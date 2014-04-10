@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractComponent {
     protected final Logger logger;
     protected final Settings settings;
-    protected final Settings componentSettings;
+    protected Settings componentSettings;
 
     public AbstractComponent(Settings settings) {
         this.logger = LoggerFactory.getLogger(getClass());

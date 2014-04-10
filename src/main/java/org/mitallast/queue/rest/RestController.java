@@ -28,10 +28,12 @@ public class RestController extends AbstractComponent {
     public void dispatchRequest(RestRequest request, RestSession channel) {
         try {
             executeHandler(request, channel);
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            logger.error("error handle request", e);
             try {
                 channel.sendResponse(new QueueException(e));
-            } catch (Exception ex) {
+            } catch (Throwable ex) {
+                logger.error("error send", e);
                 logger.error("Failed to send failure response for uri [" + request.getUrl() + "]", ex);
             }
         }
@@ -53,7 +55,7 @@ public class RestController extends AbstractComponent {
     }
 
     private RestHandler getHandler(RestRequest request) {
-        String path = request.getPath();
+        String path = request.getQueryPath();
         HttpMethod method = request.getHttpMethod();
         if (method == HttpMethod.GET) {
             return getHandlers.retrieve(path, request.getQueryStringMap());

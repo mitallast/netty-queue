@@ -4,6 +4,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 
 public class QueueException extends RuntimeException {
 
+    public QueueException() {
+        super();
+    }
+
     public QueueException(Throwable ex) {
         super(ex);
     }

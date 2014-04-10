@@ -86,7 +86,7 @@ public class RestUtils {
      *                                  escape sequence.
      */
     public static String decodeComponent(final String s) {
-        return decodeComponent(s, Charset.forName("UTF_8"));
+        return decodeComponent(s, Charset.forName("UTF-8"));
     }
 
     /**

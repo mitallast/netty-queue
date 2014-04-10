@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("unchecked")
 public interface SettingsLoader {
 
     Map<String, String> load(InputStream source) throws IOException;

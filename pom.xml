@@ -15,6 +15,8 @@
         <jackson.version>2.3.2</jackson.version>
         <joda.version>2.3</joda.version>
         <javassist.version>3.18.1-GA</javassist.version>
+        <bigqueue.version>0.7.0</bigqueue.version>
+        <google.guava.version>15.0</google.guava.version>
     </properties>
 
     <dependencies>
@@ -79,11 +81,34 @@
             <scope>compile</scope>
         </dependency>
         <!--<dependency>-->
+        <!--<groupId>com.leansoft</groupId>-->
+        <!--<artifactId>bigqueue</artifactId>-->
+        <!--<version>${bigqueue.version}</version>-->
+        <!--<exclusions>-->
+        <!--<exclusion>-->
+        <!--<groupId>log4j</groupId>-->
+        <!--<artifactId>log4j</artifactId>-->
+        <!--</exclusion>-->
+        <!--</exclusions>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+        <!--<groupId>com.google.guava</groupId>-->
+        <!--<artifactId>guava</artifactId>-->
+        <!--<version>${google.guava.version}</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
         <!--<groupId>com.strategicgains</groupId>-->
         <!--<artifactId>RestExpress</artifactId>-->
         <!--<version>0.10.1</version>-->
         <!--</dependency>-->
     </dependencies>
+
+    <!--<repositories>-->
+    <!--<repository>-->
+    <!--<id>github.release.repo</id>-->
+    <!--<url>https://raw.github.com/bulldog2011/bulldog-repo/master/repo/releases/</url>-->
+    <!--</repository>-->
+    <!--</repositories>-->
 
     <build>
         <plugins>

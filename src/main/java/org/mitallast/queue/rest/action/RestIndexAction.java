@@ -4,17 +4,17 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.client.Service;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class IndexAction extends BaseRestHandler {
+public class RestIndexAction extends BaseRestHandler {
 
-    public IndexAction(Settings settings, Service service, RestController controller) {
-        super(settings, service);
+    public RestIndexAction(Settings settings, Client client, RestController controller) {
+        super(settings, client);
         controller.registerHandler(HttpMethod.GET, "/", this);
         controller.registerHandler(HttpMethod.HEAD, "/", this);
     }

@@ -27,7 +27,7 @@ public interface RestRequest {
 
     String getHost();
 
-    String getPath();
+    String getQueryPath();
 
     String getBaseUrl();
 
@@ -35,5 +35,9 @@ public interface RestRequest {
 
     public Map<String, String> getQueryStringMap();
 
+    public String param(String param);
+
     InputStream getInputStream();
+
+    String getBody();
 }

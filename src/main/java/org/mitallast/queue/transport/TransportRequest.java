@@ -1,6 +1,5 @@
 package org.mitallast.queue.transport;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -10,6 +9,7 @@ import org.mitallast.queue.rest.RestRequest;
 
 import java.io.InputStream;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +17,8 @@ import java.util.Map;
 public class TransportRequest implements RestRequest {
 
     public static final String ENCODING = "UTF-8";
+    public static final Charset charset = Charset.forName(ENCODING);
+
     public static final String METHOD_TUNNEL = "_method";
     private static final String DEFAULT_PROTOCOL = "http";
     private FullHttpRequest httpRequest;
@@ -24,6 +26,7 @@ public class TransportRequest implements RestRequest {
     private HttpHeaders httpHeaders;
 
     private Map<String, String> queryStringMap;
+    private String queryPath;
 
     public TransportRequest(FullHttpRequest request) {
         this.httpRequest = request;
@@ -43,6 +46,10 @@ public class TransportRequest implements RestRequest {
 
     public Map<String, String> getQueryStringMap() {
         return queryStringMap;
+    }
+
+    public String param(String param) {
+        return queryStringMap.get(param);
     }
 
     public HttpHeaders getHttpHeaders() {
@@ -73,12 +80,12 @@ public class TransportRequest implements RestRequest {
         return httpMethod.equals(HttpMethod.OPTIONS);
     }
 
-    public ByteBuf getBody() {
-        return httpRequest.content();
-    }
-
     public InputStream getInputStream() {
         return new ByteBufInputStream(httpRequest.content());
+    }
+
+    public String getBody() {
+        return httpRequest.content().toString(charset);
     }
 
     public String getProtocol() {
@@ -89,8 +96,8 @@ public class TransportRequest implements RestRequest {
         return httpHeaders.get(HttpHeaders.Names.HOST);
     }
 
-    public String getPath() {
-        return httpRequest.getUri();
+    public String getQueryPath() {
+        return queryPath;
     }
 
     public String getBaseUrl() {
@@ -98,7 +105,7 @@ public class TransportRequest implements RestRequest {
     }
 
     public String getUrl() {
-        return getBaseUrl() + getPath();
+        return getBaseUrl() + getQueryPath();
     }
 
     private void determineEffectiveHttpMethod() {
@@ -114,12 +121,16 @@ public class TransportRequest implements RestRequest {
     }
 
     private void parseQueryString() {
-        if (!httpRequest.getUri().contains("?")) {
+        String uri = httpRequest.getUri();
+        if (!uri.contains("?")) {
+            queryStringMap = new HashMap<>();
+            queryPath = uri;
             return;
         }
 
-        QueryStringDecoder decoder = new QueryStringDecoder(httpRequest.getUri());
+        QueryStringDecoder decoder = new QueryStringDecoder(uri);
         Map<String, List<String>> parameters = decoder.parameters();
+        queryPath = decoder.path();
 
         if (parameters == null || parameters.isEmpty()) {
             return;

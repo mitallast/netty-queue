@@ -1,7 +1,8 @@
 package org.mitallast.queue;
 
+import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
+import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
-import org.mitallast.queue.action.queues.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queues.remove.RemoveQueueAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
 import org.mitallast.queue.client.Client;
@@ -13,6 +14,7 @@ import org.mitallast.queue.queues.InternalQueuesService;
 import org.mitallast.queue.queues.QueuesService;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.action.RestIndexAction;
+import org.mitallast.queue.rest.action.queue.dequeue.RestDeQueueAction;
 import org.mitallast.queue.rest.action.queue.enqueue.RestEnQueueAction;
 import org.mitallast.queue.rest.action.queues.create.RestCreateQueueAction;
 import org.mitallast.queue.rest.action.queues.remove.RestRemoveQueueAction;
@@ -37,15 +39,16 @@ public class Main {
         CreateQueueAction createQueueAction = new CreateQueueAction(settings, executorService, queuesService);
         RemoveQueueAction removeQueueAction = new RemoveQueueAction(settings, executorService, queuesService);
         EnQueueAction enQueueAction = new EnQueueAction(settings, executorService, queuesService);
+        DeQueueAction deQueueAction = new DeQueueAction(settings, executorService, queuesService);
 
         QueuesClient queuesClient = new QueuesClient(queuesStatsAction, createQueueAction, removeQueueAction);
-        QueueClient queueClient = new QueueClient(enQueueAction);
+        QueueClient queueClient = new QueueClient(enQueueAction, deQueueAction);
         Client client = new Client(queuesClient, queueClient);
-
 
         RestController restController = new RestController(settings);
 
         new RestEnQueueAction(settings, client, restController);
+        new RestDeQueueAction(settings, client, restController);
 
         new RestIndexAction(settings, client, restController);
         new RestQueuesStatsAction(settings, client, restController);

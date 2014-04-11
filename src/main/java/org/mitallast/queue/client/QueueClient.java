@@ -1,29 +1,27 @@
 package org.mitallast.queue.client;
 
-import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.action.ActionListener;
-import org.mitallast.queue.action.queues.enqueue.EnQueueAction;
-import org.mitallast.queue.action.queues.enqueue.EnQueueRequest;
-import org.mitallast.queue.action.queues.enqueue.EnQueueResponse;
-
-import java.util.concurrent.ExecutionException;
+import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
+import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
+import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
+import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
+import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
+import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 
 public class QueueClient {
     private final EnQueueAction enQueueAction;
+    private final DeQueueAction deQueueAction;
 
-    public QueueClient(EnQueueAction enQueueAction) {
+    public QueueClient(EnQueueAction enQueueAction, DeQueueAction deQueueAction) {
         this.enQueueAction = enQueueAction;
-    }
-
-    public EnQueueResponse enQueueRequest(EnQueueRequest request) {
-        try {
-            return enQueueAction.execute(request).get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new QueueRuntimeException(e);
-        }
+        this.deQueueAction = deQueueAction;
     }
 
     public void enQueueRequest(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
         enQueueAction.execute(request, listener);
+    }
+
+    public void deQueueRequest(DeQueueRequest request, ActionListener<DeQueueResponse> listener) {
+        deQueueAction.execute(request, listener);
     }
 }

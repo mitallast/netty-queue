@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queues.enqueue;
+package org.mitallast.queue.action.queue.enqueue;
 
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;

@@ -13,14 +13,10 @@ import java.io.OutputStream;
 public class TransportResponse implements RestResponse {
     private HttpResponseStatus responseStatus = HttpResponseStatus.OK;
     private HttpHeaders headers = new DefaultHttpHeaders(false);
-    private ByteBuf buffer = null;
+    private ByteBuf buffer = Unpooled.buffer(0);
     private Throwable exception = null;
 
     public TransportResponse() {
-    }
-
-    public boolean hasBuffer() {
-        return buffer != null;
     }
 
     public ByteBuf getBuffer() {
@@ -28,9 +24,6 @@ public class TransportResponse implements RestResponse {
     }
 
     public OutputStream getOutputStream() {
-        if (buffer == null) {
-            buffer = Unpooled.buffer(0);
-        }
         return new ByteBufOutputStream(buffer);
     }
 

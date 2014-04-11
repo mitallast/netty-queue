@@ -50,6 +50,9 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
     public QueueMessage<String> dequeue() {
         try {
             byte[] bytes = bigQueue.dequeue();
+            if (bytes == null) {
+                return null;
+            }
             return new QueueMessage<>(new String(bytes));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);

@@ -7,8 +7,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import java.io.OutputStream;
 
 public interface RestResponse {
-    boolean hasBuffer();
-
     ByteBuf getBuffer();
 
     OutputStream getOutputStream();

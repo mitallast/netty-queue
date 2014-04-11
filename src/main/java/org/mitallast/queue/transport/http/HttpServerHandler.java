@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.http;
 
+import com.google.inject.Inject;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -24,10 +25,10 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
 
     private final RestController restController;
 
+    @Inject
     public HttpServerHandler(RestController restController) {
         this.restController = restController;
     }
-
 
     private static void sendError(ChannelHandlerContext ctx, HttpResponseStatus status) {
         FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, status, Unpooled.copiedBuffer("Failure: " + status.toString() + "\r\n", CharsetUtil.UTF_8));

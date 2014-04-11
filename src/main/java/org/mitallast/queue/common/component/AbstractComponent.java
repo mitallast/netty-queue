@@ -1,4 +1,4 @@
-package org.mitallast.queue.common.module;
+package org.mitallast.queue.common.component;
 
 import org.mitallast.queue.common.settings.Settings;
 import org.slf4j.Logger;

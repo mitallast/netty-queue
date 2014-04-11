@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.http;
 
+import com.google.inject.Inject;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -11,6 +12,7 @@ public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final HttpServerHandler httpHandler;
 
+    @Inject
     public HttpServerInitializer(HttpServerHandler httpHandler) {
         super();
         this.httpHandler = httpHandler;

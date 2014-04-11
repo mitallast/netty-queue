@@ -2,6 +2,7 @@ package org.mitallast.queue.rest.action;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.client.Client;
@@ -13,6 +14,7 @@ import java.io.OutputStream;
 
 public class RestIndexAction extends BaseRestHandler {
 
+    @Inject
     public RestIndexAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
         controller.registerHandler(HttpMethod.GET, "/", this);

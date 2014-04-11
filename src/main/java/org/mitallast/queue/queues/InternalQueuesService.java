@@ -1,6 +1,8 @@
 package org.mitallast.queue.queues;
 
-import org.mitallast.queue.common.module.AbstractComponent;
+import com.google.inject.Inject;
+import org.mitallast.queue.QueueException;
+import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueType;
@@ -11,12 +13,34 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class InternalQueuesService extends AbstractComponent implements QueuesService {
+public class InternalQueuesService extends AbstractLifecycleComponent implements QueuesService {
 
-    private volatile Map<String, QueueService> queues = new HashMap<String, QueueService>();
+    private volatile Map<String, QueueService> queues = new HashMap<>();
 
+    @Inject
     public InternalQueuesService(Settings settings) {
         super(settings);
+    }
+
+    @Override
+    protected void doStart() throws QueueException {
+        for (QueueService queueService : queues.values()) {
+            queueService.start();
+        }
+    }
+
+    @Override
+    protected void doStop() throws QueueException {
+        for (QueueService queueService : queues.values()) {
+            queueService.stop();
+        }
+    }
+
+    @Override
+    protected void doClose() throws QueueException {
+        for (QueueService queueService : queues.values()) {
+            queueService.close();
+        }
     }
 
     @Override
@@ -50,18 +74,21 @@ public class InternalQueuesService extends AbstractComponent implements QueuesSe
                 throw new QueueMissingException("Queue type missing");
         }
 
+        queueService.start();
         queues.put(queueService.queue().getName(), queueService);
         return queueService;
     }
 
     @Override
-    public synchronized void removeQueue(String name, String reason) {
+    public synchronized void deleteQueue(String name, String reason) {
+        logger.info("delete queue {} reason {}", name, reason);
         Queue queue = new Queue(name);
         QueueService queueService = queues.get(queue.getName());
         if (queueService == null) {
             throw new QueueMissingException("Queue not found");
         }
-        queueService.deleteQueue();
+        queueService.removeQueue();
         queues.remove(queue.getName());
+        logger.info("queue deleted");
     }
 }

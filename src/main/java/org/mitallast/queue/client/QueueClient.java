@@ -1,5 +1,6 @@
 package org.mitallast.queue.client;
 
+import com.google.inject.Inject;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
 import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
@@ -12,6 +13,7 @@ public class QueueClient {
     private final EnQueueAction enQueueAction;
     private final DeQueueAction deQueueAction;
 
+    @Inject
     public QueueClient(EnQueueAction enQueueAction, DeQueueAction deQueueAction) {
         this.enQueueAction = enQueueAction;
         this.deQueueAction = deQueueAction;

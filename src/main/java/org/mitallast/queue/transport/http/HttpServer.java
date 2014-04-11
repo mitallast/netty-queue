@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.http;
 
+import com.google.inject.Inject;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.AdaptiveRecvByteBufAllocator;
@@ -8,12 +9,13 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.mitallast.queue.QueueException;
+import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.RestController;
 
-import java.io.IOException;
+public class HttpServer extends AbstractLifecycleComponent {
 
-public class HttpServer {
     private int port;
     private int backlog;
     private boolean keepAlive;
@@ -22,21 +24,30 @@ public class HttpServer {
 
     private RestController restController;
 
-    public HttpServer(Settings componentSettings, RestController restController) {
-        this.port = componentSettings.getAsInt("port", 8080);
-        this.backlog = componentSettings.getAsInt("backlog", 65536);
-        this.reuseAddress = componentSettings.getAsBoolean("reuse_address", true);
-        this.keepAlive = componentSettings.getAsBoolean("keep_alive", true);
-        this.tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", true);
+
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
+    private ServerBootstrap bootstrap;
+    private Channel channel;
+
+    @Inject
+    public HttpServer(Settings settings, RestController restController) {
+        super(settings);
+        this.port = settings.getAsInt("port", 8080);
+        this.backlog = settings.getAsInt("backlog", 65536);
+        this.reuseAddress = settings.getAsBoolean("reuse_address", true);
+        this.keepAlive = settings.getAsBoolean("keep_alive", true);
+        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
         this.restController = restController;
     }
 
-    public void run() throws IOException, InterruptedException {
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+    @Override
+    protected void doStart() throws QueueException {
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
         try {
-            ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            bootstrap = new ServerBootstrap();
+            bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new HttpServerInitializer(new HttpServerHandler(restController)))
                     .option(ChannelOption.SO_BACKLOG, backlog)
@@ -45,12 +56,29 @@ public class HttpServer {
                     .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                     .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
-
-            Channel ch = b.bind(port).sync().channel();
-            ch.closeFuture().sync();
-        } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            channel = bootstrap.bind(port).sync().channel();
+        } catch (InterruptedException e) {
+            throw new QueueException(e);
         }
+    }
+
+    @Override
+    protected void doStop() throws QueueException {
+        bossGroup.shutdownGracefully();
+        workerGroup.shutdownGracefully();
+        try {
+            channel.closeFuture().sync();
+        } catch (InterruptedException e) {
+            throw new QueueException(e);
+        }
+        channel = null;
+        bootstrap = null;
+        workerGroup = null;
+        bossGroup = null;
+    }
+
+    @Override
+    protected void doClose() throws QueueException {
+
     }
 }

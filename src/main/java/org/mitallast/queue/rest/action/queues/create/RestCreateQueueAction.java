@@ -2,6 +2,7 @@ package org.mitallast.queue.rest.action.queues.create;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
@@ -18,6 +19,7 @@ import java.io.OutputStream;
 
 public class RestCreateQueueAction extends BaseRestHandler {
 
+    @Inject
     public RestCreateQueueAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
         controller.registerHandler(HttpMethod.PUT, "/{queue}", this);

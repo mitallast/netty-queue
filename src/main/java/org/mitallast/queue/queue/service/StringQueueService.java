@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.service;
 
+import org.mitallast.queue.QueueException;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.common.bigqueue.BigQueueImpl;
 import org.mitallast.queue.common.bigqueue.IBigQueue;
@@ -29,12 +30,6 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
             workDir += File.separator;
         }
         queueDir = workDir + BIG_QUEUE_DIR;
-
-        try {
-            bigQueue = new BigQueueImpl(queueDir, queue.getName(), 1024 * 1024 * 1024);
-        } catch (IOException e) {
-            throw new QueueRuntimeException(e);
-        }
     }
 
     @Override
@@ -70,17 +65,13 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
     }
 
     @Override
-    public void deleteQueue() {
+    public void removeQueue() {
         try {
-            this.bigQueue.removeAll();
-            this.bigQueue.close();
-            this.bigQueue = null;
-        } catch (IOException e) {
-            throw new QueueRuntimeException(e);
-        }
-
-        try {
+            logger.info("close queue");
+            close();
+            logger.info("delete directory");
             FileUtil.deleteDirectory(new File(queueDir));
+            logger.info("directory deleted");
         } catch (Throwable e) {
             throw new QueueRuntimeException(e);
         }
@@ -89,5 +80,28 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
     @Override
     public boolean isSupported(QueueMessage message) {
         return message.getMessage() instanceof String;
+    }
+
+    @Override
+    protected void doStart() throws QueueException {
+        try {
+            bigQueue = new BigQueueImpl(queueDir, queue.getName(), 1024 * 1024 * 1024);
+        } catch (IOException e) {
+            throw new QueueRuntimeException(e);
+        }
+    }
+
+    @Override
+    protected void doStop() throws QueueException {
+        this.bigQueue.flush();
+        try {
+            this.bigQueue.close();
+        } catch (IOException e) {
+            throw new QueueException(e);
+        }
+    }
+
+    @Override
+    protected void doClose() throws QueueException {
     }
 }

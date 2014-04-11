@@ -4,10 +4,10 @@ import org.mitallast.queue.action.ActionResponse;
 
 import java.util.Set;
 
-public class QueuesStatsResponse extends ActionResponse {
+public class QueueStatsResponse extends ActionResponse {
     private Set<String> queues;
 
-    public QueuesStatsResponse(Set<String> queues) {
+    public QueueStatsResponse(Set<String> queues) {
         this.queues = queues;
     }
 

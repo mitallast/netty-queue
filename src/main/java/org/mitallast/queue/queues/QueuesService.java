@@ -15,5 +15,5 @@ public interface QueuesService {
 
     QueueService createQueue(String name, QueueType type, Settings queueSettings);
 
-    void removeQueue(String name, String reason);
+    void deleteQueue(String name, String reason);
 }

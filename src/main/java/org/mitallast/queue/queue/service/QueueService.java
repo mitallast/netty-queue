@@ -13,7 +13,7 @@ public interface QueueService<Message> extends QueueComponent {
 
     QueueType type();
 
-    void deleteQueue();
+    void removeQueue();
 
     boolean isSupported(QueueMessage message);
 }

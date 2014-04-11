@@ -1,0 +1,19 @@
+package org.mitallast.queue.action;
+
+import com.google.inject.AbstractModule;
+import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
+import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
+import org.mitallast.queue.action.queues.create.CreateQueueAction;
+import org.mitallast.queue.action.queues.remove.RemoveQueueAction;
+import org.mitallast.queue.action.queues.stats.QueueStatsAction;
+
+public class ActionModule extends AbstractModule {
+    @Override
+    protected void configure() {
+        bind(EnQueueAction.class).asEagerSingleton();
+        bind(DeQueueAction.class).asEagerSingleton();
+        bind(CreateQueueAction.class).asEagerSingleton();
+        bind(RemoveQueueAction.class).asEagerSingleton();
+        bind(QueueStatsAction.class).asEagerSingleton();
+    }
+}

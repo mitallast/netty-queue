@@ -2,6 +2,7 @@ package org.mitallast.queue.rest.action.queues.remove;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
@@ -16,6 +17,7 @@ import java.io.OutputStream;
 
 public class RestRemoveQueueAction extends BaseRestHandler {
 
+    @Inject
     public RestRemoveQueueAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
         controller.registerHandler(HttpMethod.DELETE, "/{queue}", this);

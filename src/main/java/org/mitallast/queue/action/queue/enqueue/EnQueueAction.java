@@ -1,5 +1,6 @@
 package org.mitallast.queue.action.queue.enqueue;
 
+import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
@@ -9,20 +10,19 @@ import org.mitallast.queue.queue.service.QueueService;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.QueuesService;
 
-import java.util.concurrent.ExecutorService;
-
 public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueResponse> {
 
     private final QueuesService queuesService;
 
-    public EnQueueAction(Settings settings, ExecutorService executorService, QueuesService queuesService) {
-        super(settings, executorService);
+    @Inject
+    public EnQueueAction(Settings settings, QueuesService queuesService) {
+        super(settings);
         this.queuesService = queuesService;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void doExecute(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
+    public void execute(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {
             listener.onFailure(validationException);

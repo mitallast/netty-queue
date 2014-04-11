@@ -17,6 +17,7 @@
         <javassist.version>3.18.1-GA</javassist.version>
         <bigqueue.version>0.7.0</bigqueue.version>
         <google.guava.version>15.0</google.guava.version>
+        <google.guice.version>4.0-beta4</google.guice.version>
     </properties>
 
     <dependencies>
@@ -84,23 +85,12 @@
         <!--<groupId>com.leansoft</groupId>-->
         <!--<artifactId>bigqueue</artifactId>-->
         <!--<version>${bigqueue.version}</version>-->
-        <!--<exclusions>-->
-        <!--<exclusion>-->
-        <!--<groupId>log4j</groupId>-->
-        <!--<artifactId>log4j</artifactId>-->
-        <!--</exclusion>-->
-        <!--</exclusions>-->
         <!--</dependency>-->
-        <!--<dependency>-->
-        <!--<groupId>com.google.guava</groupId>-->
-        <!--<artifactId>guava</artifactId>-->
-        <!--<version>${google.guava.version}</version>-->
-        <!--</dependency>-->
-        <!--<dependency>-->
-        <!--<groupId>com.strategicgains</groupId>-->
-        <!--<artifactId>RestExpress</artifactId>-->
-        <!--<version>0.10.1</version>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>${google.guice.version}</version>
+        </dependency>
     </dependencies>
 
     <!--<repositories>-->

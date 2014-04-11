@@ -29,7 +29,7 @@ public class TransportResponse implements RestResponse {
 
     public OutputStream getOutputStream() {
         if (buffer == null) {
-            buffer = Unpooled.buffer();
+            buffer = Unpooled.buffer(0);
         }
         return new ByteBufOutputStream(buffer);
     }

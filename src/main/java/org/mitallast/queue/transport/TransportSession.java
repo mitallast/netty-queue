@@ -44,7 +44,6 @@ public class TransportSession implements RestSession {
     @Override
     public void sendResponse(RestResponse response) {
         if (!response.hasException()) {
-            response.getHeaders().set(CONTENT_TYPE, "text/json; charset=UTF-8");
             ByteBuf buffer = response.getBuffer();
             DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, response.getResponseStatus(), buffer, false);
             httpResponse.headers().set(response.getHeaders());

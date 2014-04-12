@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest.action.queue.enqueue;
+package org.mitallast.queue.rest.action.queue.stats;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -6,44 +6,39 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
-import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
-import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
+import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
+import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queues.stats.QueueStats;
 import org.mitallast.queue.rest.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class RestEnQueueAction extends BaseRestHandler {
+public class RestQueueStatsAction extends BaseRestHandler {
 
     @Inject
-    public RestEnQueueAction(Settings settings, Client client, RestController controller) {
+    public RestQueueStatsAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(HttpMethod.POST, "/{queue}/message", this);
+        controller.registerHandler(HttpMethod.GET, "/{queue}/_stats", this);
     }
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
-        EnQueueRequest<String> enQueueRequest = new EnQueueRequest<>();
-        enQueueRequest.setQueue(request.param("queue"));
-
-        QueueMessage<String> queueMessage = new QueueMessage<>();
-        queueMessage.setMessage(request.getBody());
-        enQueueRequest.setMessage(queueMessage);
-
-        client.queue().enQueueRequest(enQueueRequest, new ActionListener<EnQueueResponse>() {
-
+        QueueStatsRequest queueStatsRequest = new QueueStatsRequest();
+        queueStatsRequest.setQueue(request.param("queue"));
+        client.queue().queueStatsRequest(queueStatsRequest, new ActionListener<QueueStatsResponse>() {
             @Override
-            public void onResponse(EnQueueResponse response) {
-                JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.CREATED);
+            public void onResponse(QueueStatsResponse queueStatsResponse) {
+                JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
                 JsonFactory factory = new JsonFactory();
                 try (OutputStream stream = restResponse.getOutputStream()) {
+                    QueueStats queueStats = queueStatsResponse.getStats();
                     JsonGenerator generator = factory.createGenerator(stream);
                     generator.writeStartObject();
-                    generator.writeFieldName("acknowledged");
-                    generator.writeBoolean(response.isAcknowledged());
+                    generator.writeStringField("name", queueStats.getQueue().getName());
+                    generator.writeNumberField("size", queueStats.getSize());
                     generator.writeEndObject();
                     generator.close();
                     session.sendResponse(restResponse);
@@ -57,5 +52,6 @@ public class RestEnQueueAction extends BaseRestHandler {
                 session.sendResponse(e);
             }
         });
+
     }
 }

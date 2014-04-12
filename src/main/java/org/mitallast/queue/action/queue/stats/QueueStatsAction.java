@@ -1,15 +1,16 @@
-package org.mitallast.queue.action.queues.stats;
+package org.mitallast.queue.action.queue.stats;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queue.service.QueueService;
+import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.QueuesService;
 
 public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueStatsResponse> {
-
-    private final QueuesService queuesService;
+    private QueuesService queuesService;
 
     @Inject
     public QueueStatsAction(Settings settings, QueuesService queuesService) {
@@ -24,6 +25,10 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
             listener.onFailure(validationException);
             return;
         }
-        listener.onResponse(new QueueStatsResponse(queuesService.queues()));
+        if (!queuesService.hasQueue(request.getQueue())) {
+            listener.onFailure(new QueueMissingException(request.getQueue()));
+        }
+        QueueService queueService = queuesService.queue(request.getQueue());
+        listener.onResponse(new QueueStatsResponse(queueService.stats()));
     }
 }

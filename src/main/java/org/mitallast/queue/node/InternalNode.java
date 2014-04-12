@@ -1,6 +1,7 @@
 package org.mitallast.queue.node;
 
 import com.google.inject.Injector;
+import org.mitallast.queue.action.ActionModule;
 import org.mitallast.queue.client.ClientModule;
 import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.component.ModulesBuilder;
@@ -30,6 +31,7 @@ public class InternalNode implements Node {
 
         ModulesBuilder modules = new ModulesBuilder();
         modules.add(new QueuesModule(this.settings));
+        modules.add(new ActionModule());
         modules.add(new ClientModule());
         modules.add(new RestModule());
         modules.add(new TransportModule());

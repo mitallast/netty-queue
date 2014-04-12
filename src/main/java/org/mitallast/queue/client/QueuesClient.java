@@ -8,24 +8,24 @@ import org.mitallast.queue.action.queues.create.CreateQueueResponse;
 import org.mitallast.queue.action.queues.remove.RemoveQueueAction;
 import org.mitallast.queue.action.queues.remove.RemoveQueueRequest;
 import org.mitallast.queue.action.queues.remove.RemoveQueueResponse;
-import org.mitallast.queue.action.queues.stats.QueueStatsAction;
-import org.mitallast.queue.action.queues.stats.QueueStatsRequest;
-import org.mitallast.queue.action.queues.stats.QueueStatsResponse;
+import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
+import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
+import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 
 public class QueuesClient {
 
-    private final QueueStatsAction queuesStatsAction;
+    private final QueuesStatsAction queuesStatsAction;
     private final CreateQueueAction createQueueAction;
     private final RemoveQueueAction removeQueueAction;
 
     @Inject
-    public QueuesClient(QueueStatsAction queuesStatsAction, CreateQueueAction createQueueAction, RemoveQueueAction removeQueueAction) {
+    public QueuesClient(QueuesStatsAction queuesStatsAction, CreateQueueAction createQueueAction, RemoveQueueAction removeQueueAction) {
         this.queuesStatsAction = queuesStatsAction;
         this.createQueueAction = createQueueAction;
         this.removeQueueAction = removeQueueAction;
     }
 
-    public void queuesStatsRequest(QueueStatsRequest request, ActionListener<QueueStatsResponse> listener) {
+    public void queuesStatsRequest(QueuesStatsRequest request, ActionListener<QueuesStatsResponse> listener) {
         queuesStatsAction.execute(request, listener);
     }
 

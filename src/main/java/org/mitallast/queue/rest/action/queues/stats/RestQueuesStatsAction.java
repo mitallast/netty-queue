@@ -6,10 +6,11 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
-import org.mitallast.queue.action.queues.stats.QueueStatsRequest;
-import org.mitallast.queue.action.queues.stats.QueueStatsResponse;
+import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
+import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queues.stats.QueueStats;
 import org.mitallast.queue.rest.*;
 
 import java.io.IOException;
@@ -25,17 +26,20 @@ public class RestQueuesStatsAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
-        client.queues().queuesStatsRequest(new QueueStatsRequest(), new ActionListener<QueueStatsResponse>() {
+        client.queues().queuesStatsRequest(new QueuesStatsRequest(), new ActionListener<QueuesStatsResponse>() {
             @Override
-            public void onResponse(QueueStatsResponse response) {
+            public void onResponse(QueuesStatsResponse response) {
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
                 JsonFactory factory = new JsonFactory();
                 try (OutputStream stream = restResponse.getOutputStream()) {
                     JsonGenerator generator = factory.createGenerator(stream);
                     generator.writeStartObject();
                     generator.writeArrayFieldStart("queues");
-                    for (String queue : response.getQueues()) {
-                        generator.writeString(queue);
+                    for (QueueStats queueStats : response.stats().getQueueStats()) {
+                        generator.writeStartObject();
+                        generator.writeStringField("name", queueStats.getQueue().getName());
+                        generator.writeNumberField("size", queueStats.getSize());
+                        generator.writeEndObject();
                     }
                     generator.writeEndArray();
                     generator.close();

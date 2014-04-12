@@ -1,40 +1,81 @@
 #!/bin/sh
 
 echo info
-curl -s -XGET localhost:8080/
+echo
+curl -i -s -XGET localhost:8080/
+echo
 echo
 
 echo stats
-curl -s -XGET localhost:8080/_stats
+echo
+curl -i -s -XGET localhost:8080/_stats
+echo
 echo
 
 echo create queue
-curl -s -XPUT localhost:8080/my_queue?type=string
+echo
+curl -i -s -XPUT localhost:8080/my_queue?type=string
+echo
 echo
 
 echo stats
-curl -s -XGET localhost:8080/_stats
+echo
+curl -i -s -XGET localhost:8080/_stats
+echo
+echo
+
+echo my_queue stats
+echo
+curl -i -s -XGET localhost:8080/my_queue/_stats
+echo
 echo
 
 echo enqueue
-curl -s -XPUT localhost:8080/my_queue/_enqueue -d 'Hello world'
+echo
+curl -i -s -XPOST localhost:8080/my_queue/message -d 'Hello world'
+echo
+echo
+
+echo my_queue stats
+echo
+curl -i -s -XGET localhost:8080/my_queue/_stats
+echo
 echo
 
 echo dequeue
-curl -s -XGET localhost:8080/my_queue/_dequeue
+echo
+curl -i -s -XGET localhost:8080/my_queue/message
+echo
+echo
+
+echo my_queue stats
+echo
+curl -i -s -XGET localhost:8080/my_queue/_stats
+echo
 echo
 
 echo dequeue
-curl -s -XGET localhost:8080/my_queue/_dequeue
+echo
+curl -i -s -XGET localhost:8080/my_queue/message
+echo
+echo
+
+echo my_queue stats
+echo
+curl -i -s -XGET localhost:8080/my_queue/_stats
+echo
 echo
 
 #ab -n100000 -c100 -k -r -p README.md localhost:8080/my_queue/_enqueue
 #ab -n100000 -c100 -k -r localhost:8080/
 
 echo delete queue
-curl -s -XDELETE localhost:8080/my_queue?reason=test
+echo
+curl -i -s -XDELETE localhost:8080/my_queue?reason=test
+echo
 echo
 
 echo stats
-curl -s -XGET localhost:8080/_stats
+echo
+curl -i -s -XGET localhost:8080/_stats
 echo

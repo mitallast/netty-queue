@@ -1,5 +1,6 @@
 package org.mitallast.queue.rest;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.transport.TransportResponse;
@@ -11,6 +12,7 @@ public class StringRestResponse extends TransportResponse {
 
     public StringRestResponse(HttpResponseStatus status) {
         setResponseStatus(status);
+        getHeaders().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain");
     }
 
     public StringRestResponse(HttpResponseStatus status, String message) {

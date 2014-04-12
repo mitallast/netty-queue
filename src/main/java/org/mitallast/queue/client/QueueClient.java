@@ -8,15 +8,20 @@ import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
+import org.mitallast.queue.action.queue.stats.QueueStatsAction;
+import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
+import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 
 public class QueueClient {
     private final EnQueueAction enQueueAction;
     private final DeQueueAction deQueueAction;
+    private final QueueStatsAction queueStatsAction;
 
     @Inject
-    public QueueClient(EnQueueAction enQueueAction, DeQueueAction deQueueAction) {
+    public QueueClient(EnQueueAction enQueueAction, DeQueueAction deQueueAction, QueueStatsAction queueStatsAction) {
         this.enQueueAction = enQueueAction;
         this.deQueueAction = deQueueAction;
+        this.queueStatsAction = queueStatsAction;
     }
 
     public void enQueueRequest(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
@@ -25,5 +30,9 @@ public class QueueClient {
 
     public void deQueueRequest(DeQueueRequest request, ActionListener<DeQueueResponse> listener) {
         deQueueAction.execute(request, listener);
+    }
+
+    public void queueStatsRequest(QueueStatsRequest request, ActionListener<QueueStatsResponse> listener) {
+        queueStatsAction.execute(request, listener);
     }
 }

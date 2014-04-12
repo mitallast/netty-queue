@@ -10,6 +10,7 @@ import org.mitallast.queue.queue.AbstractQueueComponent;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueType;
+import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.File;
 import java.io.IOException;
@@ -103,5 +104,13 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
 
     @Override
     protected void doClose() throws QueueException {
+    }
+
+    @Override
+    public QueueStats stats() {
+        QueueStats stats = new QueueStats();
+        stats.setQueue(queue);
+        stats.setSize(bigQueue.size());
+        return stats;
     }
 }

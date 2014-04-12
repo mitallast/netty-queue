@@ -8,6 +8,8 @@ import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueType;
 import org.mitallast.queue.queue.service.QueueService;
 import org.mitallast.queue.queue.service.StringQueueService;
+import org.mitallast.queue.queues.stats.QueueStats;
+import org.mitallast.queue.queues.stats.QueuesStats;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -90,5 +92,24 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
         queueService.removeQueue();
         queues.remove(queue.getName());
         logger.info("queue deleted");
+    }
+
+    @Override
+    public QueuesStats stats() {
+        QueuesStats stats = new QueuesStats();
+        for (QueueService queueService : queues.values()) {
+            stats.addQueueStats(queueService.stats());
+        }
+        return stats;
+    }
+
+    @Override
+    public QueueStats stats(String name) {
+        Queue queue = new Queue(name);
+        QueueService queueService = queues.get(queue.getName());
+        if (queueService == null) {
+            throw new QueueMissingException("Queue not found");
+        }
+        return queueService.stats();
     }
 }

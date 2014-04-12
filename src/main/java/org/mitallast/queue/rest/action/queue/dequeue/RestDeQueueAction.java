@@ -20,7 +20,7 @@ public class RestDeQueueAction extends BaseRestHandler {
     @Inject
     public RestDeQueueAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(HttpMethod.GET, "/{queue}/_dequeue", this);
+        controller.registerHandler(HttpMethod.GET, "/{queue}/message", this);
     }
 
     @Override

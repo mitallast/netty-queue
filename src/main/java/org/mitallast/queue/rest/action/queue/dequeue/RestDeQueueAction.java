@@ -10,7 +10,12 @@ import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
 import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.rest.*;
+import org.mitallast.queue.rest.BaseRestHandler;
+import org.mitallast.queue.rest.RestController;
+import org.mitallast.queue.rest.RestRequest;
+import org.mitallast.queue.rest.RestSession;
+import org.mitallast.queue.rest.response.JsonRestResponse;
+import org.mitallast.queue.rest.response.StatusRestResponse;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,7 +37,7 @@ public class RestDeQueueAction extends BaseRestHandler {
             @Override
             public void onResponse(DeQueueResponse deQueueResponse) {
                 if (deQueueResponse.getMessage() == null) {
-                    session.sendResponse(new StringRestResponse(HttpResponseStatus.NO_CONTENT));
+                    session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
@@ -41,7 +46,6 @@ public class RestDeQueueAction extends BaseRestHandler {
                     JsonGenerator generator = factory.createGenerator(stream);
                     generator.writeStartObject();
                     generator.writeFieldName("message");
-
                     generator.writeObject(deQueueResponse.getMessage().getMessage());
                     generator.writeEndObject();
                     generator.close();

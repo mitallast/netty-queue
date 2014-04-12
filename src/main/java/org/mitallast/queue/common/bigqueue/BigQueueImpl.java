@@ -81,8 +81,8 @@ public class BigQueueImpl implements IBigQueue {
     }
 
     @Override
-    public void enqueue(byte[] data) throws IOException {
-        this.innerArray.append(data);
+    public long enqueue(byte[] data) throws IOException {
+        return this.innerArray.append(data);
     }
 
     @Override

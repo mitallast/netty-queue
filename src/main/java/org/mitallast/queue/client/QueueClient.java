@@ -8,6 +8,9 @@ import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
+import org.mitallast.queue.action.queue.peek.PeekQueueAction;
+import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
+import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
@@ -15,12 +18,14 @@ import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 public class QueueClient {
     private final EnQueueAction enQueueAction;
     private final DeQueueAction deQueueAction;
+    private final PeekQueueAction peekQueueAction;
     private final QueueStatsAction queueStatsAction;
 
     @Inject
-    public QueueClient(EnQueueAction enQueueAction, DeQueueAction deQueueAction, QueueStatsAction queueStatsAction) {
+    public QueueClient(EnQueueAction enQueueAction, DeQueueAction deQueueAction, PeekQueueAction peekQueueAction, QueueStatsAction queueStatsAction) {
         this.enQueueAction = enQueueAction;
         this.deQueueAction = deQueueAction;
+        this.peekQueueAction = peekQueueAction;
         this.queueStatsAction = queueStatsAction;
     }
 
@@ -34,5 +39,9 @@ public class QueueClient {
 
     public void queueStatsRequest(QueueStatsRequest request, ActionListener<QueueStatsResponse> listener) {
         queueStatsAction.execute(request, listener);
+    }
+
+    public void peekQueueRequest(PeekQueueRequest request, ActionListener<PeekQueueResponse> listener) {
+        peekQueueAction.execute(request, listener);
     }
 }

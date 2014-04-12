@@ -7,6 +7,7 @@ import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.rest.response.StringRestResponse;
 import org.mitallast.queue.rest.support.RestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

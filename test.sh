@@ -32,7 +32,25 @@ echo
 
 echo enqueue
 echo
-curl -i -s -XPOST localhost:8080/my_queue/message -d 'Hello world'
+curl -i -s -XPOST localhost:8080/my_queue/message -d 'Hello world 1 !!!'
+echo
+echo
+
+echo enqueue
+echo
+curl -i -s -XPOST localhost:8080/my_queue/message -d 'Hello world 2 !!!'
+echo
+echo
+
+echo my_queue stats
+echo
+curl -i -s -XGET localhost:8080/my_queue/_stats
+echo
+echo
+
+echo peek
+echo
+curl -i -s -XHEAD localhost:8080/my_queue/message
 echo
 echo
 
@@ -45,6 +63,18 @@ echo
 echo dequeue
 echo
 curl -i -s -XGET localhost:8080/my_queue/message
+echo
+echo
+
+echo my_queue stats
+echo
+curl -i -s -XGET localhost:8080/my_queue/_stats
+echo
+echo
+
+echo peek
+echo
+curl -i -s -XHEAD localhost:8080/my_queue/message
 echo
 echo
 

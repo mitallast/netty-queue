@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest;
+package org.mitallast.queue.rest.response;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;

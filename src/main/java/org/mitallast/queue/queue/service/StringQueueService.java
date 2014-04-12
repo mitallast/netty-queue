@@ -34,9 +34,11 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
     }
 
     @Override
-    public void enqueue(QueueMessage<String> o) {
+    public long enqueue(QueueMessage<String> message) {
         try {
-            bigQueue.enqueue(o.getMessage().getBytes());
+            long index = bigQueue.enqueue(message.getMessage().getBytes());
+            message.setIndex(index);
+            return index;
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         }
@@ -46,6 +48,19 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
     public QueueMessage<String> dequeue() {
         try {
             byte[] bytes = bigQueue.dequeue();
+            if (bytes == null) {
+                return null;
+            }
+            return new QueueMessage<>(new String(bytes));
+        } catch (IOException e) {
+            throw new QueueRuntimeException(e);
+        }
+    }
+
+    @Override
+    public QueueMessage<String> peek() {
+        try {
+            byte[] bytes = bigQueue.peek();
             if (bytes == null) {
                 return null;
             }

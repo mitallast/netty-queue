@@ -6,9 +6,12 @@ import org.mitallast.queue.queue.QueueType;
 import org.mitallast.queue.queues.stats.QueueStats;
 
 public interface QueueService<Message> extends QueueComponent {
-    void enqueue(QueueMessage<Message> message);
+
+    long enqueue(QueueMessage<Message> message);
 
     QueueMessage<Message> dequeue();
+
+    QueueMessage<Message> peek();
 
     long size();
 

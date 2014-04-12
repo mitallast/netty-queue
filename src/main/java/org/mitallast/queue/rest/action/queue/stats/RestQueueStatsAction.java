@@ -11,7 +11,11 @@ import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.stats.QueueStats;
-import org.mitallast.queue.rest.*;
+import org.mitallast.queue.rest.BaseRestHandler;
+import org.mitallast.queue.rest.RestController;
+import org.mitallast.queue.rest.RestRequest;
+import org.mitallast.queue.rest.RestSession;
+import org.mitallast.queue.rest.response.JsonRestResponse;
 
 import java.io.IOException;
 import java.io.OutputStream;

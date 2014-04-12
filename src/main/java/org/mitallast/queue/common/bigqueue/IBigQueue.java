@@ -21,9 +21,10 @@ public interface IBigQueue extends Closeable {
      * Adds an item at the back of a queue
      *
      * @param data to be enqueued data
+     * @return appended index
      * @throws java.io.IOException exception throws if there is any IO error during enqueue operation.
      */
-    public void enqueue(byte[] data) throws IOException;
+    public long enqueue(byte[] data) throws IOException;
 
     /**
      * Retrieves and removes the front of a queue

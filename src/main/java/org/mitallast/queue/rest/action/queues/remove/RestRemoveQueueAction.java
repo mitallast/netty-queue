@@ -10,7 +10,11 @@ import org.mitallast.queue.action.queues.remove.RemoveQueueRequest;
 import org.mitallast.queue.action.queues.remove.RemoveQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.rest.*;
+import org.mitallast.queue.rest.BaseRestHandler;
+import org.mitallast.queue.rest.RestController;
+import org.mitallast.queue.rest.RestRequest;
+import org.mitallast.queue.rest.RestSession;
+import org.mitallast.queue.rest.response.JsonRestResponse;
 
 import java.io.IOException;
 import java.io.OutputStream;

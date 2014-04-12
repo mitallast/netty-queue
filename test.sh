@@ -32,13 +32,13 @@ echo
 
 echo enqueue
 echo
-curl -i -s -XPOST localhost:8080/my_queue/message -d 'Hello world 1 !!!'
+curl -i -s -XPOST localhost:8080/my_queue/message -d '{"message":"Hello world 1"}'
 echo
 echo
 
 echo enqueue
 echo
-curl -i -s -XPOST localhost:8080/my_queue/message -d 'Hello world 2 !!!'
+curl -i -s -XPOST localhost:8080/my_queue/message -d '{"message":["Hello world 2"]}'
 echo
 echo
 

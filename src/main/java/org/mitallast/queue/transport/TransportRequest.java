@@ -25,7 +25,7 @@ public class TransportRequest implements RestRequest {
     private HttpMethod httpMethod;
     private HttpHeaders httpHeaders;
 
-    private Map<String, String> queryStringMap;
+    private Map<String, String> paramMap;
     private String queryPath;
 
     public TransportRequest(FullHttpRequest request) {
@@ -44,12 +44,16 @@ public class TransportRequest implements RestRequest {
         return httpMethod;
     }
 
-    public Map<String, String> getQueryStringMap() {
-        return queryStringMap;
+    public Map<String, String> getParamMap() {
+        return paramMap;
     }
 
     public String param(String param) {
-        return queryStringMap.get(param);
+        return paramMap.get(param);
+    }
+
+    public boolean hasParam(String param) {
+        return paramMap.containsKey(param);
     }
 
     public HttpHeaders getHttpHeaders() {
@@ -123,7 +127,7 @@ public class TransportRequest implements RestRequest {
     private void parseQueryString() {
         String uri = httpRequest.getUri();
         if (!uri.contains("?")) {
-            queryStringMap = new HashMap<>();
+            paramMap = new HashMap<>();
             queryPath = uri;
             return;
         }
@@ -136,10 +140,10 @@ public class TransportRequest implements RestRequest {
             return;
         }
 
-        queryStringMap = new HashMap<>(parameters.size());
+        paramMap = new HashMap<>(parameters.size());
 
         for (Map.Entry<String, List<String>> entry : parameters.entrySet()) {
-            queryStringMap.put(entry.getKey(), entry.getValue().get(0));
+            paramMap.put(entry.getKey(), entry.getValue().get(0));
 
             for (String value : entry.getValue()) {
                 try {

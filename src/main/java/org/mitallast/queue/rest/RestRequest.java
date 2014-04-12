@@ -33,9 +33,11 @@ public interface RestRequest {
 
     String getUrl();
 
-    public Map<String, String> getQueryStringMap();
+    Map<String, String> getParamMap();
 
-    public String param(String param);
+    String param(String param);
+
+    boolean hasParam(String param);
 
     InputStream getInputStream();
 

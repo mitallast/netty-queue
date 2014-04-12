@@ -61,17 +61,17 @@ public class RestController extends AbstractComponent {
         String path = request.getQueryPath();
         HttpMethod method = request.getHttpMethod();
         if (method == HttpMethod.GET) {
-            return getHandlers.retrieve(path, request.getQueryStringMap());
+            return getHandlers.retrieve(path, request.getParamMap());
         } else if (method == HttpMethod.POST) {
-            return postHandlers.retrieve(path, request.getQueryStringMap());
+            return postHandlers.retrieve(path, request.getParamMap());
         } else if (method == HttpMethod.PUT) {
-            return putHandlers.retrieve(path, request.getQueryStringMap());
+            return putHandlers.retrieve(path, request.getParamMap());
         } else if (method == HttpMethod.DELETE) {
-            return deleteHandlers.retrieve(path, request.getQueryStringMap());
+            return deleteHandlers.retrieve(path, request.getParamMap());
         } else if (method == HttpMethod.HEAD) {
-            return headHandlers.retrieve(path, request.getQueryStringMap());
+            return headHandlers.retrieve(path, request.getParamMap());
         } else if (method == HttpMethod.OPTIONS) {
-            return optionsHandlers.retrieve(path, request.getQueryStringMap());
+            return optionsHandlers.retrieve(path, request.getParamMap());
         } else {
             return null;
         }

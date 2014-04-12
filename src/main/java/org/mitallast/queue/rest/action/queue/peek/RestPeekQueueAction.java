@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.action.queue.peek;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
@@ -29,7 +28,7 @@ public class RestPeekQueueAction extends BaseRestHandler {
     }
 
     @Override
-    public void handleRequest(RestRequest request, final RestSession session) {
+    public void handleRequest(final RestRequest request, final RestSession session) {
         PeekQueueRequest peekQueueRequest = new PeekQueueRequest();
         peekQueueRequest.setQueue(request.param("queue"));
 
@@ -41,9 +40,8 @@ public class RestPeekQueueAction extends BaseRestHandler {
                     return;
                 }
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-                JsonFactory factory = new JsonFactory();
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = factory.createGenerator(stream);
+                    JsonGenerator generator = getGenerator(request, stream);
                     generator.writeStartObject();
                     generator.writeFieldName("message");
                     generator.writeObject(deQueueResponse.getMessage().getMessage());

@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.action.queues.stats;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
@@ -29,14 +28,13 @@ public class RestQueuesStatsAction extends BaseRestHandler {
     }
 
     @Override
-    public void handleRequest(RestRequest request, final RestSession session) {
+    public void handleRequest(final RestRequest request, final RestSession session) {
         client.queues().queuesStatsRequest(new QueuesStatsRequest(), new ActionListener<QueuesStatsResponse>() {
             @Override
             public void onResponse(QueuesStatsResponse response) {
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-                JsonFactory factory = new JsonFactory();
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = factory.createGenerator(stream);
+                    JsonGenerator generator = getGenerator(request, stream);
                     generator.writeStartObject();
                     generator.writeArrayFieldStart("queues");
                     for (QueueStats queueStats : response.stats().getQueueStats()) {

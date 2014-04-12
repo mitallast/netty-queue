@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.action.queues.remove;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
@@ -28,7 +27,7 @@ public class RestRemoveQueueAction extends BaseRestHandler {
     }
 
     @Override
-    public void handleRequest(RestRequest request, final RestSession session) {
+    public void handleRequest(final RestRequest request, final RestSession session) {
         RemoveQueueRequest removeQueueRequest = new RemoveQueueRequest();
         removeQueueRequest.setQueue(request.param("queue"));
         removeQueueRequest.setReason(request.param("reason"));
@@ -37,9 +36,8 @@ public class RestRemoveQueueAction extends BaseRestHandler {
             @Override
             public void onResponse(RemoveQueueResponse response) {
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-                JsonFactory factory = new JsonFactory();
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = factory.createGenerator(stream);
+                    JsonGenerator generator = getGenerator(request, stream);
                     generator.writeStartObject();
                     generator.writeFieldName("acknowledged");
                     generator.writeBoolean(response.isAcknowledged());

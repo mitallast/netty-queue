@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.action;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
@@ -28,9 +27,8 @@ public class RestIndexAction extends BaseRestHandler {
     @Override
     public void handleRequest(RestRequest request, RestSession session) {
         JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-        JsonFactory factory = new JsonFactory();
         try (OutputStream stream = restResponse.getOutputStream()) {
-            JsonGenerator generator = factory.createGenerator(stream);
+            JsonGenerator generator = getGenerator(request, stream);
             generator.writeStartObject();
             generator.writeStringField("message", "You now, for queue");
             generator.writeEndObject();

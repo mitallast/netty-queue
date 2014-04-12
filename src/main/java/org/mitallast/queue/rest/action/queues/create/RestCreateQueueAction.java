@@ -45,7 +45,5 @@ public class RestCreateQueueAction extends BaseRestHandler {
                 session.sendResponse(e);
             }
         });
-
-
     }
 }

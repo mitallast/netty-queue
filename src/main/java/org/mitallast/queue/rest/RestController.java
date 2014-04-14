@@ -33,6 +33,7 @@ public class RestController extends AbstractComponent {
             executeHandler(request, channel);
         } catch (Throwable e) {
             logger.error("error handle request", e);
+            e.printStackTrace();
             try {
                 channel.sendResponse(new QueueException(e));
             } catch (Throwable ex) {

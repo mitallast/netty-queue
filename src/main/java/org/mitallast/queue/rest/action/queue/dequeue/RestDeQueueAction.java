@@ -43,6 +43,9 @@ public class RestDeQueueAction extends BaseRestHandler {
                 try (OutputStream stream = restResponse.getOutputStream()) {
                     JsonGenerator generator = getGenerator(request, stream);
                     generator.writeStartObject();
+                    if (deQueueResponse.getMessage().getUid() != null) {
+                        generator.writeStringField("uid", deQueueResponse.getMessage().getUid());
+                    }
                     generator.writeFieldName("message");
                     generator.writeObject(deQueueResponse.getMessage().getMessage());
                     generator.writeEndObject();

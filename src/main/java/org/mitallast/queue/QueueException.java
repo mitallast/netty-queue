@@ -12,12 +12,12 @@ public class QueueException extends RuntimeException {
         super(ex);
     }
 
-    public QueueException(String msg) {
-        super(msg);
-    }
-
     public QueueException(String msg, Throwable cause) {
         super(msg, cause);
+    }
+
+    public QueueException(String msg) {
+        super(msg);
     }
 
     public HttpResponseStatus status() {

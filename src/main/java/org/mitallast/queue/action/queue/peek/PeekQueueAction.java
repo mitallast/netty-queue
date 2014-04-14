@@ -32,7 +32,7 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
             listener.onFailure(new QueueMissingException(request.getQueue()));
         }
         QueueService queueService = queuesService.queue(request.getQueue());
-        QueueMessage message = queueService.dequeue();
+        QueueMessage message = queueService.peek();
         listener.onResponse(new PeekQueueResponse(message));
     }
 }

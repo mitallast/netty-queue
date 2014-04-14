@@ -14,7 +14,7 @@ echo
 
 echo create queue
 echo
-curl -i -s -XPUT 'localhost:8080/my_queue?type=string&pretty'
+curl -i -s -XPUT 'localhost:8080/my_queue?type=string_uid&pretty'
 echo
 echo
 
@@ -96,7 +96,19 @@ curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
 echo
 echo
 
-#ab -n100000 -c100 -k -r -p README.md 'localhost:8080/my_queue/_enqueue
+echo my_queue enqueue uid custom_uid
+echo
+curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uid":"custom_uid","message":"Hello world custom_uid"}'
+echo
+echo
+
+echo my_queue enqueue uid custom_uid fail
+echo
+curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uid":"custom_uid","message":"Hello world custom_uid"}'
+echo
+echo
+
+ab -n100000 -c100 -k -p message.json 'localhost:8080/my_queue/message'
 #ab -n100000 -c100 -k -r 'localhost:8080/
 
 echo delete queue

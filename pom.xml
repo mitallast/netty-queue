@@ -126,6 +126,38 @@
                     <target>1.7</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.1</version>
+                <configuration>
+                    <executable>java</executable>
+                    <arguments>
+                        <argument>-server</argument>
+                        <argument>-d64</argument>
+                        <argument>-Xms512m</argument>
+                        <argument>-Xmx512m</argument>
+                        <argument>-XX:MaxPermSize=512m</argument>
+                        <argument>-XX:ReservedCodeCacheSize=256m</argument>
+                        <argument>-XX:+UseG1GC</argument>
+                        <argument>-XX:MaxGCPauseMillis=150</argument>
+                        <argument>-XX:InitiatingHeapOccupancyPercent=70</argument>
+                        <argument>-XX:NewRatio=2</argument>
+                        <argument>-XX:SurvivorRatio=8</argument>
+                        <argument>-XX:MaxTenuringThreshold=15</argument>
+                        <argument>-XX:G1ReservePercent=50</argument>
+                        <argument>-XX:G1HeapRegionSize=32m</argument>
+                        <argument>-XX:+UseCompressedOops</argument>
+                        <argument>-XX:+AggressiveOpts</argument>
+                        <argument>-XX:+UseFastAccessorMethods</argument>
+                        <argument>-XX:-MaxFDLimit</argument>
+                        <argument>-Dio.netty.allocator.numDirectArenas=64</argument>
+                        <argument>-classpath</argument>
+                        <classpath/>
+                        <argument>org.mitallast.queue.Main</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

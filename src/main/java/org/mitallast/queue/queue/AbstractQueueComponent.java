@@ -18,4 +18,9 @@ public abstract class AbstractQueueComponent extends AbstractLifecycleComponent 
     public Queue queue() {
         return queue;
     }
+
+    @Override
+    public Settings queueSettings() {
+        return queueSettings;
+    }
 }

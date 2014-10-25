@@ -2,6 +2,7 @@ package org.mitallast.queue.rest;
 
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.rest.action.RestIndexAction;
+import org.mitallast.queue.rest.action.queue.delete.RestDeleteAction;
 import org.mitallast.queue.rest.action.queue.dequeue.RestDeQueueAction;
 import org.mitallast.queue.rest.action.queue.enqueue.RestEnQueueAction;
 import org.mitallast.queue.rest.action.queue.peek.RestPeekQueueAction;
@@ -16,6 +17,8 @@ public class RestModule extends AbstractModule {
         bind(RestDeQueueAction.class).asEagerSingleton();
         bind(RestEnQueueAction.class).asEagerSingleton();
         bind(RestPeekQueueAction.class).asEagerSingleton();
+        bind(RestDeleteAction.class).asEagerSingleton();
+
         bind(RestQueueStatsAction.class).asEagerSingleton();
 
         bind(RestCreateQueueAction.class).asEagerSingleton();

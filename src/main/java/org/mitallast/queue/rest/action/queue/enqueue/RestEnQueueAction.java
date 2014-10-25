@@ -19,6 +19,7 @@ import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.response.HeaderRestResponse;
+import org.mitallast.queue.rest.response.StringRestResponse;
 import org.mitallast.queue.rest.support.Headers;
 
 import java.io.IOException;
@@ -98,7 +99,11 @@ public class RestEnQueueAction extends BaseRestHandler {
 
             @Override
             public void onFailure(Throwable e) {
-                session.sendResponse(e);
+                if (e instanceof QueueMessageUuidDuplicateException) {
+                    session.sendResponse(new StringRestResponse(HttpResponseStatus.CONFLICT, "Message already exists"));
+                } else {
+                    session.sendResponse(e);
+                }
             }
         });
     }

@@ -95,7 +95,6 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
 
     @Override
     public QueueMessage<String> peek() {
-        lock.lock();
         try (DBIterator iterator = levelDb.iterator(readOptions)) {
             iterator.seekToFirst();
             if (!iterator.hasNext()) {
@@ -105,9 +104,12 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             return new QueueMessage<>(new String(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
-        } finally {
-            lock.unlock();
         }
+    }
+
+    @Override
+    public void delete(UUID uuid) {
+        levelDb.delete(toBytes(uuid), writeOptions);
     }
 
     @Override

@@ -4,6 +4,8 @@ import org.mitallast.queue.queue.QueueComponent;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queues.stats.QueueStats;
 
+import java.util.UUID;
+
 public interface QueueService<Message> extends QueueComponent {
 
     void enqueue(QueueMessage<Message> message);
@@ -11,6 +13,8 @@ public interface QueueService<Message> extends QueueComponent {
     QueueMessage<Message> dequeue();
 
     QueueMessage<Message> peek();
+
+    void delete(UUID uuid);
 
     long size();
 

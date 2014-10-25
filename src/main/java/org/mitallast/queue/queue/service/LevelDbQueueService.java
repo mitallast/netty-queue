@@ -47,6 +47,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         if (!workDir.endsWith(File.separator)) {
             workDir += File.separator;
         }
+        workDir += queue.getName() + File.separator;
         levelDbDir = workDir + LEVEL_DB_DIR;
     }
 
@@ -149,7 +150,13 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         lock.lock();
         try {
             try {
-                levelDb = JniDBFactory.factory.open(new File(levelDbDir), options);
+                File levelDbDirFile = new File(levelDbDir);
+                if(!levelDbDirFile.exists()){
+                    if(!levelDbDirFile.mkdirs()){
+                        throw new IOException("Error create "+levelDbDirFile);
+                    }
+                }
+                levelDb = JniDBFactory.factory.open(levelDbDirFile, options);
             } catch (IOException e) {
                 throw new QueueRuntimeException(e);
             }

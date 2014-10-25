@@ -16,7 +16,7 @@ import org.slf4j.LoggerFactory;
 
 public class InternalNode implements Node {
 
-    private final static Logger logger = LoggerFactory.getLogger(Node.class);
+    private final static Logger logger = LoggerFactory.getLogger(InternalNode.class);
 
     private final Lifecycle lifecycle = new Lifecycle();
 
@@ -30,7 +30,7 @@ public class InternalNode implements Node {
         logger.info("initializing...");
 
         ModulesBuilder modules = new ModulesBuilder();
-        modules.add(new QueuesModule(this.settings));
+        modules.add(new QueuesModule(settings));
         modules.add(new ActionModule());
         modules.add(new ClientModule());
         modules.add(new RestModule());

@@ -2,7 +2,9 @@ package org.mitallast.queue.common.path;
 
 import org.mitallast.queue.common.Strings;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PathTrie<TrieType> {
@@ -50,7 +52,7 @@ public class PathTrie<TrieType> {
         return retrieve(path, null);
     }
 
-    public TrieType retrieve(String path, Map<String, String> params) {
+    public TrieType retrieve(String path, Map<String, List<String>> params) {
         if (path.length() == 0) {
             return rootValue;
         }
@@ -123,9 +125,9 @@ public class PathTrie<TrieType> {
             TrieNode<NodeType> node = children.get(key);
             if (node == null) {
                 if (index == (path.length - 1)) {
-                    node = new TrieNode<NodeType>(token, value, this, wildcard);
+                    node = new TrieNode<>(token, value, this, wildcard);
                 } else {
-                    node = new TrieNode<NodeType>(token, null, this, wildcard);
+                    node = new TrieNode<>(token, null, this, wildcard);
                 }
                 children.put(key, node);
             } else {
@@ -158,7 +160,7 @@ public class PathTrie<TrieType> {
             return namedWildcard != null;
         }
 
-        public NodeType retrieve(String[] path, int index, Map<String, String> params) {
+        public NodeType retrieve(String[] path, int index, Map<String, List<String>> params) {
             if (index >= path.length) {
                 return null;
             }
@@ -194,9 +196,14 @@ public class PathTrie<TrieType> {
             return res;
         }
 
-        private void put(Map<String, String> params, TrieNode<NodeType> node, String value) {
+        private void put(Map<String, List<String>> params, TrieNode<NodeType> node, String value) {
             if (params != null && node.isNamedWildcard()) {
-                params.put(node.namedWildcard(), decoder.decode(value));
+                List<String> list = params.get(node.namedWildcard());
+                if(list == null){
+                    list = new ArrayList<>(1);
+                    params.put(node.namedWildcard(), list);
+                }
+                list.add(decoder.decode(value));
             }
         }
     }

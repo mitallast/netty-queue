@@ -8,9 +8,8 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.mitallast.queue.rest.RestRequest;
 
 import java.io.InputStream;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +24,7 @@ public class TransportRequest implements RestRequest {
     private HttpMethod httpMethod;
     private HttpHeaders httpHeaders;
 
-    private Map<String, String> paramMap;
+    private Map<String, List<String>> paramMap;
     private String queryPath;
 
     public TransportRequest(FullHttpRequest request) {
@@ -36,78 +35,95 @@ public class TransportRequest implements RestRequest {
         determineEffectiveHttpMethod();
     }
 
-    public FullHttpRequest getHttpRequest() {
-        return httpRequest;
-    }
-
+    @Override
     public HttpMethod getHttpMethod() {
         return httpMethod;
     }
 
-    public Map<String, String> getParamMap() {
+    @Override
+    public Map<String, List<String>> getParamMap() {
         return paramMap;
     }
 
+    @Override
     public String param(String param) {
-        return paramMap.get(param);
+        List<String> params = paramMap.get(param);
+        return (params == null || params.isEmpty())
+            ? null
+            : params.get(0);
     }
 
+    @Override
     public boolean hasParam(String param) {
         return paramMap.containsKey(param);
     }
 
+    @Override
     public HttpHeaders getHttpHeaders() {
         return httpHeaders;
     }
 
+    @Override
     public boolean isMethodGet() {
         return httpMethod.equals(HttpMethod.GET);
     }
 
+    @Override
     public boolean isMethodDelete() {
         return httpMethod.equals(HttpMethod.DELETE);
     }
 
+    @Override
     public boolean isMethodPost() {
         return httpMethod.equals(HttpMethod.POST);
     }
 
+    @Override
     public boolean isMethodPut() {
         return httpMethod.equals(HttpMethod.PUT);
     }
 
+    @Override
     public boolean isMethodHead() {
         return httpMethod.equals(HttpMethod.HEAD);
     }
 
+    @Override
     public boolean isMethodOptions() {
         return httpMethod.equals(HttpMethod.OPTIONS);
     }
 
+    @Override
     public InputStream getInputStream() {
         return new ByteBufInputStream(httpRequest.content());
     }
 
+    @Override
     public String getBody() {
         return httpRequest.content().toString(charset);
     }
 
+    @Override
     public String getProtocol() {
         return DEFAULT_PROTOCOL;
     }
 
+    @Override
     public String getHost() {
         return httpHeaders.get(HttpHeaders.Names.HOST);
     }
 
+    @Override
     public String getQueryPath() {
         return queryPath;
     }
 
+    @Override
     public String getBaseUrl() {
         return getProtocol() + "://" + getHost();
     }
 
+    @Override
     public String getUrl() {
         return getBaseUrl() + getQueryPath();
     }
@@ -125,33 +141,16 @@ public class TransportRequest implements RestRequest {
     }
 
     private void parseQueryString() {
+
         String uri = httpRequest.getUri();
         if (!uri.contains("?")) {
-            paramMap = new HashMap<>();
+            paramMap = Collections.emptyMap();
             queryPath = uri;
             return;
         }
 
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
-        Map<String, List<String>> parameters = decoder.parameters();
         queryPath = decoder.path();
-
-        if (parameters == null || parameters.isEmpty()) {
-            return;
-        }
-
-        paramMap = new HashMap<>(parameters.size());
-
-        for (Map.Entry<String, List<String>> entry : parameters.entrySet()) {
-            paramMap.put(entry.getKey(), entry.getValue().get(0));
-
-            for (String value : entry.getValue()) {
-                try {
-                    httpHeaders.add(entry.getKey(), URLDecoder.decode(value, ENCODING));
-                } catch (Exception e) {
-                    httpHeaders.add(entry.getKey(), value);
-                }
-            }
-        }
+        paramMap = decoder.parameters();
     }
 }

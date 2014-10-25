@@ -5,6 +5,7 @@ import io.netty.handler.codec.http.HttpMethod;
 
 import java.io.InputStream;
 import java.util.Map;
+import java.util.List;
 
 public interface RestRequest {
     HttpMethod getHttpMethod();
@@ -33,7 +34,7 @@ public interface RestRequest {
 
     String getUrl();
 
-    Map<String, String> getParamMap();
+    Map<String, List<String>> getParamMap();
 
     String param(String param);
 

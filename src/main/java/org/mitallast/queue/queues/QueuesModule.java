@@ -14,6 +14,7 @@ public class QueuesModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(Settings.class).toInstance(settings);
-        bind(QueuesService.class).to(InternalQueuesService.class).asEagerSingleton();
+        bind(QueuesService.class).to(InternalQueuesService.class);
+        bind(InternalQueuesService.class).asEagerSingleton();
     }
 }

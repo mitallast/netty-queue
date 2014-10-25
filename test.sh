@@ -98,17 +98,17 @@ echo
 
 echo my_queue enqueue uid custom_uid
 echo
-curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uid":"custom_uid","message":"Hello world custom_uid"}'
+curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
 echo
 echo
 
 echo my_queue enqueue uid custom_uid fail
 echo
-curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uid":"custom_uid","message":"Hello world custom_uid"}'
+curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
 echo
 echo
 
-ab -n100000 -c100 -k -p message.json 'localhost:8080/my_queue/message'
+#ab -n100000 -c100 -k -p message.json 'localhost:8080/my_queue/message'
 #ab -n100000 -c100 -k -r 'localhost:8080/
 
 echo delete queue

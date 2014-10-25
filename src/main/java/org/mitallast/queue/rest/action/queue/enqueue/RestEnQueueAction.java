@@ -93,7 +93,7 @@ public class RestEnQueueAction extends BaseRestHandler {
 
             @Override
             public void onResponse(EnQueueResponse response) {
-                session.sendResponse(new HeaderRestResponse(HttpResponseStatus.CREATED, Headers.MESSAGE_INDEX, response.getIndex()));
+                session.sendResponse(new HeaderRestResponse(HttpResponseStatus.CREATED, Headers.MESSAGE_INDEX, response.getUUID()));
             }
 
             @Override

@@ -38,7 +38,7 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
         if (!queueService.isSupported(request.getMessage())) {
             listener.onFailure(new QueueTypeMismatch());
         }
-        long index = queueService.enqueue(request.getMessage());
-        listener.onResponse(new EnQueueResponse(index));
+        queueService.enqueue(request.getMessage());
+        listener.onResponse(new EnQueueResponse(request.getMessage().getUid()));
     }
 }

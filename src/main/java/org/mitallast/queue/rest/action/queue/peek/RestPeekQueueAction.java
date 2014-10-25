@@ -44,7 +44,7 @@ public class RestPeekQueueAction extends BaseRestHandler {
                     JsonGenerator generator = getGenerator(request, stream);
                     generator.writeStartObject();
                     if (deQueueResponse.getMessage().getUid() != null) {
-                        generator.writeStringField("uid", deQueueResponse.getMessage().getUid());
+                        generator.writeStringField("uid", deQueueResponse.getMessage().getUid().toString());
                     }
                     generator.writeFieldName("message");
                     generator.writeObject(deQueueResponse.getMessage().getMessage());

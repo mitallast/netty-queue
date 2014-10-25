@@ -1,4 +1,4 @@
-package org.mitallast.queue.common.bigqueue;
+package org.mitallast.queue.common;
 
 import java.io.File;
 import java.io.IOException;

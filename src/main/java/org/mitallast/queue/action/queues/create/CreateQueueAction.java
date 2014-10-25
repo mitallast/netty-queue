@@ -24,7 +24,7 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
             listener.onFailure(validationException);
             return;
         }
-        queuesService.createQueue(request.getQueue(), request.getType(), request.getSettings());
+        queuesService.createQueue(request.getQueue(), request.getSettings());
         listener.onResponse(new CreateQueueResponse(true));
     }
 }

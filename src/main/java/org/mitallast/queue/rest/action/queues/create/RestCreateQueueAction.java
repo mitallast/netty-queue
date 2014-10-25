@@ -9,7 +9,6 @@ import org.mitallast.queue.action.queues.create.CreateQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.QueueType;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -29,10 +28,6 @@ public class RestCreateQueueAction extends BaseRestHandler {
     public void handleRequest(RestRequest request, final RestSession session) {
         CreateQueueRequest createQueueRequest = new CreateQueueRequest(request.param("queue"));
         createQueueRequest.setSettings(ImmutableSettings.EMPTY);
-
-        if (request.param("type") != null) {
-            createQueueRequest.setType(QueueType.valueOf(request.param("type").toUpperCase()));
-        }
 
         client.queues().createQueue(createQueueRequest, new ActionListener<CreateQueueResponse>() {
             @Override

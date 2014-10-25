@@ -4,9 +4,12 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.*;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.QueueRuntimeException;
-import org.mitallast.queue.common.bigqueue.Files;
+import org.mitallast.queue.common.Files;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.*;
+import org.mitallast.queue.queue.AbstractQueueComponent;
+import org.mitallast.queue.queue.Queue;
+import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queue.QueueMessageUidDuplicateException;
 import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.File;
@@ -21,24 +24,9 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     private final Options options = new Options();
     private final WriteOptions writeOptions = new WriteOptions();
     private final ReadOptions readOptions = new ReadOptions();
-
-    {
-        options.createIfMissing(true);
-        options.maxOpenFiles(4096);
-        options.blockSize(65536);
-        options.verifyChecksums(false);
-        options.paranoidChecks(false);
-
-        writeOptions.snapshot(false);
-        writeOptions.sync(false);
-
-        readOptions.fillCache(true);
-        readOptions.verifyChecksums(false);
-    }
-
     private final ReentrantLock lock = new ReentrantLock();
     private String workDir;
-    private String levelDbDir;
+    private final String levelDbDir;
     private DB levelDb;
 
     public LevelDbQueueService(Settings settings, Settings queueSettings, Queue queue) {
@@ -49,20 +37,31 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         }
         workDir += queue.getName() + File.separator;
         levelDbDir = workDir + LEVEL_DB_DIR;
+
+        options.createIfMissing(true);
+        options.maxOpenFiles(4096);
+        options.blockSize(65536);
+        options.verifyChecksums(false);
+        options.paranoidChecks(false);
+
+        writeOptions.snapshot(false);
+        writeOptions.sync(false);
+
+        readOptions.fillCache(false);
+        readOptions.verifyChecksums(false);
     }
 
     @Override
-    public long enqueue(QueueMessage<String> message) {
+    public void enqueue(QueueMessage<String> message) {
         if (message.getUid() == null) {
             // write without lock
-            message.setUid(UUID.randomUUID().toString());
-            byte[] uid = message.getUid().getBytes();
+            message.setUid(UUID.randomUUID());
+            byte[] uid = toBytes(message.getUid());
             byte[] msg = message.getMessage().getBytes();
             levelDb.put(uid, msg, writeOptions);
-            return 0;
         } else {
             // write with lock
-            byte[] uid = message.getUid().getBytes();
+            byte[] uid = toBytes(message.getUid());
             byte[] msg = message.getMessage().getBytes();
             lock.lock();
             try {
@@ -70,7 +69,6 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
                     throw new QueueMessageUidDuplicateException(message.getUid());
                 }
                 levelDb.put(uid, msg, writeOptions);
-                return 0;
             } finally {
                 lock.unlock();
             }
@@ -80,15 +78,14 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     @Override
     public QueueMessage<String> dequeue() {
         lock.lock();
-        try {
-            try (DBIterator iterator = levelDb.iterator(readOptions)) {
-                if (!iterator.hasNext()) {
-                    return null;
-                }
-                Map.Entry<byte[], byte[]> entry = iterator.next();
-                levelDb.delete(entry.getKey(), writeOptions);
-                return new QueueMessage<>(new String(entry.getValue()), new String(entry.getKey()));
+        try (DBIterator iterator = levelDb.iterator(readOptions)) {
+            iterator.seekToFirst();
+            if (!iterator.hasNext()) {
+                return null;
             }
+            Map.Entry<byte[], byte[]> entry = iterator.next();
+            levelDb.delete(entry.getKey(), writeOptions);
+            return new QueueMessage<>(new String(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         } finally {
@@ -99,14 +96,13 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     @Override
     public QueueMessage<String> peek() {
         lock.lock();
-        try {
-            try (DBIterator iterator = levelDb.iterator(readOptions)) {
-                if (!iterator.hasNext()) {
-                    return null;
-                }
-                Map.Entry<byte[], byte[]> entry = iterator.next();
-                return new QueueMessage<>(new String(entry.getValue()), new String(entry.getKey()));
+        try (DBIterator iterator = levelDb.iterator(readOptions)) {
+            iterator.seekToFirst();
+            if (!iterator.hasNext()) {
+                return null;
             }
+            Map.Entry<byte[], byte[]> entry = iterator.next();
+            return new QueueMessage<>(new String(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         } finally {
@@ -120,18 +116,13 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     }
 
     @Override
-    public QueueType type() {
-        return QueueType.LEVEL_DB;
-    }
-
-    @Override
     public void removeQueue() {
         lock.lock();
         try {
             logger.info("close queue");
             close();
             logger.info("delete directory");
-            Files.deleteDirectory(new File(levelDbDir));
+            Files.deleteDirectory(new File(workDir));
             logger.info("directory deleted");
         } catch (Throwable e) {
             throw new QueueRuntimeException(e);
@@ -156,6 +147,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
                         throw new IOException("Error create " + levelDbDirFile);
                     }
                 }
+                logger.info("start level db queue at [{}]", levelDbDirFile);
                 levelDb = JniDBFactory.factory.open(levelDbDirFile, options);
             } catch (IOException e) {
                 throw new QueueRuntimeException(e);
@@ -188,5 +180,34 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         stats.setQueue(queue);
         stats.setSize(size());
         return stats;
+    }
+
+    public static UUID toUUID(byte[] bytes) {
+        return new UUID(toLong(bytes, 0), toLong(bytes, 8));
+    }
+
+    public static byte[] toBytes(UUID uuid) {
+        byte[] bytes = new byte[16];
+        toBytes(bytes, 0, uuid.getMostSignificantBits());
+        toBytes(bytes, 8, uuid.getLeastSignificantBits());
+        return bytes;
+    }
+
+    public static long toLong(byte[] bytes, int start) {
+        return (bytes[start] & 0xFFL) << 56
+            | (bytes[start + 1] & 0xFFL) << 48
+            | (bytes[start + 2] & 0xFFL) << 40
+            | (bytes[start + 3] & 0xFFL) << 32
+            | (bytes[start + 4] & 0xFFL) << 24
+            | (bytes[start + 5] & 0xFFL) << 16
+            | (bytes[start + 6] & 0xFFL) << 8
+            | (bytes[start + 7] & 0xFFL);
+    }
+
+    public static void toBytes(byte[] bytes, int start, long value) {
+        for (int i = 7 + start; i >= start; i--) {
+            bytes[i] = (byte) (value & 0xffL);
+            value >>= 8;
+        }
     }
 }

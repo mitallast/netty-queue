@@ -2,19 +2,17 @@ package org.mitallast.queue.action.queue.enqueue;
 
 import org.mitallast.queue.action.ActionResponse;
 
+import java.util.UUID;
+
 public class EnQueueResponse extends ActionResponse {
 
-    private long index;
+    private final UUID uuid;
 
-    public EnQueueResponse(long index) {
-        this.index = index;
+    public EnQueueResponse(UUID uuid) {
+        this.uuid = uuid;
     }
 
-    public long getIndex() {
-        return index;
-    }
-
-    public void setIndex(long index) {
-        this.index = index;
+    public UUID getUUID() {
+        return uuid;
     }
 }

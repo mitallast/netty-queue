@@ -10,8 +10,6 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
-import org.mitallast.queue.queue.QueueType;
-import org.mitallast.queue.queue.service.BigQueueService;
 import org.mitallast.queue.queue.service.LevelDbQueueService;
 import org.mitallast.queue.queue.service.QueueService;
 import org.mitallast.queue.queues.stats.QueueStats;
@@ -80,24 +78,14 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
     }
 
     @Override
-    public synchronized QueueService createQueue(String name, QueueType type, Settings queueSettings) {
-        logger.info("create queue {}[{}], {}", name, type, queueSettings);
+    public synchronized QueueService createQueue(String name, Settings queueSettings) {
+        logger.info("create queue {}, {}", name, queueSettings);
         Queue queue = new Queue(name);
         if (queues.containsKey(queue.getName())) {
             throw new QueueAlreadyExistsException(queue.getName());
         }
 
-        final QueueService queueService;
-        switch (type) {
-            case BIG_QUEUE:
-                queueService = new BigQueueService(settings, queueSettings, queue);
-                break;
-            case LEVEL_DB:
-                queueService = new LevelDbQueueService(settings, queueSettings, queue);
-                break;
-            default:
-                throw new QueueMissingException("Queue type missing");
-        }
+        final QueueService queueService = new LevelDbQueueService(settings, queueSettings, queue);
 
         queueService.start();
         queues.put(queueService.queue().getName(), queueService);
@@ -153,7 +141,6 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
                 while ((token = parser.nextToken()) != JsonToken.END_ARRAY) {
                     assertEquals(JsonToken.START_OBJECT, token);
                     String queue = null;
-                    QueueType queueType = null;
                     ImmutableSettings.Builder builder = ImmutableSettings.builder();
                     while ((token = parser.nextToken()) != JsonToken.END_OBJECT) {
                         assertEquals(JsonToken.FIELD_NAME, token);
@@ -161,10 +148,6 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
                             case "queue":
                                 assertEquals(JsonToken.VALUE_STRING, parser.nextToken());
                                 queue = parser.getText();
-                                break;
-                            case "type":
-                                assertEquals(JsonToken.VALUE_STRING, parser.nextToken());
-                                queueType = QueueType.valueOf(parser.getText());
                                 break;
                             case "settings":
                                 assertEquals(JsonToken.START_OBJECT, parser.nextToken());
@@ -183,10 +166,7 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
                     if (queue == null) {
                         throw new QueueException("Queue name cannot be null");
                     }
-                    if (queueType == null) {
-                        throw new QueueException("Queue type cannot be null");
-                    }
-                    createQueue(queue, queueType, builder.build());
+                    createQueue(queue, builder.build());
                 }
                 assertEquals(JsonToken.END_OBJECT, parser.nextToken());
                 parser.close();
@@ -218,15 +198,12 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
             for (QueueService queueService : queues.values()) {
                 generator.writeStartObject();
                 generator.writeStringField("queue", queueService.queue().getName());
-                generator.writeStringField("type", queueService.type().toString());
-
                 generator.writeFieldName("settings");
                 generator.writeStartObject();
                 for (Map.Entry<String, String> settingsEntry : queueService.queueSettings().getAsMap().entrySet()) {
                     generator.writeStringField(settingsEntry.getKey(), settingsEntry.getValue());
                 }
                 generator.writeEndObject();
-
                 generator.writeEndObject();
             }
             generator.writeEndArray();

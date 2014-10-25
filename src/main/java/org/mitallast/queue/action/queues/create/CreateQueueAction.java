@@ -25,6 +25,6 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
             return;
         }
         queuesService.createQueue(request.getQueue(), request.getSettings());
-        listener.onResponse(new CreateQueueResponse(true));
+        listener.onResponse(new CreateQueueResponse());
     }
 }

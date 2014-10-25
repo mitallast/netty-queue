@@ -25,6 +25,6 @@ public class RemoveQueueAction extends AbstractAction<RemoveQueueRequest, Remove
             return;
         }
         queuesService.deleteQueue(request.getQueue(), request.getReason());
-        listener.onResponse(new RemoveQueueResponse(true));
+        listener.onResponse(new RemoveQueueResponse());
     }
 }

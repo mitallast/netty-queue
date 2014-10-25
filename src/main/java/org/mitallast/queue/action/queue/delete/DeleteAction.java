@@ -31,6 +31,6 @@ public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> 
         }
         QueueService queueService = queuesService.queue(request.getQueue());
         queueService.delete(request.getUuid());
-        listener.onResponse(new DeleteResponse(true));
+        listener.onResponse(new DeleteResponse());
     }
 }

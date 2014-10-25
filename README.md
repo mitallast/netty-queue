@@ -40,9 +40,14 @@ enqueue message
 
     curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
 
-enqueue with uuid custom_uuid message 
+enqueue with uuid message 
 
-    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"custom_uid","message":"Hello world custom_uid"}'
+    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
+
+delete with uuid
+
+    curl -i -s -XDELETE 'localhost:8080/my_queue/message?uuid=a57586b7-3eed-4c7c-b257-8bf9021fffbd&pretty'
+    curl -i -s -XDELETE 'localhost:8080/my_queue/message/a57586b7-3eed-4c7c-b257-8bf9021fffbd?pretty'
 
 peek message
 

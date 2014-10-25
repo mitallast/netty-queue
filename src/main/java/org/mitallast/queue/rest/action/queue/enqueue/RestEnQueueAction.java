@@ -18,9 +18,7 @@ import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
-import org.mitallast.queue.rest.response.HeaderRestResponse;
 import org.mitallast.queue.rest.response.StringRestResponse;
-import org.mitallast.queue.rest.support.Headers;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -94,7 +92,7 @@ public class RestEnQueueAction extends BaseRestHandler {
 
             @Override
             public void onResponse(EnQueueResponse response) {
-                session.sendResponse(new HeaderRestResponse(HttpResponseStatus.CREATED, Headers.MESSAGE_INDEX, response.getUUID()));
+                session.sendResponse(new StringRestResponse(HttpResponseStatus.CREATED, response.getUUID().toString()));
             }
 
             @Override

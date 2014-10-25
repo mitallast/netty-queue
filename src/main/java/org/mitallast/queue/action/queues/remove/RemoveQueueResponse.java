@@ -1,13 +1,6 @@
 package org.mitallast.queue.action.queues.remove;
 
-import org.mitallast.queue.action.support.AcknowledgedResponse;
+import org.mitallast.queue.action.ActionResponse;
 
-public class RemoveQueueResponse extends AcknowledgedResponse {
-
-    public RemoveQueueResponse() {
-    }
-
-    public RemoveQueueResponse(boolean acknowledged) {
-        super(acknowledged);
-    }
+public class RemoveQueueResponse extends ActionResponse {
 }

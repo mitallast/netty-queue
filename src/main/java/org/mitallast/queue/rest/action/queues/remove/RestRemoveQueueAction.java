@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.action.queues.remove;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -13,10 +12,7 @@ import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
-import org.mitallast.queue.rest.response.JsonRestResponse;
-
-import java.io.IOException;
-import java.io.OutputStream;
+import org.mitallast.queue.rest.response.StatusRestResponse;
 
 public class RestRemoveQueueAction extends BaseRestHandler {
 
@@ -35,18 +31,7 @@ public class RestRemoveQueueAction extends BaseRestHandler {
         client.queues().removeQueue(removeQueueRequest, new ActionListener<RemoveQueueResponse>() {
             @Override
             public void onResponse(RemoveQueueResponse response) {
-                JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-                try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = getGenerator(request, stream);
-                    generator.writeStartObject();
-                    generator.writeFieldName("acknowledged");
-                    generator.writeBoolean(response.isAcknowledged());
-                    generator.writeEndObject();
-                    generator.close();
-                    session.sendResponse(restResponse);
-                } catch (IOException e) {
-                    session.sendResponse(e);
-                }
+                session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));
             }
 
             @Override

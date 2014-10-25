@@ -17,6 +17,7 @@ public class StringRestResponse extends TransportResponse {
 
     public StringRestResponse(HttpResponseStatus status, String message) {
         setResponseStatus(status);
+        getHeaders().set(HttpHeaders.Names.CONTENT_TYPE, "text/plain");
         try {
             try (OutputStream stream = getOutputStream()) {
                 stream.write(message.getBytes());

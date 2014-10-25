@@ -29,6 +29,7 @@ public class RestEnQueueAction extends BaseRestHandler {
     public RestEnQueueAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
         controller.registerHandler(HttpMethod.POST, "/{queue}/message", this);
+        controller.registerHandler(HttpMethod.PUT, "/{queue}/message", this);
     }
 
     private static void parse(EnQueueRequest<String> request, InputStream inputStream) throws IOException {

@@ -60,7 +60,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             byte[] msg = message.getMessage().getBytes();
             levelDb.put(uid, msg, writeOptions);
             return 0;
-        }else {
+        } else {
             // write with lock
             byte[] uid = message.getUid().getBytes();
             byte[] msg = message.getMessage().getBytes();
@@ -121,7 +121,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
 
     @Override
     public QueueType type() {
-        return QueueType.BIG_QUEUE;
+        return QueueType.LEVEL_DB;
     }
 
     @Override
@@ -151,9 +151,9 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         try {
             try {
                 File levelDbDirFile = new File(levelDbDir);
-                if(!levelDbDirFile.exists()){
-                    if(!levelDbDirFile.mkdirs()){
-                        throw new IOException("Error create "+levelDbDirFile);
+                if (!levelDbDirFile.exists()) {
+                    if (!levelDbDirFile.mkdirs()) {
+                        throw new IOException("Error create " + levelDbDirFile);
                     }
                 }
                 levelDb = JniDBFactory.factory.open(levelDbDirFile, options);

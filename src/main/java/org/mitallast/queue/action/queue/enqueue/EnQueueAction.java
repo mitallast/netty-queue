@@ -5,6 +5,7 @@ import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.queue.QueueTypeMismatch;
 import org.mitallast.queue.queue.service.QueueService;
 import org.mitallast.queue.queues.QueueMissingException;
@@ -30,15 +31,22 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
         }
         if (!queuesService.hasQueue(request.getQueue())) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
+            return;
         }
         QueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
-            throw new QueueMissingException(request.getQueue());
+            listener.onFailure(new QueueMissingException(request.getQueue()));
+            return;
         }
         if (!queueService.isSupported(request.getMessage())) {
             listener.onFailure(new QueueTypeMismatch());
+            return;
         }
-        queueService.enqueue(request.getMessage());
-        listener.onResponse(new EnQueueResponse(request.getMessage().getUuid()));
+        try {
+            queueService.enqueue(request.getMessage());
+            listener.onResponse(new EnQueueResponse(request.getMessage().getUuid()));
+        } catch (QueueMessageUuidDuplicateException e) {
+            listener.onFailure(e);
+        }
     }
 }

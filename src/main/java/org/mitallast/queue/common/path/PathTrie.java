@@ -100,18 +100,6 @@ public class PathTrie<TrieType> {
             namedWildcard = key.substring(key.indexOf('{') + 1, key.indexOf('}'));
         }
 
-        public boolean isWildcard() {
-            return isWildcard;
-        }
-
-        public synchronized void addChild(TrieNode<NodeType> child) {
-            children.put(child.key, child);
-        }
-
-        public TrieNode getChild(String key) {
-            return children.get(key);
-        }
-
         public synchronized void insert(String[] path, int index, NodeType value) {
             if (index >= path.length) {
                 return;

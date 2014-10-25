@@ -13,20 +13,15 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.rest.RestResponse;
 import org.mitallast.queue.rest.RestSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.*;
+import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class TransportSession implements RestSession {
-
-    private static final Logger logger = LoggerFactory.getLogger(TransportSession.class);
-
-    private static final String keepAliveValue = HttpHeaders.Values.KEEP_ALIVE.toString();
 
     private final ChannelHandlerContext ctx;
     private final FullHttpRequest httpRequest;
@@ -38,7 +33,7 @@ public class TransportSession implements RestSession {
 
     private static boolean isKeepAlive(FullHttpRequest request) {
         String headerValue = request.headers().get(HttpHeaders.Names.CONNECTION);
-        return keepAliveValue.equalsIgnoreCase(headerValue);
+        return KEEP_ALIVE.equalsIgnoreCase(headerValue);
     }
 
     @Override
@@ -74,7 +69,7 @@ public class TransportSession implements RestSession {
         boolean isKeepAlive = isKeepAlive(httpRequest);
         if (isKeepAlive) {
             httpResponse.headers().set(CONTENT_LENGTH, httpResponse.content().readableBytes());
-            httpResponse.headers().set(CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+            httpResponse.headers().set(CONNECTION, KEEP_ALIVE);
         } else {
             httpResponse.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
         }

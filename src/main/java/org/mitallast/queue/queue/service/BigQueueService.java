@@ -4,7 +4,7 @@ import org.mitallast.queue.QueueException;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.common.bigqueue.BigQueueImpl;
 import org.mitallast.queue.common.bigqueue.IBigQueue;
-import org.mitallast.queue.common.bigqueue.utils.FileUtil;
+import org.mitallast.queue.common.bigqueue.Files;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.AbstractQueueComponent;
 import org.mitallast.queue.queue.Queue;
@@ -15,7 +15,7 @@ import org.mitallast.queue.queues.stats.QueueStats;
 import java.io.File;
 import java.io.IOException;
 
-public class StringQueueService extends AbstractQueueComponent implements QueueService<String> {
+public class BigQueueService extends AbstractQueueComponent implements QueueService<String> {
 
     private final static String BIG_QUEUE_DIR = "big_queue";
 
@@ -24,7 +24,7 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
 
     private IBigQueue bigQueue;
 
-    public StringQueueService(Settings settings, Settings queueSettings, Queue queue) {
+    public BigQueueService(Settings settings, Settings queueSettings, Queue queue) {
         super(settings, queueSettings, queue);
         workDir = this.settings.get("work_dir");
         if (!workDir.endsWith(File.separator)) {
@@ -77,7 +77,7 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
 
     @Override
     public QueueType type() {
-        return QueueType.STRING;
+        return QueueType.BIG_QUEUE;
     }
 
     @Override
@@ -86,7 +86,7 @@ public class StringQueueService extends AbstractQueueComponent implements QueueS
             logger.info("close queue");
             close();
             logger.info("delete directory");
-            FileUtil.deleteDirectory(new File(queueDir));
+            Files.deleteDirectory(new File(queueDir));
             logger.info("directory deleted");
         } catch (Throwable e) {
             throw new QueueRuntimeException(e);

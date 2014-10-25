@@ -10,6 +10,7 @@ import org.mitallast.queue.rest.RestRequest;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -144,7 +145,7 @@ public class TransportRequest implements RestRequest {
 
         String uri = httpRequest.getUri();
         if (!uri.contains("?")) {
-            paramMap = Collections.emptyMap();
+            paramMap = new HashMap<>();
             queryPath = uri;
             return;
         }
@@ -152,5 +153,8 @@ public class TransportRequest implements RestRequest {
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         queryPath = decoder.path();
         paramMap = decoder.parameters();
+        if(paramMap == Collections.<String, List<String>>emptyMap()){
+            paramMap = new HashMap<>();
+        }
     }
 }

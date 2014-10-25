@@ -4,7 +4,6 @@ import org.mitallast.queue.common.bigqueue.page.IMappedPage;
 import org.mitallast.queue.common.bigqueue.page.IMappedPageFactory;
 import org.mitallast.queue.common.bigqueue.page.MappedPageFactoryImpl;
 import org.mitallast.queue.common.bigqueue.utils.Calculator;
-import org.mitallast.queue.common.bigqueue.utils.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -123,7 +122,7 @@ public class BigArrayImpl implements IBigArray {
         arrayDirectory = arrayDirectory + arrayName + File.separator;
 
         // validate directory
-        if (!FileUtil.isFilenameValid(arrayDirectory)) {
+        if (!Files.isFilenameValid(arrayDirectory)) {
             throw new IllegalArgumentException("invalid array directory : " + arrayDirectory);
         }
 

@@ -9,7 +9,7 @@ Goals:
  - Netty for fastest TCP/IP and HTTP server realization
  - Level DB as storage engine for amazing performance
 
-As result, one instance allows send up to 50000 messages-at-request per second in concurrent mode! 
+As result, one instance allows send up to 60000 messages-at-request per second in concurrent mode! 
 See benchmark for more details.
 
 How to run

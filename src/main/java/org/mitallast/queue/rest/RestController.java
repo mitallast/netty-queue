@@ -3,7 +3,6 @@ package org.mitallast.queue.rest;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.common.settings.Settings;
@@ -32,10 +31,8 @@ public class RestController extends AbstractComponent {
         try {
             executeHandler(request, channel);
         } catch (Throwable e) {
-            logger.error("error handle request", e);
-            e.printStackTrace();
             try {
-                channel.sendResponse(new QueueException(e));
+                channel.sendResponse(e);
             } catch (Throwable ex) {
                 logger.error("error send", e);
                 logger.error("Failed to send failure response for uri [" + request.getUrl() + "]", ex);

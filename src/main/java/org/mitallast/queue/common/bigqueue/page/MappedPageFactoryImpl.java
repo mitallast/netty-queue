@@ -2,7 +2,7 @@ package org.mitallast.queue.common.bigqueue.page;
 
 import org.mitallast.queue.common.bigqueue.cache.ILRUCache;
 import org.mitallast.queue.common.bigqueue.cache.LRUCacheImpl;
-import org.mitallast.queue.common.bigqueue.utils.FileUtil;
+import org.mitallast.queue.common.bigqueue.Files;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -167,7 +167,7 @@ public class MappedPageFactoryImpl implements IMappedPageFactory {
         boolean deleted = false;
         while (count < maxRound) {
             try {
-                FileUtil.deleteFile(new File(fileName));
+                Files.deleteFile(new File(fileName));
                 deleted = true;
                 break;
             } catch (IllegalStateException ex) {

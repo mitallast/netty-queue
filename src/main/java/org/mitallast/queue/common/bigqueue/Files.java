@@ -1,9 +1,9 @@
-package org.mitallast.queue.common.bigqueue.utils;
+package org.mitallast.queue.common.bigqueue;
 
 import java.io.File;
 import java.io.IOException;
 
-public class FileUtil {
+public class Files {
 
     /**
      * Only check if a given filename is valid according to the OS rules.
@@ -14,6 +14,7 @@ public class FileUtil {
      * @param file the name of a file
      * @return true if the file is valid, false otherwise
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static boolean isFilenameValid(String file) {
         File f = new File(file);
         try {
@@ -30,7 +31,7 @@ public class FileUtil {
         }
         File[] subs = dir.listFiles();
         if (subs != null) {
-            for (File f : dir.listFiles()) {
+            for (File f : subs) {
                 if (f.isFile()) {
                     if (!f.delete()) {
                         throw new IllegalStateException("delete file failed: " + f);

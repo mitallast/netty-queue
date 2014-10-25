@@ -27,7 +27,7 @@ Document Path:          /my_queue/message
 Document Length:        0 bytes
 
 Concurrency Level:      100
-Time taken for tests:   2.098 seconds
+Time taken for tests:   1.608 seconds
 Complete requests:      100000
 Failed requests:        0
 Write errors:           0
@@ -35,27 +35,33 @@ Keep-Alive requests:    100000
 Total transferred:      8500000 bytes
 Total body sent:        20600000
 HTML transferred:       0 bytes
-Requests per second:    47661.31 [#/sec] (mean)
-Time per request:       2.098 [ms] (mean)
-Time per request:       0.021 [ms] (mean, across all concurrent requests)
-Transfer rate:          3956.26 [Kbytes/sec] received
-                        9588.11 kb/s sent
-                        13544.38 kb/s total
+Requests per second:    62184.53 [#/sec] (mean)
+Time per request:       1.608 [ms] (mean)
+Time per request:       0.016 [ms] (mean, across all concurrent requests)
+Transfer rate:          5161.80 [Kbytes/sec] received
+                        12509.78 kb/s sent
+                        17671.58 kb/s total
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    2   1.4      2      30
-Waiting:        0    2   1.4      2      30
-Total:          0    2   1.4      2      30
+Processing:     0    2   0.5      1       6
+Waiting:        0    2   0.5      1       6
+Total:          0    2   0.5      1       6
+WARNING: The median and mean for the processing time are not within a normal deviation
+        These results are probably not that reliable.
+WARNING: The median and mean for the waiting time are not within a normal deviation
+        These results are probably not that reliable.
+WARNING: The median and mean for the total time are not within a normal deviation
+        These results are probably not that reliable.
 
 Percentage of the requests served within a certain time (ms)
-  50%      2
+  50%      1
   66%      2
   75%      2
-  80%      3
+  80%      2
   90%      3
-  95%      4
-  98%      5
-  99%      6
- 100%     30 (longest request)
+  95%      3
+  98%      3
+  99%      3
+ 100%      6 (longest request)

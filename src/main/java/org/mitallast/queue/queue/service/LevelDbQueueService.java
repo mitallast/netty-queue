@@ -4,7 +4,7 @@ import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.*;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.QueueRuntimeException;
-import org.mitallast.queue.common.bigqueue.utils.FileUtil;
+import org.mitallast.queue.common.bigqueue.Files;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.*;
 import org.mitallast.queue.queues.stats.QueueStats;
@@ -53,19 +53,26 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     @Override
     public long enqueue(QueueMessage<String> message) {
         if (message.getUid() == null) {
+            // write without lock
             message.setUid(UUID.randomUUID().toString());
-        }
-        byte[] uid = message.getUid().getBytes();
-        byte[] msg = message.getMessage().getBytes();
-        lock.lock();
-        try {
-            if (levelDb.get(uid, readOptions) != null) {
-                throw new QueueMessageUidDuplicateException(message.getUid());
-            }
+            byte[] uid = message.getUid().getBytes();
+            byte[] msg = message.getMessage().getBytes();
             levelDb.put(uid, msg, writeOptions);
             return 0;
-        } finally {
-            lock.unlock();
+        }else {
+            // write with lock
+            byte[] uid = message.getUid().getBytes();
+            byte[] msg = message.getMessage().getBytes();
+            lock.lock();
+            try {
+                if (levelDb.get(uid, readOptions) != null) {
+                    throw new QueueMessageUidDuplicateException(message.getUid());
+                }
+                levelDb.put(uid, msg, writeOptions);
+                return 0;
+            } finally {
+                lock.unlock();
+            }
         }
     }
 
@@ -113,7 +120,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
 
     @Override
     public QueueType type() {
-        return QueueType.STRING;
+        return QueueType.BIG_QUEUE;
     }
 
     @Override
@@ -123,7 +130,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             logger.info("close queue");
             close();
             logger.info("delete directory");
-            FileUtil.deleteDirectory(new File(levelDbDir));
+            Files.deleteDirectory(new File(levelDbDir));
             logger.info("directory deleted");
         } catch (Throwable e) {
             throw new QueueRuntimeException(e);

@@ -13,7 +13,7 @@ import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.QueueMessageUidDuplicateException;
+import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -59,10 +59,10 @@ public class RestEnQueueAction extends BaseRestHandler {
                             throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
                         }
                         break;
-                    case "uid":
+                    case "uuid":
                         token = parser.nextToken();
                         if (token == JsonToken.VALUE_STRING) {
-                            request.getMessage().setUid(parser.getText());
+                            request.getMessage().setUuid(parser.getText());
                         } else {
                             throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
                         }
@@ -84,7 +84,7 @@ public class RestEnQueueAction extends BaseRestHandler {
 
         try (InputStream stream = request.getInputStream()) {
             parse(enQueueRequest, stream);
-        } catch (IOException | QueueMessageUidDuplicateException e) {
+        } catch (IOException | QueueMessageUuidDuplicateException e) {
             session.sendResponse(e);
             return;
         }

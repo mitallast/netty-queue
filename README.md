@@ -40,9 +40,9 @@ enqueue message
 
     curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
 
-enqueue with uid custom_uid message 
+enqueue with uuid custom_uuid message 
 
-    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uid":"custom_uid","message":"Hello world custom_uid"}'
+    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"custom_uid","message":"Hello world custom_uid"}'
 
 peek message
 

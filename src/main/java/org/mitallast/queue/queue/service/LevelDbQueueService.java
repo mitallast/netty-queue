@@ -9,7 +9,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.AbstractQueueComponent;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.QueueMessageUidDuplicateException;
+import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.File;
@@ -53,22 +53,22 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
 
     @Override
     public void enqueue(QueueMessage<String> message) {
-        if (message.getUid() == null) {
+        if (message.getUuid() == null) {
             // write without lock
-            message.setUid(UUID.randomUUID());
-            byte[] uid = toBytes(message.getUid());
+            message.setUuid(UUID.randomUUID());
+            byte[] uuid = toBytes(message.getUuid());
             byte[] msg = message.getMessage().getBytes();
-            levelDb.put(uid, msg, writeOptions);
+            levelDb.put(uuid, msg, writeOptions);
         } else {
             // write with lock
-            byte[] uid = toBytes(message.getUid());
+            byte[] uuid = toBytes(message.getUuid());
             byte[] msg = message.getMessage().getBytes();
             lock.lock();
             try {
-                if (levelDb.get(uid, readOptions) != null) {
-                    throw new QueueMessageUidDuplicateException(message.getUid());
+                if (levelDb.get(uuid, readOptions) != null) {
+                    throw new QueueMessageUuidDuplicateException(message.getUuid());
                 }
-                levelDb.put(uid, msg, writeOptions);
+                levelDb.put(uuid, msg, writeOptions);
             } finally {
                 lock.unlock();
             }

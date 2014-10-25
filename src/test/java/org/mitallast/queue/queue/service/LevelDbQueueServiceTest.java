@@ -8,7 +8,7 @@ import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.QueueMessageUidDuplicateException;
+import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -61,7 +61,7 @@ public class LevelDbQueueServiceTest {
         assert message.equals(peek);
     }
 
-    @Test(expected = QueueMessageUidDuplicateException.class)
+    @Test(expected = QueueMessageUuidDuplicateException.class)
     public void testEnqueueDuplicate() throws IOException {
         QueueMessage<String> message = message();
         levelDbQueueService.enqueue(message);

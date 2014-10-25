@@ -5,9 +5,9 @@ import org.mitallast.queue.QueueException;
 
 import java.util.UUID;
 
-public class QueueMessageUidDuplicateException extends QueueException {
+public class QueueMessageUuidDuplicateException extends QueueException {
 
-    public QueueMessageUidDuplicateException(UUID msg) {
+    public QueueMessageUuidDuplicateException(UUID msg) {
         super(msg.toString());
     }
 

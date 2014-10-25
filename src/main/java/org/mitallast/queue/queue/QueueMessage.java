@@ -3,27 +3,27 @@ package org.mitallast.queue.queue;
 import java.util.UUID;
 
 public class QueueMessage<Message> {
-    public UUID uid;
+    public UUID uuid;
     private Message message;
 
     public QueueMessage() {
     }
 
-    public QueueMessage(Message message, UUID uid) {
+    public QueueMessage(Message message, UUID uuid) {
         this.message = message;
-        this.uid = uid;
+        this.uuid = uuid;
     }
 
-    public UUID getUid() {
-        return uid;
+    public UUID getUuid() {
+        return uuid;
     }
 
-    public void setUid(String uid) {
-        setUid(UUID.fromString(uid));
+    public void setUuid(String uuid) {
+        setUuid(UUID.fromString(uuid));
     }
 
-    public void setUid(UUID uid) {
-        this.uid = uid;
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 
     public Message getMessage() {
@@ -42,14 +42,14 @@ public class QueueMessage<Message> {
         QueueMessage that = (QueueMessage) o;
 
         if (message != null ? !message.equals(that.message) : that.message != null) return false;
-        if (uid != null ? !uid.equals(that.uid) : that.uid != null) return false;
+        if (uuid != null ? !uuid.equals(that.uuid) : that.uuid != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = uid != null ? uid.hashCode() : 0;
+        int result = uuid != null ? uuid.hashCode() : 0;
         result = 31 * result + (message != null ? message.hashCode() : 0);
         return result;
     }

@@ -30,7 +30,7 @@ server stats
 
 create queue 
 
-    curl -i -s -XPUT 'localhost:8080/my_queue?type=string_uid&pretty'
+    curl -i -s -XPUT 'localhost:8080/my_queue?pretty'
 
 queue stats
 

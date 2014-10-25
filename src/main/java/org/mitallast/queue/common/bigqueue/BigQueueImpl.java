@@ -66,8 +66,8 @@ public class BigQueueImpl implements IBigQueue {
 
         // the ttl does not matter here since queue front index page is always cached
         this.queueFrontIndexPageFactory = new MappedPageFactoryImpl(QUEUE_FRONT_INDEX_PAGE_SIZE,
-                ((BigArrayImpl) innerArray).getArrayDirectory() + QUEUE_FRONT_INDEX_PAGE_FOLDER,
-                10 * 1000/*does not matter*/);
+            ((BigArrayImpl) innerArray).getArrayDirectory() + QUEUE_FRONT_INDEX_PAGE_FOLDER,
+            10 * 1000/*does not matter*/);
         IMappedPage queueFrontIndexPage = this.queueFrontIndexPageFactory.acquirePage(QUEUE_FRONT_PAGE_INDEX);
 
         ByteBuffer queueFrontIndexBuffer = queueFrontIndexPage.getLocal(0);

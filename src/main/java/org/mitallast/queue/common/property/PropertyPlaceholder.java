@@ -77,7 +77,7 @@ public class PropertyPlaceholder {
                 String placeholder = buf.substring(startIndex + this.placeholderPrefix.length(), endIndex);
                 if (!visitedPlaceholders.add(placeholder)) {
                     throw new IllegalArgumentException(
-                            "Circular placeholder reference '" + placeholder + "' in property definitions");
+                        "Circular placeholder reference '" + placeholder + "' in property definitions");
                 }
                 // Recursive invocation, parsing placeholders contained in the placeholder key.
                 placeholder = parseStringValue(placeholder, placeholderResolver, visitedPlaceholders);

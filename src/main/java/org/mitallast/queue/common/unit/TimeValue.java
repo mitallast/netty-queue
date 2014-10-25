@@ -19,7 +19,7 @@ public class TimeValue {
     static final long C5 = C4 * 60L;
     static final long C6 = C5 * 24L;
     private final PeriodFormatter defaultFormatter = PeriodFormat.getDefault()
-            .withParseType(PeriodType.standard());
+        .withParseType(PeriodType.standard());
     private long duration;
     private TimeUnit timeUnit;
 

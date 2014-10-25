@@ -51,7 +51,7 @@ public class FanOutQueueImpl implements IFanOutQueue {
      * @throws IOException exception throws if there is any IO error during queue initialization
      */
     public FanOutQueueImpl(String queueDir, String queueName, int pageSize)
-            throws IOException {
+        throws IOException {
         innerArray = new BigArrayImpl(queueDir, queueName, pageSize);
     }
 
@@ -420,8 +420,8 @@ public class FanOutQueueImpl implements IFanOutQueue {
             this.fanoutId = fanoutId;
             // the ttl does not matter here since queue front index page is always cached
             this.indexPageFactory = new MappedPageFactoryImpl(QUEUE_FRONT_INDEX_PAGE_SIZE,
-                    innerArray.arrayDirectory + QUEUE_FRONT_INDEX_PAGE_FOLDER_PREFIX + fanoutId,
-                    10 * 1000/*does not matter*/);
+                innerArray.arrayDirectory + QUEUE_FRONT_INDEX_PAGE_FOLDER_PREFIX + fanoutId,
+                10 * 1000/*does not matter*/);
 
             IMappedPage indexPage = this.indexPageFactory.acquirePage(QUEUE_FRONT_PAGE_INDEX);
 

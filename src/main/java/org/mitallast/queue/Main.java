@@ -11,8 +11,8 @@ public class Main {
     public static void main(String... args) throws IOException, InterruptedException {
 
         final Settings settings = ImmutableSettings.builder()
-                .put("work_dir", "data")
-                .build();
+            .put("work_dir", "data")
+            .build();
         final Node node = new InternalNode(settings);
         node.start();
         Runtime.getRuntime().addShutdownHook(new Thread() {

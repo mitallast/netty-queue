@@ -145,7 +145,7 @@ public class RestUtils {
                 case '%':
                     if (i == size - 1) {
                         throw new IllegalArgumentException("unterminated escape"
-                                + " sequence at end of string: " + s);
+                            + " sequence at end of string: " + s);
                     }
                     c = s.charAt(++i);
                     if (c == '%') {
@@ -153,15 +153,15 @@ public class RestUtils {
                         break;
                     } else if (i == size - 1) {
                         throw new IllegalArgumentException("partial escape"
-                                + " sequence at end of string: " + s);
+                            + " sequence at end of string: " + s);
                     }
                     c = decodeHexNibble(c);
                     final char c2 = decodeHexNibble(s.charAt(++i));
                     if (c == Character.MAX_VALUE || c2 == Character.MAX_VALUE) {
                         throw new IllegalArgumentException(
-                                "invalid escape sequence `%" + s.charAt(i - 1)
-                                        + s.charAt(i) + "' at index " + (i - 2)
-                                        + " of: " + s
+                            "invalid escape sequence `%" + s.charAt(i - 1)
+                                + s.charAt(i) + "' at index " + (i - 2)
+                                + " of: " + s
                         );
                     }
                     c = (char) (c * 16 + c2);

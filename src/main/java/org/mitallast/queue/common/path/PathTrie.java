@@ -187,7 +187,7 @@ public class PathTrie<TrieType> {
         private void put(Map<String, List<String>> params, TrieNode<NodeType> node, String value) {
             if (params != null && node.isNamedWildcard()) {
                 List<String> list = params.get(node.namedWildcard());
-                if(list == null){
+                if (list == null) {
                     list = new ArrayList<>(1);
                     params.put(node.namedWildcard(), list);
                 }

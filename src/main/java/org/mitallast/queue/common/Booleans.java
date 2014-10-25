@@ -39,7 +39,7 @@ public class Booleans {
         }
         if (length == 3) {
             return (text[offset] == 'o' && text[offset + 1] == 'f' && text[offset + 2] == 'f') ||
-                    (text[offset] == 'y' && text[offset + 1] == 'e' && text[offset + 2] == 's');
+                (text[offset] == 'y' && text[offset + 1] == 'e' && text[offset + 2] == 's');
         }
         if (length == 4) {
             return (text[offset] == 't' && text[offset + 1] == 'r' && text[offset + 2] == 'u' && text[offset + 3] == 'e');

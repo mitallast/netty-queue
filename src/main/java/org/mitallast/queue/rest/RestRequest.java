@@ -4,8 +4,8 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 
 import java.io.InputStream;
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 public interface RestRequest {
     HttpMethod getHttpMethod();

@@ -153,7 +153,7 @@ public class TransportRequest implements RestRequest {
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         queryPath = decoder.path();
         paramMap = decoder.parameters();
-        if(paramMap == Collections.<String, List<String>>emptyMap()){
+        if (paramMap == Collections.<String, List<String>>emptyMap()) {
             paramMap = new HashMap<>();
         }
     }

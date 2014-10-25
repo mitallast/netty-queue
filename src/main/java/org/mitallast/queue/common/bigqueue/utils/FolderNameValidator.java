@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 public class FolderNameValidator {
 
     private static final String illegalChars = "/" + '\u0000' + '\u0001' + "-" + '\u001F' + '\u007F' + "-" + '\u009F' + '\uD800' + "-" + '\uF8FF' + '\uFFF0'
-            + "-" + '\uFFFF';
+        + "-" + '\uFFFF';
     private static final Pattern p = Pattern.compile("(^\\.{1,2}$)|[" + illegalChars + "]");
 
     public static void validate(String name) {

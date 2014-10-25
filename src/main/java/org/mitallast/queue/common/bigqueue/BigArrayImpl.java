@@ -143,15 +143,15 @@ public class BigArrayImpl implements IBigArray {
     void commonInit() throws IOException {
         // initialize page factories
         this.indexPageFactory = new MappedPageFactoryImpl(INDEX_PAGE_SIZE,
-                this.arrayDirectory + INDEX_PAGE_FOLDER,
-                INDEX_PAGE_CACHE_TTL);
+            this.arrayDirectory + INDEX_PAGE_FOLDER,
+            INDEX_PAGE_CACHE_TTL);
         this.dataPageFactory = new MappedPageFactoryImpl(DATA_PAGE_SIZE,
-                this.arrayDirectory + DATA_PAGE_FOLDER,
-                DATA_PAGE_CACHE_TTL);
+            this.arrayDirectory + DATA_PAGE_FOLDER,
+            DATA_PAGE_CACHE_TTL);
         // the ttl does not matter here since meta data page is always cached
         this.metaPageFactory = new MappedPageFactoryImpl(META_DATA_PAGE_SIZE,
-                this.arrayDirectory + META_DATA_PAGE_FOLDER,
-                10 * 1000/*does not matter*/);
+            this.arrayDirectory + META_DATA_PAGE_FOLDER,
+            10 * 1000/*does not matter*/);
 
         // initialize array indexes
         initArrayIndex();
@@ -549,7 +549,7 @@ public class BigArrayImpl implements IBigArray {
                 long highPartTimestamp = this.getTimestamp(highPartClosetIndex);
 
                 closestIndex = Math.abs(timestamp - lowPartTimestamp) < Math.abs(timestamp - highPartTimestamp)
-                        ? lowPartClosestIndex : highPartClosetIndex;
+                    ? lowPartClosestIndex : highPartClosetIndex;
             }
 
             return closestIndex;

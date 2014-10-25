@@ -47,7 +47,7 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
             logger.warn("Don't moved to started, " + lifecycleState());
         }
         doStart();
-        logger.info("started " + lifecycleState());
+        logger.info("started");
     }
 
     protected abstract void doStart() throws QueueException;

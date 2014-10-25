@@ -40,10 +40,14 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
     @Override
     public void start() throws QueueException {
         if (!lifecycle.canMoveToStarted()) {
+            logger.warn("Can't move to started, " + lifecycleState());
             return;
         }
+        if (!lifecycle.moveToStarted()) {
+            logger.warn("Don't moved to started, " + lifecycleState());
+        }
         doStart();
-        lifecycle.moveToStarted();
+        logger.info("started " + lifecycleState());
     }
 
     protected abstract void doStart() throws QueueException;
@@ -52,10 +56,12 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
     @Override
     public void stop() throws QueueException {
         if (!lifecycle.canMoveToStopped()) {
+            logger.warn("Can't move to stopped, it's a " + lifecycleState());
             return;
         }
         lifecycle.moveToStopped();
         doStop();
+        logger.info("stopped");
     }
 
     protected abstract void doStop() throws QueueException;
@@ -66,10 +72,12 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
             stop();
         }
         if (!lifecycle.canMoveToClosed()) {
+            logger.warn("Can't move to closed, it's a " + lifecycleState().name());
             return;
         }
         lifecycle.moveToClosed();
         doClose();
+        logger.info("closed");
     }
 
     protected abstract void doClose() throws QueueException;

@@ -6,7 +6,6 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
-import org.mitallast.queue.queue.QueueTypeMismatch;
 import org.mitallast.queue.queue.service.QueueService;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.QueuesService;
@@ -22,7 +21,6 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void execute(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {
@@ -36,10 +34,6 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
         QueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
-            return;
-        }
-        if (!queueService.isSupported(request.getMessage())) {
-            listener.onFailure(new QueueTypeMismatch());
             return;
         }
         try {

@@ -45,25 +45,25 @@ public class LevelDbQueueServiceTest {
 
     @Test
     public void testEnqueueAndPeek() throws IOException {
-        QueueMessage<String> message = message();
+        QueueMessage message = message();
         levelDbQueueService.enqueue(message);
-        QueueMessage<String> peek = levelDbQueueService.peek();
+        QueueMessage peek = levelDbQueueService.peek();
         assert peek != null;
         assert message.equals(peek);
     }
 
     @Test
     public void testEnqueueAndDequeue() throws IOException {
-        QueueMessage<String> message = message();
+        QueueMessage message = message();
         levelDbQueueService.enqueue(message);
-        QueueMessage<String> peek = levelDbQueueService.dequeue();
+        QueueMessage peek = levelDbQueueService.dequeue();
         assert peek != null;
         assert message.equals(peek);
     }
 
     @Test(expected = QueueMessageUuidDuplicateException.class)
     public void testEnqueueDuplicate() throws IOException {
-        QueueMessage<String> message = message();
+        QueueMessage message = message();
         levelDbQueueService.enqueue(message);
         levelDbQueueService.enqueue(message);
     }
@@ -79,14 +79,14 @@ public class LevelDbQueueServiceTest {
 
     @Test
     public void testGet() throws IOException {
-        QueueMessage<String> message = message();
+        QueueMessage message = message();
         levelDbQueueService.enqueue(message);
-        QueueMessage<String> saved = levelDbQueueService.get(message.getUuid());
+        QueueMessage saved = levelDbQueueService.get(message.getUuid());
         assert message.equals(saved);
     }
 
-    private QueueMessage<String> message() {
-        QueueMessage<String> message = new QueueMessage<>();
+    private QueueMessage message() {
+        QueueMessage message = new QueueMessage();
         message.setMessage("Hello world");
         return message;
     }

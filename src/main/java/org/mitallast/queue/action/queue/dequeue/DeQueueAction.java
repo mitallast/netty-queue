@@ -21,7 +21,6 @@ public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueRespons
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void execute(DeQueueRequest request, ActionListener<DeQueueResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {

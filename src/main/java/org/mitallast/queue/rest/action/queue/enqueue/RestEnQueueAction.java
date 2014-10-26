@@ -32,7 +32,7 @@ public class RestEnQueueAction extends BaseRestHandler {
         controller.registerHandler(HttpMethod.PUT, "/{queue}/message", this);
     }
 
-    private static void parse(EnQueueRequest<String> request, InputStream inputStream) throws IOException {
+    private static void parse(EnQueueRequest request, InputStream inputStream) throws IOException {
         JsonFactory jsonFactory = new JsonFactory();
         JsonParser parser = jsonFactory.createParser(inputStream);
 
@@ -76,9 +76,9 @@ public class RestEnQueueAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
-        QueueMessage<String> queueMessage = new QueueMessage<>();
+        QueueMessage queueMessage = new QueueMessage();
 
-        final EnQueueRequest<String> enQueueRequest = new EnQueueRequest<>();
+        final EnQueueRequest enQueueRequest = new EnQueueRequest();
         enQueueRequest.setQueue(request.param("queue"));
         enQueueRequest.setMessage(queueMessage);
 

@@ -36,7 +36,6 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
         return this.lifecycle.state();
     }
 
-    @SuppressWarnings({"unchecked"})
     @Override
     public void start() throws QueueException {
         if (!lifecycle.canMoveToStarted()) {
@@ -52,7 +51,6 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
 
     protected abstract void doStart() throws QueueException;
 
-    @SuppressWarnings({"unchecked"})
     @Override
     public void stop() throws QueueException {
         if (!lifecycle.canMoveToStopped()) {

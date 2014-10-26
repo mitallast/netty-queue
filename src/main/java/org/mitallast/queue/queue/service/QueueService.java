@@ -6,23 +6,21 @@ import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.util.UUID;
 
-public interface QueueService<Message> extends QueueComponent {
+public interface QueueService extends QueueComponent {
 
-    void enqueue(QueueMessage<Message> message);
+    void enqueue(QueueMessage message);
 
-    QueueMessage<Message> dequeue();
+    QueueMessage dequeue();
 
-    QueueMessage<Message> peek();
+    QueueMessage peek();
 
-    QueueMessage<Message> get(UUID uuid);
+    QueueMessage get(UUID uuid);
 
     void delete(UUID uuid);
 
     long size();
 
     void removeQueue();
-
-    boolean isSupported(QueueMessage message);
 
     QueueStats stats();
 }

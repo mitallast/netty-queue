@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class LevelDbQueueService extends AbstractQueueComponent implements QueueService<String> {
+public class LevelDbQueueService extends AbstractQueueComponent implements QueueService {
 
     private final static String LEVEL_DB_DIR = "level_db";
     private final static Charset charset = Charset.forName("UTF-8");
@@ -54,7 +54,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     }
 
     @Override
-    public void enqueue(QueueMessage<String> message) {
+    public void enqueue(QueueMessage message) {
         if (message.getUuid() == null) {
             // write without lock
             message.setUuid(UUID.randomUUID());
@@ -75,7 +75,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     }
 
     @Override
-    public QueueMessage<String> dequeue() {
+    public QueueMessage dequeue() {
         lock.lock();
         try (DBIterator iterator = levelDb.iterator(readOptions)) {
             iterator.seekToFirst();
@@ -84,7 +84,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             }
             Map.Entry<byte[], byte[]> entry = iterator.next();
             levelDb.delete(entry.getKey(), writeOptions);
-            return new QueueMessage<>(toString(entry.getValue()), toUUID(entry.getKey()));
+            return new QueueMessage(toString(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         } finally {
@@ -93,24 +93,24 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     }
 
     @Override
-    public QueueMessage<String> peek() {
+    public QueueMessage peek() {
         try (DBIterator iterator = levelDb.iterator(readOptions)) {
             iterator.seekToFirst();
             if (!iterator.hasNext()) {
                 return null;
             }
             Map.Entry<byte[], byte[]> entry = iterator.next();
-            return new QueueMessage<>(toString(entry.getValue()), toUUID(entry.getKey()));
+            return new QueueMessage(toString(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         }
     }
 
     @Override
-    public QueueMessage<String> get(UUID uuid) {
+    public QueueMessage get(UUID uuid) {
         byte[] msg = levelDb.get(toBytes(uuid));
         if (msg != null) {
-            return new QueueMessage<>(toString(msg), uuid);
+            return new QueueMessage(toString(msg), uuid);
         } else {
             return null;
         }
@@ -140,11 +140,6 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         } finally {
             lock.unlock();
         }
-    }
-
-    @Override
-    public boolean isSupported(QueueMessage message) {
-        return message.getMessage() instanceof String;
     }
 
     @Override

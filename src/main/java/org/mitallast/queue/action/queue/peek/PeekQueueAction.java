@@ -21,7 +21,6 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void execute(PeekQueueRequest request, ActionListener<PeekQueueResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {

@@ -21,7 +21,6 @@ public class GetAction extends AbstractAction<GetRequest, GetResponse> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public void execute(GetRequest request, ActionListener<GetResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {

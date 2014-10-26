@@ -2,14 +2,14 @@ package org.mitallast.queue.queue;
 
 import java.util.UUID;
 
-public class QueueMessage<Message> {
+public class QueueMessage {
     public UUID uuid;
-    private Message message;
+    private String message;
 
     public QueueMessage() {
     }
 
-    public QueueMessage(Message message, UUID uuid) {
+    public QueueMessage(String message, UUID uuid) {
         this.message = message;
         this.uuid = uuid;
     }
@@ -26,11 +26,11 @@ public class QueueMessage<Message> {
         this.uuid = uuid;
     }
 
-    public Message getMessage() {
+    public String getMessage() {
         return message;
     }
 
-    public void setMessage(Message message) {
+    public void setMessage(String message) {
         this.message = message;
     }
 

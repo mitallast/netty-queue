@@ -6,11 +6,11 @@ import org.mitallast.queue.queue.QueueMessage;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
-public class EnQueueRequest<Message> extends ActionRequest {
+public class EnQueueRequest extends ActionRequest {
 
     private String queue;
 
-    private QueueMessage<Message> message;
+    private QueueMessage message;
 
     public String getQueue() {
         return queue;
@@ -20,11 +20,11 @@ public class EnQueueRequest<Message> extends ActionRequest {
         this.queue = queue;
     }
 
-    public QueueMessage<Message> getMessage() {
+    public QueueMessage getMessage() {
         return message;
     }
 
-    public void setMessage(QueueMessage<Message> message) {
+    public void setMessage(QueueMessage message) {
         this.message = message;
     }
 

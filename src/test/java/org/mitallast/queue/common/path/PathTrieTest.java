@@ -15,7 +15,7 @@ public class PathTrieTest {
     @Before
     public void setUp() throws Exception {
         pathTrie = new PathTrie<>();
-        params = new HashMap<String, List<String>>();
+        params = new HashMap<>();
     }
 
     @Test

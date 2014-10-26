@@ -14,6 +14,8 @@ public interface QueueService<Message> extends QueueComponent {
 
     QueueMessage<Message> peek();
 
+    QueueMessage<Message> get(UUID uuid);
+
     void delete(UUID uuid);
 
     long size();

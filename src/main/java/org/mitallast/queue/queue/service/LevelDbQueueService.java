@@ -14,6 +14,7 @@ import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class LevelDbQueueService extends AbstractQueueComponent implements QueueService<String> {
 
     private final static String LEVEL_DB_DIR = "level_db";
+    private final static Charset charset = Charset.forName("UTF-8");
     private final Options options = new Options();
     private final WriteOptions writeOptions = new WriteOptions();
     private final ReadOptions readOptions = new ReadOptions();
@@ -56,19 +58,16 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         if (message.getUuid() == null) {
             // write without lock
             message.setUuid(UUID.randomUUID());
-            byte[] uuid = toBytes(message.getUuid());
-            byte[] msg = message.getMessage().getBytes();
-            levelDb.put(uuid, msg, writeOptions);
+            levelDb.put(toBytes(message.getUuid()), toBytes(message.getMessage()), writeOptions);
         } else {
             // write with lock
             byte[] uuid = toBytes(message.getUuid());
-            byte[] msg = message.getMessage().getBytes();
             lock.lock();
             try {
                 if (levelDb.get(uuid, readOptions) != null) {
                     throw new QueueMessageUuidDuplicateException(message.getUuid());
                 }
-                levelDb.put(uuid, msg, writeOptions);
+                levelDb.put(uuid, toBytes(message.getMessage()), writeOptions);
             } finally {
                 lock.unlock();
             }
@@ -85,7 +84,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             }
             Map.Entry<byte[], byte[]> entry = iterator.next();
             levelDb.delete(entry.getKey(), writeOptions);
-            return new QueueMessage<>(new String(entry.getValue()), toUUID(entry.getKey()));
+            return new QueueMessage<>(toString(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         } finally {
@@ -101,9 +100,19 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
                 return null;
             }
             Map.Entry<byte[], byte[]> entry = iterator.next();
-            return new QueueMessage<>(new String(entry.getValue()), toUUID(entry.getKey()));
+            return new QueueMessage<>(toString(entry.getValue()), toUUID(entry.getKey()));
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
+        }
+    }
+
+    @Override
+    public QueueMessage<String> get(UUID uuid) {
+        byte[] msg = levelDb.get(toBytes(uuid));
+        if (msg != null) {
+            return new QueueMessage<>(toString(msg), uuid);
+        } else {
+            return null;
         }
     }
 
@@ -211,5 +220,13 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             bytes[i] = (byte) (value & 0xffL);
             value >>= 8;
         }
+    }
+
+    private static String toString(byte[] msg) {
+        return new String(msg, charset);
+    }
+
+    private static byte[] toBytes(String msg) {
+        return msg.getBytes(charset);
     }
 }

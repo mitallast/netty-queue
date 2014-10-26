@@ -108,6 +108,12 @@ curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7
 echo
 echo
 
+echo my_queue get uuid
+echo
+curl -i -s -XHEAD 'localhost:8080/my_queue/message/a57586b7-3eed-4c7c-b256-8bf9021fffbd?pretty'
+echo
+echo
+
 echo my_queue delete uuid
 echo
 curl -i -s -XDELETE 'localhost:8080/my_queue/message?uuid=a57586b7-3eed-4c7c-b256-8bf9021fffbd&pretty'

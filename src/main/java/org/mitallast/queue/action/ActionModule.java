@@ -4,6 +4,7 @@ import com.google.inject.AbstractModule;
 import org.mitallast.queue.action.queue.delete.DeleteAction;
 import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
 import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
+import org.mitallast.queue.action.queue.get.GetAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
@@ -17,6 +18,7 @@ public class ActionModule extends AbstractModule {
         bind(DeQueueAction.class).asEagerSingleton();
         bind(PeekQueueAction.class).asEagerSingleton();
         bind(DeleteAction.class).asEagerSingleton();
+        bind(GetAction.class).asEagerSingleton();
 
         bind(QueueStatsAction.class).asEagerSingleton();
 

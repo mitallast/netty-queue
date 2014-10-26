@@ -11,6 +11,9 @@ import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
+import org.mitallast.queue.action.queue.get.GetAction;
+import org.mitallast.queue.action.queue.get.GetRequest;
+import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
@@ -23,6 +26,7 @@ public class QueueClient {
     private final DeQueueAction deQueueAction;
     private final PeekQueueAction peekQueueAction;
     private final DeleteAction deleteAction;
+    private final GetAction getAction;
     private final QueueStatsAction queueStatsAction;
 
     @Inject
@@ -30,11 +34,13 @@ public class QueueClient {
                        DeQueueAction deQueueAction,
                        PeekQueueAction peekQueueAction,
                        DeleteAction deleteAction,
+                       GetAction getAction,
                        QueueStatsAction queueStatsAction) {
         this.enQueueAction = enQueueAction;
         this.deQueueAction = deQueueAction;
         this.peekQueueAction = peekQueueAction;
         this.deleteAction = deleteAction;
+        this.getAction = getAction;
         this.queueStatsAction = queueStatsAction;
     }
 
@@ -52,6 +58,10 @@ public class QueueClient {
 
     public void deleteRequest(DeleteRequest request, ActionListener<DeleteResponse> listener) {
         deleteAction.execute(request, listener);
+    }
+
+    public void getRequest(GetRequest request, ActionListener<GetResponse> listener) {
+        getAction.execute(request, listener);
     }
 
     public void peekQueueRequest(PeekQueueRequest request, ActionListener<PeekQueueResponse> listener) {

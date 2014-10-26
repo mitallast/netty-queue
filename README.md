@@ -49,9 +49,13 @@ delete with uuid
     curl -i -s -XDELETE 'localhost:8080/my_queue/message?uuid=a57586b7-3eed-4c7c-b257-8bf9021fffbd&pretty'
     curl -i -s -XDELETE 'localhost:8080/my_queue/message/a57586b7-3eed-4c7c-b257-8bf9021fffbd?pretty'
 
-peek message
+peek message with uuid
 
     curl -i -s -XHEAD 'localhost:8080/my_queue/message?pretty'
+
+get message with uuid
+
+    curl -i -s -XHEAD 'localhost:8080/my_queue/message/a57586b7-3eed-4c7c-b256-8bf9021fffbd?pretty'
 
 dequeue message
 

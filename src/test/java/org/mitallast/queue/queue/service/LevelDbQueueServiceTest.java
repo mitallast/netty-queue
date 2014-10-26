@@ -77,6 +77,14 @@ public class LevelDbQueueServiceTest {
         }
     }
 
+    @Test
+    public void testGet() throws IOException {
+        QueueMessage<String> message = message();
+        levelDbQueueService.enqueue(message);
+        QueueMessage<String> saved = levelDbQueueService.get(message.getUuid());
+        assert message.equals(saved);
+    }
+
     private QueueMessage<String> message() {
         QueueMessage<String> message = new QueueMessage<>();
         message.setMessage("Hello world");

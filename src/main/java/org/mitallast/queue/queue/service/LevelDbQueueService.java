@@ -58,7 +58,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         if (message.getUuid() == null) {
             // write without lock
             message.setUuid(UUID.randomUUID());
-            levelDb.put(toBytes(message.getUuid()), message.getMessageBytes(), writeOptions);
+            levelDb.put(toBytes(message.getUuid()), message.getSource(), writeOptions);
         } else {
             // write with lock
             byte[] uuid = toBytes(message.getUuid());
@@ -67,7 +67,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
                 if (levelDb.get(uuid, readOptions) != null) {
                     throw new QueueMessageUuidDuplicateException(message.getUuid());
                 }
-                levelDb.put(uuid, message.getMessageBytes(), writeOptions);
+                levelDb.put(uuid, message.getSource(), writeOptions);
             } finally {
                 lock.unlock();
             }

@@ -28,7 +28,7 @@ public class RestIndexAction extends BaseRestHandler {
     public void handleRequest(RestRequest request, RestSession session) {
         JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
         try (OutputStream stream = restResponse.getOutputStream()) {
-            JsonGenerator generator = getGenerator(request, stream);
+            JsonGenerator generator = createGenerator(request, stream);
             generator.writeStartObject();
             generator.writeStringField("message", "You now, for queue");
             generator.writeEndObject();

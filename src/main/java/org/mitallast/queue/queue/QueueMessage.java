@@ -1,27 +1,33 @@
 package org.mitallast.queue.queue;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class QueueMessage {
 
     public static final Charset defaultCharset = Charset.forName("UTF-8");
+    private static final JsonFactory jsonFactory = new JsonFactory(new ObjectMapper());
 
     public UUID uuid;
-    private String message;
-    private Charset charset = defaultCharset;
+    private byte[] source;
 
     public QueueMessage() {
     }
 
-    public QueueMessage(String message, UUID uuid) {
-        setUuid(uuid);
-        setMessage(message);
-    }
-
     public QueueMessage(UUID uuid, byte[] message) {
         setUuid(uuid);
-        setMessage(message);
+        setSource(message);
     }
 
     public UUID getUuid() {
@@ -36,20 +42,65 @@ public class QueueMessage {
         this.uuid = uuid;
     }
 
+    public QueueMessageType getMessageType() {
+        int sourceType = source[0];
+        return QueueMessageType.values()[sourceType];
+    }
+
     public String getMessage() {
-        return message;
+        return new String(source, 1, source.length - 1, defaultCharset);
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setSource(String string) {
+        byte[] sourceString = string.getBytes(defaultCharset);
+        source = new byte[sourceString.length + 1];
+        source[0] = (byte) QueueMessageType.STRING.ordinal();
+        System.arraycopy(sourceString, 0, source, 1, sourceString.length);
     }
 
-    public byte[] getMessageBytes() {
-        return message.getBytes(charset);
+    public void setSource(TreeNode tree) throws IOException {
+        JsonFactory jsonFactory = new JsonFactory();
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream(512)) {
+            outputStream.write(QueueMessageType.JSON.ordinal());
+            JsonGenerator generator = jsonFactory.createGenerator(outputStream);
+            generator.setCodec(new ObjectMapper());
+            generator.writeTree(tree);
+            generator.close();
+            source = outputStream.toByteArray();
+        }
     }
 
-    public void setMessage(byte[] bytes) {
-        message = new String(bytes, charset);
+    public void setSource(byte[] newSource) {
+        source = newSource;
+    }
+
+    public byte[] getSource() {
+        return source;
+    }
+
+    public InputStream getSourceAsStream() throws IOException {
+        return new ByteArrayInputStream(source, 1, source.length - 1);
+    }
+
+    public TreeNode getSourceAsTreeNode() throws IOException {
+        JsonParser parser = jsonFactory.createParser(getSourceAsStream());
+        return parser.readValueAsTree();
+    }
+
+    public void writeTo(JsonGenerator generator) throws IOException {
+        generator.writeStartObject();
+        if (uuid != null) {
+            generator.writeStringField("uuid", uuid.toString());
+        }
+        if (source != null) {
+            generator.writeFieldName("message");
+            if (getMessageType() == QueueMessageType.STRING) {
+                generator.writeRawUTF8String(source, 1, source.length - 1);
+            } else if (getMessageType() == QueueMessageType.JSON) {
+                generator.writeTree(getSourceAsTreeNode());
+            }
+        }
+        generator.writeEndObject();
     }
 
     @Override
@@ -59,7 +110,7 @@ public class QueueMessage {
 
         QueueMessage that = (QueueMessage) o;
 
-        if (message != null ? !message.equals(that.message) : that.message != null) return false;
+        if (!Arrays.equals(source, that.source)) return false;
         if (uuid != null ? !uuid.equals(that.uuid) : that.uuid != null) return false;
 
         return true;
@@ -68,7 +119,7 @@ public class QueueMessage {
     @Override
     public int hashCode() {
         int result = uuid != null ? uuid.hashCode() : 0;
-        result = 31 * result + (message != null ? message.hashCode() : 0);
+        result = 31 * result + (source != null ? Arrays.hashCode(source) : 0);
         return result;
     }
 }

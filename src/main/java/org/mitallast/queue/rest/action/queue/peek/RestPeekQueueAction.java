@@ -9,6 +9,7 @@ import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -34,22 +35,17 @@ public class RestPeekQueueAction extends BaseRestHandler {
 
         client.queue().peekQueueRequest(peekQueueRequest, new ActionListener<PeekQueueResponse>() {
             @Override
-            public void onResponse(PeekQueueResponse deQueueResponse) {
-                if (deQueueResponse.getMessage() == null) {
+            public void onResponse(PeekQueueResponse peekQueueResponse) {
+                if (peekQueueResponse.getMessage() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
+                QueueMessage queueMessage = peekQueueResponse.getMessage();
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = getGenerator(request, stream);
-                    generator.writeStartObject();
-                    if (deQueueResponse.getMessage().getUuid() != null) {
-                        generator.writeStringField("uuid", deQueueResponse.getMessage().getUuid().toString());
+                    try (JsonGenerator generator = createGenerator(request, stream)) {
+                        queueMessage.writeTo(generator);
                     }
-                    generator.writeFieldName("message");
-                    generator.writeObject(deQueueResponse.getMessage().getMessage());
-                    generator.writeEndObject();
-                    generator.close();
                     session.sendResponse(restResponse);
                 } catch (IOException e) {
                     session.sendResponse(e);

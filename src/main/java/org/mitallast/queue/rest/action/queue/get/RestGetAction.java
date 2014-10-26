@@ -9,6 +9,7 @@ import org.mitallast.queue.action.queue.get.GetRequest;
 import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -44,17 +45,12 @@ public class RestGetAction extends BaseRestHandler {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
+                QueueMessage queueMessage = getResponse.getMessage();
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = getGenerator(request, stream);
-                    generator.writeStartObject();
-                    if (getResponse.getMessage().getUuid() != null) {
-                        generator.writeStringField("uuid", getResponse.getMessage().getUuid().toString());
+                    try (JsonGenerator generator = createGenerator(request, stream)) {
+                        queueMessage.writeTo(generator);
                     }
-                    generator.writeFieldName("message");
-                    generator.writeObject(getResponse.getMessage().getMessage());
-                    generator.writeEndObject();
-                    generator.close();
                     session.sendResponse(restResponse);
                 } catch (IOException e) {
                     session.sendResponse(e);

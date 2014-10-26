@@ -34,7 +34,7 @@ public class RestQueuesStatsAction extends BaseRestHandler {
             public void onResponse(QueuesStatsResponse response) {
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = getGenerator(request, stream);
+                    JsonGenerator generator = createGenerator(request, stream);
                     generator.writeStartObject();
                     generator.writeArrayFieldStart("queues");
                     for (QueueStats queueStats : response.stats().getQueueStats()) {

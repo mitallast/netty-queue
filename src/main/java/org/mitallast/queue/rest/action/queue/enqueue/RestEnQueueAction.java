@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.action.queue.enqueue;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.inject.Inject;
@@ -32,43 +31,44 @@ public class RestEnQueueAction extends BaseRestHandler {
         controller.registerHandler(HttpMethod.PUT, "/{queue}/message", this);
     }
 
-    private static void parse(EnQueueRequest request, InputStream inputStream) throws IOException {
-        JsonFactory jsonFactory = new JsonFactory();
-        JsonParser parser = jsonFactory.createParser(inputStream);
+    private void parse(EnQueueRequest request, InputStream inputStream) throws IOException {
+        try (JsonParser parser = createParser(inputStream)) {
+            String currentFieldName;
+            JsonToken token;
 
-        String currentFieldName;
-        JsonToken token;
+            token = parser.nextToken();
+            if (token == null) {
+                throw new QueueParseException("malformed, expected settings to start with 'object', actual [null]");
+            }
+            if (token != JsonToken.START_OBJECT) {
+                throw new QueueParseException("malformed, expected settings to start with 'object', actual [" + token + "]");
+            }
 
-        token = parser.nextToken();
-        if (token == null) {
-            throw new QueueParseException("malformed, expected settings to start with 'object', instead was [null]");
-        }
-        if (token != JsonToken.START_OBJECT) {
-            throw new QueueParseException("malformed, expected settings to start with 'object', instead was [" + token + "]");
-        }
-
-        while ((token = parser.nextToken()) != JsonToken.END_OBJECT) {
-            if (token == JsonToken.FIELD_NAME) {
-                currentFieldName = parser.getCurrentName();
-                switch (currentFieldName) {
-                    case "message":
-                        token = parser.nextToken();
-                        if (token == JsonToken.VALUE_STRING) {
-                            request.getMessage().setMessage(parser.getText());
-                        } else {
-                            throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
-                        }
-                        break;
-                    case "uuid":
-                        token = parser.nextToken();
-                        if (token == JsonToken.VALUE_STRING) {
-                            request.getMessage().setUuid(parser.getText());
-                        } else {
-                            throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
-                        }
-                        break;
-                    default:
-                        throw new QueueParseException("malformed, unexpected field [" + currentFieldName + "]");
+            while ((token = parser.nextToken()) != JsonToken.END_OBJECT) {
+                if (token == JsonToken.FIELD_NAME) {
+                    currentFieldName = parser.getCurrentName();
+                    switch (currentFieldName) {
+                        case "message":
+                            token = parser.nextToken();
+                            if (token == JsonToken.VALUE_STRING) {
+                                request.getMessage().setSource(parser.getText());
+                            } else if (token == JsonToken.START_OBJECT || token == JsonToken.START_ARRAY) {
+                                request.getMessage().setSource(parser.readValueAsTree());
+                            } else {
+                                throw new QueueParseException("malformed, expected string, object or array value at field [" + currentFieldName + "]");
+                            }
+                            break;
+                        case "uuid":
+                            token = parser.nextToken();
+                            if (token == JsonToken.VALUE_STRING) {
+                                request.getMessage().setUuid(parser.getText());
+                            } else {
+                                throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
+                            }
+                            break;
+                        default:
+                            throw new QueueParseException("malformed, unexpected field [" + currentFieldName + "]");
+                    }
                 }
             }
         }

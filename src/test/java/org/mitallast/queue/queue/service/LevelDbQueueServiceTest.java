@@ -87,7 +87,7 @@ public class LevelDbQueueServiceTest {
 
     private QueueMessage message() {
         QueueMessage message = new QueueMessage();
-        message.setMessage("Hello world");
+        message.setSource("Hello world");
         return message;
     }
 }

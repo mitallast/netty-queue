@@ -9,6 +9,7 @@ import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
 import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -39,17 +40,12 @@ public class RestDeQueueAction extends BaseRestHandler {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
+                QueueMessage queueMessage = deQueueResponse.getMessage();
                 JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
                 try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = getGenerator(request, stream);
-                    generator.writeStartObject();
-                    if (deQueueResponse.getMessage().getUuid() != null) {
-                        generator.writeStringField("uuid", deQueueResponse.getMessage().getUuid().toString());
+                    try (JsonGenerator generator = createGenerator(request, stream)) {
+                        queueMessage.writeTo(generator);
                     }
-                    generator.writeFieldName("message");
-                    generator.writeObject(deQueueResponse.getMessage().getMessage());
-                    generator.writeEndObject();
-                    generator.close();
                     session.sendResponse(restResponse);
                 } catch (IOException e) {
                     session.sendResponse(e);

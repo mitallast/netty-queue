@@ -36,9 +36,13 @@ queue stats
 
     curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
 
-enqueue message
+enqueue message as string
 
     curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
+
+enqueue message as json
+
+    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":{"Title":"Hello world"}}'
 
 enqueue with uuid message 
 

@@ -7,7 +7,6 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.response.StringRestResponse;
-import org.mitallast.queue.rest.support.RestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,12 +14,12 @@ public class RestController extends AbstractComponent {
 
     private final Logger logger = LoggerFactory.getLogger(RestController.class);
 
-    private final PathTrie<RestHandler> getHandlers = new PathTrie<>(RestUtils.REST_DECODER);
-    private final PathTrie<RestHandler> postHandlers = new PathTrie<>(RestUtils.REST_DECODER);
-    private final PathTrie<RestHandler> putHandlers = new PathTrie<>(RestUtils.REST_DECODER);
-    private final PathTrie<RestHandler> deleteHandlers = new PathTrie<>(RestUtils.REST_DECODER);
-    private final PathTrie<RestHandler> headHandlers = new PathTrie<>(RestUtils.REST_DECODER);
-    private final PathTrie<RestHandler> optionsHandlers = new PathTrie<>(RestUtils.REST_DECODER);
+    private final PathTrie<RestHandler> getHandlers = new PathTrie<>();
+    private final PathTrie<RestHandler> postHandlers = new PathTrie<>();
+    private final PathTrie<RestHandler> putHandlers = new PathTrie<>();
+    private final PathTrie<RestHandler> deleteHandlers = new PathTrie<>();
+    private final PathTrie<RestHandler> headHandlers = new PathTrie<>();
+    private final PathTrie<RestHandler> optionsHandlers = new PathTrie<>();
 
     @Inject
     public RestController(Settings settings) {

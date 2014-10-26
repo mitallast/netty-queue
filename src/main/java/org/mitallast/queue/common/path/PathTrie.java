@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.path;
 
+import io.netty.handler.codec.http.QueryStringDecoder;
 import org.mitallast.queue.common.Strings;
 
 import java.util.ArrayList;
@@ -9,29 +10,17 @@ import java.util.Map;
 
 public class PathTrie<TrieType> {
 
-    public static final Decoder NO_DECODER = new Decoder() {
-        @Override
-        public String decode(String value) {
-            return value;
-        }
-    };
-    private final Decoder decoder;
     private final TrieNode<TrieType> root;
     private final char separator;
     private TrieType rootValue;
 
     public PathTrie() {
-        this('/', "*", NO_DECODER);
+        this('/', "*");
     }
 
-    public PathTrie(Decoder decoder) {
-        this('/', "*", decoder);
-    }
-
-    public PathTrie(char separator, String wildcard, Decoder decoder) {
-        this.decoder = decoder;
+    public PathTrie(char separator, String wildcard) {
         this.separator = separator;
-        root = new TrieNode<>(new String(new char[]{separator}), null, null, wildcard);
+        root = new TrieNode<>(String.valueOf(separator), null, wildcard);
     }
 
     public void insert(String path, TrieType value) {
@@ -46,10 +35,6 @@ public class PathTrie<TrieType> {
             index = 1;
         }
         root.insert(strings, index, value);
-    }
-
-    public TrieType retrieve(String path) {
-        return retrieve(path, null);
     }
 
     public TrieType retrieve(String path, Map<String, List<String>> params) {
@@ -68,35 +53,24 @@ public class PathTrie<TrieType> {
         return root.retrieve(strings, index, params);
     }
 
-    public static interface Decoder {
-        String decode(String value);
-    }
-
     public class TrieNode<NodeType> {
+        private final Map<String, TrieNode<NodeType>> children;
         private final String wildcard;
-        private final TrieNode parent;
-        private transient String key;
-        private transient NodeType value;
-        private boolean isWildcard;
-        private transient String namedWildcard;
-        private Map<String, TrieNode<NodeType>> children;
+        private NodeType value;
+        private String namedWildcard;
 
-        public TrieNode(String key, NodeType value, TrieNode parent, String wildcard) {
-            this.key = key;
+        public TrieNode(String key, NodeType value, String wildcard) {
             this.wildcard = wildcard;
-            this.isWildcard = (key.equals(wildcard));
-            this.parent = parent;
             this.value = value;
             this.children = new HashMap<>();
             if (isNamedWildcard(key)) {
-                namedWildcard = key.substring(key.indexOf('{') + 1, key.indexOf('}'));
+                updateKeyWithNamedWildcard(key);
             } else {
                 namedWildcard = null;
             }
         }
 
         public void updateKeyWithNamedWildcard(String key) {
-            this.key = key;
             namedWildcard = key.substring(key.indexOf('{') + 1, key.indexOf('}'));
         }
 
@@ -113,9 +87,9 @@ public class PathTrie<TrieType> {
             TrieNode<NodeType> node = children.get(key);
             if (node == null) {
                 if (index == (path.length - 1)) {
-                    node = new TrieNode<>(token, value, this, wildcard);
+                    node = new TrieNode<>(token, value, wildcard);
                 } else {
-                    node = new TrieNode<>(token, null, this, wildcard);
+                    node = new TrieNode<>(token, null, wildcard);
                 }
                 children.put(key, node);
             } else {
@@ -191,7 +165,7 @@ public class PathTrie<TrieType> {
                     list = new ArrayList<>(1);
                     params.put(node.namedWildcard(), list);
                 }
-                list.add(decoder.decode(value));
+                list.add(QueryStringDecoder.decodeComponent(value));
             }
         }
     }

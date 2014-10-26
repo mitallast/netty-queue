@@ -1,6 +1,6 @@
 package org.mitallast.queue.action;
 
-public interface ActionListener<Response> {
+public interface ActionListener<Response extends ActionResponse> {
     /**
      * A response handler.
      */

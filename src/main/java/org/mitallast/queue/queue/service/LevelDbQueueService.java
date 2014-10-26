@@ -58,7 +58,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
         if (message.getUuid() == null) {
             // write without lock
             message.setUuid(UUID.randomUUID());
-            levelDb.put(toBytes(message.getUuid()), toBytes(message.getMessage()), writeOptions);
+            levelDb.put(toBytes(message.getUuid()), message.getMessageBytes(), writeOptions);
         } else {
             // write with lock
             byte[] uuid = toBytes(message.getUuid());
@@ -67,7 +67,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
                 if (levelDb.get(uuid, readOptions) != null) {
                     throw new QueueMessageUuidDuplicateException(message.getUuid());
                 }
-                levelDb.put(uuid, toBytes(message.getMessage()), writeOptions);
+                levelDb.put(uuid, message.getMessageBytes(), writeOptions);
             } finally {
                 lock.unlock();
             }
@@ -84,7 +84,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             }
             Map.Entry<byte[], byte[]> entry = iterator.next();
             levelDb.delete(entry.getKey(), writeOptions);
-            return new QueueMessage(toString(entry.getValue()), toUUID(entry.getKey()));
+            return new QueueMessage(toUUID(entry.getKey()), entry.getValue());
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         } finally {
@@ -100,7 +100,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
                 return null;
             }
             Map.Entry<byte[], byte[]> entry = iterator.next();
-            return new QueueMessage(toString(entry.getValue()), toUUID(entry.getKey()));
+            return new QueueMessage(toUUID(entry.getKey()), entry.getValue());
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         }
@@ -110,7 +110,7 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
     public QueueMessage get(UUID uuid) {
         byte[] msg = levelDb.get(toBytes(uuid));
         if (msg != null) {
-            return new QueueMessage(toString(msg), uuid);
+            return new QueueMessage(uuid, msg);
         } else {
             return null;
         }
@@ -215,13 +215,5 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
             bytes[i] = (byte) (value & 0xffL);
             value >>= 8;
         }
-    }
-
-    private static String toString(byte[] msg) {
-        return new String(msg, charset);
-    }
-
-    private static byte[] toBytes(String msg) {
-        return msg.getBytes(charset);
     }
 }

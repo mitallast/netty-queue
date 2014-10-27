@@ -14,7 +14,6 @@ import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
@@ -22,7 +21,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class LevelDbQueueService extends AbstractQueueComponent implements QueueService {
 
     private final static String LEVEL_DB_DIR = "level_db";
-    private final static Charset charset = Charset.forName("UTF-8");
     private final Options options = new Options();
     private final WriteOptions writeOptions = new WriteOptions();
     private final ReadOptions readOptions = new ReadOptions();
@@ -201,13 +199,13 @@ public class LevelDbQueueService extends AbstractQueueComponent implements Queue
 
     public static long toLong(byte[] bytes, int start) {
         return (bytes[start] & 0xFFL) << 56
-            | (bytes[start + 1] & 0xFFL) << 48
-            | (bytes[start + 2] & 0xFFL) << 40
-            | (bytes[start + 3] & 0xFFL) << 32
-            | (bytes[start + 4] & 0xFFL) << 24
-            | (bytes[start + 5] & 0xFFL) << 16
-            | (bytes[start + 6] & 0xFFL) << 8
-            | (bytes[start + 7] & 0xFFL);
+                | (bytes[start + 1] & 0xFFL) << 48
+                | (bytes[start + 2] & 0xFFL) << 40
+                | (bytes[start + 3] & 0xFFL) << 32
+                | (bytes[start + 4] & 0xFFL) << 24
+                | (bytes[start + 5] & 0xFFL) << 16
+                | (bytes[start + 6] & 0xFFL) << 8
+                | (bytes[start + 7] & 0xFFL);
     }
 
     public static void toBytes(byte[] bytes, int start, long value) {

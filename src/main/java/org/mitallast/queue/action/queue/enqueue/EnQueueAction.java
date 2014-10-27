@@ -27,10 +27,6 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
             listener.onFailure(validationException);
             return;
         }
-        if (!queuesService.hasQueue(request.getQueue())) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
-            return;
-        }
         QueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));

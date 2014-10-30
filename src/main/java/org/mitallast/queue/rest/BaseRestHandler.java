@@ -1,5 +1,6 @@
 package org.mitallast.queue.rest;
 
+import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -26,7 +27,7 @@ public abstract class BaseRestHandler extends AbstractComponent implements RestH
 
     protected JsonGenerator createGenerator(RestRequest request, OutputStream outputStream) {
         try {
-            JsonGenerator generator = jsonFactory.createGenerator(outputStream);
+            JsonGenerator generator = jsonFactory.createGenerator(outputStream, JsonEncoding.UTF8);
             if (request.hasParam("pretty")) {
                 generator.setPrettyPrinter(new DefaultPrettyPrinter());
             }

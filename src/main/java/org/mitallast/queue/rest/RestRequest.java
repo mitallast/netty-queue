@@ -12,27 +12,9 @@ public interface RestRequest {
 
     HttpHeaders getHttpHeaders();
 
-    boolean isMethodGet();
-
-    boolean isMethodDelete();
-
-    boolean isMethodPost();
-
-    boolean isMethodPut();
-
-    boolean isMethodHead();
-
-    boolean isMethodOptions();
-
-    String getProtocol();
-
-    String getHost();
-
     String getQueryPath();
 
-    String getBaseUrl();
-
-    String getUrl();
+    String getUri();
 
     Map<String, List<String>> getParamMap();
 
@@ -41,6 +23,4 @@ public interface RestRequest {
     boolean hasParam(String param);
 
     InputStream getInputStream();
-
-    String getBody();
 }

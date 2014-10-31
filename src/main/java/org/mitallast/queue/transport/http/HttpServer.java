@@ -48,14 +48,16 @@ public class HttpServer extends AbstractLifecycleComponent {
         try {
             bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new HttpServerInitializer(new HttpServerHandler(restController)))
-                .option(ChannelOption.SO_BACKLOG, backlog)
-                .option(ChannelOption.SO_REUSEADDR, reuseAddress)
-                .option(ChannelOption.SO_KEEPALIVE, keepAlive)
-                .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
-                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new HttpServerInitializer(new HttpServerHandler(restController)))
+                    .option(ChannelOption.SO_BACKLOG, backlog)
+                    .option(ChannelOption.SO_REUSEADDR, reuseAddress)
+                    .option(ChannelOption.SO_KEEPALIVE, keepAlive)
+                    .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
+                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
+                    .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
             channel = bootstrap.bind(port).sync().channel();
         } catch (InterruptedException e) {
             throw new QueueException(e);

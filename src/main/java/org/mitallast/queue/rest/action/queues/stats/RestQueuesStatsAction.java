@@ -2,6 +2,9 @@ package org.mitallast.queue.rest.action.queues.stats;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
@@ -32,20 +35,20 @@ public class RestQueuesStatsAction extends BaseRestHandler {
         client.queues().queuesStatsRequest(new QueuesStatsRequest(), new ActionListener<QueuesStatsResponse>() {
             @Override
             public void onResponse(QueuesStatsResponse response) {
-                JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-                try (OutputStream stream = restResponse.getOutputStream()) {
-                    JsonGenerator generator = createGenerator(request, stream);
-                    generator.writeStartObject();
-                    generator.writeArrayFieldStart("queues");
-                    for (QueueStats queueStats : response.stats().getQueueStats()) {
+                ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+                try (OutputStream stream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer())) {
+                    try (JsonGenerator generator = createGenerator(request, stream)) {
                         generator.writeStartObject();
-                        generator.writeStringField("name", queueStats.getQueue().getName());
-                        generator.writeNumberField("size", queueStats.getSize());
-                        generator.writeEndObject();
+                        generator.writeArrayFieldStart("queues");
+                        for (QueueStats queueStats : response.stats().getQueueStats()) {
+                            generator.writeStartObject();
+                            generator.writeStringField("name", queueStats.getQueue().getName());
+                            generator.writeNumberField("size", queueStats.getSize());
+                            generator.writeEndObject();
+                        }
+                        generator.writeEndArray();
                     }
-                    generator.writeEndArray();
-                    generator.close();
-                    session.sendResponse(restResponse);
+                    session.sendResponse(new JsonRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }

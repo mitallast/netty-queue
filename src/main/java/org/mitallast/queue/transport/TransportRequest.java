@@ -8,7 +8,6 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 import org.mitallast.queue.rest.RestRequest;
 
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -16,11 +15,7 @@ import java.util.Map;
 
 public class TransportRequest implements RestRequest {
 
-    public static final String ENCODING = "UTF-8";
-    public static final Charset charset = Charset.forName(ENCODING);
-
     public static final String METHOD_TUNNEL = "_method";
-    private static final String DEFAULT_PROTOCOL = "http";
     private FullHttpRequest httpRequest;
     private HttpMethod httpMethod;
     private HttpHeaders httpHeaders;
@@ -50,8 +45,8 @@ public class TransportRequest implements RestRequest {
     public String param(String param) {
         List<String> params = paramMap.get(param);
         return (params == null || params.isEmpty())
-            ? null
-            : params.get(0);
+                ? null
+                : params.get(0);
     }
 
     @Override
@@ -65,53 +60,8 @@ public class TransportRequest implements RestRequest {
     }
 
     @Override
-    public boolean isMethodGet() {
-        return httpMethod.equals(HttpMethod.GET);
-    }
-
-    @Override
-    public boolean isMethodDelete() {
-        return httpMethod.equals(HttpMethod.DELETE);
-    }
-
-    @Override
-    public boolean isMethodPost() {
-        return httpMethod.equals(HttpMethod.POST);
-    }
-
-    @Override
-    public boolean isMethodPut() {
-        return httpMethod.equals(HttpMethod.PUT);
-    }
-
-    @Override
-    public boolean isMethodHead() {
-        return httpMethod.equals(HttpMethod.HEAD);
-    }
-
-    @Override
-    public boolean isMethodOptions() {
-        return httpMethod.equals(HttpMethod.OPTIONS);
-    }
-
-    @Override
     public InputStream getInputStream() {
         return new ByteBufInputStream(httpRequest.content());
-    }
-
-    @Override
-    public String getBody() {
-        return httpRequest.content().toString(charset);
-    }
-
-    @Override
-    public String getProtocol() {
-        return DEFAULT_PROTOCOL;
-    }
-
-    @Override
-    public String getHost() {
-        return httpHeaders.get(HttpHeaders.Names.HOST);
     }
 
     @Override
@@ -120,13 +70,8 @@ public class TransportRequest implements RestRequest {
     }
 
     @Override
-    public String getBaseUrl() {
-        return getProtocol() + "://" + getHost();
-    }
-
-    @Override
-    public String getUrl() {
-        return getBaseUrl() + getQueryPath();
+    public String getUri() {
+        return httpRequest.getUri();
     }
 
     private void determineEffectiveHttpMethod() {

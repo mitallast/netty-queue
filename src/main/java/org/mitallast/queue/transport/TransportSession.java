@@ -38,15 +38,11 @@ public class TransportSession implements RestSession {
 
     @Override
     public void sendResponse(RestResponse response) {
-        if (!response.hasException()) {
-            ByteBuf buffer = response.getBuffer();
-            DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, response.getResponseStatus(), buffer, false);
-            httpResponse.headers().set(response.getHeaders());
-            httpResponse.headers().set(CONTENT_LENGTH, httpResponse.content().readableBytes());
-            write(httpResponse);
-        } else {
-            sendResponse(response.getException());
-        }
+        ByteBuf buffer = response.getBuffer();
+        DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, response.getResponseStatus(), buffer, false);
+        httpResponse.headers().set(response.getHeaders());
+        httpResponse.headers().set(CONTENT_LENGTH, httpResponse.content().readableBytes());
+        write(httpResponse);
     }
 
     @Override

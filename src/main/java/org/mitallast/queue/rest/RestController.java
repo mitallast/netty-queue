@@ -6,6 +6,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.rest.response.StatusRestResponse;
 import org.mitallast.queue.rest.response.StringRestResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ public class RestController extends AbstractComponent {
                 channel.sendResponse(e);
             } catch (Throwable ex) {
                 logger.error("error send", e);
-                logger.error("Failed to send failure response for uri [" + request.getUrl() + "]", ex);
+                logger.error("Failed to send failure response for uri [" + request.getUri() + "]", ex);
             }
         }
     }
@@ -46,10 +47,9 @@ public class RestController extends AbstractComponent {
         } else {
             if (request.getHttpMethod() == HttpMethod.OPTIONS) {
                 // when we have OPTIONS request, simply send OK by default (with the Access Control Origin header which gets automatically added)
-                StringRestResponse response = new StringRestResponse(HttpResponseStatus.OK);
-                channel.sendResponse(response);
+                channel.sendResponse(new StatusRestResponse(HttpResponseStatus.OK));
             } else {
-                channel.sendResponse(new StringRestResponse(HttpResponseStatus.BAD_REQUEST, "No handler found for uri [" + request.getUrl() + "] and method [" + request.getHttpMethod() + "]"));
+                channel.sendResponse(new StringRestResponse(HttpResponseStatus.BAD_REQUEST, "No handler found for uri [" + request.getUri() + "] and method [" + request.getHttpMethod() + "]"));
             }
         }
     }

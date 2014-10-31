@@ -2,6 +2,9 @@ package org.mitallast.queue.rest.action.queue.get;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
@@ -42,16 +45,16 @@ public class RestGetAction extends BaseRestHandler {
             @Override
             public void onResponse(GetResponse getResponse) {
                 if (getResponse.getMessage() == null) {
-                    session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
+                    session.sendResponse(new StatusRestResponse(HttpResponseStatus.NOT_FOUND));
                     return;
                 }
                 QueueMessage queueMessage = getResponse.getMessage();
-                JsonRestResponse restResponse = new JsonRestResponse(HttpResponseStatus.OK);
-                try (OutputStream stream = restResponse.getOutputStream()) {
+                ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
+                try (OutputStream stream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer())) {
                     try (JsonGenerator generator = createGenerator(request, stream)) {
                         queueMessage.writeTo(generator);
                     }
-                    session.sendResponse(restResponse);
+                    session.sendResponse(new JsonRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }

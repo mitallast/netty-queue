@@ -33,7 +33,7 @@ public class QueuesClient {
         createQueueAction.execute(request, listener);
     }
 
-    public void removeQueue(DeleteQueueRequest request, ActionListener<DeleteQueueResponse> listener) {
+    public void deleteQueue(DeleteQueueRequest request, ActionListener<DeleteQueueResponse> listener) {
         deleteQueueAction.execute(request, listener);
     }
 }

@@ -5,6 +5,7 @@ import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.QueuesService;
 
 public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, DeleteQueueResponse> {
@@ -24,7 +25,11 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
             listener.onFailure(validationException);
             return;
         }
-        queuesService.deleteQueue(request.getQueue(), request.getReason());
-        listener.onResponse(new DeleteQueueResponse());
+        try {
+            queuesService.deleteQueue(request.getQueue(), request.getReason());
+            listener.onResponse(new DeleteQueueResponse(true));
+        } catch (QueueMissingException e) {
+            listener.onResponse(new DeleteQueueResponse(false, e));
+        }
     }
 }

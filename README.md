@@ -22,53 +22,53 @@ Usage
 
 server info 
 
-    curl -i -s -XGET 'localhost:8080/?pretty'
+    curl -i -s -XGET 'http://127.0.0.1:8080/?pretty'
 
 server stats 
 
-    curl -i -s -XGET 'localhost:8080/_stats?pretty'
+    curl -i -s -XGET 'http://127.0.0.1:8080/_stats?pretty'
 
 create queue 
 
-    curl -i -s -XPUT 'localhost:8080/my_queue?pretty'
+    curl -i -s -XPUT 'http://127.0.0.1:8080/my_queue?pretty'
 
 queue stats
 
-    curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
+    curl -i -s -XGET 'http://127.0.0.1:8080/my_queue/_stats?pretty'
 
 enqueue message as string
 
-    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
+    curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
 
 enqueue message as json
 
-    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":{"Title":"Hello world"}}'
+    curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"message":{"Title":"Hello world"}}'
 
 enqueue with uuid message 
 
-    curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
+    curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
 
 delete with uuid
 
-    curl -i -s -XDELETE 'localhost:8080/my_queue/message?uuid=a57586b7-3eed-4c7c-b257-8bf9021fffbd&pretty'
-    curl -i -s -XDELETE 'localhost:8080/my_queue/message/a57586b7-3eed-4c7c-b257-8bf9021fffbd?pretty'
+    curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue/message?uuid=a57586b7-3eed-4c7c-b257-8bf9021fffbd&pretty'
+    curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue/message/a57586b7-3eed-4c7c-b257-8bf9021fffbd?pretty'
 
 peek message with uuid
 
-    curl -i -s -XHEAD 'localhost:8080/my_queue/message?pretty'
+    curl -i -s -XHEAD 'http://127.0.0.1:8080/my_queue/message?pretty'
 
 get message with uuid
 
-    curl -i -s -XHEAD 'localhost:8080/my_queue/message/a57586b7-3eed-4c7c-b256-8bf9021fffbd?pretty'
+    curl -i -s -XHEAD 'http://127.0.0.1:8080/my_queue/message/a57586b7-3eed-4c7c-b256-8bf9021fffbd?pretty'
 
 dequeue message
 
-    curl -i -s -XGET 'localhost:8080/my_queue/message?pretty'
+    curl -i -s -XGET 'http://127.0.0.1:8080/my_queue/message?pretty'
 
 
 delete queue
 
-    curl -i -s -XDELETE 'localhost:8080/my_queue?reason=test&pretty'
+    curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue?reason=test&pretty'
 
 
 Recommended server options
@@ -78,6 +78,11 @@ Recommended server options
     net.inet.tcp.msl: 15000
     localhost$ sudo sysctl -w net.inet.tcp.msl=1000
     net.inet.tcp.msl: 15000 -> 1000
+    localhost$ ulimit -n
+    2048
+    localhost$ ulimit -n 65536
+    localhost$ ulimit -n
+    65536
 
 Recommended java options
 ------------------------

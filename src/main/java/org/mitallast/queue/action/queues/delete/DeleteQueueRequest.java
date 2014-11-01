@@ -1,15 +1,15 @@
-package org.mitallast.queue.action.queues.remove;
+package org.mitallast.queue.action.queues.delete;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
-public class RemoveQueueRequest extends ActionRequest {
+public class DeleteQueueRequest extends ActionRequest {
     private String queue;
     private String reason;
 
-    public RemoveQueueRequest() {
+    public DeleteQueueRequest() {
     }
 
     public String getQueue() {

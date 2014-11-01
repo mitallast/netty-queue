@@ -9,7 +9,7 @@ import org.mitallast.queue.rest.action.queue.get.RestGetAction;
 import org.mitallast.queue.rest.action.queue.peek.RestPeekQueueAction;
 import org.mitallast.queue.rest.action.queue.stats.RestQueueStatsAction;
 import org.mitallast.queue.rest.action.queues.create.RestCreateQueueAction;
-import org.mitallast.queue.rest.action.queues.remove.RestRemoveQueueAction;
+import org.mitallast.queue.rest.action.queues.delete.RestDeleteQueueAction;
 import org.mitallast.queue.rest.action.queues.stats.RestQueuesStatsAction;
 
 public class RestModule extends AbstractModule {
@@ -24,7 +24,7 @@ public class RestModule extends AbstractModule {
         bind(RestQueueStatsAction.class).asEagerSingleton();
 
         bind(RestCreateQueueAction.class).asEagerSingleton();
-        bind(RestRemoveQueueAction.class).asEagerSingleton();
+        bind(RestDeleteQueueAction.class).asEagerSingleton();
         bind(RestQueuesStatsAction.class).asEagerSingleton();
 
         bind(RestIndexAction.class).asEagerSingleton();

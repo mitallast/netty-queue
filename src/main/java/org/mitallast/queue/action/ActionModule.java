@@ -8,7 +8,7 @@ import org.mitallast.queue.action.queue.get.GetAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
-import org.mitallast.queue.action.queues.remove.RemoveQueueAction;
+import org.mitallast.queue.action.queues.delete.DeleteQueueAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
 
 public class ActionModule extends AbstractModule {
@@ -23,7 +23,7 @@ public class ActionModule extends AbstractModule {
         bind(QueueStatsAction.class).asEagerSingleton();
 
         bind(CreateQueueAction.class).asEagerSingleton();
-        bind(RemoveQueueAction.class).asEagerSingleton();
+        bind(DeleteQueueAction.class).asEagerSingleton();
         bind(QueuesStatsAction.class).asEagerSingleton();
     }
 }

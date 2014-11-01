@@ -5,9 +5,9 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.action.queues.create.CreateQueueResponse;
-import org.mitallast.queue.action.queues.remove.RemoveQueueAction;
-import org.mitallast.queue.action.queues.remove.RemoveQueueRequest;
-import org.mitallast.queue.action.queues.remove.RemoveQueueResponse;
+import org.mitallast.queue.action.queues.delete.DeleteQueueAction;
+import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
+import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
@@ -16,13 +16,13 @@ public class QueuesClient {
 
     private final QueuesStatsAction queuesStatsAction;
     private final CreateQueueAction createQueueAction;
-    private final RemoveQueueAction removeQueueAction;
+    private final DeleteQueueAction deleteQueueAction;
 
     @Inject
-    public QueuesClient(QueuesStatsAction queuesStatsAction, CreateQueueAction createQueueAction, RemoveQueueAction removeQueueAction) {
+    public QueuesClient(QueuesStatsAction queuesStatsAction, CreateQueueAction createQueueAction, DeleteQueueAction deleteQueueAction) {
         this.queuesStatsAction = queuesStatsAction;
         this.createQueueAction = createQueueAction;
-        this.removeQueueAction = removeQueueAction;
+        this.deleteQueueAction = deleteQueueAction;
     }
 
     public void queuesStatsRequest(QueuesStatsRequest request, ActionListener<QueuesStatsResponse> listener) {
@@ -33,7 +33,7 @@ public class QueuesClient {
         createQueueAction.execute(request, listener);
     }
 
-    public void removeQueue(RemoveQueueRequest request, ActionListener<RemoveQueueResponse> listener) {
-        removeQueueAction.execute(request, listener);
+    public void removeQueue(DeleteQueueRequest request, ActionListener<DeleteQueueResponse> listener) {
+        deleteQueueAction.execute(request, listener);
     }
 }

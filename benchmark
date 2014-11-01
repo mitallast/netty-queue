@@ -1,4 +1,5 @@
 $ sudo launchctl limit maxfiles 1000000 1000000
+$ ulimit -n 65536
 $ sudo sysctl -w net.inet.tcp.msl=1000
 $ mvn clean install exec:exec -DskipTests
 $ curl -i -s -XDELETE 'localhost:8080/my_queue?reason=test'

@@ -116,12 +116,6 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>org.fusesource.leveldbjni</groupId>
-            <artifactId>leveldbjni-osx</artifactId>
-            <version>${leveldb.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.eaio.uuid</groupId>
             <artifactId>uuid</artifactId>
             <version>${uuid.version}</version>
@@ -174,8 +168,8 @@
                     <arguments>
                         <argument>-server</argument>
                         <argument>-d64</argument>
-                        <argument>-Xms512m</argument>
-                        <argument>-Xmx512m</argument>
+                        <argument>-Xms4g</argument>
+                        <argument>-Xmx4g</argument>
                         <argument>-XX:ReservedCodeCacheSize=256m</argument>
                         <argument>-XX:+UseG1GC</argument>
                         <argument>-XX:MaxGCPauseMillis=150</argument>
@@ -189,6 +183,7 @@
                         <argument>-XX:+AggressiveOpts</argument>
                         <argument>-XX:+UseFastAccessorMethods</argument>
                         <argument>-XX:-MaxFDLimit</argument>
+                        <argument>-Dio.netty.leakDetectionLevel=disabled</argument>
                         <argument>-classpath</argument>
                         <classpath/>
                         <argument>org.mitallast.queue.Main</argument>

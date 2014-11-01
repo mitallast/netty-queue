@@ -3,10 +3,7 @@ package org.mitallast.queue.transport.http;
 import com.google.inject.Inject;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.AdaptiveRecvByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.mitallast.queue.QueueException;
@@ -16,6 +13,7 @@ import org.mitallast.queue.rest.RestController;
 
 public class HttpServer extends AbstractLifecycleComponent {
 
+    private String host;
     private int port;
     private int backlog;
     private boolean keepAlive;
@@ -26,13 +24,14 @@ public class HttpServer extends AbstractLifecycleComponent {
 
 
     private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
+    private Class<? extends ServerChannel> channelClass;
     private ServerBootstrap bootstrap;
     private Channel channel;
 
     @Inject
     public HttpServer(Settings settings, RestController restController) {
         super(settings);
+        this.host = settings.get("host", "127.0.0.1");
         this.port = settings.getAsInt("port", 8080);
         this.backlog = settings.getAsInt("backlog", 65536);
         this.reuseAddress = settings.getAsBoolean("reuse_address", true);
@@ -44,11 +43,11 @@ public class HttpServer extends AbstractLifecycleComponent {
     @Override
     protected void doStart() throws QueueException {
         bossGroup = new NioEventLoopGroup();
-        workerGroup = new NioEventLoopGroup();
+        channelClass = NioServerSocketChannel.class;
         try {
             bootstrap = new ServerBootstrap();
-            bootstrap.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
+            bootstrap.group(bossGroup)
+                    .channel(channelClass)
                     .childHandler(new HttpServerInitializer(new HttpServerHandler(restController)))
                     .option(ChannelOption.SO_BACKLOG, backlog)
                     .option(ChannelOption.SO_REUSEADDR, reuseAddress)
@@ -58,7 +57,9 @@ public class HttpServer extends AbstractLifecycleComponent {
                     .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                     .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
-            channel = bootstrap.bind(port).sync().channel();
+            channel = bootstrap.bind(host, port)
+                    .sync()
+                    .channel();
         } catch (InterruptedException e) {
             throw new QueueException(e);
         }
@@ -67,7 +68,6 @@ public class HttpServer extends AbstractLifecycleComponent {
     @Override
     protected void doStop() throws QueueException {
         bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
         try {
             channel.closeFuture().sync();
         } catch (InterruptedException e) {
@@ -75,7 +75,6 @@ public class HttpServer extends AbstractLifecycleComponent {
         }
         channel = null;
         bootstrap = null;
-        workerGroup = null;
         bossGroup = null;
     }
 

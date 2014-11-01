@@ -2,9 +2,7 @@ package org.mitallast.queue.queue.service;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
@@ -12,44 +10,32 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
 import java.io.IOException;
-import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
 
-public abstract class BaseQueueServiceTest<T extends QueueService> {
-
-    private final static int concurrency = 24;
-    private final static int messagesCount = 50000;
-
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
+public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQueueMessageTest {
 
     protected T queueService;
-    private ExecutorService executorService;
 
     protected abstract T createQueueService(Settings settings, Settings queueSettings, Queue queue);
 
     @Before
-    public void before() {
+    public void setUp() throws Exception {
         queueService = createQueueService(
-                ImmutableSettings.builder()
-                        .put("work_dir", folder.getRoot().getPath())
-                        .build(),
-                ImmutableSettings.builder().build(),
-                new Queue("test_queue")
+            ImmutableSettings.builder()
+                .put("work_dir", folder.getRoot().getPath())
+                .build(),
+            ImmutableSettings.builder().build(),
+            new Queue("test_queue")
         );
         queueService.start();
-
-        executorService = Executors.newFixedThreadPool(concurrency);
+        super.setUp();
     }
 
     @After
-    public void after() throws InterruptedException {
+    public void tearDown() throws Exception {
         queueService.close();
         queueService = null;
-
-        executorService.shutdown();
-        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-        executorService = null;
+        super.tearDown();
     }
 
     @Test
@@ -99,7 +85,9 @@ public abstract class BaseQueueServiceTest<T extends QueueService> {
                     QueueMessage queueMessage = createMessage();
                     queueService.enqueue(queueMessage);
                     assert queueMessage.getUuid() != null;
-                    assert queueMessage.equals(queueService.get(queueMessage.getUuid()));
+                    QueueMessage queueMessageActual = queueService.get(queueMessage.getUuid());
+                    assert queueMessage.equals(queueMessageActual)
+                        : queueMessage + " != " + queueMessageActual;
                 }
             }
         });
@@ -128,7 +116,6 @@ public abstract class BaseQueueServiceTest<T extends QueueService> {
                 }
             }
         });
-        assert queueService.size() == 0;
     }
 
     @Test
@@ -193,58 +180,5 @@ public abstract class BaseQueueServiceTest<T extends QueueService> {
         });
         long end = System.currentTimeMillis();
         System.out.println("Execute with uuid concurrent at " + (end - start));
-    }
-
-    protected final void executeConcurrent(RunnableFactory runnableFactory) throws ExecutionException, InterruptedException {
-        Future[] futures = new Future[concurrency];
-        for (int i = 0; i < concurrency; i++) {
-            futures[i] = executorService.submit(runnableFactory.create(i, concurrency));
-        }
-        for (int i = 0; i < concurrency; i++) {
-            futures[i].get();
-        }
-    }
-
-    protected final void executeConcurrent(Runnable runnable) throws ExecutionException, InterruptedException {
-        Future[] futures = new Future[concurrency];
-        for (int i = 0; i < concurrency; i++) {
-            futures[i] = executorService.submit(runnable);
-        }
-        for (int i = 0; i < concurrency; i++) {
-            futures[i].get();
-        }
-    }
-
-    protected final QueueMessage[] createMessages() {
-        QueueMessage[] messages = new QueueMessage[messagesCount];
-        for (int i = 0; i < messagesCount; i++) {
-            messages[i] = createMessage();
-        }
-        return messages;
-    }
-
-    protected final QueueMessage[] createMessagesWithUuid() {
-        QueueMessage[] messages = new QueueMessage[messagesCount];
-        for (int i = 0; i < messagesCount; i++) {
-            messages[i] = createMessageWithUuid();
-        }
-        return messages;
-    }
-
-    protected final QueueMessage createMessage() {
-        QueueMessage message = new QueueMessage();
-        message.setSource("Hello world");
-        return message;
-    }
-
-    protected final QueueMessage createMessageWithUuid() {
-        QueueMessage message = new QueueMessage();
-        message.setUuid(UUID.randomUUID());
-        message.setSource("Hello world");
-        return message;
-    }
-
-    public static interface RunnableFactory {
-        public Runnable create(int thread, int concurrency);
     }
 }

@@ -1,15 +1,15 @@
-$ sudo launchctl limit maxfiles 1000000 1000000
-$ ulimit -n 65536
-$ sudo sysctl -w net.inet.tcp.msl=1000
-$ mvn clean install exec:exec -DskipTests
-$ curl -i -s -XDELETE 'localhost:8080/my_queue?reason=test'
-$ curl -i -s -XPUT 'localhost:8080/my_queue?type=string_uid&pretty'
-$ ab -n100000 -c100 -k -p message.json 'localhost:8080/my_queue/message'
+sudo launchctl limit maxfiles 1000000 1000000
+ulimit -n 65536
+sudo sysctl -w net.inet.tcp.msl=1000
+mvn clean install exec:exec -DskipTests
+curl -i -s -XDELETE 'localhost:8080/my_queue?reason=test'
+curl -i -s -XPUT 'localhost:8080/my_queue'
+ab -n100000 -c100 -k -p message.json 'http://127.0.0.1:8080/my_queue/message'
 This is ApacheBench, Version 2.3 <$Revision: 1373084 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
 
-Benchmarking localhost (be patient)
+Benchmarking 127.0.0.1 (be patient)
 Completed 10000 requests
 Completed 20000 requests
 Completed 30000 requests
@@ -24,48 +24,42 @@ Finished 100000 requests
 
 
 Server Software:
-Server Hostname:        localhost
+Server Hostname:        127.0.0.1
 Server Port:            8080
 
 Document Path:          /my_queue/message
-Document Length:        0 bytes
+Document Length:        36 bytes
 
 Concurrency Level:      100
-Time taken for tests:   1.608 seconds
+Time taken for tests:   1.217 seconds
 Complete requests:      100000
 Failed requests:        0
 Write errors:           0
 Keep-Alive requests:    100000
-Total transferred:      8500000 bytes
+Total transferred:      10400000 bytes
 Total body sent:        20600000
-HTML transferred:       0 bytes
-Requests per second:    62184.53 [#/sec] (mean)
-Time per request:       1.608 [ms] (mean)
-Time per request:       0.016 [ms] (mean, across all concurrent requests)
-Transfer rate:          5161.80 [Kbytes/sec] received
-                        12509.78 kb/s sent
-                        17671.58 kb/s total
+HTML transferred:       3600000 bytes
+Requests per second:    82160.02 [#/sec] (mean)
+Time per request:       1.217 [ms] (mean)
+Time per request:       0.012 [ms] (mean, across all concurrent requests)
+Transfer rate:          8344.38 [Kbytes/sec] received
+                        16528.29 kb/s sent
+                        24872.66 kb/s total
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    2   0.5      1       6
-Waiting:        0    2   0.5      1       6
-Total:          0    2   0.5      1       6
-WARNING: The median and mean for the processing time are not within a normal deviation
-        These results are probably not that reliable.
-WARNING: The median and mean for the waiting time are not within a normal deviation
-        These results are probably not that reliable.
-WARNING: The median and mean for the total time are not within a normal deviation
-        These results are probably not that reliable.
+Processing:     0    1   0.1      1       5
+Waiting:        0    1   0.1      1       5
+Total:          0    1   0.1      1       6
 
 Percentage of the requests served within a certain time (ms)
   50%      1
-  66%      2
-  75%      2
-  80%      2
-  90%      3
-  95%      3
-  98%      3
-  99%      3
+  66%      1
+  75%      1
+  80%      1
+  90%      1
+  95%      1
+  98%      1
+  99%      1
  100%      6 (longest request)

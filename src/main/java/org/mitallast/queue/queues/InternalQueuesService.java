@@ -10,8 +10,8 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
-import org.mitallast.queue.queue.service.LevelDbQueueService;
 import org.mitallast.queue.queue.service.QueueService;
+import org.mitallast.queue.queue.service.TransactionLogQueueService;
 import org.mitallast.queue.queues.stats.QueueStats;
 import org.mitallast.queue.queues.stats.QueuesStats;
 
@@ -85,7 +85,7 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
             throw new QueueAlreadyExistsException(queue.getName());
         }
 
-        final QueueService queueService = new LevelDbQueueService(settings, queueSettings, queue);
+        final QueueService queueService = new TransactionLogQueueService(settings, queueSettings, queue);
 
         queueService.start();
         queues.put(queueService.queue().getName(), queueService);

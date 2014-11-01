@@ -34,12 +34,12 @@ public class QueueMessage {
         return uuid;
     }
 
-    public void setUuid(String uuid) {
-        setUuid(UUID.fromString(uuid));
-    }
-
     public void setUuid(UUID uuid) {
         this.uuid = uuid;
+    }
+
+    public void setUuid(String uuid) {
+        setUuid(UUID.fromString(uuid));
     }
 
     public QueueMessageType getMessageType() {
@@ -70,12 +70,12 @@ public class QueueMessage {
         }
     }
 
-    public void setSource(byte[] newSource) {
-        source = newSource;
-    }
-
     public byte[] getSource() {
         return source;
+    }
+
+    public void setSource(byte[] newSource) {
+        source = newSource;
     }
 
     public InputStream getSourceAsStream() throws IOException {
@@ -121,5 +121,13 @@ public class QueueMessage {
         int result = uuid != null ? uuid.hashCode() : 0;
         result = 31 * result + (source != null ? Arrays.hashCode(source) : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "QueueMessage{" +
+            "uuid=" + uuid +
+            ", source=" + Arrays.toString(source) +
+            '}';
     }
 }

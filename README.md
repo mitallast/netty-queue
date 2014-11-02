@@ -7,9 +7,9 @@ Goals:
 
  - REST for simple integration and flexible message structures
  - Netty for fastest TCP/IP and HTTP server realization
- - Level DB as storage engine for amazing performance
+ - Memory mapped files to access data as an transaction log
 
-As result, one instance allows send up to 60000 messages-at-request per second in concurrent mode! 
+As result, one instance allows send up to 85000 messages-at-request per second in concurrent mode! 
 See benchmark for more details.
 
 How to run

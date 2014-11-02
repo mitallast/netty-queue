@@ -3,12 +3,15 @@ package org.mitallast.queue.queue.service.translog;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.LinkedHashMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -17,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * - message meta info * size
  * - message data * size
  */
-public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendTransactionLog {
+public class FileQueueMessageAppendTransactionLog implements Closeable {
 
     private final static long INT_SIZE = 4;
     private final static long LONG_SIZE = 8;
@@ -29,7 +32,9 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
 
     private final AtomicLong messageWriteOffset = new AtomicLong();
     private final AtomicInteger messageCount = new AtomicInteger();
-    private final LinkedHashMap<UUID, QueueMessageMeta> messageMetaMap = new LinkedHashMap<>(256);
+
+    private final ConcurrentLinkedQueue<QueueMessageMeta> messageMetaQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentHashMap<UUID, QueueMessageMeta> messageMetaMap = new ConcurrentHashMap<>(256);
 
     public FileQueueMessageAppendTransactionLog(File metaFile, File dataFile) throws IOException {
         if (!metaFile.exists()) {
@@ -46,24 +51,23 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
         dataMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(dataFile, "rw"), 4096, 10);
     }
 
-    @Override
-    @LockOwner
     public void initializeNew() throws IOException {
         writeMessageCount(0);
+        messageMetaQueue.clear();
         messageMetaMap.clear();
         messageWriteOffset.set(0);
     }
 
-    @Override
-    @LockOwner
     public void initializeExists() throws IOException {
         messageCount.set(readMessageCount());
         messageMetaMap.clear();
+        messageMetaQueue.clear();
 
         for (int i = 0; i < messageCount.get(); i++) {
             QueueMessageMeta messageMeta = readMeta(i);
             messageMeta.pos = i;
             messageMetaMap.put(messageMeta.uuid, messageMeta);
+            messageMetaQueue.add(messageMeta);
         }
         messageWriteOffset.set(dataMemoryMappedFile.length());
     }
@@ -76,53 +80,46 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
      * @param queueMessage new message
      * @return message position
      */
-    @Override
-    @LockOwner
     public int putMessage(QueueMessage queueMessage) throws IOException {
         int pos = messageCount.getAndIncrement();
 
-        QueueMessageMeta meta = messageMetaMap.get(queueMessage.getUuid());
-        if (meta == null) {
-            meta = new QueueMessageMeta();
-            meta.uuid = queueMessage.getUuid();
-            meta.pos = pos;
-            synchronized (messageMetaMap) {
-                messageMetaMap.put(meta.uuid, meta);
-            }
-        } else {
-            throw new QueueMessageUuidDuplicateException(meta.uuid);
+        QueueMessageMeta messageMeta = new QueueMessageMeta();
+        messageMeta.uuid = queueMessage.getUuid();
+        messageMeta.pos = pos;
+        if (messageMetaMap.putIfAbsent(messageMeta.uuid, messageMeta) != null) {
+            throw new QueueMessageUuidDuplicateException(messageMeta.uuid);
         }
 
         byte[] source = queueMessage.getSource();
 
-        meta.offset = messageWriteOffset.getAndAdd(source.length);
+        messageMeta.offset = messageWriteOffset.getAndAdd(source.length);
 
-        meta.length = source.length;
-        meta.setStatus(QueueMessageMeta.Status.New);
+        messageMeta.length = source.length;
+        messageMeta.setStatus(QueueMessageMeta.Status.New);
 
-        dataMemoryMappedFile.putBytes(meta.offset, source);
+        dataMemoryMappedFile.putBytes(messageMeta.offset, source);
 //        dataMemoryMappedFile.flush();
 
-        writeMeta(meta, meta.pos);
+        writeMeta(messageMeta, messageMeta.pos);
         writeMessageCount(messageCount.get());
+
+        messageMetaQueue.add(messageMeta);
 
 //        metaMemoryMappedFile.flush();
         return pos;
     }
 
-    @Override
-    @LockOwner
     public void markMessageDeleted(UUID uuid) throws IOException {
         QueueMessageMeta meta = messageMetaMap.get(uuid);
         if (meta != null) {
             meta.setStatus(QueueMessageMeta.Status.Deleted);
             writeMeta(meta, meta.pos);
+            messageMetaMap.remove(uuid);
         }
     }
 
-    @Override
     public QueueMessage peekMessage() throws IOException {
-        for (QueueMessageMeta messageMeta : messageMetaMap.values()) {
+        for (QueueMessageMeta messageMeta : messageMetaQueue) {
             if (messageMeta.isStatus(QueueMessageMeta.Status.New)) {
                 return readMessage(messageMeta, false);
             }
@@ -130,34 +127,26 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
         return null;
     }
 
-    @Override
     public QueueMessage dequeueMessage() throws IOException {
-        for (QueueMessageMeta messageMeta : messageMetaMap.values()) {
-            if (messageMeta.isStatus(QueueMessageMeta.Status.New)) {
-                messageMeta.setStatus(QueueMessageMeta.Status.Deleted);
+        QueueMessageMeta messageMeta;
+        while ((messageMeta = messageMetaQueue.poll()) != null) {
+            if (messageMeta.updateStatus(QueueMessageMeta.Status.New, QueueMessageMeta.Status.Deleted)) {
+                writeMeta(messageMeta, messageMeta.pos);
+                messageMetaMap.remove(messageMeta.uuid);
                 return readMessage(messageMeta, false);
             }
         }
         return null;
     }
 
-    @Override
-    @LockInternal
     public QueueMessage readMessage(UUID uuid) throws IOException {
-        return readMessage(uuid, true);
-    }
-
-    @Override
-    @LockInternal
-    public QueueMessage readMessage(UUID uuid, boolean checkDeletion) throws IOException {
         QueueMessageMeta meta = messageMetaMap.get(uuid);
         if (meta != null) {
-            return readMessage(meta, checkDeletion);
+            return readMessage(meta, true);
         }
         return null;
     }
 
-    @LockOwner
     private QueueMessage readMessage(QueueMessageMeta meta, boolean checkDeletion) throws IOException {
         if (meta.isStatus(QueueMessageMeta.Status.None)) {
             return null;
@@ -170,22 +159,18 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
         return new QueueMessage(meta.uuid, source);
     }
 
-    @LockNested
     private void writeMessageCount(int maxSize) throws IOException {
         metaMemoryMappedFile.putInt(MESSAGE_COUNT_OFFSET, maxSize);
     }
 
-    @LockNested
     private int readMessageCount() throws IOException {
         return metaMemoryMappedFile.getInt(MESSAGE_COUNT_OFFSET);
     }
 
-    @LockNested
     public void writeMeta(QueueMessageMeta messageMeta, int pos) throws IOException {
         writeMeta(messageMeta, getMetaOffset(pos));
     }
 
-    @LockNested
     public void writeMeta(QueueMessageMeta messageMeta, long offset) throws IOException {
         if (messageMeta.uuid == null) {
             metaMemoryMappedFile.putLong(offset, 0);
@@ -205,12 +190,10 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
         metaMemoryMappedFile.putInt(offset, messageMeta.length);
     }
 
-    @LockNested
     private QueueMessageMeta readMeta(int pos) throws IOException {
         return readMeta(getMetaOffset(pos));
     }
 
-    @LockNested
     public QueueMessageMeta readMeta(long offset) throws IOException {
         QueueMessageMeta messageMeta = new QueueMessageMeta();
         long UUIDMost = metaMemoryMappedFile.getLong(offset);
@@ -240,25 +223,14 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
         dataMemoryMappedFile.close();
     }
 
-    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
-    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD})
-    private static @interface LockNested {
-    }
-
-    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
-    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD})
-    private static @interface LockInternal {
-    }
-
-    @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.CLASS)
-    @java.lang.annotation.Target({java.lang.annotation.ElementType.METHOD})
-    private static @interface LockOwner {
-    }
-
     public static class QueueMessageMeta {
+
+        private final AtomicIntegerFieldUpdater<QueueMessageMeta> statusUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(QueueMessageMeta.class, "status");
+
         private UUID uuid;
         private long offset;
-        private int status;
+        private volatile int status;
         private int length;
         private int pos;
 
@@ -278,6 +250,10 @@ public class FileQueueMessageAppendTransactionLog implements QueueMessageAppendT
 
         public void setStatus(Status newStatus) {
             status = newStatus.ordinal();
+        }
+
+        public boolean updateStatus(Status expectedStatus, Status newStatus) {
+            return statusUpdater.compareAndSet(this, expectedStatus.ordinal(), newStatus.ordinal());
         }
 
         @Override

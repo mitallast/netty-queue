@@ -31,7 +31,7 @@ Document Path:          /my_queue/message
 Document Length:        36 bytes
 
 Concurrency Level:      100
-Time taken for tests:   1.204 seconds
+Time taken for tests:   1.171 seconds
 Complete requests:      100000
 Failed requests:        0
 Write errors:           0
@@ -39,18 +39,18 @@ Keep-Alive requests:    100000
 Total transferred:      10400000 bytes
 Total body sent:        20600000
 HTML transferred:       3600000 bytes
-Requests per second:    83036.41 [#/sec] (mean)
-Time per request:       1.204 [ms] (mean)
+Requests per second:    85406.80 [#/sec] (mean)
+Time per request:       1.171 [ms] (mean)
 Time per request:       0.012 [ms] (mean, across all concurrent requests)
-Transfer rate:          8433.39 [Kbytes/sec] received
-                        16704.59 kb/s sent
-                        25137.98 kb/s total
+Transfer rate:          8674.13 [Kbytes/sec] received
+                        17181.45 kb/s sent
+                        25855.57 kb/s total
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
-Processing:     0    1   0.1      1       6
-Waiting:        0    1   0.1      1       6
+Processing:     0    1   0.2      1       5
+Waiting:        0    1   0.2      1       5
 Total:          0    1   0.2      1       7
 
 Percentage of the requests served within a certain time (ms)

@@ -49,8 +49,6 @@ public class FileQueueMessageAppendTransactionLogTest extends BaseQueueMessageTe
         transactionLog.markMessageDeleted(newMessage.getUuid());
         QueueMessage savedMessage = transactionLog.readMessage(newMessage.getUuid());
         assert savedMessage == null;
-        savedMessage = transactionLog.readMessage(newMessage.getUuid(), false);
-        assert newMessage.equals(savedMessage);
     }
 
     @Test

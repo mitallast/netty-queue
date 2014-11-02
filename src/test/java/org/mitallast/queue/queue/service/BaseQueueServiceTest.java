@@ -10,7 +10,6 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
 
 public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQueueMessageTest {
 
@@ -77,7 +76,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
     }
 
     @Test
-    public void testEnqueueAndGetConcurrent() throws IOException, InterruptedException, ExecutionException {
+    public void testEnqueueAndGetConcurrent() throws Exception {
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
@@ -95,7 +94,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
     }
 
     @Test
-    public void testEnqueueAndDeQueueConcurrent() throws IOException, InterruptedException, ExecutionException {
+    public void testEnqueueAndDeQueueConcurrent() throws Exception {
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
@@ -119,18 +118,21 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
     }
 
     @Test
-    public void testWritePerformance() throws IOException {
+    public void testEnqueuePerformance() throws Exception {
+        warmUp();
         QueueMessage[] messages = createMessages();
         long start = System.currentTimeMillis();
         for (QueueMessage message : messages) {
             queueService.enqueue(message);
         }
         long end = System.currentTimeMillis();
-        System.out.println("Execute at " + (end - start));
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("enqueue " + qps + " qps");
     }
 
     @Test
-    public void testWritePerformanceConcurrent() throws IOException, ExecutionException, InterruptedException {
+    public void testEnqueuePerformanceConcurrent() throws Exception {
+        warmUp();
         final QueueMessage[] messages = createMessages();
         long start = System.currentTimeMillis();
         executeConcurrent(new RunnableFactory() {
@@ -147,22 +149,26 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             }
         });
         long end = System.currentTimeMillis();
-        System.out.println("Execute concurrent at " + (end - start));
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("enqueue concurrent " + qps + " qps");
     }
 
     @Test
-    public void testWritePerformanceWithUid() throws IOException {
+    public void testEnqueuePerformanceWithUid() throws Exception {
+        warmUp();
         QueueMessage[] messages = createMessagesWithUuid();
         long start = System.currentTimeMillis();
         for (QueueMessage message : messages) {
             queueService.enqueue(message);
         }
         long end = System.currentTimeMillis();
-        System.out.println("Execute with uuid at " + (end - start));
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("enqueue with uuid " + qps + " qps");
     }
 
     @Test
-    public void testWritePerformanceWithUidConcurrent() throws IOException, ExecutionException, InterruptedException {
+    public void testEnqueuePerformanceWithUidConcurrent() throws Exception {
+        warmUp();
         final QueueMessage[] messages = createMessagesWithUuid();
         long start = System.currentTimeMillis();
         executeConcurrent(new RunnableFactory() {
@@ -179,6 +185,110 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             }
         });
         long end = System.currentTimeMillis();
-        System.out.println("Execute with uuid concurrent at " + (end - start));
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("enqueue with uuid concurrent " + qps + " qps");
+    }
+
+    @Test
+    public void testDequeuePerformance() throws Exception {
+        warmUp();
+        final QueueMessage[] messages = createMessages();
+        for (QueueMessage message : messages) {
+            queueService.enqueue(message);
+        }
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < messagesCount; i++) {
+            QueueMessage message = queueService.dequeue();
+            assert message != null;
+            assert message.getUuid() != null;
+        }
+        long end = System.currentTimeMillis();
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("dequeue " + qps + " qps");
+    }
+
+    @Test
+    public void testDequeuePerformanceWithUuid() throws Exception {
+        warmUp();
+        final QueueMessage[] messages = createMessagesWithUuid();
+        for (QueueMessage message : messages) {
+            queueService.enqueue(message);
+        }
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < messagesCount; i++) {
+            QueueMessage message = queueService.dequeue();
+            assert message != null;
+            assert message.getUuid() != null;
+        }
+        long end = System.currentTimeMillis();
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("dequeue with uuid " + qps + " qps");
+    }
+
+    @Test
+    public void testDequeuePerformanceConcurrent() throws Exception {
+        warmUp();
+        final QueueMessage[] messages = createMessages();
+        for (QueueMessage message : messages) {
+            queueService.enqueue(message);
+        }
+        long start = System.currentTimeMillis();
+        executeConcurrent(new RunnableFactory() {
+            @Override
+            public Runnable create(final int thread, final int concurrency) {
+                return new Runnable() {
+                    @Override
+                    public void run() {
+                        for (int i = thread; i < messagesCount; i += concurrency) {
+                            QueueMessage message = queueService.dequeue();
+                            assert message != null;
+                            assert message.getUuid() != null;
+                        }
+                    }
+                };
+            }
+        });
+        long end = System.currentTimeMillis();
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("dequeue concurrent " + qps + " qps");
+    }
+
+    @Test
+    public void testDequeuePerformanceConcurrentWithUuid() throws Exception {
+        warmUp();
+        final QueueMessage[] messages = createMessagesWithUuid();
+        for (QueueMessage message : messages) {
+            queueService.enqueue(message);
+        }
+        long start = System.currentTimeMillis();
+        executeConcurrent(new RunnableFactory() {
+            @Override
+            public Runnable create(final int thread, final int concurrency) {
+                return new Runnable() {
+                    @Override
+                    public void run() {
+                        for (int i = thread; i < messagesCount; i += concurrency) {
+                            QueueMessage message = queueService.dequeue();
+                            assert message != null;
+                            assert message.getUuid() != null;
+                        }
+                    }
+                };
+            }
+        });
+        long end = System.currentTimeMillis();
+        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        System.out.println("dequeue concurrent with uuid " + qps + " qps");
+    }
+
+    private void warmUp() throws Exception {
+        for (int i = 0; i < messagesCount; i++) {
+            queueService.enqueue(createMessageWithUuid());
+        }
+        for (int i = 0; i < messagesCount; i++) {
+            QueueMessage message = queueService.dequeue();
+            assert message != null;
+            assert message.getUuid() != null;
+        }
     }
 }

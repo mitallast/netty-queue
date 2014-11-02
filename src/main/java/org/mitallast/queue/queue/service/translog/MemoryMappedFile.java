@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MemoryMappedFile implements Closeable {
     private final RandomAccessFile randomAccessFile;
@@ -22,23 +23,22 @@ public class MemoryMappedFile implements Closeable {
         channel = randomAccessFile.getChannel();
         cache = CacheBuilder.newBuilder()
             .maximumSize(maxPages)
+            .concurrencyLevel(24)
             .removalListener(new RemovalListener<Integer, MemoryMappedPage>() {
                 @Override
                 public void onRemoval(RemovalNotification<Integer, MemoryMappedPage> entry) {
                     MemoryMappedPage page = entry.getValue();
                     if (page != null) {
-                        try {
-                            page.close();
-                        } catch (IOException e) {
-                            new RuntimeException(e);
-                        }
+                        page.release();
                     }
                 }
             })
             .build(new CacheLoader<Integer, MemoryMappedPage>() {
                 @Override
                 public MemoryMappedPage load(Integer position) throws Exception {
-                    return createPage(position);
+                    MemoryMappedPage page = createPage(position);
+                    page.acquire();
+                    return page;
                 }
             });
     }
@@ -51,19 +51,39 @@ public class MemoryMappedFile implements Closeable {
     }
 
     public void putLong(long offset, long value) throws IOException {
-        getPage(offset).putLong(offset, value);
+        MemoryMappedPage page = getPage(offset);
+        try {
+            page.putLong(offset, value);
+        } finally {
+            releasePage(page);
+        }
     }
 
     public long getLong(long offset) throws IOException {
-        return getPage(offset).getLong(offset);
+        MemoryMappedPage page = getPage(offset);
+        try {
+            return page.getLong(offset);
+        } finally {
+            releasePage(page);
+        }
     }
 
     public void putInt(long offset, int value) throws IOException {
-        getPage(offset).putInt(offset, value);
+        MemoryMappedPage page = getPage(offset);
+        try {
+            page.putInt(offset, value);
+        } finally {
+            releasePage(page);
+        }
     }
 
     public int getInt(long offset) throws IOException {
-        return getPage(offset).getInt(offset);
+        MemoryMappedPage page = getPage(offset);
+        try {
+            return page.getInt(offset);
+        } finally {
+            releasePage(page);
+        }
     }
 
     public void getBytes(long offset, byte[] data) throws IOException {
@@ -71,13 +91,19 @@ public class MemoryMappedFile implements Closeable {
     }
 
     public void getBytes(final long offset, byte[] data, final int start, final int length) throws IOException {
+
         long position = offset;
         long end = offset + length;
         int dataPosition = start;
         while (position < end) {
             int max = pageSize - (int) (position % pageSize);
             max = Math.min(max, length - dataPosition);
-            getPage(position).getBytes(position, data, dataPosition, max);
+            MemoryMappedPage page = getPage(position);
+            try {
+                page.getBytes(position, data, dataPosition, max);
+            } finally {
+                releasePage(page);
+            }
             dataPosition += max;
             position += max;
         }
@@ -94,7 +120,12 @@ public class MemoryMappedFile implements Closeable {
         while (position < end) {
             int max = pageSize - (int) (position % pageSize);
             max = Math.min(max, length - dataPosition);
-            getPage(position).putBytes(position, data, dataPosition, max);
+            MemoryMappedPage page = getPage(position);
+            try {
+                page.putBytes(position, data, dataPosition, max);
+            } finally {
+                releasePage(page);
+            }
             dataPosition += max;
             position += max;
         }
@@ -110,26 +141,41 @@ public class MemoryMappedFile implements Closeable {
         }
     }
 
-    private MemoryMappedPage getPage(long offset) throws IOException {
+    public MemoryMappedPage getPage(long offset) throws IOException {
         int index = (int) offset / pageSize;
         try {
-            return cache.get(index);
+            synchronized (cache) {
+                MemoryMappedPage page = cache.get(index);
+                page.acquire();
+                return page;
+            }
         } catch (ExecutionException e) {
             throw new IOException(e);
+        }
+    }
+
+    public void releasePage(MemoryMappedPage page) throws IOException {
+        int referenceCount = page.release();
+        if (referenceCount <= 0) {
+            page.close();
         }
     }
 
     private MemoryMappedPage createPage(int position) throws IOException {
         long offset = pageSize * position;
         MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, pageSize);
+        buffer.load();
+        buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN);
         return new MemoryMappedPage(buffer, offset);
     }
 
-    private static class MemoryMappedPage implements Closeable {
+    public static class MemoryMappedPage implements Closeable {
+
+        private final AtomicInteger referenceCount = new AtomicInteger();
         private final long offset;
         private MappedByteBuffer buffer;
-        private volatile boolean dirty = false;
-        private volatile boolean closed = false;
+        private boolean dirty = false;
+        private boolean closed = false;
 
         private MemoryMappedPage(MappedByteBuffer buffer, long offset) {
             this.buffer = buffer;
@@ -173,6 +219,14 @@ public class MemoryMappedFile implements Closeable {
             }
         }
 
+        public int acquire() {
+            return referenceCount.incrementAndGet();
+        }
+
+        public int release() {
+            return referenceCount.decrementAndGet();
+        }
+
         public void flush() throws IOException {
             synchronized (this) {
                 if (closed) return;
@@ -184,10 +238,11 @@ public class MemoryMappedFile implements Closeable {
         }
 
         @Override
-        public void close() throws IOException {
+        public synchronized void close() throws IOException {
             synchronized (this) {
-                if (closed) return;
                 flush();
+                if (closed) return;
+                closed = true;
                 MappedByteBufferCleaner.clean(buffer);
                 buffer = null;
             }

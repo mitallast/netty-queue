@@ -12,7 +12,7 @@ import java.util.concurrent.*;
 public class BaseQueueMessageTest {
 
     protected final static int concurrency = 24;
-    protected final static int messagesCount = 5000;
+    protected final static int messagesCount = 10000;
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -29,7 +29,6 @@ public class BaseQueueMessageTest {
         executorService.shutdown();
         executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         executorService = null;
-
     }
 
     protected final void executeConcurrent(RunnableFactory runnableFactory) throws ExecutionException, InterruptedException {

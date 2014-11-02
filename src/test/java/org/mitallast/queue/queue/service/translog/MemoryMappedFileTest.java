@@ -2,30 +2,30 @@ package org.mitallast.queue.queue.service.translog;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.mitallast.queue.queue.service.BaseQueueMessageTest;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
+import java.util.Random;
 
-public class MemoryMappedFileTest {
+public class MemoryMappedFileTest extends BaseQueueMessageTest {
 
-    @Rule
-    public TemporaryFolder folder = new TemporaryFolder();
     private File file;
     private MemoryMappedFile mappedFile;
 
     @Before
     public void setUp() throws Exception {
+        super.setUp();
         file = folder.newFile();
         mappedFile = new MemoryMappedFile(new RandomAccessFile(file, "rw"), 4096, 10);
     }
 
     @After
     public void tearDown() throws Exception {
+        super.tearDown();
         mappedFile.close();
     }
 
@@ -88,5 +88,30 @@ public class MemoryMappedFileTest {
         mappedFile.putBytes(125, bytesExpected);
         mappedFile.getBytes(125, bytesActual);
         assert Arrays.equals(bytesExpected, bytesActual);
+    }
+
+    @Test
+    public void testPageConcurrent() throws Exception {
+        executeConcurrent(new RunnableFactory() {
+            @Override
+            public Runnable create(int thread, int concurrency) {
+                return new Runnable() {
+                    @Override
+                    public void run() {
+                        Random random = new Random();
+                        for (long i = 0; i < 1000; i++) {
+                            try {
+                                long offset = (long) random.nextInt(8192) * 8;
+                                MemoryMappedFile.MemoryMappedPage mappedPage = mappedFile.getPage(offset);
+                                mappedPage.getInt(offset);
+                                mappedFile.releasePage(mappedPage);
+                            } catch (Exception e) {
+                                assert false : e;
+                            }
+                        }
+                    }
+                };
+            }
+        });
     }
 }

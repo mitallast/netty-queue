@@ -102,7 +102,7 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
                         for (long i = 0; i < 1000; i++) {
                             try {
                                 long offset = (long) random.nextInt(8192) * 8;
-                                MemoryMappedFile.MemoryMappedPage mappedPage = mappedFile.getPage(offset);
+                                MemoryMappedPage mappedPage = mappedFile.getPage(offset);
                                 mappedPage.getInt(offset);
                                 mappedFile.releasePage(mappedPage);
                             } catch (Exception e) {

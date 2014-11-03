@@ -225,8 +225,8 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
 
     public static class QueueMessageMeta {
 
-        private final AtomicIntegerFieldUpdater<QueueMessageMeta> statusUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(QueueMessageMeta.class, "status");
+        private final static AtomicIntegerFieldUpdater<QueueMessageMeta> statusUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(QueueMessageMeta.class, "status");
 
         private UUID uuid;
         private long offset;
@@ -259,11 +259,11 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         @Override
         public String toString() {
             return "QueueMessageMeta{" +
-                ", uuid=" + uuid +
-                ", offset=" + offset +
-                ", status=" + status +
-                ", length=" + length +
-                '}';
+                    ", uuid=" + uuid +
+                    ", offset=" + offset +
+                    ", status=" + status +
+                    ", length=" + length +
+                    '}';
         }
 
         @Override

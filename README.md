@@ -89,12 +89,12 @@ Recommended java options
 
     -server
     -d64
-    -Xms512m
-    -Xmx512m
+    -Xms4g
+    -Xmx4g
     -XX:MaxPermSize=512m
     -XX:ReservedCodeCacheSize=256m
     -XX:+UseG1GC
-    -XX:MaxGCPauseMillis=50
+    -XX:MaxGCPauseMillis=150
     -XX:InitiatingHeapOccupancyPercent=70
     -XX:NewRatio=2
     -XX:SurvivorRatio=8
@@ -105,4 +105,4 @@ Recommended java options
     -XX:+AggressiveOpts
     -XX:+UseFastAccessorMethods
     -XX:-MaxFDLimit
-    -Dio.netty.allocator.numDirectArenas=64
+    -Dio.netty.leakDetectionLevel=disabled

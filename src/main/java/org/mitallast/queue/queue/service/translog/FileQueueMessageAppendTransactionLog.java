@@ -37,6 +37,10 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     private final ConcurrentHashMap<UUID, QueueMessageMeta> messageMetaMap = new ConcurrentHashMap<>(256);
 
     public FileQueueMessageAppendTransactionLog(File metaFile, File dataFile) throws IOException {
+        this(metaFile, dataFile, 1048576, 10);
+    }
+
+    public FileQueueMessageAppendTransactionLog(File metaFile, File dataFile, int pageSize, int maxPages) throws IOException {
         if (!metaFile.exists()) {
             if (!metaFile.createNewFile()) {
                 throw new IOException("File not found, or not writable " + metaFile);
@@ -47,8 +51,8 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
                 throw new IOException("File not found, or not writable " + metaFile);
             }
         }
-        metaMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(metaFile, "rw"), 4096, 10);
-        dataMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(dataFile, "rw"), 4096, 10);
+        metaMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(metaFile, "rw"), pageSize, maxPages);
+        dataMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(dataFile, "rw"), pageSize, maxPages);
     }
 
     public void initializeNew() throws IOException {
@@ -131,8 +135,8 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         QueueMessageMeta messageMeta;
         while ((messageMeta = messageMetaQueue.poll()) != null) {
             if (messageMeta.updateStatus(QueueMessageMeta.Status.New, QueueMessageMeta.Status.Deleted)) {
-                writeMeta(messageMeta, messageMeta.pos);
                 messageMetaMap.remove(messageMeta.uuid);
+                writeMeta(messageMeta, messageMeta.pos);
                 return readMessage(messageMeta, false);
             }
         }

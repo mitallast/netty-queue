@@ -3,19 +3,28 @@ package org.mitallast.queue.queue.service.translog;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 public class MemoryMappedPage implements Closeable {
 
-    private final AtomicInteger referenceCount = new AtomicInteger();
+    private final static AtomicIntegerFieldUpdater<MemoryMappedPage> referenceCountUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(MemoryMappedPage.class, "referenceCount");
+
     private final long offset;
     private MappedByteBuffer buffer;
     private boolean dirty = false;
     private boolean closed = false;
 
+    private volatile int referenceCount = 0;
+    private volatile long timestamp = 0;
+
     public MemoryMappedPage(MappedByteBuffer buffer, long offset) {
         this.buffer = buffer;
         this.offset = offset;
+    }
+
+    public long getOffset() {
+        return offset;
     }
 
     private int getIndex(long offset) {
@@ -56,11 +65,19 @@ public class MemoryMappedPage implements Closeable {
     }
 
     public int acquire() {
-        return referenceCount.incrementAndGet();
+        return referenceCountUpdater.incrementAndGet(this);
     }
 
     public int release() {
-        return referenceCount.decrementAndGet();
+        return referenceCountUpdater.decrementAndGet(this);
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long newTimestamp) {
+        timestamp = newTimestamp;
     }
 
     public void flush() throws IOException {

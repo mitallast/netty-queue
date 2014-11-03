@@ -1,49 +1,32 @@
 package org.mitallast.queue.queue.service.translog;
 
-import com.google.common.cache.*;
+import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCache;
+import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCacheSegment;
+import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCacheSegmented;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.ExecutionException;
 
-public class MemoryMappedFile implements Closeable {
+public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Closeable {
     private final RandomAccessFile randomAccessFile;
     private final int pageSize;
     private final FileChannel channel;
-    private final LoadingCache<Integer, MemoryMappedPage> cache;
+
+    private final MemoryMappedPageCache pageCache;
 
     public MemoryMappedFile(RandomAccessFile randomAccessFile, int pageSize, int maxPages) throws IOException {
         this.randomAccessFile = randomAccessFile;
         this.pageSize = pageSize;
         channel = randomAccessFile.getChannel();
-        cache = CacheBuilder.newBuilder()
-                .maximumSize(maxPages)
-                .concurrencyLevel(24)
-                .removalListener(new RemovalListener<Integer, MemoryMappedPage>() {
-                    @Override
-                    public void onRemoval(RemovalNotification<Integer, MemoryMappedPage> entry) {
-                        MemoryMappedPage page = entry.getValue();
-                        if (page != null) {
-                            page.release();
-                        }
-                    }
-                })
-                .build(new CacheLoader<Integer, MemoryMappedPage>() {
-                    @Override
-                    public MemoryMappedPage load(Integer position) throws Exception {
-                        MemoryMappedPage page = createPage(position);
-                        page.acquire();
-                        return page;
-                    }
-                });
+        pageCache = new MemoryMappedPageCacheSegmented(this, maxPages, 10);
     }
 
     @Override
     public void close() throws IOException {
-        cache.invalidateAll();
+        pageCache.close();
         channel.close();
         randomAccessFile.close();
     }
@@ -134,33 +117,20 @@ public class MemoryMappedFile implements Closeable {
     }
 
     public void flush() throws IOException {
-        for (MemoryMappedPage page : cache.asMap().values()) {
-            page.flush();
-        }
+        pageCache.flush();
     }
 
     public MemoryMappedPage getPage(long offset) throws IOException {
-        int index = (int) offset / pageSize;
-        try {
-            synchronized (cache) {
-                MemoryMappedPage page = cache.get(index);
-                page.acquire();
-                return page;
-            }
-        } catch (ExecutionException e) {
-            throw new IOException(e);
-        }
+        long pageOffset = (offset / pageSize) * pageSize;
+        return pageCache.acquire(pageOffset);
     }
 
     public void releasePage(MemoryMappedPage page) throws IOException {
-        int referenceCount = page.release();
-        if (referenceCount <= 0) {
-            page.close();
-        }
+        pageCache.release(page);
     }
 
-    private MemoryMappedPage createPage(int position) throws IOException {
-        long offset = pageSize * position;
+    @Override
+    public MemoryMappedPage load(long offset) throws IOException {
         MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, pageSize);
         buffer.load();
         buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN);

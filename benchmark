@@ -5,7 +5,7 @@ mvn clean install exec:exec -DskipTests
 curl -i -s -XDELETE 'localhost:8080/my_queue?reason=test'
 curl -i -s -XPUT 'localhost:8080/my_queue'
 ab -n100000 -c100 -k -p message.json -b2000 'http://127.0.0.1:8080/my_queue/message'
-This is ApacheBench, Version 2.3 <$Revision: 1373084 $>
+This is ApacheBench, Version 2.3 <$Revision: 1554214 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
 
@@ -31,27 +31,26 @@ Document Path:          /my_queue/message
 Document Length:        36 bytes
 
 Concurrency Level:      100
-Time taken for tests:   1.171 seconds
+Time taken for tests:   1.113 seconds
 Complete requests:      100000
 Failed requests:        0
-Write errors:           0
 Keep-Alive requests:    100000
 Total transferred:      10400000 bytes
 Total body sent:        20600000
 HTML transferred:       3600000 bytes
-Requests per second:    85406.80 [#/sec] (mean)
-Time per request:       1.171 [ms] (mean)
-Time per request:       0.012 [ms] (mean, across all concurrent requests)
-Transfer rate:          8674.13 [Kbytes/sec] received
-                        17181.45 kb/s sent
-                        25855.57 kb/s total
+Requests per second:    89849.84 [#/sec] (mean)
+Time per request:       1.113 [ms] (mean)
+Time per request:       0.011 [ms] (mean, across all concurrent requests)
+Transfer rate:          9125.37 [Kbytes/sec] received
+                        18075.26 kb/s sent
+                        27200.64 kb/s total
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
 Connect:        0    0   0.1      0       3
 Processing:     0    1   0.2      1       5
 Waiting:        0    1   0.2      1       5
-Total:          0    1   0.2      1       7
+Total:          0    1   0.2      1       6
 
 Percentage of the requests served within a certain time (ms)
   50%      1
@@ -60,6 +59,6 @@ Percentage of the requests served within a certain time (ms)
   80%      1
   90%      1
   95%      1
-  98%      1
+  98%      2
   99%      2
- 100%      7 (longest request)
+ 100%      6 (longest request)

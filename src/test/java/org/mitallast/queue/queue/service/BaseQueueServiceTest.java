@@ -20,11 +20,11 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
     @Before
     public void setUp() throws Exception {
         queueService = createQueueService(
-            ImmutableSettings.builder()
-                .put("work_dir", folder.getRoot().getPath())
-                .build(),
-            ImmutableSettings.builder().build(),
-            new Queue("test_queue")
+                ImmutableSettings.builder()
+                        .put("work_dir", folder.getRoot().getPath())
+                        .build(),
+                ImmutableSettings.builder().build(),
+                new Queue("test_queue")
         );
         queueService.start();
         super.setUp();
@@ -86,7 +86,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
                     assert queueMessage.getUuid() != null;
                     QueueMessage queueMessageActual = queueService.get(queueMessage.getUuid());
                     assert queueMessage.equals(queueMessageActual)
-                        : queueMessage + " != " + queueMessageActual;
+                            : queueMessage + " != " + queueMessageActual;
                 }
             }
         });
@@ -228,56 +228,46 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
     @Test
     public void testDequeuePerformanceConcurrent() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessages();
+        final QueueMessage[] messages = createMessages(messagesCount * concurrency);
         for (QueueMessage message : messages) {
             queueService.enqueue(message);
         }
         long start = System.currentTimeMillis();
-        executeConcurrent(new RunnableFactory() {
+        executeConcurrent(new Runnable() {
             @Override
-            public Runnable create(final int thread, final int concurrency) {
-                return new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int i = thread; i < messagesCount; i += concurrency) {
-                            QueueMessage message = queueService.dequeue();
-                            assert message != null;
-                            assert message.getUuid() != null;
-                        }
-                    }
-                };
+            public void run() {
+                for (int i = 0; i < messagesCount; i++) {
+                    QueueMessage message = queueService.dequeue();
+                    assert message != null;
+                    assert message.getUuid() != null;
+                }
             }
         });
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        long qps = (long) (messagesCount * concurrency / (double) (end - start) * 1000.);
         System.out.println("dequeue concurrent " + qps + " qps");
     }
 
     @Test
     public void testDequeuePerformanceConcurrentWithUuid() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessagesWithUuid();
+        final QueueMessage[] messages = createMessagesWithUuid(messagesCount * concurrency);
         for (QueueMessage message : messages) {
             queueService.enqueue(message);
         }
         long start = System.currentTimeMillis();
-        executeConcurrent(new RunnableFactory() {
+        executeConcurrent(new Runnable() {
             @Override
-            public Runnable create(final int thread, final int concurrency) {
-                return new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int i = thread; i < messagesCount; i += concurrency) {
-                            QueueMessage message = queueService.dequeue();
-                            assert message != null;
-                            assert message.getUuid() != null;
-                        }
-                    }
-                };
+            public void run() {
+                for (int i = 0; i < messagesCount; i++) {
+                    QueueMessage message = queueService.dequeue();
+                    assert message != null;
+                    assert message.getUuid() != null;
+                }
             }
         });
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
+        long qps = (long) (messagesCount * concurrency / (double) (end - start) * 1000.);
         System.out.println("dequeue concurrent with uuid " + qps + " qps");
     }
 

@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.service;
 
+import com.eaio.uuid.UUIDGen;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,6 +53,10 @@ public class BaseQueueMessageTest {
     }
 
     protected final QueueMessage[] createMessages() {
+        return createMessages(messagesCount);
+    }
+
+    protected final QueueMessage[] createMessages(int messagesCount) {
         QueueMessage[] messages = new QueueMessage[messagesCount];
         for (int i = 0; i < messagesCount; i++) {
             messages[i] = createMessage();
@@ -60,6 +65,10 @@ public class BaseQueueMessageTest {
     }
 
     protected final QueueMessage[] createMessagesWithUuid() {
+        return createMessagesWithUuid(messagesCount);
+    }
+
+    protected final QueueMessage[] createMessagesWithUuid(int messagesCount) {
         QueueMessage[] messages = new QueueMessage[messagesCount];
         for (int i = 0; i < messagesCount; i++) {
             messages[i] = createMessageWithUuid();
@@ -75,7 +84,7 @@ public class BaseQueueMessageTest {
 
     protected final QueueMessage createMessageWithUuid() {
         QueueMessage message = new QueueMessage();
-        message.setUuid(UUID.randomUUID());
+        message.setUuid(new UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode()));
         message.setSource("Hello world");
         return message;
     }

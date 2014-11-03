@@ -9,7 +9,7 @@ Goals:
  - Netty for fastest TCP/IP and HTTP server realization
  - Memory mapped files to access data as an transaction log
 
-As result, one instance allows send up to 85000 messages-at-request per second in concurrent mode! 
+As result, one instance allows send up to 91000 messages-at-request per second in concurrent mode! 
 See benchmark for more details.
 
 How to run

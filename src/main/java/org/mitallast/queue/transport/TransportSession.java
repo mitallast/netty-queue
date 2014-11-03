@@ -47,6 +47,7 @@ public class TransportSession implements RestSession {
 
     @Override
     public void sendResponse(Throwable response) {
+        response.printStackTrace(System.err);
         ByteBuf buffer = Unpooled.buffer(0);
         try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
             try (PrintWriter printWriter = new PrintWriter(outputStream)) {

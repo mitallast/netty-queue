@@ -36,7 +36,7 @@ public class HttpServer extends AbstractLifecycleComponent {
         this.backlog = settings.getAsInt("backlog", 65536);
         this.reuseAddress = settings.getAsBoolean("reuse_address", true);
         this.keepAlive = settings.getAsBoolean("keep_alive", true);
-        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
+        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
         this.restController = restController;
     }
 

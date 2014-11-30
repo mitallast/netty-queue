@@ -11,7 +11,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <netty.version>4.0.24.Final</netty.version>
+        <netty.version>4.1.0.Beta3</netty.version>
         <logback.version>1.1.2</logback.version>
         <slf4j.version>1.7.7</slf4j.version>
         <jackson.version>2.4.3</jackson.version>

@@ -40,7 +40,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest httpRequest) throws Exception {
-        if (!httpRequest.getDecoderResult().isSuccess()) {
+        if (!httpRequest.decoderResult().isSuccess()) {
             sendError(ctx, BAD_REQUEST);
             return;
         }

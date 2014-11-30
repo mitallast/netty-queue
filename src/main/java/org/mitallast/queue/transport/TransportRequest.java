@@ -25,7 +25,7 @@ public class TransportRequest implements RestRequest {
 
     public TransportRequest(FullHttpRequest request) {
         this.httpRequest = request;
-        this.httpMethod = request.getMethod();
+        this.httpMethod = request.method();
         this.httpHeaders = request.headers();
         this.parseQueryString();
         determineEffectiveHttpMethod();
@@ -71,11 +71,11 @@ public class TransportRequest implements RestRequest {
 
     @Override
     public String getUri() {
-        return httpRequest.getUri();
+        return httpRequest.uri();
     }
 
     private void determineEffectiveHttpMethod() {
-        if (!HttpMethod.POST.equals(httpRequest.getMethod())) {
+        if (!HttpMethod.POST.equals(httpRequest.method())) {
             return;
         }
 
@@ -88,7 +88,7 @@ public class TransportRequest implements RestRequest {
 
     private void parseQueryString() {
 
-        String uri = httpRequest.getUri();
+        String uri = httpRequest.uri();
         if (!uri.contains("?")) {
             paramMap = new HashMap<>();
             queryPath = uri;

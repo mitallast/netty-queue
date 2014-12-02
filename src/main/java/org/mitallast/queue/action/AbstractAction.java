@@ -9,5 +9,11 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
         super(settings);
     }
 
+    public FutureActionListener<Response> execute(Request request) {
+        FutureActionListener<Response> listener = new FutureActionListener<>();
+        execute(request, listener);
+        return listener;
+    }
+
     public abstract void execute(Request request, ActionListener<Response> listener);
 }

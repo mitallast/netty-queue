@@ -14,6 +14,11 @@ public class CreateQueueRequest extends ActionRequest {
         this.queue = queue;
     }
 
+    public CreateQueueRequest(String queue, Settings settings) {
+        this.queue = queue;
+        this.settings = settings;
+    }
+
     public String getQueue() {
         return queue;
     }

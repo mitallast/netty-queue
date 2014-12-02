@@ -2,6 +2,7 @@ package org.mitallast.queue.client;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.ActionListener;
+import org.mitallast.queue.action.FutureActionListener;
 import org.mitallast.queue.action.queue.delete.DeleteAction;
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
@@ -44,24 +45,48 @@ public class QueueClient {
         this.queueStatsAction = queueStatsAction;
     }
 
-    public void enQueueRequest(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
+    public FutureActionListener<EnQueueResponse> enqueueRequest(EnQueueRequest request) {
+        return enQueueAction.execute(request);
+    }
+
+    public void enqueueRequest(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
         enQueueAction.execute(request, listener);
     }
 
-    public void deQueueRequest(DeQueueRequest request, ActionListener<DeQueueResponse> listener) {
+    public FutureActionListener<DeQueueResponse> dequeueRequest(DeQueueRequest request) {
+        return deQueueAction.execute(request);
+    }
+
+    public void dequeueRequest(DeQueueRequest request, ActionListener<DeQueueResponse> listener) {
         deQueueAction.execute(request, listener);
+    }
+
+    public FutureActionListener<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
+        return queueStatsAction.execute(request);
     }
 
     public void queueStatsRequest(QueueStatsRequest request, ActionListener<QueueStatsResponse> listener) {
         queueStatsAction.execute(request, listener);
     }
 
+    public FutureActionListener<DeleteResponse> deleteRequest(DeleteRequest request) {
+        return deleteAction.execute(request);
+    }
+
     public void deleteRequest(DeleteRequest request, ActionListener<DeleteResponse> listener) {
         deleteAction.execute(request, listener);
     }
 
+    public FutureActionListener<GetResponse> getRequest(GetRequest request) {
+        return getAction.execute(request);
+    }
+
     public void getRequest(GetRequest request, ActionListener<GetResponse> listener) {
         getAction.execute(request, listener);
+    }
+
+    public FutureActionListener<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
+        return peekQueueAction.execute(request);
     }
 
     public void peekQueueRequest(PeekQueueRequest request, ActionListener<PeekQueueResponse> listener) {

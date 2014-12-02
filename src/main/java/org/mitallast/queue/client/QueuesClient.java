@@ -2,6 +2,7 @@ package org.mitallast.queue.client;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.ActionListener;
+import org.mitallast.queue.action.FutureActionListener;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.action.queues.create.CreateQueueResponse;
@@ -25,12 +26,24 @@ public class QueuesClient {
         this.deleteQueueAction = deleteQueueAction;
     }
 
+    public FutureActionListener<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
+        return queuesStatsAction.execute(request);
+    }
+
     public void queuesStatsRequest(QueuesStatsRequest request, ActionListener<QueuesStatsResponse> listener) {
         queuesStatsAction.execute(request, listener);
     }
 
+    public FutureActionListener<CreateQueueResponse> createQueue(CreateQueueRequest request) {
+        return createQueueAction.execute(request);
+    }
+
     public void createQueue(CreateQueueRequest request, ActionListener<CreateQueueResponse> listener) {
         createQueueAction.execute(request, listener);
+    }
+
+    public FutureActionListener<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
+        return deleteQueueAction.execute(request);
     }
 
     public void deleteQueue(DeleteQueueRequest request, ActionListener<DeleteQueueResponse> listener) {

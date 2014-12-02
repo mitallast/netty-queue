@@ -8,6 +8,13 @@ import static org.mitallast.queue.action.ValidateActions.addValidationError;
 public class QueueStatsRequest extends ActionRequest {
     private String queue;
 
+    public QueueStatsRequest() {
+    }
+
+    public QueueStatsRequest(String queue) {
+        this.queue = queue;
+    }
+
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;

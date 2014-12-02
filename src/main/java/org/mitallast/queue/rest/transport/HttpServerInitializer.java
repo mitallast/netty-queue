@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.http;
+package org.mitallast.queue.rest.transport;
 
 import com.google.inject.Inject;
 import io.netty.channel.ChannelInitializer;
@@ -24,6 +24,6 @@ public class HttpServerInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast("decoder", new HttpRequestDecoder(4096, 8192, 8192, false));
         pipeline.addLast("aggregator", new HttpObjectAggregator(1048576));
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("httpHandler", httpHandler);
+        pipeline.addLast("handler", httpHandler);
     }
 }

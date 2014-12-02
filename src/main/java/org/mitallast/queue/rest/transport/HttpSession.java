@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport;
+package org.mitallast.queue.rest.transport;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
@@ -21,12 +21,12 @@ import static io.netty.handler.codec.http.HttpHeaders.Names.*;
 import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
-public class TransportSession implements RestSession {
+public class HttpSession implements RestSession {
 
     private final ChannelHandlerContext ctx;
     private final FullHttpRequest httpRequest;
 
-    public TransportSession(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
+    public HttpSession(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
         this.ctx = ctx;
         this.httpRequest = httpRequest;
     }
@@ -48,7 +48,7 @@ public class TransportSession implements RestSession {
     @Override
     public void sendResponse(Throwable response) {
         response.printStackTrace(System.err);
-        ByteBuf buffer = Unpooled.buffer(0);
+        ByteBuf buffer = Unpooled.buffer();
         try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
             try (PrintWriter printWriter = new PrintWriter(outputStream)) {
                 response.printStackTrace(printWriter);

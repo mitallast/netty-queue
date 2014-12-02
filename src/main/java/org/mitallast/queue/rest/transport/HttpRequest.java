@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport;
+package org.mitallast.queue.rest.transport;
 
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TransportRequest implements RestRequest {
+public class HttpRequest implements RestRequest {
 
     public static final String METHOD_TUNNEL = "_method";
     private FullHttpRequest httpRequest;
@@ -23,7 +23,7 @@ public class TransportRequest implements RestRequest {
     private Map<String, List<String>> paramMap;
     private String queryPath;
 
-    public TransportRequest(FullHttpRequest request) {
+    public HttpRequest(FullHttpRequest request) {
         this.httpRequest = request;
         this.httpMethod = request.method();
         this.httpHeaders = request.headers();

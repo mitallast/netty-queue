@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.http;
+package org.mitallast.queue.rest.transport;
 
 import com.google.inject.Inject;
 import io.netty.bootstrap.ServerBootstrap;
@@ -21,7 +21,6 @@ public class HttpServer extends AbstractLifecycleComponent {
     private boolean tcpNoDelay;
 
     private RestController restController;
-
 
     private EventLoopGroup bossGroup;
     private Class<? extends ServerChannel> channelClass;
@@ -47,19 +46,19 @@ public class HttpServer extends AbstractLifecycleComponent {
         try {
             bootstrap = new ServerBootstrap();
             bootstrap.group(bossGroup)
-                    .channel(channelClass)
-                    .childHandler(new HttpServerInitializer(new HttpServerHandler(restController)))
-                    .option(ChannelOption.SO_BACKLOG, backlog)
-                    .option(ChannelOption.SO_REUSEADDR, reuseAddress)
-                    .option(ChannelOption.SO_KEEPALIVE, keepAlive)
-                    .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
-                    .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
-                    .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+                .channel(channelClass)
+                .childHandler(new HttpServerInitializer(new HttpServerHandler(restController)))
+                .option(ChannelOption.SO_BACKLOG, backlog)
+                .option(ChannelOption.SO_REUSEADDR, reuseAddress)
+                .option(ChannelOption.SO_KEEPALIVE, keepAlive)
+                .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
+                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
             channel = bootstrap.bind(host, port)
-                    .sync()
-                    .channel();
+                .sync()
+                .channel();
         } catch (InterruptedException e) {
             throw new QueueException(e);
         }

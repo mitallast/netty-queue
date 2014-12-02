@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.http;
+package org.mitallast.queue.rest.transport;
 
 import com.google.inject.Inject;
 import io.netty.buffer.Unpooled;
@@ -12,8 +12,6 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.util.CharsetUtil;
 import org.mitallast.queue.rest.RestController;
-import org.mitallast.queue.transport.TransportRequest;
-import org.mitallast.queue.transport.TransportSession;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
@@ -45,8 +43,8 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
             return;
         }
 
-        final TransportRequest request = new TransportRequest(httpRequest);
-        restController.dispatchRequest(request, new TransportSession(ctx, httpRequest));
+        final HttpRequest request = new HttpRequest(httpRequest);
+        restController.dispatchRequest(request, new HttpSession(ctx, httpRequest));
     }
 
     @Override

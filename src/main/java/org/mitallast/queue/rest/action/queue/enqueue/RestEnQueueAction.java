@@ -89,7 +89,7 @@ public class RestEnQueueAction extends BaseRestHandler {
             return;
         }
 
-        client.queue().enQueueRequest(enQueueRequest, new ActionListener<EnQueueResponse>() {
+        client.queue().enqueueRequest(enQueueRequest, new ActionListener<EnQueueResponse>() {
 
             @Override
             public void onResponse(EnQueueResponse response) {

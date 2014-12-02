@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport;
+package org.mitallast.queue.rest.transport;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -7,20 +7,20 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.rest.RestResponse;
 
-public class TransportResponse implements RestResponse {
+public class HttpResponse implements RestResponse {
     private final HttpResponseStatus responseStatus;
     private final ByteBuf buffer;
     private final HttpHeaders headers = new DefaultHttpHeaders(false);
 
-    public TransportResponse() {
+    public HttpResponse() {
         this(HttpResponseStatus.OK);
     }
 
-    public TransportResponse(HttpResponseStatus responseStatus) {
+    public HttpResponse(HttpResponseStatus responseStatus) {
         this(responseStatus, Unpooled.EMPTY_BUFFER);
     }
 
-    public TransportResponse(HttpResponseStatus responseStatus, ByteBuf buffer) {
+    public HttpResponse(HttpResponseStatus responseStatus, ByteBuf buffer) {
         this.responseStatus = responseStatus;
         this.buffer = buffer;
     }

@@ -75,7 +75,7 @@ public class RestEnQueueActionTest {
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enQueueRequest(captor.capture(), any(ActionListener.class));
+        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(ActionListener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
@@ -110,7 +110,7 @@ public class RestEnQueueActionTest {
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enQueueRequest(captor.capture(), any(ActionListener.class));
+        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(ActionListener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
@@ -145,7 +145,7 @@ public class RestEnQueueActionTest {
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enQueueRequest(captor.capture(), any(ActionListener.class));
+        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(ActionListener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();

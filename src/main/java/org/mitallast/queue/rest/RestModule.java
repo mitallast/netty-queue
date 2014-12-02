@@ -11,10 +11,19 @@ import org.mitallast.queue.rest.action.queue.stats.RestQueueStatsAction;
 import org.mitallast.queue.rest.action.queues.create.RestCreateQueueAction;
 import org.mitallast.queue.rest.action.queues.delete.RestDeleteQueueAction;
 import org.mitallast.queue.rest.action.queues.stats.RestQueuesStatsAction;
+import org.mitallast.queue.rest.transport.HttpServer;
+import org.mitallast.queue.rest.transport.HttpServerHandler;
+import org.mitallast.queue.rest.transport.HttpServerInitializer;
 
 public class RestModule extends AbstractModule {
     @Override
     protected void configure() {
+        bind(HttpServerHandler.class).asEagerSingleton();
+        bind(HttpServerInitializer.class).asEagerSingleton();
+        bind(HttpServer.class).asEagerSingleton();
+
+        bind(RestController.class).asEagerSingleton();
+
         bind(RestDeQueueAction.class).asEagerSingleton();
         bind(RestEnQueueAction.class).asEagerSingleton();
         bind(RestPeekQueueAction.class).asEagerSingleton();
@@ -28,7 +37,5 @@ public class RestModule extends AbstractModule {
         bind(RestQueuesStatsAction.class).asEagerSingleton();
 
         bind(RestIndexAction.class).asEagerSingleton();
-
-        bind(RestController.class).asEagerSingleton();
     }
 }

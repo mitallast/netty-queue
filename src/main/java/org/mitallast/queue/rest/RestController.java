@@ -40,7 +40,7 @@ public class RestController extends AbstractComponent {
         }
     }
 
-    void executeHandler(RestRequest request, RestSession channel) {
+    private void executeHandler(RestRequest request, RestSession channel) {
         final RestHandler handler = getHandler(request);
         if (handler != null) {
             handler.handleRequest(request, channel);

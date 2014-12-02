@@ -36,7 +36,7 @@ public class RestDeQueueAction extends BaseRestHandler {
         DeQueueRequest deQueueRequest = new DeQueueRequest();
         deQueueRequest.setQueue(request.param("queue"));
 
-        client.queue().deQueueRequest(deQueueRequest, new ActionListener<DeQueueResponse>() {
+        client.queue().dequeueRequest(deQueueRequest, new ActionListener<DeQueueResponse>() {
             @Override
             public void onResponse(DeQueueResponse deQueueResponse) {
                 if (deQueueResponse.getMessage() == null) {

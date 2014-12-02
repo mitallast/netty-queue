@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.buffer.ByteBuf;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -76,6 +77,12 @@ public class QueueMessage {
 
     public void setSource(byte[] newSource) {
         source = newSource;
+    }
+
+    public void setSource(QueueMessageType type, ByteBuf buffer) {
+        source = new byte[1 + buffer.readableBytes()];
+        source[0] = (byte) type.ordinal();
+        buffer.readBytes(source, 1, source.length - 1);
     }
 
     public InputStream getSourceAsStream() throws IOException {

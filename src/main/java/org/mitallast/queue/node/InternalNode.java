@@ -2,6 +2,7 @@ package org.mitallast.queue.node;
 
 import com.google.inject.Injector;
 import org.mitallast.queue.action.ActionModule;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.ClientModule;
 import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.component.ModulesBuilder;
@@ -9,8 +10,9 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.InternalQueuesService;
 import org.mitallast.queue.queues.QueuesModule;
 import org.mitallast.queue.rest.RestModule;
-import org.mitallast.queue.transport.TransportModule;
-import org.mitallast.queue.transport.http.HttpServer;
+import org.mitallast.queue.rest.transport.HttpServer;
+import org.mitallast.queue.stomp.StompModule;
+import org.mitallast.queue.stomp.transport.StompServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,13 +36,17 @@ public class InternalNode implements Node {
         modules.add(new ActionModule());
         modules.add(new ClientModule());
         modules.add(new RestModule());
-        modules.add(new TransportModule());
+        modules.add(new StompModule());
 
         injector = modules.createInjector();
 
         logger.info("initialized");
     }
 
+    @Override
+    public Client client() {
+        return injector.getInstance(Client.class);
+    }
 
     @Override
     public Settings settings() {
@@ -55,6 +61,7 @@ public class InternalNode implements Node {
         logger.info("starting...");
         injector.getInstance(InternalQueuesService.class).start();
         injector.getInstance(HttpServer.class).start();
+        injector.getInstance(StompServer.class).start();
         logger.info("started");
         return this;
     }
@@ -65,6 +72,7 @@ public class InternalNode implements Node {
             return this;
         }
         logger.info("stopping...");
+        injector.getInstance(StompServer.class).stop();
         injector.getInstance(HttpServer.class).stop();
         injector.getInstance(InternalQueuesService.class).stop();
         logger.info("stopped");
@@ -80,6 +88,7 @@ public class InternalNode implements Node {
             return;
         }
         logger.info("closing...");
+        injector.getInstance(StompServer.class).close();
         injector.getInstance(HttpServer.class).close();
         injector.getInstance(InternalQueuesService.class).close();
         logger.info("closed");

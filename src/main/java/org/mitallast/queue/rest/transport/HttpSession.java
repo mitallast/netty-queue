@@ -3,7 +3,6 @@ package org.mitallast.queue.rest.transport;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -70,11 +69,12 @@ public class HttpSession implements RestSession {
         } else {
             httpResponse.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
         }
-        ChannelFuture future = ctx.write(httpResponse);
 
         // Decide whether to close the connection or not.
         if (!isKeepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
+        } else {
+            ctx.write(httpResponse, ctx.voidPromise());
         }
     }
 }

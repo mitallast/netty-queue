@@ -38,7 +38,7 @@ public class HttpServer extends AbstractLifecycleComponent {
         this.host = settings.get("host", "127.0.0.1");
         this.port = settings.getAsInt("port", 8080);
         this.backlog = settings.getAsInt("backlog", 1024);
-        this.reuseAddress = settings.getAsBoolean("reuse_address", true);
+        this.reuseAddress = settings.getAsBoolean("reuse_address", false);
         this.keepAlive = settings.getAsBoolean("keep_alive", true);
         this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
         this.sndBuf = settings.getAsInt("snd_buf", 4096 * 10);
@@ -85,12 +85,15 @@ public class HttpServer extends AbstractLifecycleComponent {
 
     @Override
     protected void doStop() throws QueueException {
-        bootstrap.group().shutdownGracefully();
         try {
-            channel.closeFuture().sync();
+            if (channel != null) {
+                channel.close().sync();
+            }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new QueueException(e);
         }
+        bootstrap.group().shutdownGracefully();
         channel = null;
         bootstrap = null;
     }

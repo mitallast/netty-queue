@@ -53,13 +53,14 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
 
     @Override
     public void stop() throws QueueException {
+        logger.debug("stopping");
         if (!lifecycle.canMoveToStopped()) {
             logger.warn("Can't move to stopped, it's a " + lifecycleState());
             return;
         }
         lifecycle.moveToStopped();
         doStop();
-        logger.info("stopped");
+        logger.debug("stopped");
     }
 
     protected abstract void doStop() throws QueueException;

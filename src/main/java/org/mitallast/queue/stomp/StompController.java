@@ -27,7 +27,6 @@ public class StompController extends AbstractComponent {
     }
 
     public void dispatchRequest(StompSession session, StompFrame request) {
-        logger.info("frame received: {}", request);
         StompHandler handler = handlers.get(request.command());
         handler.handleRequest(session, request);
     }

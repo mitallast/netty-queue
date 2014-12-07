@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.mitallast</groupId>
-    <artifactId>netty-test</artifactId>
+    <artifactId>netty-queue</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>

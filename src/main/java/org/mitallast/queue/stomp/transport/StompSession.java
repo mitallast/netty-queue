@@ -51,8 +51,7 @@ public class StompSession {
         if (response.content().isReadable()) {
             response.headers().set(StompHeaders.CONTENT_LENGTH, response.content().readableBytes());
         }
-        System.out.println("write response: " + response);
-        channelFuture = ctx.writeAndFlush(response, ctx.voidPromise());
+        channelFuture = ctx.write(response, ctx.voidPromise());
     }
 
     public void close() {

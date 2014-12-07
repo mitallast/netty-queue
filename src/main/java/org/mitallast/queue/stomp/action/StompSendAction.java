@@ -22,7 +22,6 @@ public class StompSendAction extends BaseStompHandler {
     public StompSendAction(Settings settings, Client client, StompController controller) {
         super(settings, client);
         controller.registerHandler(StompCommand.SEND, this);
-        ;
     }
 
     @Override

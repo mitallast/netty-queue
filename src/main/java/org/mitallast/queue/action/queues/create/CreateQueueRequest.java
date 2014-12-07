@@ -2,13 +2,14 @@ package org.mitallast.queue.action.queues.create;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class CreateQueueRequest extends ActionRequest {
     private String queue;
-    private Settings settings;
+    private Settings settings = ImmutableSettings.EMPTY;
 
     public CreateQueueRequest(String queue) {
         this.queue = queue;

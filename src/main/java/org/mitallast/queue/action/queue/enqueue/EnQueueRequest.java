@@ -12,6 +12,14 @@ public class EnQueueRequest extends ActionRequest {
 
     private QueueMessage message;
 
+    public EnQueueRequest() {
+    }
+
+    public EnQueueRequest(String queue, QueueMessage message) {
+        this.queue = queue;
+        this.message = message;
+    }
+
     public String getQueue() {
         return queue;
     }

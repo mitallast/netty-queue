@@ -26,6 +26,7 @@ public class StompServer extends AbstractLifecycleComponent {
     private int rcvBuf;
     private int wbLow;
     private int wbHigh;
+    private int threads;
     private ServerBootstrap bootstrap;
     private Channel channel;
 
@@ -33,7 +34,7 @@ public class StompServer extends AbstractLifecycleComponent {
     public StompServer(Settings settings, StompController stompController) {
         super(settings);
         this.host = settings.get("host", "127.0.0.1");
-        this.port = settings.getAsInt("port", 8080);
+        this.port = settings.getAsInt("port", 9080);
         this.backlog = settings.getAsInt("backlog", 1024);
         this.reuseAddress = settings.getAsBoolean("reuse_address", true);
         this.keepAlive = settings.getAsBoolean("keep_alive", true);
@@ -42,6 +43,7 @@ public class StompServer extends AbstractLifecycleComponent {
         this.rcvBuf = settings.getAsInt("rcv_buf", 4096 * 10);
         this.wbHigh = settings.getAsInt("write_buffer_high_water_mark", 64 * 1024);
         this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 2 * 1024);
+        this.threads = settings.getAsInt("threads", 24);
         this.stompController = stompController;
     }
 
@@ -49,7 +51,7 @@ public class StompServer extends AbstractLifecycleComponent {
     protected void doStart() throws QueueException {
         try {
             bootstrap = new ServerBootstrap();
-            bootstrap.group(new NioEventLoopGroup())
+            bootstrap.group(new NioEventLoopGroup(threads))
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new StompServerInitializer(new StompServerHandler(stompController)))
                     .option(ChannelOption.SO_BACKLOG, backlog)
@@ -82,12 +84,15 @@ public class StompServer extends AbstractLifecycleComponent {
 
     @Override
     protected void doStop() throws QueueException {
-        bootstrap.group().shutdownGracefully();
         try {
-            channel.closeFuture().sync();
+            if (channel != null) {
+                channel.close().sync();
+            }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new QueueException(e);
         }
+        bootstrap.group().shutdownGracefully();
         channel = null;
         bootstrap = null;
     }

@@ -1,6 +1,5 @@
 package org.mitallast.queue.stomp.transport;
 
-import com.google.inject.Inject;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -12,7 +11,6 @@ public class StompServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final StompServerHandler stompHandler;
 
-    @Inject
     public StompServerInitializer(StompServerHandler stompHandler) {
         super();
         this.stompHandler = stompHandler;

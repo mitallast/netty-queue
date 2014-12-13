@@ -35,14 +35,14 @@ public class StompServer extends AbstractLifecycleComponent {
         super(settings);
         this.host = settings.get("host", "127.0.0.1");
         this.port = settings.getAsInt("port", 9080);
-        this.backlog = settings.getAsInt("backlog", 1024);
-        this.reuseAddress = settings.getAsBoolean("reuse_address", true);
+        this.backlog = settings.getAsInt("backlog", 65536);
+        this.reuseAddress = settings.getAsBoolean("reuse_address", false);
         this.keepAlive = settings.getAsBoolean("keep_alive", true);
-        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
-        this.sndBuf = settings.getAsInt("snd_buf", 4096 * 10);
-        this.rcvBuf = settings.getAsInt("rcv_buf", 4096 * 10);
-        this.wbHigh = settings.getAsInt("write_buffer_high_water_mark", 64 * 1024);
-        this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 2 * 1024);
+        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
+        this.sndBuf = settings.getAsInt("snd_buf", 65536);
+        this.rcvBuf = settings.getAsInt("rcv_buf", 65536);
+        this.wbHigh = settings.getAsInt("write_buffer_high_water_mark", 65536);
+        this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 1024);
         this.threads = settings.getAsInt("threads", 24);
         this.stompController = stompController;
     }

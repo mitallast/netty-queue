@@ -4,13 +4,11 @@ import com.google.inject.AbstractModule;
 import org.mitallast.queue.stomp.action.*;
 import org.mitallast.queue.stomp.transport.StompServer;
 import org.mitallast.queue.stomp.transport.StompServerHandler;
-import org.mitallast.queue.stomp.transport.StompServerInitializer;
 
 public class StompModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(StompServerHandler.class).asEagerSingleton();
-        bind(StompServerInitializer.class).asEagerSingleton();
         bind(StompServer.class).asEagerSingleton();
 
         bind(StompController.class).asEagerSingleton();

@@ -1,9 +1,9 @@
 package org.mitallast.queue.queue.service;
 
-import com.eaio.uuid.UUIDGen;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.common.Files;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
@@ -88,7 +88,7 @@ public class TransactionLogQueueService extends AbstractQueueService {
     public void enqueue(QueueMessage message) {
         try {
             if (message.getUuid() == null) {
-                message.setUuid(new UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode()));
+                message.setUuid(UUIDs.generateRandom());
             }
             transactionLog.putMessage(message);
         } catch (IOException e) {

@@ -8,10 +8,13 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.stomp.StompController;
+
+import java.util.concurrent.ThreadFactory;
 
 public class StompServer extends AbstractLifecycleComponent {
 
@@ -35,7 +38,7 @@ public class StompServer extends AbstractLifecycleComponent {
         super(settings);
         this.host = settings.get("host", "127.0.0.1");
         this.port = settings.getAsInt("port", 9080);
-        this.backlog = settings.getAsInt("backlog", 65536);
+        this.backlog = settings.getAsInt("backlog", 1024);
         this.reuseAddress = settings.getAsBoolean("reuse_address", false);
         this.keepAlive = settings.getAsBoolean("keep_alive", true);
         this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
@@ -47,11 +50,19 @@ public class StompServer extends AbstractLifecycleComponent {
         this.stompController = stompController;
     }
 
+    private ThreadFactory threadFactory(String name) {
+        return new DefaultThreadFactory(name, true);
+    }
+
+    private NioEventLoopGroup group(String name) {
+        return new NioEventLoopGroup(threads, threadFactory(name));
+    }
+
     @Override
     protected void doStart() throws QueueException {
         try {
             bootstrap = new ServerBootstrap();
-            bootstrap.group(new NioEventLoopGroup(threads))
+            bootstrap.group(group("boss"), group("worker"))
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new StompServerInitializer(new StompServerHandler(stompController)))
                     .option(ChannelOption.SO_BACKLOG, backlog)

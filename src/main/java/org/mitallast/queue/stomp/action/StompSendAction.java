@@ -26,6 +26,11 @@ public class StompSendAction extends BaseStompHandler {
 
     @Override
     public void handleRequest(final StompSession session, final StompFrame request) {
+        if (true) {
+            session.sendResponse(StompCommand.RECEIPT);
+            return;
+        }
+
         String destination = request.headers().get(StompHeaders.DESTINATION);
         String contentType = request.headers().get(StompHeaders.CONTENT_TYPE, "text/plain");
         ByteBuf content = request.content();

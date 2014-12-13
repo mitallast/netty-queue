@@ -1,13 +1,12 @@
 package org.mitallast.queue.queue.service;
 
-import com.eaio.uuid.UUIDGen;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.queue.QueueMessage;
 
-import java.util.UUID;
 import java.util.concurrent.*;
 
 public class BaseQueueMessageTest {
@@ -84,7 +83,7 @@ public class BaseQueueMessageTest {
 
     protected final QueueMessage createMessageWithUuid() {
         QueueMessage message = new QueueMessage();
-        message.setUuid(new UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode()));
+        message.setUuid(UUIDs.generateRandom());
         message.setSource("Hello world");
         return message;
     }

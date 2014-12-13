@@ -3,12 +3,12 @@ package org.mitallast.queue.queue.service.translog;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.service.BaseQueueMessageTest;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 public class FileQueueMessageAppendTransactionLogTest extends BaseQueueMessageTest {
 
@@ -67,7 +67,7 @@ public class FileQueueMessageAppendTransactionLogTest extends BaseQueueMessageTe
     @Test
     public void testMeta() throws IOException {
         FileQueueMessageAppendTransactionLog.QueueMessageMeta messageMeta =
-            new FileQueueMessageAppendTransactionLog.QueueMessageMeta(UUID.randomUUID(), 13, 2314, 2341324);
+                new FileQueueMessageAppendTransactionLog.QueueMessageMeta(UUIDs.generateRandom(), 13, 2314, 2341324);
         transactionLog.writeMeta(messageMeta, 0l);
         FileQueueMessageAppendTransactionLog.QueueMessageMeta messageMetaActual = transactionLog.readMeta(0l);
         assert messageMeta.equals(messageMetaActual);

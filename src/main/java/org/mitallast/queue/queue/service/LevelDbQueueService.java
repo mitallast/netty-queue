@@ -1,11 +1,11 @@
 package org.mitallast.queue.queue.service;
 
-import com.eaio.uuid.UUIDGen;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.*;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.common.Files;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
@@ -58,7 +58,7 @@ public class LevelDbQueueService extends AbstractQueueService {
     public void enqueue(QueueMessage message) {
         if (message.getUuid() == null) {
             // write without lock
-            UUID uuid = new UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode());
+            UUID uuid = UUIDs.generateRandom();
             message.setUuid(uuid);
             levelDb.put(toBytes(uuid), message.getSource(), writeOptions);
             assert keyMap.put(uuid, uuid) == null;

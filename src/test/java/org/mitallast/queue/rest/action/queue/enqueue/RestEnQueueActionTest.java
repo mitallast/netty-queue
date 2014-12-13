@@ -8,6 +8,7 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.QueueClient;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
@@ -59,7 +60,7 @@ public class RestEnQueueActionTest {
     @SuppressWarnings("unchecked")
     public void testString() throws IOException {
 
-        UUID uuid = UUID.randomUUID();
+        UUID uuid = UUIDs.generateRandom();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         JsonFactory factory = new JsonFactory();
@@ -89,7 +90,7 @@ public class RestEnQueueActionTest {
     @SuppressWarnings("unchecked")
     public void testJsonObject() throws IOException {
 
-        UUID uuid = UUID.randomUUID();
+        UUID uuid = UUIDs.generateRandom();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         JsonFactory factory = new JsonFactory();
@@ -124,7 +125,7 @@ public class RestEnQueueActionTest {
     @SuppressWarnings("unchecked")
     public void testJsonArray() throws IOException {
 
-        UUID uuid = UUID.randomUUID();
+        UUID uuid = UUIDs.generateRandom();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         JsonFactory factory = new JsonFactory();

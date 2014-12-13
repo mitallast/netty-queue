@@ -1,7 +1,7 @@
 package org.mitallast.queue.queue.service;
 
-import com.eaio.uuid.UUIDGen;
 import org.mitallast.queue.QueueException;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
@@ -41,7 +41,7 @@ public class MemoryQueueService extends AbstractQueueService {
     public void enqueue(QueueMessage message) {
         UUID uuid = message.getUuid();
         if (uuid == null) {
-            uuid = new UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode());
+            uuid = UUIDs.generateRandom();
             message.setUuid(uuid);
         }
         if (queueMessageMap.putIfAbsent(uuid, message) == null) {

@@ -3,9 +3,9 @@ package org.mitallast.queue.rest.transport;
 import com.google.inject.Inject;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.mitallast.queue.QueueException;
@@ -26,6 +26,7 @@ public class HttpServer extends AbstractLifecycleComponent {
     private int rcvBuf;
     private int wbLow;
     private int wbHigh;
+    private int maxMessagesPerRead;
 
     private RestController restController;
 
@@ -38,13 +39,14 @@ public class HttpServer extends AbstractLifecycleComponent {
         this.host = settings.get("host", "127.0.0.1");
         this.port = settings.getAsInt("port", 8080);
         this.backlog = settings.getAsInt("backlog", 1024);
-        this.reuseAddress = settings.getAsBoolean("reuse_address", false);
+        this.reuseAddress = settings.getAsBoolean("reuse_address", true);
         this.keepAlive = settings.getAsBoolean("keep_alive", true);
         this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
-        this.sndBuf = settings.getAsInt("snd_buf", 4096 * 10);
-        this.rcvBuf = settings.getAsInt("rcv_buf", 4096 * 10);
+        this.sndBuf = settings.getAsInt("snd_buf", 32 * 1024);
+        this.rcvBuf = settings.getAsInt("rcv_buf", 32 * 1024);
         this.wbHigh = settings.getAsInt("write_buffer_high_water_mark", 64 * 1024);
-        this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 2 * 1024);
+        this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 32 * 1024);
+        this.maxMessagesPerRead = settings.getAsInt("max_messages_per_read", 256);
         this.restController = restController;
     }
 
@@ -64,7 +66,8 @@ public class HttpServer extends AbstractLifecycleComponent {
                     .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
                     .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
                     .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf))
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
+                    .option(ChannelOption.MAX_MESSAGES_PER_READ, maxMessagesPerRead)
 
                     .childOption(ChannelOption.SO_REUSEADDR, reuseAddress)
                     .childOption(ChannelOption.SO_KEEPALIVE, keepAlive)
@@ -74,7 +77,9 @@ public class HttpServer extends AbstractLifecycleComponent {
                     .childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
                     .childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf));
+                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
+                    .childOption(ChannelOption.MAX_MESSAGES_PER_READ, maxMessagesPerRead)
+            ;
             channel = bootstrap.bind(host, port)
                     .sync()
                     .channel();

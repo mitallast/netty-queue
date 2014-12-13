@@ -31,8 +31,8 @@ public class HttpSession implements RestSession {
     }
 
     private static boolean isKeepAlive(FullHttpRequest request) {
-        String headerValue = request.headers().get(HttpHeaders.Names.CONNECTION);
-        return KEEP_ALIVE.equalsIgnoreCase(headerValue);
+        return request.protocolVersion().isKeepAliveDefault()
+                || KEEP_ALIVE.equalsIgnoreCase(request.headers().get(HttpHeaders.Names.CONNECTION));
     }
 
     @Override
@@ -66,15 +66,10 @@ public class HttpSession implements RestSession {
         if (isKeepAlive) {
             httpResponse.headers().set(CONTENT_LENGTH, httpResponse.content().readableBytes());
             httpResponse.headers().set(CONNECTION, KEEP_ALIVE);
+            ctx.write(httpResponse, ctx.voidPromise());
         } else {
             httpResponse.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
-        }
-
-        // Decide whether to close the connection or not.
-        if (!isKeepAlive) {
             ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
-        } else {
-            ctx.write(httpResponse, ctx.voidPromise());
         }
     }
 }

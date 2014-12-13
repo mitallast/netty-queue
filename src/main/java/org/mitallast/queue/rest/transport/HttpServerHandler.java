@@ -1,6 +1,5 @@
 package org.mitallast.queue.rest.transport;
 
-import com.google.inject.Inject;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -23,7 +22,6 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
 
     private final RestController restController;
 
-    @Inject
     public HttpServerHandler(RestController restController) {
         this.restController = restController;
     }

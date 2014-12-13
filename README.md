@@ -5,20 +5,25 @@ This is an simple java queue server.
 
 Goals:
 
- - REST for simple integration and flexible message structures
+ - REST for simple integration
+ - JSON for flexible message structures
+ - STOMP for fast and asynchronous api
  - Netty for fastest TCP/IP and HTTP server realization
  - Memory mapped files to access data as an transaction log
 
-As result, one instance allows send up to 91000 messages-at-request per second in concurrent mode! 
+As result:
+ - One instance allows send up to 91000 REST messages-at-request per second in concurrent mode
+ - One instance allows send up to 248704 STOMP messages-at-request per second in concurrent mode
+
 See benchmark for more details.
 
 How to run
 ----------
 
-    mvn exec:exec
+    mvn exec:exec -DskipTests
     
-Usage
------
+REST usage
+----------
 
 server info 
 
@@ -70,6 +75,44 @@ delete queue
 
     curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue?reason=test&pretty'
 
+
+STOMP usage
+-----------
+
+Connect and send json messages async:
+
+    $ telnet 127.0.0.1 9080
+    Trying 127.0.0.1...
+    Connected to localhost.
+    Escape character is '^]'.
+    CONNECT
+
+    ^@
+    CONNECTED
+    version:1.2
+
+    SEND
+    destination:my_queue
+    content-type:json
+    content-length:26
+    receipt:1
+
+    {"message":"Hello world 1"}
+    ^@
+    SEND
+    destination:my_queue
+    content-type:json
+    content-length:26
+    receipt:2
+
+    {"message":"Hello world 2"}
+    ^@
+    RECEIPT
+    receipt-id:1
+    RECEIPT
+    receipt-id:2
+
+See tests for communication example
 
 Recommended server options
 --------------------------

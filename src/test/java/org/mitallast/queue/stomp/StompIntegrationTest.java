@@ -6,7 +6,6 @@ import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
@@ -18,37 +17,40 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class StompIntegrationTest extends BaseQueueTest {
 
     private static final String QUEUE = "my_queue";
-    private StompClient stompClient;
+    private final List<StompClient> stompClients = new ArrayList<>();
 
-    @Before
-    public void setUpClient() throws Exception {
-        stompClient = new StompClient(ImmutableSettings.builder()
-            .put("host", "127.0.0.1")
-            .put("port", 9080)
-            .put("use_oio", false)
-            .build());
+    public synchronized StompClient stompClient() {
+        StompClient stompClient = new StompClient(ImmutableSettings.builder()
+                .put("host", "127.0.0.1")
+                .put("port", 9080)
+                .put("use_oio", false)
+                .build());
 
         stompClient.start();
+        stompClients.add(stompClient);
+        return stompClient;
     }
 
     @After
     public void tearDownClient() throws Exception {
-        if (stompClient != null) {
-            stompClient.stop();
+        for (StompClient client : stompClients) {
+            client.stop();
         }
     }
 
     @Test
-    public void test() throws ExecutionException, InterruptedException {
-
+    public void testSingleThread() throws Exception {
         StompFrame connect = new DefaultStompFrame(StompCommand.CONNECT);
         connect.headers().set(StompHeaders.ACCEPT_VERSION, "1.2");
         connect.headers().set(StompHeaders.RECEIPT, "connect");
+        StompClient stompClient = stompClient();
         StompFrame connectResponse = stompClient.send(connect).get();
         assert connectResponse.command().equals(StompCommand.CONNECTED);
         assert connectResponse.headers().get(StompHeaders.RECEIPT_ID).equals("connect");
@@ -57,65 +59,95 @@ public class StompIntegrationTest extends BaseQueueTest {
         QueueStatsResponse response = client().queue().queueStatsRequest(new QueueStatsRequest(QUEUE)).get();
         assert response.getStats().getSize() == 0;
 
-        final int max = 10000;
-        final int concurrency = 8;
-        final ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
+        final int max = 50000;
 
-        long start = System.currentTimeMillis();
-
-        try {
-            List<Future> futureList = new ArrayList<>(concurrency);
-            for (int i = 0; i < concurrency; i++) {
-                final Future future = executorService.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        final Map<String, Future<StompFrame>> futures = new HashMap<>(max);
-                        byte[] data = "Hello world".getBytes();
-                        long start = System.currentTimeMillis();
-                        for (int i = 0; i < max; i++) {
-                            String receipt = java.util.UUID.randomUUID().toString();
-                            StompFrame sendRequest = new DefaultStompFrame(StompCommand.SEND);
-                            sendRequest.headers().set(StompHeaders.DESTINATION, QUEUE);
-                            sendRequest.headers().set(StompHeaders.CONTENT_TYPE, "text");
-                            sendRequest.headers().set(StompHeaders.RECEIPT, receipt);
-                            sendRequest.headers().set(StompHeaders.CONTENT_LENGTH, data.length);
-                            sendRequest.content().writeBytes(data);
-                            futures.put(receipt, stompClient.send(sendRequest));
-                        }
-                        long end = System.currentTimeMillis();
-                        long sendTime = end - start;
-                        System.out.println("send " + sendTime + "ms");
-
-                        start = System.currentTimeMillis();
-                        try {
-                            for (Map.Entry<String, Future<StompFrame>> futureEntry : futures.entrySet()) {
-                                StompFrame sendResponse = futureEntry.getValue().get();
-                                Assert.assertEquals(StompCommand.RECEIPT, sendResponse.command());
-                                Assert.assertEquals(futureEntry.getKey(), sendResponse.headers().get(StompHeaders.RECEIPT_ID));
-                            }
-                        } catch (InterruptedException | ExecutionException e) {
-                            assert false : e;
-                        }
-
-                        end = System.currentTimeMillis();
-                        long awaitTime = end - start;
-                        System.out.println("await " + awaitTime + "ms");
-
-                        System.out.println("total " + (sendTime + awaitTime) + "ms");
-                        System.out.println((max * 1000 / (sendTime + awaitTime)) + " q/s");
-                    }
-                });
-                futureList.add(future);
-            }
-            for (Future future : futureList) future.get();
-        } finally {
-            executorService.shutdown();
-            executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        // warm up
+        for (int i = 0; i < 2; i++) {
+            send(stompClient, max);
         }
 
+        long start = System.currentTimeMillis();
+        send(stompClient, max);
         long end = System.currentTimeMillis();
+
+        System.out.println("total " + (end - start) + "ms");
+        //noinspection NumericOverflow
+        System.out.println((max * 1000 / (end - start)) + " q/s");
+    }
+
+    @Test
+    public void testMultiThread() throws Exception {
+
+
+        client().queues().createQueue(new CreateQueueRequest(QUEUE, ImmutableSettings.builder().build())).get();
+        QueueStatsResponse response = client().queue().queueStatsRequest(new QueueStatsRequest(QUEUE)).get();
+        assert response.getStats().getSize() == 0;
+
+        final int concurrency = 24;
+        final int max = 10000;
+
+        final StompClient stompClient = stompClient();
+        StompFrame connect = new DefaultStompFrame(StompCommand.CONNECT);
+        connect.headers().set(StompHeaders.ACCEPT_VERSION, "1.2");
+        connect.headers().set(StompHeaders.RECEIPT, "connect");
+
+        StompFrame connectResponse = stompClient.send(connect).get();
+        assert connectResponse.command().equals(StompCommand.CONNECTED);
+        assert connectResponse.headers().get(StompHeaders.RECEIPT_ID).equals("connect");
+        // warm up
+        for (int i = 0; i < concurrency; i++) {
+            send(stompClient, max);
+        }
+
+
+        final ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
+        final List<Future> futures = new ArrayList<>(concurrency);
+
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < concurrency; i++) {
+            Future future = executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        StompFrame connect = new DefaultStompFrame(StompCommand.CONNECT);
+                        connect.headers().set(StompHeaders.ACCEPT_VERSION, "1.2");
+                        connect.headers().set(StompHeaders.RECEIPT, "connect");
+
+                        send(stompClient, max);
+                    } catch (Exception e) {
+                        assert false : e;
+                    }
+                }
+            });
+            futures.add(future);
+        }
+        for (Future future : futures) {
+            future.get();
+        }
+        long end = System.currentTimeMillis();
+
         System.out.println("total " + (end - start) + "ms");
         //noinspection NumericOverflow
         System.out.println((max * concurrency * 1000 / (end - start)) + " q/s");
+    }
+
+    private void send(StompClient stompClient, int max) throws Exception {
+        final Map<String, Future<StompFrame>> futures = new HashMap<>(max);
+        byte[] data = "Hello world".getBytes();
+        for (int i = 0; i < max; i++) {
+            String receipt = java.util.UUID.randomUUID().toString();
+            StompFrame sendRequest = new DefaultStompFrame(StompCommand.SEND);
+            sendRequest.headers().set(StompHeaders.DESTINATION, QUEUE);
+            sendRequest.headers().set(StompHeaders.CONTENT_TYPE, "text");
+            sendRequest.headers().set(StompHeaders.RECEIPT, receipt);
+            sendRequest.headers().set(StompHeaders.CONTENT_LENGTH, data.length);
+            sendRequest.content().writeBytes(data);
+            futures.put(receipt, stompClient.send(sendRequest));
+        }
+        for (Map.Entry<String, Future<StompFrame>> futureEntry : futures.entrySet()) {
+            StompFrame sendResponse = futureEntry.getValue().get();
+            Assert.assertEquals(StompCommand.RECEIPT, sendResponse.command());
+            Assert.assertEquals(futureEntry.getKey(), sendResponse.headers().get(StompHeaders.RECEIPT_ID));
+        }
     }
 }

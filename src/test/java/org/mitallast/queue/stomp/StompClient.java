@@ -9,6 +9,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.handler.codec.stomp.*;
+import io.netty.util.AttributeKey;
 import org.mitallast.queue.common.concurrent.BasicFuture;
 import org.mitallast.queue.common.settings.Settings;
 import org.slf4j.Logger;
@@ -19,12 +20,13 @@ import java.util.concurrent.Future;
 
 public class StompClient {
     private final static Logger logger = LoggerFactory.getLogger(StompClient.class);
+    private final static AttributeKey<ConcurrentHashMap<String, BasicFuture<StompFrame>>> attr = AttributeKey.valueOf("map");
     private final String host;
     private final int port;
     private final int threads;
     private final int maxContentLength;
     private final boolean useOio;
-    private final ConcurrentHashMap<String, BasicFuture<StompFrame>> frameFutureMap = new ConcurrentHashMap<>();
+
     private Bootstrap stompBootstrap;
     private Channel stompChannel;
     private boolean keepAlive;
@@ -42,48 +44,49 @@ public class StompClient {
         threads = settings.getAsInt("threads", 24);
         useOio = settings.getAsBoolean("use_oio", false);
 
-        reuseAddress = settings.getAsBoolean("reuse_address", false);
+        reuseAddress = settings.getAsBoolean("reuse_address", true);
         keepAlive = settings.getAsBoolean("keep_alive", true);
-        tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
-        sndBuf = settings.getAsInt("snd_buf", 4096 * 10);
-        rcvBuf = settings.getAsInt("rcv_buf", 4096 * 10);
-        wbHigh = settings.getAsInt("write_buffer_high_water_mark", 64 * 1024);
-        wbLow = settings.getAsInt("write_buffer_low_water_mark", 2 * 1024);
+        tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
+        sndBuf = settings.getAsInt("snd_buf", 65536);
+        rcvBuf = settings.getAsInt("rcv_buf", 65536);
+        wbHigh = settings.getAsInt("write_buffer_high_water_mark", 65536);
+        wbLow = settings.getAsInt("write_buffer_low_water_mark", 1024);
     }
 
     public void start() {
         stompBootstrap = new Bootstrap()
-            .channel(useOio ? OioSocketChannel.class : NioSocketChannel.class)
-            .group(useOio ? new OioEventLoopGroup(threads) : new NioEventLoopGroup(threads))
-            .option(ChannelOption.SO_REUSEADDR, reuseAddress)
-            .option(ChannelOption.SO_KEEPALIVE, keepAlive)
-            .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
-            .option(ChannelOption.SO_SNDBUF, sndBuf)
-            .option(ChannelOption.SO_RCVBUF, rcvBuf)
-            .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
-            .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
-            .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-            .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf))
-            .handler(new ChannelInitializer<SocketChannel>() {
+                .channel(useOio ? OioSocketChannel.class : NioSocketChannel.class)
+                .group(useOio ? new OioEventLoopGroup(threads) : new NioEventLoopGroup(threads))
+                .option(ChannelOption.SO_REUSEADDR, reuseAddress)
+                .option(ChannelOption.SO_KEEPALIVE, keepAlive)
+                .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
+                .option(ChannelOption.SO_SNDBUF, sndBuf)
+                .option(ChannelOption.SO_RCVBUF, rcvBuf)
+                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
+                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
+                .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf))
+                .handler(new ChannelInitializer<SocketChannel>() {
 
-                @Override
-                protected void initChannel(SocketChannel ch) throws Exception {
-                    ChannelPipeline pipeline = ch.pipeline();
-                    pipeline.addLast("decoder", new StompSubframeDecoder());
-                    pipeline.addLast("encoder", new StompSubframeEncoder());
-                    pipeline.addLast("aggregator", new StompSubframeAggregator(maxContentLength));
-                    pipeline.addLast("handler", new StompHandler());
-                }
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("decoder", new StompSubframeDecoder());
+                        pipeline.addLast("encoder", new StompSubframeEncoder());
+                        pipeline.addLast("aggregator", new StompSubframeAggregator(maxContentLength));
+                        pipeline.addLast("handler", new StompHandler());
+                    }
 
-                @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                    cause.printStackTrace();
-                    ctx.close();
-                }
-            });
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        cause.printStackTrace();
+                        ctx.close();
+                    }
+                });
 
         try {
             stompChannel = stompBootstrap.connect(host, port).sync().channel();
+            stompChannel.attr(attr).set(new ConcurrentHashMap<String, BasicFuture<StompFrame>>());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -98,7 +101,7 @@ public class StompClient {
     public Future<StompFrame> send(StompFrame request) {
         String receipt = request.headers().get(StompHeaders.RECEIPT);
         BasicFuture<StompFrame> future = new BasicFuture<>();
-        frameFutureMap.put(receipt, future);
+        stompChannel.attr(attr).get().put(receipt, future);
         stompChannel.writeAndFlush(request);
         return future;
     }
@@ -107,7 +110,7 @@ public class StompClient {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
             String receipt = frame.headers().get(StompHeaders.RECEIPT_ID);
-            BasicFuture<StompFrame> frameFuture = frameFutureMap.remove(receipt);
+            BasicFuture<StompFrame> frameFuture = ctx.channel().attr(attr).get().remove(receipt);
             if (frameFuture != null) {
                 frameFuture.set(frame);
             } else {

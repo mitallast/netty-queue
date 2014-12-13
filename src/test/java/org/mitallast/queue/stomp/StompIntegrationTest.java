@@ -30,7 +30,6 @@ public class StompIntegrationTest extends BaseQueueTest {
         StompClient stompClient = new StompClient(ImmutableSettings.builder()
                 .put("host", "127.0.0.1")
                 .put("port", 9080)
-                .put("use_oio", false)
                 .build());
 
         stompClient.start();
@@ -63,11 +62,11 @@ public class StompIntegrationTest extends BaseQueueTest {
 
         // warm up
         for (int i = 0; i < 2; i++) {
-            send(stompClient, max);
+            send(max);
         }
 
         long start = System.currentTimeMillis();
-        send(stompClient, max);
+        send(max);
         long end = System.currentTimeMillis();
 
         System.out.println("total " + (end - start) + "ms");
@@ -77,8 +76,6 @@ public class StompIntegrationTest extends BaseQueueTest {
 
     @Test
     public void testMultiThread() throws Exception {
-
-
         client().queues().createQueue(new CreateQueueRequest(QUEUE, ImmutableSettings.builder().build())).get();
         QueueStatsResponse response = client().queue().queueStatsRequest(new QueueStatsRequest(QUEUE)).get();
         assert response.getStats().getSize() == 0;
@@ -94,11 +91,11 @@ public class StompIntegrationTest extends BaseQueueTest {
         StompFrame connectResponse = stompClient.send(connect).get();
         assert connectResponse.command().equals(StompCommand.CONNECTED);
         assert connectResponse.headers().get(StompHeaders.RECEIPT_ID).equals("connect");
+
         // warm up
         for (int i = 0; i < concurrency; i++) {
-            send(stompClient, max);
+            send(max);
         }
-
 
         final ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
         final List<Future> futures = new ArrayList<>(concurrency);
@@ -113,7 +110,7 @@ public class StompIntegrationTest extends BaseQueueTest {
                         connect.headers().set(StompHeaders.ACCEPT_VERSION, "1.2");
                         connect.headers().set(StompHeaders.RECEIPT, "connect");
 
-                        send(stompClient, max);
+                        send(max);
                     } catch (Exception e) {
                         assert false : e;
                     }
@@ -131,7 +128,12 @@ public class StompIntegrationTest extends BaseQueueTest {
         System.out.println((max * concurrency * 1000 / (end - start)) + " q/s");
     }
 
-    private void send(StompClient stompClient, int max) throws Exception {
+    private void send(int max) throws Exception {
+        final StompClient stompClient = stompClient();
+        StompFrame connect = new DefaultStompFrame(StompCommand.CONNECT);
+        connect.headers().set(StompHeaders.ACCEPT_VERSION, "1.2");
+        connect.headers().set(StompHeaders.RECEIPT, "connect");
+
         final Map<String, Future<StompFrame>> futures = new HashMap<>(max);
         byte[] data = "Hello world".getBytes();
         for (int i = 0; i < max; i++) {

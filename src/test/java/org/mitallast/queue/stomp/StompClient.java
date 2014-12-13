@@ -4,10 +4,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.handler.codec.stomp.*;
 import io.netty.util.AttributeKey;
 import org.mitallast.queue.common.concurrent.BasicFuture;
@@ -25,7 +23,6 @@ public class StompClient {
     private final int port;
     private final int threads;
     private final int maxContentLength;
-    private final boolean useOio;
 
     private Bootstrap stompBootstrap;
     private Channel stompChannel;
@@ -42,7 +39,6 @@ public class StompClient {
         port = settings.getAsInt("port", 9080);
         maxContentLength = settings.getAsInt("max_content_length", 1048576);
         threads = settings.getAsInt("threads", 24);
-        useOio = settings.getAsBoolean("use_oio", false);
 
         reuseAddress = settings.getAsBoolean("reuse_address", true);
         keepAlive = settings.getAsBoolean("keep_alive", true);
@@ -55,8 +51,8 @@ public class StompClient {
 
     public void start() {
         stompBootstrap = new Bootstrap()
-                .channel(useOio ? OioSocketChannel.class : NioSocketChannel.class)
-                .group(useOio ? new OioEventLoopGroup(threads) : new NioEventLoopGroup(threads))
+                .channel(NioSocketChannel.class)
+                .group(new NioEventLoopGroup(threads))
                 .option(ChannelOption.SO_REUSEADDR, reuseAddress)
                 .option(ChannelOption.SO_KEEPALIVE, keepAlive)
                 .option(ChannelOption.TCP_NODELAY, tcpNoDelay)

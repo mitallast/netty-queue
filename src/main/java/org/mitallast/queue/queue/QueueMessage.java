@@ -28,6 +28,11 @@ public class QueueMessage {
         setSource(source);
     }
 
+    public QueueMessage(UUID uuid, String source) {
+        setUuid(uuid);
+        setSource(source);
+    }
+
     public QueueMessage(UUID uuid, QueueMessageType type, ByteBuf buffer) {
         this.uuid = uuid;
         this.type = type;
@@ -38,12 +43,12 @@ public class QueueMessage {
         return uuid;
     }
 
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
-    }
-
     public void setUuid(String uuid) {
         setUuid(UUID.fromString(uuid));
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 
     public QueueMessageType getMessageType() {

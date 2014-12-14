@@ -1,7 +1,7 @@
 sudo launchctl limit maxfiles 1000000 1000000
 ulimit -n 65536
 sudo sysctl -w net.inet.tcp.msl=1000
-mvn clean install exec:exec -DskipTests
+mvn clean package exec:exec -DskipTests
 curl -i -s -XDELETE 'localhost:8080/my_queue?reason=test'
 curl -i -s -XPUT 'localhost:8080/my_queue'
 ab -n100000 -c100 -k -p message.json -b2000 'http://127.0.0.1:8080/my_queue/message'

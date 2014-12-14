@@ -3,7 +3,11 @@ package org.mitallast.queue.queue.service.translog.cache;
 import org.mitallast.queue.queue.service.translog.MemoryMappedPage;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
@@ -23,7 +27,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     public MemoryMappedPageCacheSegment(Loader loader, int maxPages) {
         this.loader = loader;
         this.maxPages = maxPages;
-        pageMap = new HashMap<>(maxPages);
+        pageMap = new ConcurrentHashMap<>(maxPages, 0.5f);
     }
 
     @Override
@@ -41,8 +45,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
                 page = loader.load(offset);
                 page.acquire();
                 page.setTimestamp(System.currentTimeMillis());
-                pageMap.put(offset, page);
-                garbage.add(page);
+                assert pageMap.put(offset, page) == null;
             }
             page.acquire();
             page.setTimestamp(System.currentTimeMillis());

@@ -13,7 +13,7 @@ Goals:
 
 As result:
  - One instance allows send up to 91000 REST messages-at-request per second in concurrent mode
- - One instance allows send up to 248704 STOMP messages-at-request per second in concurrent mode
+ - One instance allows send up to 145000 STOMP messages-at-request per second in concurrent mode
 
 See benchmark for more details.
 

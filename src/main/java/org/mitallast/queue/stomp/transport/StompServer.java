@@ -36,17 +36,17 @@ public class StompServer extends AbstractLifecycleComponent {
     @Inject
     public StompServer(Settings settings, StompController stompController) {
         super(settings);
-        this.host = settings.get("host", "127.0.0.1");
-        this.port = settings.getAsInt("port", 9080);
-        this.backlog = settings.getAsInt("backlog", 1024);
-        this.reuseAddress = settings.getAsBoolean("reuse_address", false);
-        this.keepAlive = settings.getAsBoolean("keep_alive", true);
-        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
-        this.sndBuf = settings.getAsInt("snd_buf", 65536);
-        this.rcvBuf = settings.getAsInt("rcv_buf", 65536);
-        this.wbHigh = settings.getAsInt("write_buffer_high_water_mark", 65536);
-        this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 1024);
-        this.threads = settings.getAsInt("threads", 24);
+        this.host = componentSettings.get("host", "127.0.0.1");
+        this.port = componentSettings.getAsInt("port", 9080);
+        this.backlog = componentSettings.getAsInt("backlog", 1024);
+        this.reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
+        this.keepAlive = componentSettings.getAsBoolean("keep_alive", true);
+        this.tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", false);
+        this.sndBuf = componentSettings.getAsInt("snd_buf", 65536);
+        this.rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
+        this.wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
+        this.wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
+        this.threads = componentSettings.getAsInt("threads", 24);
         this.stompController = stompController;
     }
 

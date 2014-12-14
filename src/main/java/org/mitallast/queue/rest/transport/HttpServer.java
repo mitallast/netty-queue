@@ -36,17 +36,17 @@ public class HttpServer extends AbstractLifecycleComponent {
     @Inject
     public HttpServer(Settings settings, RestController restController) {
         super(settings);
-        this.host = settings.get("host", "127.0.0.1");
-        this.port = settings.getAsInt("port", 8080);
-        this.backlog = settings.getAsInt("backlog", 1024);
-        this.reuseAddress = settings.getAsBoolean("reuse_address", true);
-        this.keepAlive = settings.getAsBoolean("keep_alive", true);
-        this.tcpNoDelay = settings.getAsBoolean("tcp_no_delay", true);
-        this.sndBuf = settings.getAsInt("snd_buf", 32 * 1024);
-        this.rcvBuf = settings.getAsInt("rcv_buf", 32 * 1024);
-        this.wbHigh = settings.getAsInt("write_buffer_high_water_mark", 64 * 1024);
-        this.wbLow = settings.getAsInt("write_buffer_low_water_mark", 32 * 1024);
-        this.maxMessagesPerRead = settings.getAsInt("max_messages_per_read", 256);
+        this.host = componentSettings.get("host", "127.0.0.1");
+        this.port = componentSettings.getAsInt("port", 8080);
+        this.backlog = componentSettings.getAsInt("backlog", 1024);
+        this.reuseAddress = componentSettings.getAsBoolean("reuse_address", true);
+        this.keepAlive = componentSettings.getAsBoolean("keep_alive", true);
+        this.tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", true);
+        this.sndBuf = componentSettings.getAsInt("snd_buf", 32 * 1024);
+        this.rcvBuf = componentSettings.getAsInt("rcv_buf", 32 * 1024);
+        this.wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 64 * 1024);
+        this.wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 32 * 1024);
+        this.maxMessagesPerRead = componentSettings.getAsInt("max_messages_per_read", 256);
         this.restController = restController;
     }
 

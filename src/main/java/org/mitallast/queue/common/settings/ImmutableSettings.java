@@ -137,10 +137,10 @@ public class ImmutableSettings implements Settings {
 
     @Override
     public Settings getComponentSettings(Class component) {
-        if (component.getName().startsWith("org.mitallast")) {
-            return getComponentSettings("org.mitallast", component);
+        if (component.getName().startsWith("org.mitallast.queue")) {
+            return getComponentSettings("org.mitallast.queue", component);
         }
-        // not starting with org.mitallast, just remove the first package part (probably org/net/com)
+        // not starting with org.mitallast.queue, just remove the first package part (probably org/net/com)
         return getComponentSettings(component.getName().substring(0, component.getName().indexOf('.')), component);
     }
 

@@ -1,7 +1,7 @@
 package org.mitallast.queue.queue.service.translog;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
@@ -160,7 +160,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         if (checkDeletion && meta.isStatus(QueueMessageMeta.Status.Deleted)) {
             return null;
         }
-        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(meta.length);
+        ByteBuf buffer = Unpooled.buffer(meta.length);
         dataMemoryMappedFile.getBytes(meta.offset, buffer, meta.length);
         return new QueueMessage(meta.uuid, QueueMessageType.values()[meta.type], buffer);
     }

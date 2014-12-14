@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.ActionListener;
@@ -35,8 +35,8 @@ public class RestQueuesStatsAction extends BaseRestHandler {
         client.queues().queuesStatsRequest(new QueuesStatsRequest(), new ActionListener<QueuesStatsResponse>() {
             @Override
             public void onResponse(QueuesStatsResponse response) {
-                ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
-                try (OutputStream stream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer())) {
+                ByteBuf buffer = Unpooled.buffer();
+                try (OutputStream stream = new ByteBufOutputStream(buffer)) {
                     try (JsonGenerator generator = createGenerator(request, stream)) {
                         generator.writeStartObject();
                         generator.writeArrayFieldStart("queues");

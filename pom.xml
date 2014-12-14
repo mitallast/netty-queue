@@ -110,12 +110,6 @@
             <version>${google.guava.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.fusesource.leveldbjni</groupId>
-            <artifactId>leveldbjni-all</artifactId>
-            <version>${leveldb.version}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.eaio.uuid</groupId>
             <artifactId>uuid</artifactId>
             <version>${uuid.version}</version>

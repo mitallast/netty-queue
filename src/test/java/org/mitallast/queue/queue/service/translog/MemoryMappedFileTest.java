@@ -1,5 +1,7 @@
 package org.mitallast.queue.queue.service.translog;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +41,15 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
     }
 
     @Test
+    public void testLongWithIntOffset() throws IOException {
+        for (long offset = 4; offset < 655360; offset += 8) {
+            mappedFile.putLong(offset, offset);
+            long actual = mappedFile.getLong(offset);
+            assert actual == offset;
+        }
+    }
+
+    @Test
     public void testInt() throws IOException {
         for (long offset = 0; offset < 655360; offset += 4) {
             mappedFile.putInt(offset, (int) offset);
@@ -63,6 +74,29 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
     }
 
     @Test
+    public void testByteBuf() throws IOException {
+        final int bytes = 128;
+        ByteBuf expected = Unpooled.buffer(bytes);
+        ByteBuf actual = Unpooled.buffer(bytes);
+        byte counter = 0;
+        for (long offset = 0; offset < 655360; offset += bytes) {
+            expected.resetWriterIndex();
+            for (int i = 0; i < bytes; i++) {
+                expected.writeByte((byte) (counter * 3 + counter));
+            }
+            expected.resetReaderIndex();
+            mappedFile.putBytes(offset, expected, bytes);
+            mappedFile.getBytes(offset, actual, bytes);
+
+            expected.resetReaderIndex();
+            actual.resetReaderIndex();
+            for (int i = 0; i < bytes; i++) {
+                assert expected.readByte() == actual.readByte();
+            }
+        }
+    }
+
+    @Test
     public void testReopen() throws IOException {
         byte[] bytesExpected = new byte[128];
         byte[] bytesActual = new byte[bytesExpected.length];
@@ -83,11 +117,35 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
         byte[] bytesActual = new byte[bytesExpected.length];
         byte counter = 0;
         for (int i = 0; i < bytesExpected.length; i++) {
-            bytesExpected[i] = (byte) (counter * 3 + counter);
+            counter = (byte) (counter * 3 + counter);
+            bytesExpected[i] = counter;
         }
         mappedFile.putBytes(125, bytesExpected);
         mappedFile.getBytes(125, bytesActual);
         assert Arrays.equals(bytesExpected, bytesActual);
+    }
+
+    @Test
+    public void testByteBufOverPageSize() throws IOException {
+        final int bytes = 4096 * 3;
+        ByteBuf expected = Unpooled.buffer(bytes);
+        ByteBuf actual = Unpooled.buffer(bytes);
+        expected.resetWriterIndex();
+
+        byte counter = 0;
+        for (int i = 0; i < bytes; i++) {
+            counter = (byte) (counter * 3 + counter);
+            expected.writeByte(counter);
+        }
+        expected.resetReaderIndex();
+        mappedFile.putBytes(125, expected, bytes);
+        mappedFile.getBytes(125, actual, bytes);
+
+        expected.resetReaderIndex();
+        actual.resetReaderIndex();
+        for (int i = 0; i < bytes; i++) {
+            assert expected.readByte() == actual.readByte();
+        }
     }
 
     @Test

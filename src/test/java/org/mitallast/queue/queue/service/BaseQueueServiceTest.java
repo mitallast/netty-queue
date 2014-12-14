@@ -53,11 +53,21 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
 
     @Test
     public void testEnqueueAndDequeue() throws IOException {
-        QueueMessage message = createMessage();
-        queueService.enqueue(message);
-        QueueMessage peek = queueService.dequeue();
-        assert peek != null;
-        assert message.equals(peek);
+        QueueMessage message1 = createMessage();
+        QueueMessage message2 = createMessage();
+        QueueMessage message3 = createMessage();
+        queueService.enqueue(message1);
+        queueService.enqueue(message2);
+        queueService.enqueue(message3);
+        QueueMessage peek1 = queueService.dequeue();
+        QueueMessage peek2 = queueService.dequeue();
+        QueueMessage peek3 = queueService.dequeue();
+        assert peek1 != null;
+        assert peek2 != null;
+        assert peek3 != null;
+        assert message1.equals(peek1) : message1 + " != " + peek1;
+        assert message2.equals(peek2) : message2 + " != " + peek2;
+        assert message3.equals(peek3) : message3 + " != " + peek3;
     }
 
     @Test(expected = QueueMessageUuidDuplicateException.class)

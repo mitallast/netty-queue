@@ -1,6 +1,9 @@
 package org.mitallast.queue.queue.service.translog;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
 import java.io.Closeable;
@@ -24,7 +27,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
 
     private final static long INT_SIZE = 4;
     private final static long LONG_SIZE = 8;
-    private final static long MESSAGE_META_SIZE = LONG_SIZE * 3 + INT_SIZE * 2;
+    private final static long MESSAGE_META_SIZE = LONG_SIZE * 3 + INT_SIZE * 3;
     private final static long MESSAGE_COUNT_OFFSET = 0;
     private final static long MESSAGE_META_OFFSET = MESSAGE_COUNT_OFFSET + INT_SIZE;
     private final MemoryMappedFile metaMemoryMappedFile;
@@ -85,20 +88,19 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
      * @return message position
      */
     public int putMessage(QueueMessage queueMessage) throws IOException {
-        int pos = messageCount.getAndIncrement();
-
         QueueMessageMeta messageMeta = new QueueMessageMeta();
         messageMeta.uuid = queueMessage.getUuid();
-        messageMeta.pos = pos;
+        messageMeta.pos = messageCount.getAndIncrement();
         if (messageMetaMap.putIfAbsent(messageMeta.uuid, messageMeta) != null) {
             throw new QueueMessageUuidDuplicateException(messageMeta.uuid);
         }
 
-        byte[] source = queueMessage.getSource();
+        ByteBuf source = queueMessage.getSource();
+        source.resetReaderIndex();
 
-        messageMeta.offset = messageWriteOffset.getAndAdd(source.length);
-
-        messageMeta.length = source.length;
+        messageMeta.offset = messageWriteOffset.getAndAdd(source.readableBytes());
+        messageMeta.length = source.readableBytes();
+        messageMeta.type = queueMessage.getMessageType().ordinal();
         messageMeta.setStatus(QueueMessageMeta.Status.New);
 
         dataMemoryMappedFile.putBytes(messageMeta.offset, source);
@@ -110,7 +112,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         messageMetaQueue.add(messageMeta);
 
 //        metaMemoryMappedFile.flush();
-        return pos;
+        return messageMeta.pos;
     }
 
     public void markMessageDeleted(UUID uuid) throws IOException {
@@ -158,9 +160,9 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         if (checkDeletion && meta.isStatus(QueueMessageMeta.Status.Deleted)) {
             return null;
         }
-        byte[] source = new byte[meta.length];
-        dataMemoryMappedFile.getBytes(meta.offset, source);
-        return new QueueMessage(meta.uuid, source);
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(meta.length);
+        dataMemoryMappedFile.getBytes(meta.offset, buffer, meta.length);
+        return new QueueMessage(meta.uuid, QueueMessageType.values()[meta.type], buffer);
     }
 
     private void writeMessageCount(int maxSize) throws IOException {
@@ -176,26 +178,23 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     }
 
     public void writeMeta(QueueMessageMeta messageMeta, long offset) throws IOException {
-        if (messageMeta.uuid == null) {
-            metaMemoryMappedFile.putLong(offset, 0);
-            offset += LONG_SIZE;
-            metaMemoryMappedFile.putLong(offset, 0);
-            offset += LONG_SIZE;
-        } else {
-            metaMemoryMappedFile.putLong(offset, messageMeta.uuid.getMostSignificantBits());
-            offset += LONG_SIZE;
-            metaMemoryMappedFile.putLong(offset, messageMeta.uuid.getLeastSignificantBits());
-            offset += LONG_SIZE;
-        }
+        metaMemoryMappedFile.putLong(offset, messageMeta.uuid.getMostSignificantBits());
+        offset += LONG_SIZE;
+        metaMemoryMappedFile.putLong(offset, messageMeta.uuid.getLeastSignificantBits());
+        offset += LONG_SIZE;
         metaMemoryMappedFile.putLong(offset, messageMeta.offset);
         offset += LONG_SIZE;
         metaMemoryMappedFile.putInt(offset, messageMeta.status);
         offset += INT_SIZE;
         metaMemoryMappedFile.putInt(offset, messageMeta.length);
+        offset += INT_SIZE;
+        metaMemoryMappedFile.putInt(offset, messageMeta.type);
     }
 
     private QueueMessageMeta readMeta(int pos) throws IOException {
-        return readMeta(getMetaOffset(pos));
+        QueueMessageMeta messageMeta = readMeta(getMetaOffset(pos));
+        messageMeta.pos = pos;
+        return messageMeta;
     }
 
     public QueueMessageMeta readMeta(long offset) throws IOException {
@@ -237,15 +236,17 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         private volatile int status;
         private int length;
         private int pos;
+        private int type;
 
         public QueueMessageMeta() {
         }
 
-        public QueueMessageMeta(UUID uuid, long offset, int status, int length) {
+        public QueueMessageMeta(UUID uuid, long offset, int status, int length, int type) {
             this.uuid = uuid;
             this.offset = offset;
             this.status = status;
             this.length = length;
+            this.type = type;
         }
 
         public boolean isStatus(Status expectedStatus) {
@@ -261,16 +262,6 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         }
 
         @Override
-        public String toString() {
-            return "QueueMessageMeta{" +
-                    ", uuid=" + uuid +
-                    ", offset=" + offset +
-                    ", status=" + status +
-                    ", length=" + length +
-                    '}';
-        }
-
-        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -280,6 +271,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
             if (length != that.length) return false;
             if (offset != that.offset) return false;
             if (status != that.status) return false;
+            if (type != that.type) return false;
             if (uuid != null ? !uuid.equals(that.uuid) : that.uuid != null) return false;
 
             return true;
@@ -287,7 +279,23 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
 
         @Override
         public int hashCode() {
-            return uuid != null ? uuid.hashCode() : 0;
+            int result = uuid != null ? uuid.hashCode() : 0;
+            result = 31 * result + (int) (offset ^ (offset >>> 32));
+            result = 31 * result + length;
+            result = 31 * result + pos;
+            result = 31 * result + type;
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "QueueMessageMeta{" +
+                    "uuid=" + uuid +
+                    ", offset=" + offset +
+                    ", status=" + status +
+                    ", length=" + length +
+                    ", type=" + type +
+                    '}';
         }
 
         enum Status {None, New, Deleted}

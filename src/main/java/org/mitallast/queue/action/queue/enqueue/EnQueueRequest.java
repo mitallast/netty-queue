@@ -44,8 +44,10 @@ public class EnQueueRequest extends ActionRequest {
         }
         if (message == null) {
             validationException = addValidationError("message is missing", validationException);
+        } else if (message.getMessageType() == null) {
+            validationException = addValidationError("message type is missing", validationException);
         } else if (message.getSource() == null) {
-            validationException = addValidationError("message is missing", validationException);
+            validationException = addValidationError("message source is missing", validationException);
         }
         return validationException;
     }

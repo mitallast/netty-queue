@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.service.translog;
 
+import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCache;
 import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCacheSegment;
 import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCacheSegmented;
@@ -33,20 +34,39 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
 
     public void putLong(long offset, long value) throws IOException {
         MemoryMappedPage page = getPage(offset);
+        long pageMax = page.getOffset() + pageSize;
         try {
-            page.putLong(offset, value);
+            if (offset + 8 < pageMax) {
+                page.putLong(offset, value);
+            } else {
+                page.putInt(offset, (int) (value >>> 32));
+            }
         } finally {
             releasePage(page);
+        }
+        if (offset + 8 >= pageMax) {
+            putInt(offset + 4, (int) value);
         }
     }
 
     public long getLong(long offset) throws IOException {
         MemoryMappedPage page = getPage(offset);
+        long pageMax = page.getOffset() + pageSize;
+        long value = 0;
         try {
-            return page.getLong(offset);
+            if (offset + 8 < pageMax) {
+                value = page.getLong(offset);
+            } else {
+                value = page.getInt(offset) & 0xffffffffL;
+                value = value << 32;
+            }
         } finally {
             releasePage(page);
         }
+        if (offset + 8 >= pageMax) {
+            value |= getInt(offset + 4) & 0xffffffffL;
+        }
+        return value;
     }
 
     public void putInt(long offset, int value) throws IOException {
@@ -67,12 +87,29 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
         }
     }
 
+    public void getBytes(long offset, ByteBuf buffer, int length) throws IOException {
+        long position = offset;
+        long end = offset + length;
+        int dataPosition = 0;
+        while (position < end) {
+            int max = pageSize - (int) (position % pageSize);
+            max = Math.min(max, length - dataPosition);
+            MemoryMappedPage page = getPage(position);
+            try {
+                page.getBytes(position, buffer, max);
+            } finally {
+                releasePage(page);
+            }
+            dataPosition += max;
+            position += max;
+        }
+    }
+
     public void getBytes(long offset, byte[] data) throws IOException {
         getBytes(offset, data, 0, data.length);
     }
 
     public void getBytes(final long offset, byte[] data, final int start, final int length) throws IOException {
-
         long position = offset;
         long end = offset + length;
         int dataPosition = start;
@@ -92,6 +129,28 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
 
     public void putBytes(long offset, byte[] data) throws IOException {
         putBytes(offset, data, 0, data.length);
+    }
+
+    public void putBytes(long offset, ByteBuf byteBuf) throws IOException {
+        putBytes(offset, byteBuf, byteBuf.readableBytes());
+    }
+
+    public void putBytes(long offset, ByteBuf byteBuf, int length) throws IOException {
+        long position = offset;
+        long end = offset + length;
+        int dataPosition = 0;
+        while (position < end) {
+            int max = pageSize - (int) (position % pageSize);
+            max = Math.min(max, length - dataPosition);
+            MemoryMappedPage page = getPage(position);
+            try {
+                page.putBytes(position, byteBuf, max);
+            } finally {
+                releasePage(page);
+            }
+            dataPosition += max;
+            position += max;
+        }
     }
 
     public void putBytes(final long offset, final byte[] data, final int start, final int length) throws IOException {

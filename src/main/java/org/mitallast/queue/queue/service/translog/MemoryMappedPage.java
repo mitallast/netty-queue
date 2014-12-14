@@ -1,5 +1,7 @@
 package org.mitallast.queue.queue.service.translog;
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
@@ -32,7 +34,12 @@ public class MemoryMappedPage implements Closeable {
     }
 
     public void putLong(long offset, long value) {
-        buffer.putLong(getIndex(offset), value);
+        try {
+            buffer.putLong(getIndex(offset), value);
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println(offset + " : " + value + " ; " + (offset % 8));
+            throw e;
+        }
         dirty = true;
     }
 
@@ -49,12 +56,27 @@ public class MemoryMappedPage implements Closeable {
         return buffer.getInt(getIndex(offset));
     }
 
+    public void putBytes(long offset, ByteBuf byteBuf, int length) {
+        int index = getIndex(offset);
+        for (int i = 0; i < length; i++, index++) {
+            buffer.put(index, byteBuf.readByte());
+        }
+        dirty = true;
+    }
+
     public void putBytes(long offset, byte[] data, int start, int length) {
         int index = getIndex(offset);
         for (int i = 0; i < length; i++, index++, start++) {
             buffer.put(index, data[start]);
         }
         dirty = true;
+    }
+
+    public void getBytes(long offset, ByteBuf buffer, int length) {
+        int index = getIndex(offset);
+        for (int i = 0; i < length; i++, index++) {
+            buffer.writeByte(this.buffer.get(index));
+        }
     }
 
     public void getBytes(long offset, byte[] data, int start, int length) {

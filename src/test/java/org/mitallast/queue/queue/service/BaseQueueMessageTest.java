@@ -77,14 +77,14 @@ public class BaseQueueMessageTest {
 
     protected final QueueMessage createMessage() {
         QueueMessage message = new QueueMessage();
-        message.setSource("Hello world");
+        message.setSource(UUIDs.generateRandom().toString());
         return message;
     }
 
     protected final QueueMessage createMessageWithUuid() {
         QueueMessage message = new QueueMessage();
         message.setUuid(UUIDs.generateRandom());
-        message.setSource("Hello world");
+        message.setSource(UUIDs.generateRandom().toString());
         return message;
     }
 

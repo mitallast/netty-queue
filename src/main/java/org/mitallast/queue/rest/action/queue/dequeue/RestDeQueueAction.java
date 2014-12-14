@@ -45,7 +45,7 @@ public class RestDeQueueAction extends BaseRestHandler {
                 }
                 QueueMessage queueMessage = deQueueResponse.getMessage();
                 ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer();
-                try (OutputStream stream = new ByteBufOutputStream(PooledByteBufAllocator.DEFAULT.buffer())) {
+                try (OutputStream stream = new ByteBufOutputStream(buffer)) {
                     try (JsonGenerator generator = createGenerator(request, stream)) {
                         queueMessage.writeTo(generator);
                     }

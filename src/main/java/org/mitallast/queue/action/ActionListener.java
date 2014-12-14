@@ -1,13 +1,6 @@
 package org.mitallast.queue.action;
 
-public interface ActionListener<Response extends ActionResponse> {
-    /**
-     * A response handler.
-     */
-    void onResponse(Response response);
+import org.mitallast.queue.common.concurrent.Listener;
 
-    /**
-     * A failure handler.
-     */
-    void onFailure(Throwable e);
+public interface ActionListener<Response extends ActionResponse> extends Listener<Response> {
 }

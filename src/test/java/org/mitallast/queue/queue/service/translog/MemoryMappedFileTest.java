@@ -100,7 +100,7 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
     public void testReopen() throws IOException {
         byte[] bytesExpected = new byte[128];
         byte[] bytesActual = new byte[bytesExpected.length];
-        byte counter = 0;
+        byte counter = 31;
         for (int i = 0; i < bytesExpected.length; i++) {
             bytesExpected[i] = (byte) (counter * 3 + counter);
         }
@@ -115,7 +115,7 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
     public void testBytesOverPageSize() throws IOException {
         byte[] bytesExpected = new byte[4096 * 3];
         byte[] bytesActual = new byte[bytesExpected.length];
-        byte counter = 0;
+        byte counter = 31;
         for (int i = 0; i < bytesExpected.length; i++) {
             counter = (byte) (counter * 3 + counter);
             bytesExpected[i] = counter;
@@ -130,9 +130,10 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
         final int bytes = 4096 * 3;
         ByteBuf expected = Unpooled.buffer(bytes);
         ByteBuf actual = Unpooled.buffer(bytes);
-        expected.resetWriterIndex();
+        expected.clear();
+        actual.clear();
 
-        byte counter = 0;
+        byte counter = 31;
         for (int i = 0; i < bytes; i++) {
             counter = (byte) (counter * 3 + counter);
             expected.writeByte(counter);
@@ -144,7 +145,7 @@ public class MemoryMappedFileTest extends BaseQueueMessageTest {
         expected.resetReaderIndex();
         actual.resetReaderIndex();
         for (int i = 0; i < bytes; i++) {
-            assert expected.readByte() == actual.readByte();
+            assert expected.readByte() == actual.readByte() : i;
         }
     }
 

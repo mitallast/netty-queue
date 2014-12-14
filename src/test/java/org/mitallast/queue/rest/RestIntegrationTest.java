@@ -8,6 +8,7 @@ import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
+import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +84,7 @@ public class RestIntegrationTest extends BaseQueueTest {
     }
 
     private void send(int max) throws Exception {
-        RestClient restClient = new RestClient(ImmutableSettings.EMPTY);
+        RestClient restClient = new RestClient(settings());
         restClient.start();
         try {
             byte[] bytes = "{\"message\":\"hello world\"}".getBytes();

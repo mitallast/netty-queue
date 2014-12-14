@@ -1,4 +1,4 @@
-package org.mitallast.queue.stomp;
+package org.mitallast.queue.stomp.transport;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -8,6 +8,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.stomp.*;
 import io.netty.util.AttributeKey;
+import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.concurrent.BasicFuture;
 import org.mitallast.queue.common.settings.Settings;
 import org.slf4j.Logger;
@@ -16,7 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-public class StompClient {
+public class StompClient extends AbstractComponent {
     private final static Logger logger = LoggerFactory.getLogger(StompClient.class);
     private final static AttributeKey<ConcurrentHashMap<String, BasicFuture<StompFrame>>> attr = AttributeKey.valueOf("map");
     private final String host;
@@ -35,21 +36,23 @@ public class StompClient {
     private int wbHigh;
 
     public StompClient(Settings settings) {
-        host = settings.get("host", "127.0.0.1");
-        port = settings.getAsInt("port", 9080);
-        maxContentLength = settings.getAsInt("max_content_length", 1048576);
-        threads = settings.getAsInt("threads", 24);
+        super(settings);
+        host = componentSettings.get("host", "127.0.0.1");
+        port = componentSettings.getAsInt("port", 9080);
+        maxContentLength = componentSettings.getAsInt("max_content_length", 1048576);
+        threads = componentSettings.getAsInt("threads", 24);
 
-        reuseAddress = settings.getAsBoolean("reuse_address", true);
-        keepAlive = settings.getAsBoolean("keep_alive", true);
-        tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
-        sndBuf = settings.getAsInt("snd_buf", 65536);
-        rcvBuf = settings.getAsInt("rcv_buf", 65536);
-        wbHigh = settings.getAsInt("write_buffer_high_water_mark", 65536);
-        wbLow = settings.getAsInt("write_buffer_low_water_mark", 1024);
+        reuseAddress = componentSettings.getAsBoolean("reuse_address", true);
+        keepAlive = componentSettings.getAsBoolean("keep_alive", true);
+        tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", false);
+        sndBuf = componentSettings.getAsInt("snd_buf", 65536);
+        rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
+        wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
+        wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
     }
 
     public void start() {
+        logger.info("connect to {}:{}", host, port);
         stompBootstrap = new Bootstrap()
                 .channel(NioSocketChannel.class)
                 .group(new NioEventLoopGroup(threads))

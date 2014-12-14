@@ -84,7 +84,7 @@ public class RestEnQueueAction extends BaseRestHandler {
 
         try (InputStream stream = request.getInputStream()) {
             parse(enQueueRequest, stream);
-        } catch (IOException | QueueMessageUuidDuplicateException e) {
+        } catch (IOException e) {
             session.sendResponse(e);
             return;
         }

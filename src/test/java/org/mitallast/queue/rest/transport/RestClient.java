@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest;
+package org.mitallast.queue.rest.transport;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -13,6 +13,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.AttributeKey;
+import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.concurrent.BasicFuture;
 import org.mitallast.queue.common.settings.Settings;
 import org.slf4j.Logger;
@@ -21,7 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 
-public class RestClient {
+public class RestClient extends AbstractComponent {
     private final static Logger logger = LoggerFactory.getLogger(RestClient.class);
     private final static AttributeKey<ConcurrentLinkedDeque<BasicFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
     private final String host;
@@ -40,20 +41,20 @@ public class RestClient {
     private int wbHigh;
 
     public RestClient(Settings settings) {
+        super(settings);
+        host = componentSettings.get("host", "127.0.0.1");
+        port = componentSettings.getAsInt("port", 8080);
+        maxContentLength = componentSettings.getAsInt("max_content_length", 1048576);
+        threads = componentSettings.getAsInt("threads", 24);
+        useOio = componentSettings.getAsBoolean("use_oio", false);
 
-        host = settings.get("host", "127.0.0.1");
-        port = settings.getAsInt("port", 8080);
-        maxContentLength = settings.getAsInt("max_content_length", 1048576);
-        threads = settings.getAsInt("threads", 24);
-        useOio = settings.getAsBoolean("use_oio", false);
-
-        reuseAddress = settings.getAsBoolean("reuse_address", true);
-        keepAlive = settings.getAsBoolean("keep_alive", true);
-        tcpNoDelay = settings.getAsBoolean("tcp_no_delay", false);
-        sndBuf = settings.getAsInt("snd_buf", 65536);
-        rcvBuf = settings.getAsInt("rcv_buf", 65536);
-        wbHigh = settings.getAsInt("write_buffer_high_water_mark", 65536);
-        wbLow = settings.getAsInt("write_buffer_low_water_mark", 1024);
+        reuseAddress = componentSettings.getAsBoolean("reuse_address", true);
+        keepAlive = componentSettings.getAsBoolean("keep_alive", true);
+        tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", false);
+        sndBuf = componentSettings.getAsInt("snd_buf", 65536);
+        rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
+        wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
+        wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
     }
 
     public void start() {

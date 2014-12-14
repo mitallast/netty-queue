@@ -1,6 +1,7 @@
 package org.mitallast.queue.queue.service.translog;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -14,6 +15,7 @@ public class MemoryMappedPage implements Closeable {
 
     private final long offset;
     private MappedByteBuffer buffer;
+    private ByteBuf buf;
     private boolean dirty = false;
     private boolean closed = false;
 
@@ -22,6 +24,7 @@ public class MemoryMappedPage implements Closeable {
 
     public MemoryMappedPage(MappedByteBuffer buffer, long offset) {
         this.buffer = buffer;
+        this.buf = Unpooled.wrappedBuffer(buffer);
         this.offset = offset;
     }
 
@@ -56,11 +59,9 @@ public class MemoryMappedPage implements Closeable {
         return buffer.getInt(getIndex(offset));
     }
 
-    public void putBytes(long offset, ByteBuf byteBuf, int length) {
+    public void putBytes(final long offset, ByteBuf byteBuf, int length) {
         int index = getIndex(offset);
-        for (int i = 0; i < length; i++, index++) {
-            buffer.put(index, byteBuf.readByte());
-        }
+        buf.setBytes(index, byteBuf, length);
         dirty = true;
     }
 
@@ -120,6 +121,7 @@ public class MemoryMappedPage implements Closeable {
             closed = true;
             MappedByteBufferCleaner.clean(buffer);
             buffer = null;
+            buf = null;
         }
     }
 }

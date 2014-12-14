@@ -71,6 +71,6 @@ public class FileQueueMessageAppendTransactionLogTest extends BaseQueueMessageTe
                 new FileQueueMessageAppendTransactionLog.QueueMessageMeta(UUIDs.generateRandom(), 13, 2314, 2341324, 0);
         transactionLog.writeMeta(messageMeta, 0l);
         FileQueueMessageAppendTransactionLog.QueueMessageMeta messageMetaActual = transactionLog.readMeta(0l);
-        assert messageMeta.equals(messageMetaActual);
+        assert messageMeta.equals(messageMetaActual) : "\n" + messageMeta + " != \n" + messageMetaActual;
     }
 }

@@ -47,9 +47,7 @@ public class StompIntegrationTest extends BaseStompTest {
                 @Override
                 public void run() {
                     try {
-                        while (!Thread.interrupted()) {
-                            send(max);
-                        }
+                        send(max);
                     } catch (Exception e) {
                         assert false : e;
                     }

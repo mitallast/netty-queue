@@ -1,6 +1,7 @@
 package org.mitallast.queue.queue.service.translog;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
@@ -27,7 +28,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
 
     private final static long INT_SIZE = 4;
     private final static long LONG_SIZE = 8;
-    private final static long MESSAGE_META_SIZE = LONG_SIZE * 3 + INT_SIZE * 3;
+    private final static long MESSAGE_META_SIZE = LONG_SIZE * 8;
     private final static long MESSAGE_COUNT_OFFSET = 0;
     private final static long MESSAGE_META_OFFSET = MESSAGE_COUNT_OFFSET + INT_SIZE;
     private final MemoryMappedFile metaMemoryMappedFile;
@@ -37,7 +38,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     private final AtomicInteger messageCount = new AtomicInteger();
 
     private final ConcurrentLinkedQueue<QueueMessageMeta> messageMetaQueue = new ConcurrentLinkedQueue<>();
-    private final ConcurrentHashMap<UUID, QueueMessageMeta> messageMetaMap = new ConcurrentHashMap<>(256);
+    private final ConcurrentHashMap<UUID, QueueMessageMeta> messageMetaMap = new ConcurrentHashMap<>(65536, 0.5f);
 
     public FileQueueMessageAppendTransactionLog(File metaFile, File dataFile) throws IOException {
         this(metaFile, dataFile, 1048576, 10);
@@ -178,17 +179,20 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     }
 
     public void writeMeta(QueueMessageMeta messageMeta, long offset) throws IOException {
-        metaMemoryMappedFile.putLong(offset, messageMeta.uuid.getMostSignificantBits());
-        offset += LONG_SIZE;
-        metaMemoryMappedFile.putLong(offset, messageMeta.uuid.getLeastSignificantBits());
-        offset += LONG_SIZE;
-        metaMemoryMappedFile.putLong(offset, messageMeta.offset);
-        offset += LONG_SIZE;
-        metaMemoryMappedFile.putInt(offset, messageMeta.status);
-        offset += INT_SIZE;
-        metaMemoryMappedFile.putInt(offset, messageMeta.length);
-        offset += INT_SIZE;
-        metaMemoryMappedFile.putInt(offset, messageMeta.type);
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer((int) MESSAGE_META_SIZE);
+        buffer.clear();
+        try {
+            buffer.writeLong(messageMeta.uuid.getMostSignificantBits());
+            buffer.writeLong(messageMeta.uuid.getLeastSignificantBits());
+            buffer.writeLong(messageMeta.offset);
+            buffer.writeInt(messageMeta.status);
+            buffer.writeInt(messageMeta.length);
+            buffer.writeInt(messageMeta.type);
+            buffer.resetReaderIndex();
+            metaMemoryMappedFile.putBytes(offset, buffer);
+        } finally {
+            buffer.release();
+        }
     }
 
     private QueueMessageMeta readMeta(int pos) throws IOException {
@@ -198,22 +202,28 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     }
 
     public QueueMessageMeta readMeta(long offset) throws IOException {
-        QueueMessageMeta messageMeta = new QueueMessageMeta();
-        long UUIDMost = metaMemoryMappedFile.getLong(offset);
-        offset += LONG_SIZE;
-        long UUIDLeast = metaMemoryMappedFile.getLong(offset);
-        offset += LONG_SIZE;
-        if (UUIDMost != 0 && UUIDLeast != 0) {
-            messageMeta.uuid = new UUID(UUIDMost, UUIDLeast);
-        } else {
-            messageMeta.uuid = null;
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer((int) MESSAGE_META_SIZE);
+        buffer.clear();
+        try {
+            metaMemoryMappedFile.getBytes(offset, buffer, (int) MESSAGE_META_SIZE);
+            buffer.resetReaderIndex();
+
+            QueueMessageMeta messageMeta = new QueueMessageMeta();
+            long UUIDMost = buffer.readLong();
+            long UUIDLeast = buffer.readLong();
+            if (UUIDMost != 0 && UUIDLeast != 0) {
+                messageMeta.uuid = new UUID(UUIDMost, UUIDLeast);
+            } else {
+                messageMeta.uuid = null;
+            }
+            messageMeta.offset = buffer.readLong();
+            messageMeta.status = buffer.readInt();
+            messageMeta.length = buffer.readInt();
+            messageMeta.type = buffer.readInt();
+            return messageMeta;
+        } finally {
+            buffer.release();
         }
-        messageMeta.offset = metaMemoryMappedFile.getLong(offset);
-        offset += LONG_SIZE;
-        messageMeta.status = metaMemoryMappedFile.getInt(offset);
-        offset += INT_SIZE;
-        messageMeta.length = metaMemoryMappedFile.getInt(offset);
-        return messageMeta;
     }
 
     private long getMetaOffset(int pos) {

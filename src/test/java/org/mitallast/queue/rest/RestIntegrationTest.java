@@ -88,6 +88,7 @@ public class RestIntegrationTest extends BaseQueueTest {
         restClient.start();
         try {
             byte[] bytes = "{\"message\":\"hello world\"}".getBytes();
+            List<Future<FullHttpResponse>> futures = new ArrayList<>(max);
             for (int i = 0; i < max; i++) {
                 DefaultFullHttpRequest request = new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
@@ -96,7 +97,13 @@ public class RestIntegrationTest extends BaseQueueTest {
                         Unpooled.wrappedBuffer(bytes)
                 );
                 request.headers().set(HttpHeaders.Names.CONTENT_LENGTH, bytes.length);
-                FullHttpResponse response = restClient.send(request).get();
+                futures.add(restClient.send(request));
+            }
+            restClient.flush();
+            for (Future<FullHttpResponse> future : futures) {
+                FullHttpResponse response = future.get();
+                assert response.status().code() >= 200 : response.status();
+                assert response.status().code() < 300 : response.status();
                 response.content().release();
             }
         } finally {

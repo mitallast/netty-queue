@@ -35,6 +35,7 @@ public class RestClient extends AbstractComponent {
     private boolean keepAlive;
     private boolean reuseAddress;
     private boolean tcpNoDelay;
+    private int backlog;
     private int sndBuf;
     private int rcvBuf;
     private int wbLow;
@@ -51,8 +52,8 @@ public class RestClient extends AbstractComponent {
         reuseAddress = componentSettings.getAsBoolean("reuse_address", true);
         keepAlive = componentSettings.getAsBoolean("keep_alive", true);
         tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", false);
-        sndBuf = componentSettings.getAsInt("snd_buf", 65536);
-        rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
+        sndBuf = componentSettings.getAsInt("snd_buf", 1048576);
+        rcvBuf = componentSettings.getAsInt("rcv_buf", 1048576);
         wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
         wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
     }
@@ -110,7 +111,11 @@ public class RestClient extends AbstractComponent {
     public Future<FullHttpResponse> send(HttpRequest request) {
         final BasicFuture<FullHttpResponse> future = new BasicFuture<>();
         httpChannel.attr(attr).get().push(future);
-        httpChannel.writeAndFlush(request);
+        httpChannel.write(request, httpChannel.voidPromise());
         return future;
+    }
+
+    public void flush() {
+        httpChannel.flush();
     }
 }

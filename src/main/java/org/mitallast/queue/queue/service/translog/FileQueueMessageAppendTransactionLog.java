@@ -13,10 +13,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * File structure
@@ -25,6 +25,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * - message data * size
  */
 public class FileQueueMessageAppendTransactionLog implements Closeable {
+
+    private final static AtomicReferenceFieldUpdater<FileQueueMessageAppendTransactionLog, QueueMessageMeta> tailUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(FileQueueMessageAppendTransactionLog.class, QueueMessageMeta.class, "tail");
+    private final static AtomicReferenceFieldUpdater<FileQueueMessageAppendTransactionLog, QueueMessageMeta> headUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(FileQueueMessageAppendTransactionLog.class, QueueMessageMeta.class, "head");
 
     private final static long INT_SIZE = 4;
     private final static long LONG_SIZE = 8;
@@ -36,9 +41,9 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
 
     private final AtomicLong messageWriteOffset = new AtomicLong();
     private final AtomicInteger messageCount = new AtomicInteger();
-
-    private final ConcurrentLinkedQueue<QueueMessageMeta> messageMetaQueue = new ConcurrentLinkedQueue<>();
     private final ConcurrentHashMap<UUID, QueueMessageMeta> messageMetaMap = new ConcurrentHashMap<>(65536, 0.5f);
+    private transient volatile QueueMessageMeta head;
+    private transient volatile QueueMessageMeta tail;
 
     public FileQueueMessageAppendTransactionLog(File metaFile, File dataFile) throws IOException {
         this(metaFile, dataFile, 1048576, 10);
@@ -57,11 +62,92 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         }
         metaMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(metaFile, "rw"), pageSize, maxPages);
         dataMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(dataFile, "rw"), pageSize, maxPages);
+
+        head = tail = QueueMessageMeta.empty();
+    }
+
+    private boolean offer(final QueueMessageMeta newNode) {
+        assert newNode != null;
+
+        for (QueueMessageMeta t = tail, p = t; ; ) {
+            QueueMessageMeta q = p.next;
+            if (q == null) {
+                // p is last node
+                if (p.casNext(null, newNode)) {
+                    // Successful CAS is the linearization point
+                    // for e to become an element of this queue,
+                    // and for newNode to become "live".
+                    if (p != t) // hop two nodes at a time
+                        casTail(t, newNode);  // Failure is OK.
+                    return true;
+                }
+                // Lost CAS race to another thread; re-read next
+            } else if (p == q)
+                // We have fallen off list.  If tail is unchanged, it
+                // will also be off-list, in which case we need to
+                // jump to head, from which all live nodes are always
+                // reachable.  Else the new tail is a better bet.
+                p = (t != (t = tail)) ? t : head;
+            else
+                // Check for tail updates after two hops.
+                p = (p != t && t != (t = tail)) ? t : q;
+        }
+    }
+
+    private QueueMessageMeta poll() {
+        restartFromHead:
+        for (; ; ) {
+            for (QueueMessageMeta h = head, p = h, q; ; ) {
+                if (p.updateStatus(QueueMessageMeta.Status.New, QueueMessageMeta.Status.Deleted)) {
+                    // Successful CAS is the linearization point
+                    // for item to be removed from this queue.
+                    if (p != h) // hop two nodes at a time
+                        updateHead(h, ((q = p.next) != null) ? q : p);
+                    return p;
+                } else if ((q = p.next) == null) {
+                    updateHead(h, p);
+                    return null;
+                } else if (p == q)
+                    continue restartFromHead;
+                else
+                    p = q;
+            }
+        }
+    }
+
+    private QueueMessageMeta peek() {
+        restartFromHead:
+        for (; ; ) {
+            for (QueueMessageMeta h = head, p = h, q; ; ) {
+                boolean hasItem = p.isStatus(QueueMessageMeta.Status.New);
+                if (hasItem || (q = p.next) == null) {
+                    updateHead(h, p);
+                    return hasItem ? p : null;
+                } else if (p == q)
+                    continue restartFromHead;
+                else
+                    p = q;
+            }
+        }
+    }
+
+    private void updateHead(QueueMessageMeta h, QueueMessageMeta p) {
+        if (h != p && casHead(h, p))
+            h.lazySetNext(h);
+    }
+
+    private boolean casTail(QueueMessageMeta cmp, QueueMessageMeta val) {
+        return tailUpdater.compareAndSet(this, cmp, val);
+    }
+
+    private boolean casHead(QueueMessageMeta cmp, QueueMessageMeta val) {
+        return headUpdater.compareAndSet(this, cmp, val);
     }
 
     public void initializeNew() throws IOException {
         writeMessageCount(0);
-        messageMetaQueue.clear();
+        head = tail = QueueMessageMeta.empty();
+
         messageMetaMap.clear();
         messageWriteOffset.set(0);
     }
@@ -69,13 +155,13 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     public void initializeExists() throws IOException {
         messageCount.set(readMessageCount());
         messageMetaMap.clear();
-        messageMetaQueue.clear();
+        head = tail = QueueMessageMeta.empty();
 
         for (int i = 0; i < messageCount.get(); i++) {
             QueueMessageMeta messageMeta = readMeta(i);
             messageMeta.pos = i;
             messageMetaMap.put(messageMeta.uuid, messageMeta);
-            messageMetaQueue.add(messageMeta);
+            offer(messageMeta);
         }
         messageWriteOffset.set(dataMemoryMappedFile.length());
     }
@@ -89,7 +175,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
      * @return message position
      */
     public int putMessage(QueueMessage queueMessage) throws IOException {
-        QueueMessageMeta messageMeta = new QueueMessageMeta();
+        QueueMessageMeta messageMeta = QueueMessageMeta.empty();
         messageMeta.uuid = queueMessage.getUuid();
         messageMeta.pos = messageCount.getAndIncrement();
         if (messageMetaMap.putIfAbsent(messageMeta.uuid, messageMeta) != null) {
@@ -110,7 +196,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         writeMeta(messageMeta, messageMeta.pos);
         writeMessageCount(messageCount.get());
 
-        messageMetaQueue.add(messageMeta);
+        offer(messageMeta);
 
 //        metaMemoryMappedFile.flush();
         return messageMeta.pos;
@@ -126,22 +212,19 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
     }
 
     public QueueMessage peekMessage() throws IOException {
-        for (QueueMessageMeta messageMeta : messageMetaQueue) {
-            if (messageMeta.isStatus(QueueMessageMeta.Status.New)) {
-                return readMessage(messageMeta, false);
-            }
+        QueueMessageMeta messageMeta = peek();
+        if (messageMeta != null) {
+            return readMessage(messageMeta, false);
         }
         return null;
     }
 
     public QueueMessage dequeueMessage() throws IOException {
-        QueueMessageMeta messageMeta;
-        while ((messageMeta = messageMetaQueue.poll()) != null) {
-            if (messageMeta.updateStatus(QueueMessageMeta.Status.New, QueueMessageMeta.Status.Deleted)) {
-                messageMetaMap.remove(messageMeta.uuid);
-                writeMeta(messageMeta, messageMeta.pos);
-                return readMessage(messageMeta, false);
-            }
+        QueueMessageMeta messageMeta = poll();
+        if (messageMeta != null) {
+            messageMetaMap.remove(messageMeta.uuid);
+            writeMeta(messageMeta, messageMeta.pos);
+            return readMessage(messageMeta, false);
         }
         return null;
     }
@@ -208,7 +291,7 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
             metaMemoryMappedFile.getBytes(offset, buffer, (int) MESSAGE_META_SIZE);
             buffer.resetReaderIndex();
 
-            QueueMessageMeta messageMeta = new QueueMessageMeta();
+            QueueMessageMeta messageMeta = QueueMessageMeta.empty();
             long UUIDMost = buffer.readLong();
             long UUIDLeast = buffer.readLong();
             if (UUIDMost != 0 && UUIDLeast != 0) {
@@ -241,17 +324,19 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
         private final static AtomicIntegerFieldUpdater<QueueMessageMeta> statusUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(QueueMessageMeta.class, "status");
 
-        private UUID uuid;
-        private long offset;
-        private volatile int status;
-        private int length;
-        private int pos;
-        private int type;
+        private final static AtomicReferenceFieldUpdater<QueueMessageMeta, QueueMessageMeta> nextUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(QueueMessageMeta.class, QueueMessageMeta.class, "next");
 
-        public QueueMessageMeta() {
-        }
+        UUID uuid;
+        long offset;
+        volatile int status;
+        int length;
+        int pos;
+        int type;
 
-        public QueueMessageMeta(UUID uuid, long offset, int status, int length, int type) {
+        volatile QueueMessageMeta next;
+
+        QueueMessageMeta(UUID uuid, long offset, int status, int length, int type) {
             this.uuid = uuid;
             this.offset = offset;
             this.status = status;
@@ -259,16 +344,28 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
             this.type = type;
         }
 
-        public boolean isStatus(Status expectedStatus) {
+        static QueueMessageMeta empty() {
+            return new QueueMessageMeta(null, -1, Status.Deleted.ordinal(), -1, -1);
+        }
+
+        boolean isStatus(Status expectedStatus) {
             return expectedStatus.ordinal() == status;
         }
 
-        public void setStatus(Status newStatus) {
+        void setStatus(Status newStatus) {
             status = newStatus.ordinal();
         }
 
-        public boolean updateStatus(Status expectedStatus, Status newStatus) {
+        boolean updateStatus(Status expectedStatus, Status newStatus) {
             return statusUpdater.compareAndSet(this, expectedStatus.ordinal(), newStatus.ordinal());
+        }
+
+        void lazySetNext(QueueMessageMeta val) {
+            nextUpdater.lazySet(this, val);
+        }
+
+        boolean casNext(QueueMessageMeta cmp, QueueMessageMeta val) {
+            return nextUpdater.compareAndSet(this, cmp, val);
         }
 
         @Override

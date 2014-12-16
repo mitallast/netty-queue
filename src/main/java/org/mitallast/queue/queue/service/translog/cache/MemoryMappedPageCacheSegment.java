@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.service.translog.cache;
 
+import org.mitallast.queue.common.concurrent.MapReentrantLock;
 import org.mitallast.queue.queue.service.translog.MemoryMappedPage;
 
 import java.io.IOException;
@@ -22,95 +23,95 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     private final int maxPages;
     private final Map<Long, MemoryMappedPage> pageMap;
     private final ArrayList<MemoryMappedPage> garbage = new ArrayList<>();
-    private final ReentrantLock writeLock = new ReentrantLock();
+    private final MapReentrantLock pageLock;
+    private final ReentrantLock gcLock;
 
     public MemoryMappedPageCacheSegment(Loader loader, int maxPages) {
         this.loader = loader;
         this.maxPages = maxPages;
         pageMap = new ConcurrentHashMap<>(maxPages, 0.5f);
+        pageLock = new MapReentrantLock(maxPages);
+        gcLock = new ReentrantLock();
     }
 
     @Override
     public MemoryMappedPage acquire(long offset) throws IOException {
         MemoryMappedPage page = pageMap.get(offset);
         if (page != null) {
-            page.acquire();
+            assert page.acquire() > 1;
             page.setTimestamp(System.currentTimeMillis());
             return page;
         }
-        writeLock.lock();
+        pageLock.get(offset).lock();
         try {
             page = pageMap.get(offset);
             if (page == null) {
                 page = loader.load(offset);
-                page.acquire();
+                assert page.acquire() == 1;
                 page.setTimestamp(System.currentTimeMillis());
                 assert pageMap.put(offset, page) == null;
             }
-            page.acquire();
+            assert page.acquire() > 1;
             page.setTimestamp(System.currentTimeMillis());
             return page;
         } finally {
-            writeLock.unlock();
+            pageLock.get(offset).unlock();
         }
     }
 
     @Override
     public void release(MemoryMappedPage page) throws IOException {
-        writeLock.lock();
-        try {
-            internalRelease(page);
-            garbageCollect();
-        } finally {
-            writeLock.unlock();
-        }
-    }
-
-    private boolean internalRelease(MemoryMappedPage page) throws IOException {
-        if (page.release() == 0) {
-            pageMap.remove(page.getOffset());
-            page.close();
-            return true;
-        }
-        return false;
+        page.release();
+        garbageCollect();
     }
 
     @Override
     public void flush() throws IOException {
-        writeLock.lock();
-        try {
-            for (MemoryMappedPage page : pageMap.values()) {
+        for (MemoryMappedPage page : pageMap.values()) {
+            pageLock.get(page.getOffset()).lock();
+            try {
                 page.flush();
+            } finally {
+                pageLock.get(page.getOffset()).unlock();
             }
-        } finally {
-            writeLock.unlock();
         }
     }
 
     @Override
     public void close() throws IOException {
-        writeLock.lock();
-        try {
-            for (MemoryMappedPage page : pageMap.values()) {
+        for (MemoryMappedPage page : pageMap.values()) {
+            pageLock.get(page.getOffset()).lock();
+            try {
                 page.close();
+            } finally {
+                pageLock.get(page.getOffset()).unlock();
             }
-            pageMap.clear();
-        } finally {
-            writeLock.unlock();
         }
     }
 
     private void garbageCollect() throws IOException {
-        if (pageMap.size() <= maxPages) {
-            return;
-        }
-        if (pageMap.size() > maxPages) {
-            garbage.addAll(pageMap.values());
-            Collections.sort(garbage, reserveComparator);
-            for (int i = garbage.size() - 1; i > maxPages; i--) {
-                if (internalRelease(garbage.get(i))) {
-                    garbage.remove(i);
+        if (pageMap.size() > maxPages
+                && !gcLock.isLocked()
+                && gcLock.tryLock()) {
+            try {
+                garbage.clear();
+                garbage.addAll(pageMap.values());
+                Collections.sort(garbage, reserveComparator);
+                for (int i = garbage.size() - 1; i > 0 && garbage.size() > maxPages; i--) {
+                    MemoryMappedPage page = garbage.get(i);
+                    pageLock.get(page.getOffset()).lock();
+                    try {
+                        if (page.release() == 0) {
+                            pageMap.remove(page.getOffset());
+                            garbage.remove(i);
+                            page.close();
+                        }
+                    } finally {
+                        pageLock.get(page.getOffset()).unlock();
+                    }
                 }
+            } finally {
+                gcLock.unlock();
             }
         }
     }

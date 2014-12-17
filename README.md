@@ -12,8 +12,8 @@ Goals:
  - Memory mapped files to access data as an transaction log
 
 As result one instance allows:
- - send up to 122013 REST messages-at-request per second in concurrent mode
- - send up to 145000 STOMP messages-at-request per second in concurrent mode
+ - send up to 165175 REST messages-at-request per second in concurrent mode
+ - send up to 176600 STOMP messages-at-request per second in concurrent mode
 
 See integration test benchmarks for more details.
 

@@ -1,12 +1,10 @@
 package org.mitallast.queue.stomp;
 
-import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.stomp.transport.StompClient;
 
 import java.util.ArrayList;
@@ -77,19 +75,13 @@ public class StompIntegrationTest extends BaseStompTest {
         final Map<String, Future<StompFrame>> futures = new HashMap<>(max);
         byte[] data = "Hello world".getBytes();
         for (int i = 0; i < max; i++) {
-            String receipt = UUIDs.generateRandom().toString();
-            StompFrame sendRequest = new DefaultStompFrame(StompCommand.SEND);
-            sendRequest.headers().set(StompHeaders.DESTINATION, queueName());
-            sendRequest.headers().set(StompHeaders.CONTENT_TYPE, "text");
-            sendRequest.headers().set(StompHeaders.RECEIPT, receipt);
-            sendRequest.headers().set(StompHeaders.CONTENT_LENGTH, data.length);
-            sendRequest.content().writeBytes(data);
-            futures.put(receipt, stompClient.send(sendRequest));
+            StompFrame sendRequest = sendFrame(data);
+            futures.put(sendRequest.headers().get(StompHeaders.RECEIPT), stompClient.send(sendRequest));
         }
         for (Map.Entry<String, Future<StompFrame>> futureEntry : futures.entrySet()) {
             StompFrame sendResponse = futureEntry.getValue().get();
             Assert.assertEquals(StompCommand.RECEIPT, sendResponse.command());
-            Assert.assertEquals(futureEntry.getKey(), sendResponse.headers().get(StompHeaders.RECEIPT_ID));
+            Assert.assertEquals(sendResponse.headers().get(StompHeaders.RECEIPT_ID), futureEntry.getKey());
         }
         stompClient.stop();
     }

@@ -1,5 +1,6 @@
 package org.mitallast.queue.stomp;
 
+import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
@@ -60,12 +61,11 @@ abstract public class BaseStompTest extends BaseQueueTest {
 
     public StompFrame sendFrame(byte[] data) {
         String receipt = UUIDs.generateRandom().toString();
-        StompFrame frame = new DefaultStompFrame(StompCommand.SEND);
+        StompFrame frame = new DefaultStompFrame(StompCommand.SEND, Unpooled.wrappedBuffer(data));
         frame.headers().set(StompHeaders.DESTINATION, queueName());
         frame.headers().set(StompHeaders.CONTENT_TYPE, "text");
         frame.headers().set(StompHeaders.RECEIPT, receipt);
         frame.headers().set(StompHeaders.CONTENT_LENGTH, data.length);
-        frame.content().writeBytes(data);
         return frame;
     }
 }

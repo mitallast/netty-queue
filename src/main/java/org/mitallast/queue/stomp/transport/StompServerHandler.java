@@ -9,20 +9,23 @@ import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import org.mitallast.queue.stomp.StompController;
+import org.mitallast.queue.stomp.StompSubscriptionController;
 
 @ChannelHandler.Sharable
 public class StompServerHandler extends SimpleChannelInboundHandler<StompFrame> {
 
     private final StompController stompController;
+    private final StompSubscriptionController subscriptionController;
 
     @Inject
-    public StompServerHandler(StompController stompController) {
+    public StompServerHandler(StompController stompController, StompSubscriptionController subscriptionController) {
         this.stompController = stompController;
+        this.subscriptionController = subscriptionController;
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, StompFrame request) throws Exception {
-        StompSession session = new StompSession(ctx, request);
+        StompSession session = new StompSession(ctx, request, subscriptionController);
         try {
             if (!request.decoderResult().isSuccess()) {
                 if (request.decoderResult().cause() != null) {
@@ -44,7 +47,19 @@ public class StompServerHandler extends SimpleChannelInboundHandler<StompFrame> 
     }
 
     @Override
+    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+        super.channelRegistered(ctx);
+    }
+
+    @Override
+    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        subscriptionController.unsubscribe(ctx.channel());
+        super.channelUnregistered(ctx);
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        subscriptionController.unsubscribe(ctx.channel());
         cause.printStackTrace();
         if (ctx.channel().isActive()) {
             StompFrame response = new DefaultStompFrame(StompCommand.ERROR);

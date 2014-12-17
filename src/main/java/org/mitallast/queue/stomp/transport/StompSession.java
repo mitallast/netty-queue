@@ -7,6 +7,8 @@ import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
+import org.mitallast.queue.queue.Queue;
+import org.mitallast.queue.stomp.StompSubscriptionController;
 
 import java.nio.charset.Charset;
 
@@ -16,11 +18,13 @@ public class StompSession {
 
     private final ChannelHandlerContext ctx;
     private final StompFrame request;
+    private final StompSubscriptionController subscriptionController;
     private ChannelFuture channelFuture;
 
-    public StompSession(ChannelHandlerContext ctx, StompFrame request) {
+    public StompSession(ChannelHandlerContext ctx, StompFrame request, StompSubscriptionController subscriptionController) {
         this.ctx = ctx;
         this.request = request;
+        this.subscriptionController = subscriptionController;
     }
 
     public void sendError(Throwable error) {
@@ -56,5 +60,17 @@ public class StompSession {
 
     public void close() {
         channelFuture = channelFuture.addListener(ChannelFutureListener.CLOSE);
+    }
+
+    public void subscribe(Queue queue) {
+        subscriptionController.subscribe(queue, ctx.channel());
+    }
+
+    public void unsubscribe(Queue queue) {
+        subscriptionController.unsubscribe(queue, ctx.channel());
+    }
+
+    public void unsubscribe() {
+        subscriptionController.unsubscribe(ctx.channel());
     }
 }

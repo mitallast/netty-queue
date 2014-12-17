@@ -5,20 +5,19 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.stomp.StompController;
 
 public class StompServer extends NettyServer {
 
-    private final StompController stompController;
+    private final StompServerHandler stompServerHandler;
 
     @Inject
-    public StompServer(Settings settings, StompController stompController) {
+    public StompServer(Settings settings, StompServerHandler stompServerHandler) {
         super(settings);
-        this.stompController = stompController;
+        this.stompServerHandler = stompServerHandler;
     }
 
     @Override
     protected ChannelInitializer<SocketChannel> channelInitializer() {
-        return new StompServerInitializer(new StompServerHandler(stompController));
+        return new StompServerInitializer(stompServerHandler);
     }
 }

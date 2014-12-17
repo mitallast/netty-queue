@@ -8,6 +8,7 @@ import org.mitallast.queue.stomp.transport.StompServerHandler;
 public class StompModule extends AbstractModule {
     @Override
     protected void configure() {
+        bind(StompSubscriptionController.class).asEagerSingleton();
         bind(StompServerHandler.class).asEagerSingleton();
         bind(StompServer.class).asEagerSingleton();
 

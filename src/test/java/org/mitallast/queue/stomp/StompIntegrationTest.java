@@ -71,13 +71,13 @@ public class StompIntegrationTest extends BaseStompTest {
 
     private void send(int max) throws Exception {
         StompClient stompClient = createStompClient();
-
         final Map<String, Future<StompFrame>> futures = new HashMap<>(max);
         byte[] data = "Hello world".getBytes();
         for (int i = 0; i < max; i++) {
             StompFrame sendRequest = sendFrame(data);
-            futures.put(sendRequest.headers().get(StompHeaders.RECEIPT), stompClient.send(sendRequest));
+            futures.put(sendRequest.headers().get(StompHeaders.RECEIPT), stompClient.send(sendRequest, false));
         }
+        stompClient.flush();
         for (Map.Entry<String, Future<StompFrame>> futureEntry : futures.entrySet()) {
             StompFrame sendResponse = futureEntry.getValue().get();
             Assert.assertEquals(StompCommand.RECEIPT, sendResponse.command());

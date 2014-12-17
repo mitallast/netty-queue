@@ -11,11 +11,11 @@ Goals:
  - Netty for fastest TCP/IP and HTTP server realization
  - Memory mapped files to access data as an transaction log
 
-As result:
- - One instance allows send up to 91000 REST messages-at-request per second in concurrent mode
- - One instance allows send up to 145000 STOMP messages-at-request per second in concurrent mode
+As result one instance allows:
+ - send up to 122013 REST messages-at-request per second in concurrent mode
+ - send up to 145000 STOMP messages-at-request per second in concurrent mode
 
-See benchmark for more details.
+See integration test benchmarks for more details.
 
 How to run
 ----------

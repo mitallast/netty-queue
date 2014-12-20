@@ -1,6 +1,6 @@
-package org.mitallast.queue.queue.service.translog.cache;
+package org.mitallast.queue.common.mmap.cache;
 
-import org.mitallast.queue.queue.service.translog.MemoryMappedPage;
+import org.mitallast.queue.common.mmap.MemoryMappedPage;
 
 import java.io.Closeable;
 import java.io.IOException;

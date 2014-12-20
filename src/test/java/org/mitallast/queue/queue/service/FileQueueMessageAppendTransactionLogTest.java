@@ -1,11 +1,10 @@
-package org.mitallast.queue.queue.service.translog;
+package org.mitallast.queue.queue.service;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.service.BaseQueueMessageTest;
 
 import java.io.File;
 import java.io.IOException;

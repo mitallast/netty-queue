@@ -1,9 +1,9 @@
-package org.mitallast.queue.queue.service.translog;
+package org.mitallast.queue.common.mmap;
 
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCache;
-import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCacheSegment;
-import org.mitallast.queue.queue.service.translog.cache.MemoryMappedPageCacheSegmented;
+import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCache;
+import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCacheSegment;
+import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCacheSegmented;
 
 import java.io.Closeable;
 import java.io.IOException;

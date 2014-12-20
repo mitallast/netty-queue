@@ -7,7 +7,6 @@ import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.service.translog.FileQueueMessageAppendTransactionLog;
 
 import java.io.File;
 import java.io.IOException;

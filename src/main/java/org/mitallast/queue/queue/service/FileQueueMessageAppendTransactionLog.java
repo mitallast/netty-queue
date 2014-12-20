@@ -1,8 +1,9 @@
-package org.mitallast.queue.queue.service.translog;
+package org.mitallast.queue.queue.service;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import org.mitallast.queue.common.mmap.MemoryMappedFile;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;

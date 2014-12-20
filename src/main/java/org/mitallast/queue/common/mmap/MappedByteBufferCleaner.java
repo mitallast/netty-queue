@@ -1,4 +1,4 @@
-package org.mitallast.queue.queue.service.translog;
+package org.mitallast.queue.common.mmap;
 
 import java.lang.reflect.Method;
 import java.nio.MappedByteBuffer;

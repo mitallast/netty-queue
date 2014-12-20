@@ -23,6 +23,7 @@
         <mockito.version>1.10.8</mockito.version>
         <leveldb.version>1.8</leveldb.version>
         <uuid.version>3.4</uuid.version>
+        <trove.version>3.0.3</trove.version>
     </properties>
 
     <dependencies>
@@ -120,6 +121,12 @@
                     <artifactId>slf4j-api</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.trove4j</groupId>
+            <artifactId>trove4j</artifactId>
+            <version>${trove.version}</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

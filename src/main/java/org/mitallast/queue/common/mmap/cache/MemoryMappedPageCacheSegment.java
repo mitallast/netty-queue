@@ -29,33 +29,37 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     public MemoryMappedPageCacheSegment(Loader loader, int maxPages) {
         this.loader = loader;
         this.maxPages = maxPages;
-        pageMap = new ConcurrentHashMap<>(maxPages, 0.5f);
+        pageMap = new ConcurrentHashMap<>();
         pageLock = new MapReentrantLock(maxPages);
         gcLock = new ReentrantLock();
     }
 
     @Override
-    public MemoryMappedPage acquire(long offset) throws IOException {
-        MemoryMappedPage page = pageMap.get(offset);
+    public MemoryMappedPage acquire(final long offset) throws IOException {
+        MemoryMappedPage page;
+        page = pageMap.get(offset);
         if (page != null) {
             assert page.acquire() > 1;
             page.setTimestamp(System.currentTimeMillis());
             return page;
         }
-        pageLock.get(offset).lock();
+        final ReentrantLock lock = pageLock.get(offset);
+        lock.lock();
         try {
             page = pageMap.get(offset);
-            if (page == null) {
-                page = loader.load(offset);
-                assert page.acquire() == 1;
+            if (page != null) {
+                assert page.acquire() > 1;
                 page.setTimestamp(System.currentTimeMillis());
-                assert pageMap.put(offset, page) == null;
+                return page;
             }
-            assert page.acquire() > 1;
+            page = loader.load(offset);
+            assert page.acquire() == 1; // allocation
+            assert page.acquire() == 2; // acquire
             page.setTimestamp(System.currentTimeMillis());
+            assert pageMap.put(offset, page) == null;
             return page;
         } finally {
-            pageLock.get(offset).unlock();
+            lock.unlock();
         }
     }
 
@@ -66,25 +70,27 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     }
 
     @Override
-    public void flush() throws IOException {
+    public synchronized void flush() throws IOException {
         for (MemoryMappedPage page : pageMap.values()) {
-            pageLock.get(page.getOffset()).lock();
+            final ReentrantLock lock = pageLock.get(page.getOffset());
+            lock.lock();
             try {
                 page.flush();
             } finally {
-                pageLock.get(page.getOffset()).unlock();
+                lock.unlock();
             }
         }
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         for (MemoryMappedPage page : pageMap.values()) {
-            pageLock.get(page.getOffset()).lock();
+            final ReentrantLock lock = pageLock.get(page.getOffset());
+            lock.lock();
             try {
                 page.close();
             } finally {
-                pageLock.get(page.getOffset()).unlock();
+                lock.unlock();
             }
         }
     }
@@ -99,7 +105,8 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
                 Collections.sort(garbage, reserveComparator);
                 for (int i = garbage.size() - 1; i > 0 && garbage.size() > maxPages; i--) {
                     MemoryMappedPage page = garbage.get(i);
-                    pageLock.get(page.getOffset()).lock();
+                    final ReentrantLock lock = pageLock.get(page.getOffset());
+                    lock.lock();
                     try {
                         if (page.release() == 0) {
                             pageMap.remove(page.getOffset());
@@ -107,7 +114,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
                             page.close();
                         }
                     } finally {
-                        pageLock.get(page.getOffset()).unlock();
+                        lock.unlock();
                     }
                 }
             } finally {

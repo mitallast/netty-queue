@@ -190,9 +190,11 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
 
     @Override
     public MemoryMappedPage load(long offset) throws IOException {
-        MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, pageSize);
-        buffer.load();
-        buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN);
-        return new MemoryMappedPage(buffer, offset);
+        synchronized (channel) {
+            MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, pageSize);
+            buffer.load();
+            buffer.order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            return new MemoryMappedPage(buffer, offset);
+        }
     }
 }

@@ -11,8 +11,6 @@ public interface TransactionalQueueService extends QueueComponent {
 
     public QueueTransaction transaction(String id) throws IOException;
 
-    public QueueTransaction transaction() throws IOException;
-
     public QueueMessage lock(UUID uuid) throws IOException;
 
     public QueueMessage lockAndPop() throws IOException;

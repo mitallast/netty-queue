@@ -2,24 +2,24 @@ package org.mitallast.queue.queue.transactional.memory;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 
-public class MemoryTransactionalQueueServiceTest {
+public class MemoryTransactionalQueueServiceTest extends BaseTest {
 
     @Test
     public void testLock() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
         queueService.push(queueMessage);
         Assert.assertEquals(queueMessage, queueService.lock(queueMessage.getUuid()));
         Assert.assertNull(queueService.lock(queueMessage.getUuid()));
@@ -30,10 +30,10 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
         queueService.push(queueMessage);
         Assert.assertEquals(queueMessage, queueService.lockAndPop());
         Assert.assertNull(queueService.lockAndPop());
@@ -45,10 +45,10 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
         queueService.push(queueMessage);
         queueService.lock(queueMessage.getUuid());
         Assert.assertEquals(queueMessage, queueService.unlockAndDelete(queueMessage.getUuid()));
@@ -61,10 +61,10 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
         queueService.push(queueMessage);
         queueService.lock(queueMessage.getUuid());
         Assert.assertEquals(queueMessage, queueService.unlockAndRollback(queueMessage.getUuid()));
@@ -78,11 +78,11 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
-        final QueueTransaction transaction = queueService.transaction(UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
+        final QueueTransaction transaction = queueService.transaction(randomUUID().toString());
         transaction.begin();
         transaction.push(queueMessage);
         transaction.commit();
@@ -95,11 +95,11 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
-        final QueueTransaction transaction = queueService.transaction(UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
+        final QueueTransaction transaction = queueService.transaction(randomUUID().toString());
         transaction.begin();
         transaction.push(queueMessage);
         transaction.rollback();
@@ -112,11 +112,11 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
-        final QueueTransaction transaction = queueService.transaction(UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
+        final QueueTransaction transaction = queueService.transaction(randomUUID().toString());
         queueService.push(queueMessage);
 
         transaction.begin();
@@ -133,11 +133,11 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
-        final QueueTransaction transaction = queueService.transaction(UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
+        final QueueTransaction transaction = queueService.transaction(randomUUID().toString());
         queueService.push(queueMessage);
 
         transaction.begin();
@@ -154,11 +154,11 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
-        final QueueTransaction transaction = queueService.transaction(UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
+        final QueueTransaction transaction = queueService.transaction(randomUUID().toString());
         queueService.push(queueMessage);
 
         transaction.begin();
@@ -175,11 +175,11 @@ public class MemoryTransactionalQueueServiceTest {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
                 ImmutableSettings.EMPTY,
                 ImmutableSettings.EMPTY,
-                new Queue(UUIDs.generateRandom().toString())
+                new Queue(randomUUID().toString())
         );
 
-        final QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
-        final QueueTransaction transaction = queueService.transaction(UUIDs.generateRandom().toString());
+        final QueueMessage queueMessage = createMessageWithUuid();
+        final QueueTransaction transaction = queueService.transaction(randomUUID().toString());
         queueService.push(queueMessage);
 
         transaction.begin();

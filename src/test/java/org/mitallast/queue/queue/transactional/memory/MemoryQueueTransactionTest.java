@@ -2,7 +2,7 @@ package org.mitallast.queue.queue.transactional.memory;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mockito.ArgumentCaptor;
@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 
-public class MemoryQueueTransactionTest {
+public class MemoryQueueTransactionTest extends BaseTest {
 
     @Mock
     private TransactionalQueueService queueService;
@@ -28,12 +28,12 @@ public class MemoryQueueTransactionTest {
         MockitoAnnotations.initMocks(this);
         assert queueService != null;
         assert queueMessageArgumentCaptor != null;
-        transaction = new MemoryQueueTransaction(UUIDs.generateRandom().toString(), queueService);
+        transaction = new MemoryQueueTransaction(randomUUID().toString(), queueService);
     }
 
     @Test
     public void testCommitPush() throws Exception {
-        QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        QueueMessage queueMessage = createMessageWithUuid();
 
         transaction.begin();
         transaction.push(queueMessage);
@@ -47,7 +47,7 @@ public class MemoryQueueTransactionTest {
 
     @Test
     public void testRollbackPush() throws Exception {
-        QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        QueueMessage queueMessage = createMessageWithUuid();
 
         transaction.begin();
         transaction.push(queueMessage);
@@ -59,7 +59,7 @@ public class MemoryQueueTransactionTest {
 
     @Test
     public void testCommitPop() throws Exception {
-        QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        QueueMessage queueMessage = createMessageWithUuid();
         when(queueService.lockAndPop()).thenReturn(queueMessage);
 
         transaction.begin();
@@ -72,7 +72,7 @@ public class MemoryQueueTransactionTest {
 
     @Test
     public void testRollbackPop() throws Exception {
-        QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        QueueMessage queueMessage = createMessageWithUuid();
         when(queueService.lockAndPop()).thenReturn(queueMessage);
 
         transaction.begin();
@@ -86,7 +86,7 @@ public class MemoryQueueTransactionTest {
 
     @Test
     public void testCommitDelete() throws Exception {
-        QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        QueueMessage queueMessage = createMessageWithUuid();
         when(queueService.lock(queueMessage.getUuid())).thenReturn(queueMessage);
 
 
@@ -101,7 +101,7 @@ public class MemoryQueueTransactionTest {
 
     @Test
     public void testRollbackDelete() throws Exception {
-        QueueMessage queueMessage = new QueueMessage(UUIDs.generateRandom(), UUIDs.generateRandom().toString());
+        QueueMessage queueMessage = createMessageWithUuid();
         when(queueService.lock(queueMessage.getUuid())).thenReturn(queueMessage);
 
 

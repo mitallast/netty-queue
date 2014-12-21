@@ -3,32 +3,28 @@ package org.mitallast.queue.queue.service;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.File;
 import java.io.IOException;
 
-public class FileQueueMessageAppendTransactionLogTest extends BaseQueueMessageTest {
+public class FileQueueMessageAppendTransactionLogTest extends BaseTest {
 
     private File metaFile;
     private File dataFile;
     private FileQueueMessageAppendTransactionLog transactionLog;
 
-    @Override
     @Before
     public void setUp() throws Exception {
-        super.setUp();
-        metaFile = folder.newFile();
-        dataFile = folder.newFile();
+        metaFile = testFolder.newFile();
+        dataFile = testFolder.newFile();
         transactionLog = new FileQueueMessageAppendTransactionLog(metaFile, dataFile);
         transactionLog.initializeNew();
     }
 
-    @Override
     @After
     public void tearDown() throws Exception {
-        super.tearDown();
         transactionLog.close();
     }
 
@@ -67,7 +63,7 @@ public class FileQueueMessageAppendTransactionLogTest extends BaseQueueMessageTe
     @Test
     public void testMeta() throws IOException {
         FileQueueMessageAppendTransactionLog.QueueMessageMeta messageMeta =
-                new FileQueueMessageAppendTransactionLog.QueueMessageMeta(UUIDs.generateRandom(), 13, 2314, 2341324, 0);
+                new FileQueueMessageAppendTransactionLog.QueueMessageMeta(randomUUID(), 13, 2314, 2341324, 0);
         transactionLog.writeMeta(messageMeta, 0l);
         FileQueueMessageAppendTransactionLog.QueueMessageMeta messageMetaActual = transactionLog.readMeta(0l);
         assert messageMeta.equals(messageMetaActual) : "\n" + messageMeta + " != \n" + messageMetaActual;

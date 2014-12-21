@@ -3,6 +3,7 @@ package org.mitallast.queue.queue.service;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
@@ -11,7 +12,7 @@ import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
 import java.io.IOException;
 
-public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQueueMessageTest {
+public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseTest {
 
     protected T queueService;
 
@@ -21,20 +22,18 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
     public void setUp() throws Exception {
         queueService = createQueueService(
                 ImmutableSettings.builder()
-                        .put("work_dir", folder.getRoot().getPath())
+                        .put("work_dir", testFolder.getRoot().getPath())
                         .build(),
                 ImmutableSettings.builder().build(),
                 new Queue("test_queue")
         );
         queueService.start();
-        super.setUp();
     }
 
     @After
     public void tearDown() throws Exception {
         queueService.close();
         queueService = null;
-        super.tearDown();
     }
 
     @Test
@@ -90,7 +89,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
-                for (int i = 0; i < messagesCount; i++) {
+                for (int i = 0; i < max(); i++) {
                     QueueMessage queueMessage = createMessage();
                     queueService.enqueue(queueMessage);
                     assert queueMessage.getUuid() != null;
@@ -100,7 +99,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
                 }
             }
         });
-        assert queueService.size() == messagesCount * concurrency;
+        assert queueService.size() == total();
     }
 
     @Test
@@ -108,17 +107,17 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
-                for (int i = 0; i < messagesCount; i++) {
+                for (int i = 0; i < max(); i++) {
                     QueueMessage queueMessage = createMessage();
                     queueService.enqueue(queueMessage);
                 }
             }
         });
-        assert queueService.size() == messagesCount * concurrency;
+        assert queueService.size() == total();
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
-                for (int i = 0; i < messagesCount; i++) {
+                for (int i = 0; i < max(); i++) {
                     QueueMessage queueMessage = queueService.dequeue();
                     assert queueMessage != null;
                     assert queueMessage.getUuid() != null;
@@ -136,8 +135,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             queueService.enqueue(message);
         }
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
-        System.out.println("enqueue " + qps + " qps");
+        printQps("enqueue", max(), start, end);
     }
 
     @Test
@@ -151,7 +149,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
                 return new Runnable() {
                     @Override
                     public void run() {
-                        for (int i = thread; i < messagesCount; i += concurrency) {
+                        for (int i = thread; i < max(); i += concurrency) {
                             queueService.enqueue(messages[i]);
                         }
                     }
@@ -159,8 +157,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             }
         });
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
-        System.out.println("enqueue concurrent " + qps + " qps");
+        printQps("enqueue concurrent", max(), start, end);
     }
 
     @Test
@@ -172,8 +169,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             queueService.enqueue(message);
         }
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
-        System.out.println("enqueue with uuid " + qps + " qps");
+        printQps("enqueue with uuid", max(), start, end);
     }
 
     @Test
@@ -187,7 +183,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
                 return new Runnable() {
                     @Override
                     public void run() {
-                        for (int i = thread; i < messagesCount; i += concurrency) {
+                        for (int i = thread; i < max(); i += concurrency) {
                             queueService.enqueue(messages[i]);
                         }
                     }
@@ -195,8 +191,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             }
         });
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
-        System.out.println("enqueue with uuid concurrent " + qps + " qps");
+        printQps("enqueue with uuid concurrent", max(), start, end);
     }
 
     @Test
@@ -207,14 +202,13 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             queueService.enqueue(message);
         }
         long start = System.currentTimeMillis();
-        for (int i = 0; i < messagesCount; i++) {
+        for (int i = 0; i < max(); i++) {
             QueueMessage message = queueService.dequeue();
             assert message != null;
             assert message.getUuid() != null;
         }
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
-        System.out.println("dequeue " + qps + " qps");
+        printQps("dequeue", max(), start, end);
     }
 
     @Test
@@ -225,20 +219,19 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             queueService.enqueue(message);
         }
         long start = System.currentTimeMillis();
-        for (int i = 0; i < messagesCount; i++) {
+        for (int i = 0; i < max(); i++) {
             QueueMessage message = queueService.dequeue();
             assert message != null;
             assert message.getUuid() != null;
         }
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount / (double) (end - start) * 1000.);
-        System.out.println("dequeue with uuid " + qps + " qps");
+        printQps("dequeue with uuid", max(), start, end);
     }
 
     @Test
     public void testDequeuePerformanceConcurrent() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessages(messagesCount * concurrency);
+        final QueueMessage[] messages = createMessages(total());
         for (QueueMessage message : messages) {
             queueService.enqueue(message);
         }
@@ -246,7 +239,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
-                for (int i = 0; i < messagesCount; i++) {
+                for (int i = 0; i < max(); i++) {
                     QueueMessage message = queueService.dequeue();
                     assert message != null;
                     assert message.getUuid() != null;
@@ -254,14 +247,13 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             }
         });
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount * concurrency / (double) (end - start) * 1000.);
-        System.out.println("dequeue concurrent " + qps + " qps");
+        printQps("dequeue concurrent", total(), start, end);
     }
 
     @Test
     public void testDequeuePerformanceConcurrentWithUuid() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessagesWithUuid(messagesCount * concurrency);
+        final QueueMessage[] messages = createMessagesWithUuid(total());
         for (QueueMessage message : messages) {
             queueService.enqueue(message);
         }
@@ -269,7 +261,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
         executeConcurrent(new Runnable() {
             @Override
             public void run() {
-                for (int i = 0; i < messagesCount; i++) {
+                for (int i = 0; i < max(); i++) {
                     QueueMessage message = queueService.dequeue();
                     assert message != null;
                     assert message.getUuid() != null;
@@ -277,15 +269,14 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseQ
             }
         });
         long end = System.currentTimeMillis();
-        long qps = (long) (messagesCount * concurrency / (double) (end - start) * 1000.);
-        System.out.println("dequeue concurrent with uuid " + qps + " qps");
+        printQps("dequeue concurrent with uuid", total(), start, end);
     }
 
     private void warmUp() throws Exception {
-        for (int i = 0; i < messagesCount; i++) {
+        for (int i = 0; i < max(); i++) {
             queueService.enqueue(createMessageWithUuid());
         }
-        for (int i = 0; i < messagesCount; i++) {
+        for (int i = 0; i < max(); i++) {
             QueueMessage message = queueService.dequeue();
             assert message != null;
             assert message.getUuid() != null;

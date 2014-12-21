@@ -2,27 +2,23 @@ package org.mitallast.queue.action;
 
 import org.junit.Test;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
-import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.queue.QueueMessage;
 
 public class ActionIntegrationTest extends BaseQueueTest {
 
-    private final static String queue = "foo";
-
     @Test
     public void testSend() throws Exception {
-        client().queues().createQueue(new CreateQueueRequest(queue)).get();
+        createQueue();
+        assertQueueEmpty();
 
-        final int max = 100000;
         long start = System.currentTimeMillis();
-        for (int i = 0; i < max; i++) {
+        for (int i = 0; i < max(); i++) {
             client().queue()
-                    .enqueueRequest(new EnQueueRequest(queue, new QueueMessage("foo")))
-                .get();
+                    .enqueueRequest(new EnQueueRequest(queueName(), new QueueMessage("foo")))
+                    .get();
         }
         long end = System.currentTimeMillis();
-        System.out.println("execute " + max + " at " + (end - start) + "ms");
-        System.out.println((max * 1000 / (end - start)) + " qps");
+        printQps("send", max(), start, end);
     }
 }

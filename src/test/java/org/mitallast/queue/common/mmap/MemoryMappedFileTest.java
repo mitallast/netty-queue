@@ -5,7 +5,7 @@ import io.netty.buffer.Unpooled;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.queue.service.BaseQueueMessageTest;
+import org.mitallast.queue.common.BaseTest;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,21 +13,19 @@ import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.Random;
 
-public class MemoryMappedFileTest extends BaseQueueMessageTest {
+public class MemoryMappedFileTest extends BaseTest {
 
     private File file;
     private MemoryMappedFile mappedFile;
 
     @Before
     public void setUp() throws Exception {
-        super.setUp();
-        file = folder.newFile();
+        file = testFolder.newFile();
         mappedFile = new MemoryMappedFile(new RandomAccessFile(file, "rw"), 4096, 10);
     }
 
     @After
     public void tearDown() throws Exception {
-        super.tearDown();
         mappedFile.close();
     }
 

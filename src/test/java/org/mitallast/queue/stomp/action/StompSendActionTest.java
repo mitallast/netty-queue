@@ -24,7 +24,7 @@ public class StompSendActionTest extends BaseStompTest {
 
         QueueMessage message = dequeue().getMessage();
         assert message.getMessageType() == QueueMessageType.STRING;
-        assert message.getSource().toString(UTF8).equals(send.content().toString(UTF8)) : message.getSource().toString(UTF8) + " != " + send.content().toString(UTF8);
+        assert message.getSource().toString(getUTF8()).equals(send.content().toString(getUTF8())) : message.getSource().toString(getUTF8()) + " != " + send.content().toString(getUTF8());
         send.content().release();
     }
 }

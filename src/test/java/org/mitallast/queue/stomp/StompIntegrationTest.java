@@ -7,66 +7,43 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.stomp.transport.StompClient;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class StompIntegrationTest extends BaseStompTest {
-
-    private static final int concurrency = 24;
-    private static final int max = 10000;
 
     @Test
     public void testSingleThread() throws Exception {
         createQueue();
         warmUp();
         long start = System.currentTimeMillis();
-        send(max * concurrency);
+        send(total());
         long end = System.currentTimeMillis();
-
-        System.out.println("total " + (end - start) + "ms");
-        //noinspection NumericOverflow
-        System.out.println((max * concurrency * 1000 / (end - start)) + " q/s");
+        printQps("send", total(), start, end);
     }
 
     @Test
     public void testMultiThread() throws Exception {
         createQueue();
         warmUp();
-        final ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
-        final List<Future> futures = new ArrayList<>(concurrency);
         long start = System.currentTimeMillis();
-        for (int i = 0; i < concurrency; i++) {
-            Future future = executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        send(max);
-                    } catch (Exception e) {
-                        assert false : e;
-                    }
+        executeConcurrent(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    send(max());
+                } catch (Exception e) {
+                    assert false : e;
                 }
-            });
-            futures.add(future);
-        }
-        for (Future future : futures) {
-            future.get();
-        }
+            }
+        });
         long end = System.currentTimeMillis();
-
-        System.out.println("total " + (end - start) + "ms");
-        //noinspection NumericOverflow
-        System.out.println((max * concurrency * 1000 / (end - start)) + " q/s");
+        printQps("send", total(), start, end);
     }
 
     private void warmUp() throws Exception {
-        for (int i = 0; i < concurrency; i++) {
-            send(max / concurrency);
-        }
+        send(total());
     }
 
     private void send(int max) throws Exception {

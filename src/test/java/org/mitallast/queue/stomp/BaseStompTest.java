@@ -8,7 +8,6 @@ import io.netty.handler.codec.stomp.StompHeaders;
 import org.junit.After;
 import org.junit.Before;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.stomp.transport.StompClient;
 
 import java.util.ArrayList;
@@ -52,15 +51,15 @@ abstract public class BaseStompTest extends BaseQueueTest {
     }
 
     public StompFrame sendFrame() {
-        return sendFrame(UUIDs.generateRandom().toString());
+        return sendFrame(randomUUID().toString());
     }
 
     public StompFrame sendFrame(String string) {
-        return sendFrame(string.getBytes(UTF8));
+        return sendFrame(string.getBytes(getUTF8()));
     }
 
     public StompFrame sendFrame(byte[] data) {
-        String receipt = UUIDs.generateRandom().toString();
+        String receipt = randomUUID().toString();
         StompFrame frame = new DefaultStompFrame(StompCommand.SEND, Unpooled.wrappedBuffer(data));
         frame.headers().set(StompHeaders.DESTINATION, queueName());
         frame.headers().set(StompHeaders.CONTENT_TYPE, "text");

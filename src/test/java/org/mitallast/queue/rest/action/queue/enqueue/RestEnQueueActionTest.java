@@ -8,7 +8,7 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.QueueClient;
-import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
@@ -28,7 +28,7 @@ import java.util.UUID;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-public class RestEnQueueActionTest {
+public class RestEnQueueActionTest extends BaseTest {
     @Mock
     private Settings settings;
     @Mock
@@ -60,7 +60,7 @@ public class RestEnQueueActionTest {
     @SuppressWarnings("unchecked")
     public void testString() throws IOException {
 
-        UUID uuid = UUIDs.generateRandom();
+        UUID uuid = randomUUID();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         JsonFactory factory = new JsonFactory();
@@ -90,7 +90,7 @@ public class RestEnQueueActionTest {
     @SuppressWarnings("unchecked")
     public void testJsonObject() throws IOException {
 
-        UUID uuid = UUIDs.generateRandom();
+        UUID uuid = randomUUID();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         JsonFactory factory = new JsonFactory();
@@ -125,7 +125,7 @@ public class RestEnQueueActionTest {
     @SuppressWarnings("unchecked")
     public void testJsonArray() throws IOException {
 
-        UUID uuid = UUIDs.generateRandom();
+        UUID uuid = randomUUID();
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         JsonFactory factory = new JsonFactory();

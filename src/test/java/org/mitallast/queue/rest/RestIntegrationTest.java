@@ -3,84 +3,48 @@ package org.mitallast.queue.rest;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.*;
 import org.junit.Test;
-import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
-import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
-import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class RestIntegrationTest extends BaseQueueTest {
 
-    private static final String QUEUE = "my_queue";
-
     @Test
-    public void testSingleThread() throws Exception {
-        client().queues().createQueue(new CreateQueueRequest(QUEUE, ImmutableSettings.builder().build())).get();
-        QueueStatsResponse response = client().queue().queueStatsRequest(new QueueStatsRequest(QUEUE)).get();
-        assert response.getStats().getSize() == 0;
-
-        final int max = 20000;
-
-        // warm up
-        for (int i = 0; i < 2; i++) {
-            send(max);
-        }
-
+    public void test() throws Exception {
+        createQueue();
+        assertQueueEmpty();
+        warmUp();
         long start = System.currentTimeMillis();
-        send(max);
+        send(max());
         long end = System.currentTimeMillis();
-
-        System.out.println("total " + (end - start) + "ms");
-        //noinspection NumericOverflow
-        System.out.println((max * 1000 / (end - start)) + " q/s");
+        printQps("send", max(), start, end);
     }
 
     @Test
-    public void testMultiThread() throws Exception {
-        client().queues().createQueue(new CreateQueueRequest(QUEUE, ImmutableSettings.builder().build())).get();
-        QueueStatsResponse response = client().queue().queueStatsRequest(new QueueStatsRequest(QUEUE)).get();
-        assert response.getStats().getSize() == 0;
-
-        final int max = 10000;
-
-        // warm up
-        for (int i = 0; i < 2; i++) {
-            send(max);
-        }
-
-        final int concurrency = 24;
-        final ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
-        final List<Future> futures = new ArrayList<>(concurrency);
-
+    public void testConcurrent() throws Exception {
+        createQueue();
+        assertQueueEmpty();
+        warmUp();
         long start = System.currentTimeMillis();
-        for (int i = 0; i < concurrency; i++) {
-            Future future = executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        send(max);
-                    } catch (Exception e) {
-                        assert false : e;
-                    }
+        executeConcurrent(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    send(max());
+                } catch (Exception e) {
+                    assert false : e;
                 }
-            });
-            futures.add(future);
-        }
-        for (Future future : futures) {
-            future.get();
-        }
+            }
+        });
         long end = System.currentTimeMillis();
+        printQps("send", max(), start, end);
+    }
 
-        System.out.println("total " + (end - start) + "ms");
-        //noinspection NumericOverflow
-        System.out.println((max * concurrency * 1000 / (end - start)) + " q/s");
+    private void warmUp() throws Exception {
+        send(total());
     }
 
     private void send(int max) throws Exception {
@@ -93,7 +57,7 @@ public class RestIntegrationTest extends BaseQueueTest {
                 DefaultFullHttpRequest request = new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.PUT,
-                        "/" + QUEUE + "/message",
+                        "/" + queueName() + "/message",
                         Unpooled.wrappedBuffer(bytes)
                 );
                 request.headers().set(HttpHeaders.Names.CONTENT_LENGTH, bytes.length);

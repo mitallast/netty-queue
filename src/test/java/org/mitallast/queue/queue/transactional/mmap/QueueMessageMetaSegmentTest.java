@@ -68,21 +68,24 @@ public class QueueMessageMetaSegmentTest {
         final QueueMessageMetaSegment messageMetaSegment = new QueueMessageMetaSegment(mmapFile, total, 0.7f);
         final ExecutorService executor = Executors.newFixedThreadPool(concurrency);
         try {
+            final List<QueueMessageMeta> metaList = new ArrayList<>(total);
+            for (int i = 0; i < total; i++) {
+                QueueMessageMeta meta = meta();
+                metaList.add(meta);
+            }
             List<Future> futures = new ArrayList<>(concurrency);
             start = System.currentTimeMillis();
             for (int i = 0; i < concurrency; i++) {
                 Future future = executor.submit(new Runnable() {
                     @Override
                     public void run() {
-                        final List<QueueMessageMeta> metaList = new ArrayList<>(max);
                         try {
-                            for (int i = 0; i < max; i++) {
-                                QueueMessageMeta meta = meta();
-                                metaList.add(meta);
+                            for (int i = 0; i < total; i++) {
+                                QueueMessageMeta meta = metaList.get(i);
                                 assert messageMetaSegment.writeMeta(meta);
 
                             }
-                            for (int i = 0; i < max; i++) {
+                            for (int i = 0; i < total; i++) {
                                 QueueMessageMeta expected = metaList.get(i);
                                 QueueMessageMeta actual = messageMetaSegment.readMeta(expected.getUuid());
                                 Assert.assertEquals(expected, actual);
@@ -99,7 +102,7 @@ public class QueueMessageMetaSegmentTest {
             }
             end = System.currentTimeMillis();
             System.out.println("read/write: " + (end - start));
-            System.out.println((total * 2 * 1000 / (end - start)) + " q/s");
+            System.out.println(((total * concurrency * 2 / (end - start)) * 1000) + " q/s");
         } finally {
             executor.shutdown();
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);

@@ -1,4 +1,4 @@
-package org.mitallast.queue.queue.transactional.mmap;
+package org.mitallast.queue.queue.transactional.mmap.meta;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;

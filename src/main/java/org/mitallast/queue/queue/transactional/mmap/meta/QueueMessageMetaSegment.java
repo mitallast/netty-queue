@@ -1,4 +1,4 @@
-package org.mitallast.queue.queue.transactional.mmap;
+package org.mitallast.queue.queue.transactional.mmap.meta;
 
 import gnu.trove.impl.HashFunctions;
 import gnu.trove.impl.PrimeFinder;

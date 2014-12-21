@@ -8,7 +8,7 @@ public class MapReentrantLock {
     public MapReentrantLock(final int size) {
         this.locks = new ReentrantLock[size];
         for (int i = 0; i < size; i++) {
-            locks[i] = new ReentrantLock();
+            locks[i] = new ReentrantLock(false);
         }
     }
 

@@ -31,22 +31,17 @@ public class QueueMessageMetaSegment {
         this.locks = new MapReentrantLock(128);
     }
 
-    public boolean writeMeta(QueueMessageMeta newMeta) throws IOException {
-        final int hash = newMeta.getUuid().hashCode() & 0x7fffffff;
+    public boolean writeMeta(QueueMessageMeta meta) throws IOException {
+        final UUID uuid = meta.getUuid();
+        final int hash = meta.getUuid().hashCode() & 0x7fffffff;
         int index = hash % size;
-        QueueMessageMeta saved;
         ReentrantLock lock;
 
         lock = locks.get(index);
         lock.lock();
         try {
-            saved = readMeta(index);
-            if (saved == null) {
-                writeMeta(newMeta, index);
-                return true;
-            }
-            if (saved.getUuid().equals(newMeta.getUuid())) {
-                writeMeta(newMeta, index);
+            if (checkAssignment(uuid, index)) {
+                writeMeta(meta, index);
                 return true;
             }
         } finally {
@@ -63,13 +58,8 @@ public class QueueMessageMetaSegment {
             lock = locks.get(index);
             lock.lock();
             try {
-                saved = readMeta(index);
-                if (saved == null) {
-                    writeMeta(newMeta, index);
-                    return true;
-                }
-                if (saved.getUuid().equals(newMeta.getUuid())) {
-                    writeMeta(newMeta, index);
+                if (checkAssignment(uuid, index)) {
+                    writeMeta(meta, index);
                     return true;
                 }
             } finally {
@@ -128,6 +118,25 @@ public class QueueMessageMetaSegment {
 
     private QueueMessageMeta readMeta(int pos) throws IOException {
         return readMeta(getMetaOffset(pos));
+    }
+
+    private boolean checkAssignment(UUID uuid, int pos) throws IOException {
+        return checkAssignment(uuid, getMetaOffset(pos));
+    }
+
+    private boolean checkAssignment(UUID uuid, long metaOffset) throws IOException {
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer((int) LONG_SIZE * 2);
+        try {
+            buffer.clear();
+            mappedFile.getBytes(metaOffset, buffer, (int) MESSAGE_META_SIZE);
+            buffer.resetReaderIndex();
+            long UUIDMost = buffer.readLong();
+            long UUIDLeast = buffer.readLong();
+            return (UUIDMost == 0 && UUIDLeast == 0)
+                    || (uuid.getMostSignificantBits() == UUIDMost && uuid.getLeastSignificantBits() == UUIDLeast);
+        } finally {
+            buffer.release();
+        }
     }
 
     private QueueMessageMeta readMeta(long metaOffset) throws IOException {

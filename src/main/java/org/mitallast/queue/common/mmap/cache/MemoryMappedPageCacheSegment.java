@@ -43,8 +43,14 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
         MemoryMappedPage page;
         page = pageMap.get(offset);
         if (page != null) {
-            assert page.acquire() > 1;
-            page.setTimestamp(System.currentTimeMillis());
+            assert page.acquire() > 0;
+            if (gcLock.tryLock()) {
+                try {
+                    page.setTimestamp(System.currentTimeMillis());
+                } finally {
+                    gcLock.unlock();
+                }
+            }
             return page;
         }
         final ReentrantLock lock = pageLock.get(offset);
@@ -53,7 +59,13 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
             page = pageMap.get(offset);
             if (page != null) {
                 assert page.acquire() > 1;
-                page.setTimestamp(System.currentTimeMillis());
+                if (gcLock.tryLock()) {
+                    try {
+                        page.setTimestamp(System.currentTimeMillis());
+                    } finally {
+                        gcLock.unlock();
+                    }
+                }
                 return page;
             }
             page = loader.load(offset);

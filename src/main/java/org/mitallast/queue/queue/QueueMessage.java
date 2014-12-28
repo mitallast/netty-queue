@@ -17,7 +17,7 @@ public class QueueMessage {
     public static final Charset defaultCharset = Charset.forName("UTF-8");
     private static final JsonFactory jsonFactory = new JsonFactory(new ObjectMapper());
 
-    public UUID uuid;
+    private UUID uuid;
     private QueueMessageType type;
     private ByteBuf buffer;
 
@@ -43,12 +43,12 @@ public class QueueMessage {
         return uuid;
     }
 
-    public void setUuid(String uuid) {
-        setUuid(UUID.fromString(uuid));
-    }
-
     public void setUuid(UUID uuid) {
         this.uuid = uuid;
+    }
+
+    public void setUuid(String uuid) {
+        setUuid(UUID.fromString(uuid));
     }
 
     public QueueMessageType getMessageType() {

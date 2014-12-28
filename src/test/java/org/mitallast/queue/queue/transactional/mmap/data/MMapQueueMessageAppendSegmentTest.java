@@ -15,8 +15,7 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
-@SuppressWarnings("NumericOverflow")
-public class QueueMessageAppendSegmentTest extends BaseTest {
+public class MMapQueueMessageAppendSegmentTest extends BaseTest {
 
     private MemoryMappedFile mmapFile;
 
@@ -33,7 +32,7 @@ public class QueueMessageAppendSegmentTest extends BaseTest {
 
     @Test
     public void testReadWrite() throws Exception {
-        QueueMessageAppendSegment segment = new QueueMessageAppendSegment(mmapFile);
+        QueueMessageAppendSegment segment = new MMapQueueMessageAppendSegment(mmapFile);
         List<ByteBuf> bufferList = new ArrayList<>(max());
         long[] offsets = new long[max()];
         int length = randomUUID().toString().getBytes().length * 5;
@@ -72,7 +71,7 @@ public class QueueMessageAppendSegmentTest extends BaseTest {
 
     @Test
     public void testReadWriteConcurrent() throws Exception {
-        final QueueMessageAppendSegment segment = new QueueMessageAppendSegment(mmapFile);
+        final QueueMessageAppendSegment segment = new MMapQueueMessageAppendSegment(mmapFile);
         final List<ByteBuf> bufferList = new ArrayList<>(total());
         final long[] offsets = new long[total()];
         final int length = randomUUID().toString().getBytes().length * 5;

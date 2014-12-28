@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class QueueMessageMetaSegmentTest extends BaseTest {
+public class MMapQueueMessageMetaSegmentTest extends BaseTest {
 
     private final Random random = new Random();
 
@@ -32,7 +32,7 @@ public class QueueMessageMetaSegmentTest extends BaseTest {
 
     @Test
     public void testReadWrite() throws Exception {
-        final QueueMessageMetaSegment messageMetaSegment = new QueueMessageMetaSegment(mmapFile, total(), 0.7f);
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         final List<QueueMessageMeta> metaList = new ArrayList<>(total());
         long start, end;
         start = System.currentTimeMillis();
@@ -57,7 +57,7 @@ public class QueueMessageMetaSegmentTest extends BaseTest {
     @Test
     public void testReadWriteConcurrent() throws Exception {
         long start, end;
-        final QueueMessageMetaSegment messageMetaSegment = new QueueMessageMetaSegment(mmapFile, total(), 0.7f);
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         final List<QueueMessageMeta> metaList = new ArrayList<>(total());
         for (int i = 0; i < total(); i++) {
             QueueMessageMeta meta = meta();

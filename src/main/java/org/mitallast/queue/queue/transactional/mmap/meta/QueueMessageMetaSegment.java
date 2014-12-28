@@ -5,6 +5,12 @@ import java.util.UUID;
 
 public interface QueueMessageMetaSegment {
 
+    QueueMessageMeta lock(UUID uuid) throws IOException;
+
+    QueueMessageMeta unlockAndDelete(UUID uuid) throws IOException;
+
+    QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException;
+
     boolean writeLock(UUID uuid) throws IOException;
 
     boolean writeMeta(QueueMessageMeta meta) throws IOException;

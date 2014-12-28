@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
+import org.mitallast.queue.queue.QueueMessageType;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -88,14 +89,50 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         printQps("read/write", total() * concurrency() * 2, start, end);
     }
 
+    @Test
+    public void testLock() throws IOException {
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
+        QueueMessageMeta meta = meta();
+
+        assert messageMetaSegment.writeMeta(meta);
+        QueueMessageMeta metaLocked = messageMetaSegment.lock(meta.getUuid());
+        Assert.assertEquals(meta, metaLocked);
+        Assert.assertEquals(QueueMessageStatus.LOCKED, metaLocked.getStatus());
+    }
+
+    @Test
+    public void testUnlockAndDelete() throws IOException {
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
+        QueueMessageMeta meta = meta();
+
+        messageMetaSegment.writeMeta(meta);
+        messageMetaSegment.lock(meta.getUuid());
+        QueueMessageMeta deleted = messageMetaSegment.unlockAndDelete(meta.getUuid());
+
+        Assert.assertEquals(meta, deleted);
+        Assert.assertEquals(QueueMessageStatus.DELETED, deleted.getStatus());
+    }
+
+    @Test
+    public void testUnlockAndQueue() throws IOException {
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
+        QueueMessageMeta meta = meta();
+
+        messageMetaSegment.writeMeta(meta);
+        messageMetaSegment.lock(meta.getUuid());
+        QueueMessageMeta deleted = messageMetaSegment.unlockAndQueue(meta.getUuid());
+
+        Assert.assertEquals(meta, deleted);
+        Assert.assertEquals(QueueMessageStatus.QUEUED, deleted.getStatus());
+    }
+
     private QueueMessageMeta meta() {
         return new QueueMessageMeta(
                 randomUUID(),
                 QueueMessageStatus.QUEUED,
                 random.nextInt(),
                 random.nextInt(),
-                random.nextInt(),
-                random.nextInt()
+                QueueMessageType.STRING
         );
     }
 }

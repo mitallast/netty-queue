@@ -5,6 +5,7 @@ import gnu.trove.impl.PrimeFinder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
+import org.mitallast.queue.queue.QueueMessageType;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     private final MemoryMappedFile mappedFile;
     private final int size;
     private final AtomicReferenceArray<UUID> uuidMap;
+    private final AtomicReferenceArray<QueueMessageStatus> statusMap;
     private final ThreadLocal<ByteBuf> localBuffer;
 
     public MMapQueueMessageMetaSegment(MemoryMappedFile mappedFile, int maxSize, float loadFactor) {
@@ -29,6 +31,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         int ceil = HashFunctions.fastCeil(maxSize / loadFactor);
         size = PrimeFinder.nextPrime(ceil);
         uuidMap = new AtomicReferenceArray<>(size);
+        statusMap = new AtomicReferenceArray<>(size);
         localBuffer = new ThreadLocal<ByteBuf>() {
             @Override
             protected ByteBuf initialValue() {
@@ -38,83 +41,92 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     }
 
     @Override
-    public boolean writeLock(UUID uuid) throws IOException {
-        final int hash = uuid.hashCode() & 0x7fffffff;
-        int index = hash % size;
-
-        if (lockPosition(uuid, index)) {
-            return true;
+    public QueueMessageMeta lock(UUID uuid) throws IOException {
+        final int index = index(uuid);
+        if (index >= 0) {
+            boolean locked = setStatusLocked(index);
+            QueueMessageMeta meta = readMeta(index);
+            if (locked) {
+                writeMeta(meta);
+            }
+            return meta;
         }
-
-        final int loopIndex = index;
-        final int probe = 1 + (hash % (size - 2));
-        do {
-            index = index - probe;
-            if (index < 0) {
-                index += size;
-            }
-
-            if (lockPosition(uuid, index)) {
-                return true;
-            }
-            // Detect loop
-        } while (index != loopIndex);
-        return false;
-    }
-
-    @Override
-    public boolean writeMeta(QueueMessageMeta meta) throws IOException {
-        final UUID uuid = meta.getUuid();
-        final int hash = uuid.hashCode() & 0x7fffffff;
-        int index = hash % size;
-
-        if (lockPosition(uuid, index)) {
-            writeMeta(meta, index);
-            return true;
-        }
-
-        final int loopIndex = index;
-        final int probe = 1 + (hash % (size - 2));
-        do {
-            index = index - probe;
-            if (index < 0) {
-                index += size;
-            }
-
-            if (lockPosition(uuid, index)) {
-                writeMeta(meta, index);
-                return true;
-            }
-            // Detect loop
-        } while (index != loopIndex);
-        return false;
-    }
-
-    @Override
-    public QueueMessageMeta readMeta(UUID uuid) throws IOException {
-        final int hash = uuid.hashCode() & 0x7fffffff;
-        int index = hash % size;
-
-        if (comparePosition(uuid, index)) {
-            return readMeta(index);
-        }
-
-        final int loopIndex = index;
-        final int probe = 1 + (hash % (size - 2));
-        do {
-            index = index - probe;
-            if (index < 0) {
-                index += size;
-            }
-            if (comparePosition(uuid, index)) {
-                return readMeta(index);
-            }
-            // Detect loop
-        } while (index != loopIndex);
         return null;
     }
 
-    private boolean comparePosition(UUID uuid, int pos) throws IOException {
+    @Override
+    public QueueMessageMeta unlockAndDelete(UUID uuid) throws IOException {
+        final int index = index(uuid);
+        if (index >= 0) {
+            boolean deleted = setStatusDeleted(index);
+            QueueMessageMeta meta = readMeta(index);
+            if (deleted) {
+                writeMeta(meta);
+            }
+            return meta;
+        }
+        return null;
+    }
+
+    @Override
+    public QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException {
+        final int index = index(uuid);
+        if (index >= 0) {
+            boolean queued = setStatusQueued(index);
+            QueueMessageMeta meta = readMeta(index);
+            if (queued) {
+                writeMeta(meta);
+            }
+            return meta;
+        }
+        return null;
+    }
+
+    private boolean setStatusLocked(int index) {
+        while (true) {
+            QueueMessageStatus current = statusMap.get(index);
+            if (current == null || current == QueueMessageStatus.QUEUED) {
+                if (statusMap.compareAndSet(index, current, QueueMessageStatus.LOCKED)) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+
+    private boolean setStatusDeleted(int index) {
+        while (true) {
+            QueueMessageStatus current = statusMap.get(index);
+            if (current == QueueMessageStatus.LOCKED) {
+                if (statusMap.compareAndSet(index, current, QueueMessageStatus.DELETED)) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+
+    private boolean setStatusQueued(int index) {
+        while (true) {
+            QueueMessageStatus current = statusMap.get(index);
+            if (current == null || current == QueueMessageStatus.LOCKED) {
+                if (statusMap.compareAndSet(index, current, QueueMessageStatus.QUEUED)) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
+    }
+
+    @Override
+    public boolean writeLock(UUID uuid) throws IOException {
+        return insert(uuid) >= 0;
+    }
+
+    private boolean comparePosition(UUID uuid, int pos) {
         return uuid.equals(uuidMap.get(pos));
     }
 
@@ -131,11 +143,17 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         }
     }
 
-    private QueueMessageMeta readMeta(int pos) throws IOException {
-        return readMeta(getMetaOffset(pos));
+    @Override
+    public QueueMessageMeta readMeta(UUID uuid) throws IOException {
+        final int index = index(uuid);
+        if (index >= 0) {
+            return readMeta(index);
+        }
+        return null;
     }
 
-    private QueueMessageMeta readMeta(long metaOffset) throws IOException {
+    private QueueMessageMeta readMeta(int pos) throws IOException {
+        long metaOffset = getMetaOffset(pos);
         ByteBuf buffer = localBuffer.get();
         buffer.clear();
         mappedFile.getBytes(metaOffset, buffer, (int) MESSAGE_META_SIZE);
@@ -149,19 +167,29 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
             // does not read entry without uuid
             return null;
         }
-        QueueMessageStatus status = QueueMessageStatus.values()[buffer.readInt()];
+        QueueMessageStatus statusSaved = QueueMessageStatus.values()[buffer.readInt()];
+        QueueMessageStatus status = statusMap.get(pos);
+        if (status == null) {
+            status = statusSaved;
+        }
         long offset = buffer.readLong();
         int length = buffer.readInt();
-        int pos = buffer.readInt();
         int type = buffer.readInt();
-        return new QueueMessageMeta(uuid, status, offset, length, pos, type);
+        return new QueueMessageMeta(uuid, status, offset, length, QueueMessageType.values()[type]);
+    }
+
+    @Override
+    public boolean writeMeta(QueueMessageMeta meta) throws IOException {
+        final int index = insert(meta.getUuid());
+        if (index >= 0) {
+            writeMeta(meta, index);
+            return true;
+        }
+        return false;
     }
 
     private void writeMeta(QueueMessageMeta messageMeta, int pos) throws IOException {
-        writeMeta(messageMeta, getMetaOffset(pos));
-    }
-
-    private void writeMeta(QueueMessageMeta messageMeta, long offset) throws IOException {
+        long offset = getMetaOffset(pos);
         ByteBuf buffer = localBuffer.get();
         buffer.clear();
         buffer.clear();
@@ -170,10 +198,57 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         buffer.writeInt(messageMeta.getStatus().ordinal());
         buffer.writeLong(messageMeta.getOffset());
         buffer.writeInt(messageMeta.getLength());
-        buffer.writeInt(messageMeta.getPos());
-        buffer.writeInt(messageMeta.getType());
+        buffer.writeInt(messageMeta.getType().ordinal());
         buffer.resetReaderIndex();
         mappedFile.putBytes(offset, buffer);
+    }
+
+    private int index(final UUID uuid) {
+        final int hash = uuid.hashCode() & 0x7fffffff;
+        int index = hash % size;
+
+        if (comparePosition(uuid, index)) {
+            return index;
+        }
+
+        final int loopIndex = index;
+        final int probe = 1 + (hash % (size - 2));
+        do {
+            index = index - probe;
+            if (index < 0) {
+                index += size;
+            }
+
+            if (comparePosition(uuid, index)) {
+                return index;
+            }
+            // Detect loop
+        } while (index != loopIndex);
+        return -1;
+    }
+
+    private int insert(final UUID uuid) {
+        final int hash = uuid.hashCode() & 0x7fffffff;
+        int index = hash % size;
+
+        if (lockPosition(uuid, index)) {
+            return index;
+        }
+
+        final int loopIndex = index;
+        final int probe = 1 + (hash % (size - 2));
+        do {
+            index = index - probe;
+            if (index < 0) {
+                index += size;
+            }
+
+            if (lockPosition(uuid, index)) {
+                return index;
+            }
+            // Detect loop
+        } while (index != loopIndex);
+        return -1;
     }
 
     private long getMetaOffset(int pos) {

@@ -3,7 +3,6 @@ package org.mitallast.queue.queue.transactional.mmap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.queue.transactional.mmap.data.QueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMeta;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMetaSegment;
@@ -33,8 +32,7 @@ public class QueueMessageSegment {
                     QueueMessageStatus.INIT,
                     offset,
                     length,
-                    0,
-                    queueMessage.getMessageType().ordinal()
+                    queueMessage.getMessageType()
             );
 
             messageMetaSegment.writeMeta(messageMeta);
@@ -50,7 +48,7 @@ public class QueueMessageSegment {
             messageAppendSegment.read(buffer, meta.getOffset(), meta.getLength());
             return new QueueMessage(
                     uuid,
-                    QueueMessageType.values()[meta.getType()],
+                    meta.getType(),
                     buffer
             );
         }

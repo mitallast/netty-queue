@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.DELETED;
+import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.QUEUED;
+
 public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     private final static long INT_SIZE = 4;
@@ -44,12 +47,8 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     public QueueMessageMeta lock(UUID uuid) throws IOException {
         final int index = index(uuid);
         if (index >= 0) {
-            boolean locked = setStatusLocked(index);
-            QueueMessageMeta meta = readMeta(index);
-            if (locked) {
-                writeMeta(meta);
-            }
-            return meta;
+            setStatusLocked(index);
+            return readMeta(index);
         }
         return null;
     }
@@ -85,7 +84,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     private boolean setStatusLocked(int index) {
         while (true) {
             QueueMessageStatus current = statusMap.get(index);
-            if (current == null || current == QueueMessageStatus.QUEUED) {
+            if (current == null || current == QUEUED) {
                 if (statusMap.compareAndSet(index, current, QueueMessageStatus.LOCKED)) {
                     return true;
                 }
@@ -99,7 +98,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         while (true) {
             QueueMessageStatus current = statusMap.get(index);
             if (current == QueueMessageStatus.LOCKED) {
-                if (statusMap.compareAndSet(index, current, QueueMessageStatus.DELETED)) {
+                if (statusMap.compareAndSet(index, current, DELETED)) {
                     return true;
                 }
             } else {
@@ -112,7 +111,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         while (true) {
             QueueMessageStatus current = statusMap.get(index);
             if (current == null || current == QueueMessageStatus.LOCKED) {
-                if (statusMap.compareAndSet(index, current, QueueMessageStatus.QUEUED)) {
+                if (statusMap.compareAndSet(index, current, QUEUED)) {
                     return true;
                 }
             } else {
@@ -195,7 +194,20 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         buffer.clear();
         buffer.writeLong(messageMeta.getUuid().getMostSignificantBits());
         buffer.writeLong(messageMeta.getUuid().getLeastSignificantBits());
-        buffer.writeInt(messageMeta.getStatus().ordinal());
+
+        switch (messageMeta.getStatus()) {
+            case LOCKED:
+                // do not write lock status
+                buffer.writeInt(QUEUED.ordinal());
+            case INIT:
+            case QUEUED:
+            case DELETED:
+                buffer.writeInt(messageMeta.getStatus().ordinal());
+                break;
+            default:
+                throw new IOException("Unexpected status: " + messageMeta.getStatus());
+        }
+
         buffer.writeLong(messageMeta.getOffset());
         buffer.writeInt(messageMeta.getLength());
         buffer.writeInt(messageMeta.getType().ordinal());

@@ -110,6 +110,6 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
             }
         });
         end = System.currentTimeMillis();
-        printQps("read/write", total() * concurrency() * 2, start, end);
+        printQps("read/write concurrent", total() * concurrency() * 2, start, end);
     }
 }

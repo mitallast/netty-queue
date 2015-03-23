@@ -46,17 +46,16 @@ public class ImmutableSettings implements Settings {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Map<String, Object> getAsStructuredMap() {
         Map<String, Object> map = new HashMap<>(2);
         for (Map.Entry<String, String> entry : settings.entrySet()) {
             processSetting(map, "", entry.getKey(), entry.getValue());
         }
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (entry.getValue() instanceof Map) {
-                @SuppressWarnings("unchecked") Map<String, Object> valMap = (Map<String, Object>) entry.getValue();
-                entry.setValue(convertMapsToArrays(valMap));
-            }
-        }
+        map.entrySet().stream().filter(entry -> entry.getValue() instanceof Map).forEach(entry -> {
+            Map<String, Object> valMap = (Map<String, Object>) entry.getValue();
+            entry.setValue(convertMapsToArrays(valMap));
+        });
 
         return map;
     }

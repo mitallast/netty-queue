@@ -38,27 +38,21 @@ public class InternalQueuesService extends AbstractLifecycleComponent implements
         if (queues.isEmpty()) {
             loadState();
         } else {
-            for (QueueService queueService : queues.values()) {
-                queueService.start();
-            }
+            queues.values().forEach(org.mitallast.queue.queue.service.QueueService::start);
         }
         flushState();
     }
 
     @Override
     protected void doStop() throws QueueException {
-        for (QueueService queueService : queues.values()) {
-            queueService.stop();
-        }
+        queues.values().forEach(org.mitallast.queue.queue.service.QueueService::stop);
         flushState();
     }
 
     @Override
     protected void doClose() throws QueueException {
         flushState();
-        for (QueueService queueService : queues.values()) {
-            queueService.close();
-        }
+        queues.values().forEach(org.mitallast.queue.queue.service.QueueService::close);
         queues.clear();
     }
 

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 public class StompSubscriptionController {
     private final ReentrantLock lock;
@@ -24,9 +25,7 @@ public class StompSubscriptionController {
         ConcurrentSet<Channel> channelSet = queueChannelMap.get(queue);
         if (channelSet != null) {
             final List<Channel> list = new ArrayList<>(channelSet.size());
-            for (Channel e : channelSet) {
-                list.add(e);
-            }
+            list.addAll(channelSet.stream().collect(Collectors.toList()));
             final Channel channel = list.get(stompFrame.hashCode() % list.size());
             channel.write(stompFrame, channel.voidPromise());
         }

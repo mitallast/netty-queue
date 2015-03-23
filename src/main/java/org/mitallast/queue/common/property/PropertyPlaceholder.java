@@ -63,7 +63,7 @@ public class PropertyPlaceholder {
         if (value == null) {
             throw new IllegalArgumentException("Argument 'value' must not be null.");
         }
-        return parseStringValue(value, placeholderResolver, new HashSet<String>());
+        return parseStringValue(value, placeholderResolver, new HashSet<>());
     }
 
     protected String parseStringValue(String strVal, PlaceholderResolver placeholderResolver,

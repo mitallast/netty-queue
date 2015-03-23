@@ -15,12 +15,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
 
-    private final static Comparator<MemoryMappedPage> reserveComparator = new Comparator<MemoryMappedPage>() {
-        @Override
-        public int compare(MemoryMappedPage o1, MemoryMappedPage o2) {
-            return (int) (o2.getTimestamp() - o1.getTimestamp());
-        }
-    };
+    private final static Comparator<MemoryMappedPage> reserveComparator =
+        (o1, o2) -> (int) (o2.getTimestamp() - o1.getTimestamp());
     private final Loader loader;
     private final int maxPages;
     private final TLongObjectMap<MemoryMappedPage> pageMap;
@@ -32,7 +28,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     public MemoryMappedPageCacheSegment(Loader loader, int maxPages) {
         this.loader = loader;
         this.maxPages = maxPages;
-        pageMap = new TSynchronizedLongObjectMap<>(new TLongObjectHashMap<MemoryMappedPage>());
+        pageMap = new TSynchronizedLongObjectMap<>(new TLongObjectHashMap<>());
         pageLock = new MapReentrantLock(maxPages);
         gcLock = new ReentrantLock();
         pagesCount = new AtomicInteger();

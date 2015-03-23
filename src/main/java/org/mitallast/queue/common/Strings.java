@@ -113,4 +113,8 @@ public class Strings {
         }
         return true;
     }
+
+    public static String toString(CharSequence charSequence) {
+        return charSequence == null ? null : charSequence.toString();
+    }
 }

@@ -5,6 +5,7 @@ import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.stomp.transport.StompClient;
 
 import java.util.HashMap;
@@ -52,7 +53,7 @@ public class StompIntegrationTest extends BaseStompTest {
         byte[] data = "Hello world".getBytes();
         for (int i = 0; i < max; i++) {
             StompFrame sendRequest = sendFrame(data);
-            futures.put(sendRequest.headers().get(StompHeaders.RECEIPT), stompClient.send(sendRequest, false));
+            futures.put(Strings.toString(sendRequest.headers().get(StompHeaders.RECEIPT)), stompClient.send(sendRequest, false));
         }
         stompClient.flush();
         for (Map.Entry<String, Future<StompFrame>> futureEntry : futures.entrySet()) {

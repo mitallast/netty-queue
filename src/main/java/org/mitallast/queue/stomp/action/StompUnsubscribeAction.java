@@ -5,6 +5,7 @@ import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.stomp.BaseStompHandler;
@@ -21,7 +22,7 @@ public class StompUnsubscribeAction extends BaseStompHandler {
 
     @Override
     public void handleRequest(StompSession session, StompFrame request) {
-        String queueName = request.headers().get(StompHeaders.DESTINATION);
+        String queueName = Strings.toString(request.headers().get(StompHeaders.DESTINATION));
         if (queueName == null || queueName.isEmpty()) {
             session.unsubscribe();
         } else {

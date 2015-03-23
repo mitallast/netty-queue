@@ -2,6 +2,7 @@ package org.mitallast.queue.rest.action.queue.enqueue;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.TreeNode;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -53,7 +54,8 @@ public class RestEnQueueAction extends BaseRestHandler {
                             if (token == JsonToken.VALUE_STRING) {
                                 request.getMessage().setSource(parser.getText());
                             } else if (token == JsonToken.START_OBJECT || token == JsonToken.START_ARRAY) {
-                                request.getMessage().setSource(parser.readValueAsTree());
+                                TreeNode treeNode = parser.readValueAsTree();
+                                request.getMessage().setSource(treeNode);
                             } else {
                                 throw new QueueParseException("malformed, expected string, object or array value at field [" + currentFieldName + "]");
                             }

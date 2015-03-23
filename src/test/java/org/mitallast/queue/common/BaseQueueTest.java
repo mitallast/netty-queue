@@ -1,5 +1,6 @@
 package org.mitallast.queue.common;
 
+import io.netty.util.ResourceLeakDetector;
 import org.junit.After;
 import org.junit.Before;
 import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
@@ -21,6 +22,7 @@ public abstract class BaseQueueTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED);
         settings = ImmutableSettings.builder()
                 .put("work_dir", testFolder.newFolder().getAbsolutePath())
                 .put("rest.transport.host", "127.0.0.1")

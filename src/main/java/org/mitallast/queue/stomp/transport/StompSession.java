@@ -7,6 +7,7 @@ import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.stomp.StompSubscriptionController;
 
@@ -48,12 +49,12 @@ public class StompSession {
     }
 
     public void sendResponse(StompFrame response) {
-        String receiptId = request.headers().get(StompHeaders.RECEIPT);
+        String receiptId = Strings.toString(request.headers().get(StompHeaders.RECEIPT));
         if (receiptId != null && !receiptId.isEmpty()) {
             response.headers().set(StompHeaders.RECEIPT_ID, receiptId);
         }
         if (response.content().isReadable()) {
-            response.headers().set(StompHeaders.CONTENT_LENGTH, response.content().readableBytes());
+            response.headers().setInt(StompHeaders.CONTENT_LENGTH, response.content().readableBytes());
         }
         channelFuture = ctx.write(response, ctx.voidPromise());
     }

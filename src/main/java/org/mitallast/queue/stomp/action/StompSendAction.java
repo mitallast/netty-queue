@@ -8,6 +8,7 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
@@ -29,7 +30,8 @@ public class StompSendAction extends BaseStompHandler {
     public void handleRequest(final StompSession session, final StompFrame request) {
         QueueMessage queueMessage = new QueueMessage();
 
-        switch (request.headers().get(StompHeaders.CONTENT_TYPE, "text/plain")) {
+        String contentType = Strings.toString(request.headers().get(StompHeaders.CONTENT_TYPE, "text/plain"));
+        switch (contentType) {
             case "text":
             case "text/plain":
                 queueMessage.setSource(QueueMessageType.STRING, request.content());
@@ -43,7 +45,7 @@ public class StompSendAction extends BaseStompHandler {
                 return;
         }
 
-        String messageId = request.headers().get(StompHeaders.MESSAGE_ID);
+        String messageId = Strings.toString(request.headers().get(StompHeaders.MESSAGE_ID));
         if (messageId != null && !messageId.isEmpty()) {
             try {
                 queueMessage.setUuid(UUID.fromString(messageId));
@@ -54,7 +56,7 @@ public class StompSendAction extends BaseStompHandler {
         }
 
         EnQueueRequest enQueueRequest = new EnQueueRequest();
-        enQueueRequest.setQueue(request.headers().get(StompHeaders.DESTINATION));
+        enQueueRequest.setQueue(Strings.toString(request.headers().get(StompHeaders.DESTINATION)));
         enQueueRequest.setMessage(queueMessage);
 
         client.queue().enqueueRequest(enQueueRequest, new ActionListener<EnQueueResponse>() {

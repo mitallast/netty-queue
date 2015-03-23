@@ -5,10 +5,7 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.*;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.rest.RestResponse;
 import org.mitallast.queue.rest.RestSession;
@@ -32,7 +29,7 @@ public class HttpSession implements RestSession {
 
     private static boolean isKeepAlive(FullHttpRequest request) {
         return request.protocolVersion().isKeepAliveDefault()
-                || KEEP_ALIVE.equalsIgnoreCase(request.headers().get(HttpHeaders.Names.CONNECTION));
+                || KEEP_ALIVE.equalsIgnoreCase(request.headers().get(HttpHeaderNames.CONNECTION));
     }
 
     @Override
@@ -68,7 +65,7 @@ public class HttpSession implements RestSession {
             httpResponse.headers().set(CONNECTION, KEEP_ALIVE);
             ctx.write(httpResponse, ctx.voidPromise());
         } else {
-            httpResponse.headers().set(CONNECTION, HttpHeaders.Values.CLOSE);
+            httpResponse.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
             ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
         }
     }

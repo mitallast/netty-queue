@@ -4,6 +4,7 @@ import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.stomp.*;
 import io.netty.util.AttributeKey;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.common.concurrent.BasicFuture;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.settings.Settings;
@@ -29,7 +30,7 @@ public class StompClient extends NettyClient {
     }
 
     public Future<StompFrame> send(StompFrame request, boolean flush) {
-        String receipt = request.headers().get(StompHeaders.RECEIPT);
+        String receipt = Strings.toString(request.headers().get(StompHeaders.RECEIPT));
         BasicFuture<StompFrame> future = new BasicFuture<>();
         Channel localChannel = channel;
         localChannel.attr(attr).get().put(receipt, future);
@@ -65,7 +66,7 @@ public class StompClient extends NettyClient {
     private class StompHandler extends SimpleChannelInboundHandler<StompFrame> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
-            String receipt = frame.headers().get(StompHeaders.RECEIPT_ID);
+            String receipt = Strings.toString(frame.headers().get(StompHeaders.RECEIPT_ID));
             BasicFuture<StompFrame> frameFuture = ctx.channel().attr(attr).get().remove(receipt);
             if (frameFuture != null) {
                 frameFuture.set(frame);

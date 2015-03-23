@@ -64,7 +64,7 @@ abstract public class BaseStompTest extends BaseQueueTest {
         frame.headers().set(StompHeaders.DESTINATION, queueName());
         frame.headers().set(StompHeaders.CONTENT_TYPE, "text");
         frame.headers().set(StompHeaders.RECEIPT, receipt);
-        frame.headers().set(StompHeaders.CONTENT_LENGTH, data.length);
+        frame.headers().setInt(StompHeaders.CONTENT_LENGTH, data.length);
         return frame;
     }
 }

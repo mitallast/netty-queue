@@ -9,7 +9,7 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 
-public class MemoryTransactionalQueueServiceTest extends BaseTest {
+public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
 
     @Test
     public void testLock() throws Exception {

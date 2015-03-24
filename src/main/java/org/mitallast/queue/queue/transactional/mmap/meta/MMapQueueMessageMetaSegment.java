@@ -11,8 +11,7 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.DELETED;
-import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.QUEUED;
+import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.*;
 
 public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
@@ -44,11 +43,22 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     }
 
     @Override
+    public QueueMessageMeta lockAndPop() throws IOException {
+        for (int index = 0; index < size; index++) {
+            if (setStatusLocked(index)) {
+                return readMeta(index);
+            }
+        }
+        return null;
+    }
+
+    @Override
     public QueueMessageMeta lock(UUID uuid) throws IOException {
         final int index = index(uuid);
         if (index >= 0) {
-            setStatusLocked(index);
-            return readMeta(index);
+            if (setStatusLocked(index)) {
+                return readMeta(index);
+            }
         }
         return null;
     }
@@ -81,15 +91,28 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         return null;
     }
 
+    private boolean setStatusInit(int index) {
+        while (true) {
+            QueueMessageStatus current = statusMap.get(index);
+            if (current == null) {
+                if (statusMap.compareAndSet(index, null, QueueMessageStatus.INIT)) {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
+    }
+
     private boolean setStatusLocked(int index) {
         while (true) {
             QueueMessageStatus current = statusMap.get(index);
-            if (current == null || current == QUEUED) {
+            if (current == QUEUED) {
                 if (statusMap.compareAndSet(index, current, QueueMessageStatus.LOCKED)) {
                     return true;
                 }
             } else {
-                return true;
+                return false;
             }
         }
     }
@@ -102,7 +125,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
                     return true;
                 }
             } else {
-                return true;
+                return false;
             }
         }
     }
@@ -122,7 +145,11 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     @Override
     public boolean writeLock(UUID uuid) throws IOException {
-        return insert(uuid) >= 0;
+        int index = insert(uuid);
+        if (index >= 0) {
+            return setStatusInit(index);
+        }
+        return false;
     }
 
     private boolean comparePosition(UUID uuid, int pos) {
@@ -181,8 +208,11 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     public boolean writeMeta(QueueMessageMeta meta) throws IOException {
         final int index = insert(meta.getUuid());
         if (index >= 0) {
-            writeMeta(meta, index);
-            return true;
+            if (statusMap.compareAndSet(index, INIT, LOCKED)) {
+                writeMeta(meta, index);
+                statusMap.set(index, QUEUED);
+                return true;
+            }
         }
         return false;
     }

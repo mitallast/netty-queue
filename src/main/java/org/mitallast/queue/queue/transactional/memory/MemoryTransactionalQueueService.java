@@ -46,6 +46,15 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
     }
 
     @Override
+    public QueueMessage get(UUID uuid) throws IOException {
+        MessageEntry messageEntry = messageMap.get(uuid);
+        if (messageEntry != null) {
+            return messageEntry.queueMessage;
+        }
+        return null;
+    }
+
+    @Override
     public QueueMessage lock(UUID uuid) throws IOException {
         MessageEntry messageEntry = messageMap.get(uuid);
         if (messageEntry != null && messageEntry.setLockedStatus()) {
@@ -87,11 +96,12 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
     }
 
     @Override
-    public void push(QueueMessage queueMessage) throws IOException {
+    public boolean push(QueueMessage queueMessage) throws IOException {
         MessageEntry messageEntry = new MessageEntry(queueMessage, MessageStatus.QUEUED);
         if (messageMap.putIfAbsent(queueMessage.getUuid(), messageEntry) != null) {
             throw new QueueMessageUuidDuplicateException(queueMessage.getUuid());
         }
+        return true;
     }
 
     @Override
@@ -109,7 +119,7 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
     private static class MessageEntry {
 
         final static AtomicReferenceFieldUpdater<MessageEntry, MessageStatus> statusUpdater =
-                AtomicReferenceFieldUpdater.newUpdater(MessageEntry.class, MessageStatus.class, "messageStatus");
+            AtomicReferenceFieldUpdater.newUpdater(MessageEntry.class, MessageStatus.class, "messageStatus");
 
         final QueueMessage queueMessage;
         volatile MessageStatus messageStatus;

@@ -40,6 +40,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         for (int i = 0; i < total(); i++) {
             QueueMessageMeta meta = meta();
             metaList.add(meta);
+            assert messageMetaSegment.writeLock(meta.getUuid());
             assert messageMetaSegment.writeMeta(meta);
         }
         end = System.currentTimeMillis();
@@ -66,23 +67,21 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         }
 
         start = System.currentTimeMillis();
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i = 0; i < total(); i++) {
-                        QueueMessageMeta meta = metaList.get(i);
+        executeConcurrent(() -> {
+            try {
+                for (int i = 0; i < total(); i++) {
+                    QueueMessageMeta meta = metaList.get(i);
+                    if (messageMetaSegment.writeLock(meta.getUuid())) {
                         assert messageMetaSegment.writeMeta(meta);
-
                     }
-                    for (int i = 0; i < total(); i++) {
-                        QueueMessageMeta expected = metaList.get(i);
-                        QueueMessageMeta actual = messageMetaSegment.readMeta(expected.getUuid());
-                        Assert.assertEquals(expected, actual);
-                    }
-                } catch (IOException e) {
-                    assert false : e;
                 }
+                for (int i = 0; i < total(); i++) {
+                    QueueMessageMeta expected = metaList.get(i);
+                    QueueMessageMeta actual = messageMetaSegment.readMeta(expected.getUuid());
+                    Assert.assertEquals(expected, actual);
+                }
+            } catch (IOException e) {
+                assert false : e;
             }
         });
         end = System.currentTimeMillis();
@@ -94,6 +93,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
+        assert messageMetaSegment.writeLock(meta.getUuid());
         assert messageMetaSegment.writeMeta(meta);
         QueueMessageMeta metaLocked = messageMetaSegment.lock(meta.getUuid());
         Assert.assertEquals(meta, metaLocked);
@@ -105,8 +105,9 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
-        messageMetaSegment.writeMeta(meta);
-        messageMetaSegment.lock(meta.getUuid());
+        assert messageMetaSegment.writeLock(meta.getUuid());
+        assert messageMetaSegment.writeMeta(meta);
+        assert messageMetaSegment.lock(meta.getUuid()) != null;
         QueueMessageMeta deleted = messageMetaSegment.unlockAndDelete(meta.getUuid());
 
         Assert.assertEquals(meta, deleted);
@@ -118,8 +119,9 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
-        messageMetaSegment.writeMeta(meta);
-        messageMetaSegment.lock(meta.getUuid());
+        assert messageMetaSegment.writeLock(meta.getUuid());
+        assert messageMetaSegment.writeMeta(meta);
+        assert messageMetaSegment.lock(meta.getUuid()) != null;
         QueueMessageMeta deleted = messageMetaSegment.unlockAndQueue(meta.getUuid());
 
         Assert.assertEquals(meta, deleted);
@@ -128,11 +130,11 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
 
     private QueueMessageMeta meta() {
         return new QueueMessageMeta(
-                randomUUID(),
-                QueueMessageStatus.QUEUED,
-                random.nextInt(),
-                random.nextInt(),
-                QueueMessageType.STRING
+            randomUUID(),
+            QueueMessageStatus.QUEUED,
+            random.nextInt(),
+            random.nextInt(),
+            QueueMessageType.STRING
         );
     }
 }

@@ -5,6 +5,8 @@ import java.util.UUID;
 
 public interface QueueMessageMetaSegment {
 
+    QueueMessageMeta lockAndPop() throws IOException;
+
     QueueMessageMeta lock(UUID uuid) throws IOException;
 
     QueueMessageMeta unlockAndDelete(UUID uuid) throws IOException;

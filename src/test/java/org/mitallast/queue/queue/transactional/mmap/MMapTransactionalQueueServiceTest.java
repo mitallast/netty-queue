@@ -9,8 +9,7 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
 
-import java.util.HashSet;
-import java.util.UUID;
+import java.io.IOException;
 
 public class MMapTransactionalQueueServiceTest extends BaseTest {
 
@@ -140,21 +139,42 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     @Test
     public void testLongPush() throws Exception {
         logger.info("generate test data");
-        QueueMessage[] messagesWithUuid = createMessagesWithUuid(100000);
-        HashSet<UUID> uuids = new HashSet<>();
-        for (QueueMessage message : messagesWithUuid) {
-            assert uuids.add(message.getUuid());
-        }
-        assert uuids.size() == messagesWithUuid.length;
+        QueueMessage[][] messagesWithUuid = new QueueMessage[concurrency()][];
+        long start = System.currentTimeMillis();
+        executeConcurrent((t, c) -> () -> {
+            messagesWithUuid[t] = createMessagesWithUuid(max());
+        });
+        long end = System.currentTimeMillis();
+        printQps("generate concurrent", total(), start, end);
+
         logger.info("write test data");
-        for (QueueMessage message : messagesWithUuid) {
-            Assert.assertTrue(service.push(message));
-        }
+        start = System.currentTimeMillis();
+        executeConcurrent((t, c) -> () -> {
+            try {
+                for (QueueMessage expected : messagesWithUuid[t]) {
+                    Assert.assertTrue(service.push(expected));
+                }
+            } catch (IOException e) {
+                assert false : e;
+            }
+        });
+        end = System.currentTimeMillis();
+        printQps("write concurrent", total(), start, end);
+
         logger.info("read test data");
-        for (QueueMessage expected : messagesWithUuid) {
-            QueueMessage actual = service.get(expected.getUuid());
-            Assert.assertNotNull(actual);
-            Assert.assertEquals(expected, actual);
-        }
+        start = System.currentTimeMillis();
+        executeConcurrent((t, c) -> () -> {
+            try {
+                for (QueueMessage expected : messagesWithUuid[t]) {
+                    QueueMessage actual = service.get(expected.getUuid());
+                    Assert.assertNotNull(actual);
+                    Assert.assertEquals(expected, actual);
+                }
+            } catch (IOException e) {
+                assert false : e;
+            }
+        });
+        end = System.currentTimeMillis();
+        printQps("read concurrent", total() * concurrency(), start, end);
     }
 }

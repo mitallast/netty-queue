@@ -40,7 +40,7 @@ public class StompSendAction extends BaseStompHandler {
             return;
         }
 
-        String messageId = Strings.toString(request.headers().get(StompHeaders.MESSAGE_ID));
+        CharSequence messageId = request.headers().get(StompHeaders.MESSAGE_ID);
         if (!Strings.isEmpty(messageId)) {
             try {
                 queueMessage.setUuid(UUIDs.fromString(messageId));

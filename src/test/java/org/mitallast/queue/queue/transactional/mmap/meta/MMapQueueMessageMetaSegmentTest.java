@@ -40,6 +40,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         for (int i = 0; i < total(); i++) {
             QueueMessageMeta meta = meta();
             metaList.add(meta);
+            assert messageMetaSegment.insert(meta.getUuid());
             assert messageMetaSegment.writeLock(meta.getUuid());
             assert messageMetaSegment.writeMeta(meta);
         }
@@ -67,18 +68,18 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         }
 
         start = System.currentTimeMillis();
-        executeConcurrent(() -> {
+        executeConcurrent((thread, concurrency) -> () -> {
             try {
-                for (int i = 0; i < total(); i++) {
-                    QueueMessageMeta meta = metaList.get(i);
-                    if (messageMetaSegment.writeLock(meta.getUuid())) {
-                        assert messageMetaSegment.writeMeta(meta);
-                    }
+                for (int i = thread; i < total(); i += concurrency) {
+                    QueueMessageMeta expected = metaList.get(i);
+                    Assert.assertTrue("insert i=" + i, messageMetaSegment.insert(expected.getUuid()));
+                    Assert.assertTrue("lock   i=" + i, messageMetaSegment.writeLock(expected.getUuid()));
+                    Assert.assertTrue("write  i=" + i, messageMetaSegment.writeMeta(expected));
                 }
-                for (int i = 0; i < total(); i++) {
+                for (int i = thread; i < total(); i += concurrency) {
                     QueueMessageMeta expected = metaList.get(i);
                     QueueMessageMeta actual = messageMetaSegment.readMeta(expected.getUuid());
-                    Assert.assertEquals(expected, actual);
+                    Assert.assertEquals("i=" + i, expected, actual);
                 }
             } catch (IOException e) {
                 assert false : e;
@@ -93,6 +94,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
+        assert messageMetaSegment.insert(meta.getUuid());
         assert messageMetaSegment.writeLock(meta.getUuid());
         assert messageMetaSegment.writeMeta(meta);
         QueueMessageMeta metaLocked = messageMetaSegment.lock(meta.getUuid());
@@ -105,6 +107,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
+        assert messageMetaSegment.insert(meta.getUuid());
         assert messageMetaSegment.writeLock(meta.getUuid());
         assert messageMetaSegment.writeMeta(meta);
         assert messageMetaSegment.lock(meta.getUuid()) != null;
@@ -119,6 +122,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
+        assert messageMetaSegment.insert(meta.getUuid());
         assert messageMetaSegment.writeLock(meta.getUuid());
         assert messageMetaSegment.writeMeta(meta);
         assert messageMetaSegment.lock(meta.getUuid()) != null;

@@ -4,11 +4,13 @@ import gnu.trove.impl.HashFunctions;
 import gnu.trove.impl.PrimeFinder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.mitallast.queue.common.Locks;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
 import org.mitallast.queue.queue.QueueMessageType;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.*;
@@ -26,10 +28,13 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     private final AtomicReferenceArray<UUID> uuidMap;
     private final AtomicReferenceArray<QueueMessageStatus> statusMap;
     private final ThreadLocal<ByteBuf> localBuffer;
+    private final AtomicInteger sizeCounter;
+    private final int maxSize;
 
     public MMapQueueMessageMetaSegment(MemoryMappedFile mappedFile, int maxSize, float loadFactor) {
         this.mappedFile = mappedFile;
-
+        this.sizeCounter = new AtomicInteger();
+        this.maxSize = maxSize;
         int ceil = HashFunctions.fastCeil(maxSize / loadFactor);
         size = PrimeFinder.nextPrime(ceil);
         uuidMap = new AtomicReferenceArray<>(size);
@@ -40,6 +45,21 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
                 return Unpooled.buffer(512);
             }
         };
+    }
+
+    private boolean incrementSize() {
+        while (true) {
+            int currentSize = sizeCounter.get();
+            if (currentSize < maxSize) {
+                if (sizeCounter.compareAndSet(currentSize, currentSize + 1)) {
+                    return true;
+                } else {
+                    Locks.parkNanos();
+                }
+            } else {
+                return false;
+            }
+        }
     }
 
     @Override
@@ -145,7 +165,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     @Override
     public boolean insert(UUID uuid) throws IOException {
-        return insertKey(uuid) >= 0;
+        return incrementSize() && insertKey(uuid) >= 0;
     }
 
     @Override
@@ -154,8 +174,13 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         return index >= 0 && setStatusInit(index);
     }
 
-    private boolean comparePosition(UUID uuid, int pos) {
-        return uuid.equals(uuidMap.get(pos));
+    /**
+     * @return -1 if null, pos if equals, else -2 if not equals
+     */
+    private int comparePosition(UUID uuid, int pos) {
+        UUID actual = uuidMap.get(pos);
+        if (actual == null) return -1;
+        return uuid.equals(actual) ? pos : -2;
     }
 
     private boolean lockPosition(UUID uuid, int pos) {
@@ -251,8 +276,9 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         final int hash = uuid.hashCode() & 0x7fffffff;
         int index = hash % size;
 
-        if (comparePosition(uuid, index)) {
-            return index;
+        int cmp = comparePosition(uuid, index);
+        if (cmp != -2) {
+            return cmp;
         }
 
         final int loopIndex = index;
@@ -263,8 +289,9 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
                 index += size;
             }
 
-            if (comparePosition(uuid, index)) {
-                return index;
+            cmp = comparePosition(uuid, index);
+            if (cmp != -2) {
+                return cmp;
             }
             // Detect loop
         } while (index != loopIndex);

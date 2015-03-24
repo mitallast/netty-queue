@@ -42,6 +42,10 @@ public class QueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
+        segment.insert(message1.getUuid());
+        segment.insert(message2.getUuid());
+        segment.insert(message3.getUuid());
+
         segment.writeLock(message1.getUuid());
         segment.writeLock(message2.getUuid());
         segment.writeLock(message3.getUuid());
@@ -56,6 +60,10 @@ public class QueueMessageSegmentTest extends BaseTest {
         QueueMessage message1 = createMessageWithUuid();
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
+
+        segment.insert(message1.getUuid());
+        segment.insert(message2.getUuid());
+        segment.insert(message3.getUuid());
 
         segment.writeLock(message1.getUuid());
         segment.writeLock(message2.getUuid());
@@ -75,6 +83,10 @@ public class QueueMessageSegmentTest extends BaseTest {
         QueueMessage message1 = createMessageWithUuid();
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
+
+        segment.insert(message1.getUuid());
+        segment.insert(message2.getUuid());
+        segment.insert(message3.getUuid());
 
         segment.writeLock(message1.getUuid());
         segment.writeLock(message2.getUuid());
@@ -99,6 +111,10 @@ public class QueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
+        segment.insert(message1.getUuid());
+        segment.insert(message2.getUuid());
+        segment.insert(message3.getUuid());
+
         segment.writeLock(message1.getUuid());
         segment.writeLock(message2.getUuid());
         segment.writeLock(message3.getUuid());
@@ -119,6 +135,10 @@ public class QueueMessageSegmentTest extends BaseTest {
         QueueMessage message1 = createMessageWithUuid();
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
+
+        segment.insert(message1.getUuid());
+        segment.insert(message2.getUuid());
+        segment.insert(message3.getUuid());
 
         segment.writeLock(message1.getUuid());
         segment.writeLock(message2.getUuid());
@@ -142,6 +162,10 @@ public class QueueMessageSegmentTest extends BaseTest {
         QueueMessage message1 = createMessageWithUuid();
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
+
+        segment.insert(message1.getUuid());
+        segment.insert(message2.getUuid());
+        segment.insert(message3.getUuid());
 
         segment.writeLock(message1.getUuid());
         segment.writeLock(message2.getUuid());

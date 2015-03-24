@@ -9,6 +9,9 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
 
+import java.util.HashSet;
+import java.util.UUID;
+
 public class MMapTransactionalQueueServiceTest extends BaseTest {
 
     private MMapTransactionalQueueService service;
@@ -138,6 +141,11 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     public void testLongPush() throws Exception {
         logger.info("generate test data");
         QueueMessage[] messagesWithUuid = createMessagesWithUuid(100000);
+        HashSet<UUID> uuids = new HashSet<>();
+        for (QueueMessage message : messagesWithUuid) {
+            assert uuids.add(message.getUuid());
+        }
+        assert uuids.size() == messagesWithUuid.length;
         logger.info("write test data");
         for (QueueMessage message : messagesWithUuid) {
             Assert.assertTrue(service.push(message));

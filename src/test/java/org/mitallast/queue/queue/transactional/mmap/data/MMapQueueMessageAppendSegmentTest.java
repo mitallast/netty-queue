@@ -3,6 +3,7 @@ package org.mitallast.queue.queue.transactional.mmap.data;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCounted;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,11 +40,11 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
         long start, end;
         for (int i = 0; i < max(); i++) {
             bufferList.add(Unpooled.wrappedBuffer(
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes()
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes()
             ));
         }
 
@@ -53,7 +54,7 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
             offsets[i] = offset;
         }
         end = System.currentTimeMillis();
-        printQps("append", total(), start, end);
+        printQps("append", max(), start, end);
 
         start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
@@ -64,52 +65,52 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
             expected.resetReaderIndex();
 
             Assert.assertTrue(ByteBufUtil.equals(expected, buffer));
+            buffer.release();
         }
         end = System.currentTimeMillis();
-        printQps("read", total(), start, end);
+        printQps("read", max(), start, end);
     }
 
     @Test
     public void testReadWriteConcurrent() throws Exception {
         final QueueMessageAppendSegment segment = new MMapQueueMessageAppendSegment(mmapFile);
-        final List<ByteBuf> bufferList = new ArrayList<>(total());
-        final long[] offsets = new long[total()];
+        final List<ByteBuf> bufferList = new ArrayList<>(max());
+        final long[] offsets = new long[max()];
         final int length = randomUUID().toString().getBytes().length * 5;
         long start, end;
-        for (int i = 0; i < total(); i++) {
+        for (int i = 0; i < max(); i++) {
             bufferList.add(Unpooled.wrappedBuffer(
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes(),
-                    randomUUID().toString().getBytes()
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes(),
+                randomUUID().toString().getBytes()
             ));
         }
 
         start = System.currentTimeMillis();
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i = 0; i < total(); i++) {
-                        long offset = segment.append(Unpooled.wrappedBuffer(bufferList.get(i)));
-                        offsets[i] = offset;
-                    }
-                    for (int i = 0; i < total(); i++) {
-                        ByteBuf buffer = Unpooled.buffer();
-                        segment.read(buffer, offsets[i], length);
-                        buffer.resetReaderIndex();
-                        ByteBuf expected = Unpooled.wrappedBuffer(bufferList.get(i));
-                        expected.resetReaderIndex();
-
-                        Assert.assertTrue(ByteBufUtil.equals(expected, buffer));
-                    }
-                } catch (IOException e) {
-                    assert false : e;
+        executeConcurrent((thread, concurrency) -> () -> {
+            try {
+                for (int i = thread; i < max(); i += concurrency) {
+                    long offset = segment.append(bufferList.get(i));
+                    offsets[i] = offset;
                 }
+                ByteBuf buffer = Unpooled.buffer();
+                for (int i = thread; i < max(); i += concurrency) {
+                    buffer.resetWriterIndex();
+                    segment.read(buffer, offsets[i], length);
+                    buffer.resetReaderIndex();
+                    ByteBuf expected = bufferList.get(i);
+                    expected.resetReaderIndex();
+                    Assert.assertTrue(ByteBufUtil.equals(expected, buffer));
+                }
+                buffer.release();
+            } catch (IOException e) {
+                assert false : e;
             }
         });
+        bufferList.forEach(ReferenceCounted::release);
         end = System.currentTimeMillis();
-        printQps("read/write concurrent", total() * concurrency() * 2, start, end);
+        printQps("read/write concurrent", total() * 2, start, end);
     }
 }

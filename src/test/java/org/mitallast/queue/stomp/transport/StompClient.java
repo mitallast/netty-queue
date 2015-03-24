@@ -22,7 +22,7 @@ public class StompClient extends NettyClient {
 
     @Override
     protected void init() {
-        channel.attr(attr).set(new ConcurrentHashMap<String, BasicFuture<StompFrame>>());
+        channel.attr(attr).set(new ConcurrentHashMap<>());
     }
 
     public Future<StompFrame> send(StompFrame request) {
@@ -31,6 +31,7 @@ public class StompClient extends NettyClient {
 
     public Future<StompFrame> send(StompFrame request, boolean flush) {
         String receipt = Strings.toString(request.headers().get(StompHeaders.RECEIPT));
+        assert !Strings.isEmpty(receipt);
         BasicFuture<StompFrame> future = new BasicFuture<>();
         Channel localChannel = channel;
         localChannel.attr(attr).get().put(receipt, future);
@@ -67,6 +68,7 @@ public class StompClient extends NettyClient {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
             String receipt = Strings.toString(frame.headers().get(StompHeaders.RECEIPT_ID));
+            assert !Strings.isEmpty(receipt);
             BasicFuture<StompFrame> frameFuture = ctx.channel().attr(attr).get().remove(receipt);
             if (frameFuture != null) {
                 frameFuture.set(frame);

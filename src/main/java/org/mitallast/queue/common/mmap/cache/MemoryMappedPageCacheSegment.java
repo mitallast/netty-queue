@@ -38,8 +38,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     public MemoryMappedPage acquire(final long offset) throws IOException {
         MemoryMappedPage page;
         page = pageMap.get(offset);
-        if (page != null) {
-            assert page.acquire() > 0;
+        if (page != null && page.acquire() > 0) {
             if (gcLock.tryLock()) {
                 try {
                     page.setTimestamp(System.currentTimeMillis());
@@ -110,8 +109,8 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
 
     private void garbageCollect() throws IOException {
         if (pagesCount.get() > maxPages
-                && !gcLock.isLocked()
-                && gcLock.tryLock()) {
+            && !gcLock.isLocked()
+            && gcLock.tryLock()) {
             try {
                 garbage.clear();
                 garbage.addAll(pageMap.valueCollection());

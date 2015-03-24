@@ -244,6 +244,21 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         return false;
     }
 
+    @Override
+    public boolean isGarbage() throws IOException {
+        int deleted = 0;
+        for (int i = 0; i < size; i++) {
+            QueueMessageStatus status = statusMap.get(i);
+            if (status != null) {
+                if (!DELETED.equals(status)) {
+                    return false;
+                }
+                deleted++;
+            }
+        }
+        return deleted == maxSize;
+    }
+
     private void writeMeta(QueueMessageMeta messageMeta, int pos) throws IOException {
         long offset = getMetaOffset(pos);
         ByteBuf buffer = localBuffer.get();

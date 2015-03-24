@@ -21,4 +21,6 @@ public interface QueueMessageMetaSegment extends Closeable {
     boolean writeMeta(QueueMessageMeta meta) throws IOException;
 
     QueueMessageMeta readMeta(UUID uuid) throws IOException;
+
+    boolean isGarbage() throws IOException;
 }

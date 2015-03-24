@@ -132,6 +132,38 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         Assert.assertEquals(QueueMessageStatus.QUEUED, deleted.getStatus());
     }
 
+    @Test
+    public void testIsGarbage() throws IOException {
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, 3, 0.7f);
+
+        QueueMessageMeta meta1 = meta();
+        QueueMessageMeta meta2 = meta();
+        QueueMessageMeta meta3 = meta();
+
+        messageMetaSegment.insert(meta1.getUuid());
+        messageMetaSegment.insert(meta2.getUuid());
+        messageMetaSegment.insert(meta3.getUuid());
+
+        messageMetaSegment.writeLock(meta1.getUuid());
+        messageMetaSegment.writeLock(meta2.getUuid());
+        messageMetaSegment.writeLock(meta3.getUuid());
+
+        messageMetaSegment.writeMeta(meta1);
+        messageMetaSegment.writeMeta(meta2);
+        messageMetaSegment.writeMeta(meta3);
+
+        messageMetaSegment.lock(meta1.getUuid());
+        messageMetaSegment.lock(meta2.getUuid());
+        messageMetaSegment.lock(meta3.getUuid());
+
+        messageMetaSegment.unlockAndDelete(meta1.getUuid());
+        assert !messageMetaSegment.isGarbage();
+        messageMetaSegment.unlockAndDelete(meta2.getUuid());
+        assert !messageMetaSegment.isGarbage();
+        messageMetaSegment.unlockAndDelete(meta3.getUuid());
+        assert messageMetaSegment.isGarbage();
+    }
+
     private QueueMessageMeta meta() {
         return new QueueMessageMeta(
             randomUUID(),

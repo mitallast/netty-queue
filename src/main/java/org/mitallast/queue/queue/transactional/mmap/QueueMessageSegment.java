@@ -10,15 +10,38 @@ import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class QueueMessageSegment implements TransactionalQueueSegment {
 
     private final QueueMessageAppendSegment messageAppendSegment;
     private final QueueMessageMetaSegment messageMetaSegment;
+    private final AtomicInteger referenceCount;
 
     public QueueMessageSegment(QueueMessageAppendSegment messageAppendSegment, QueueMessageMetaSegment messageMetaSegment) {
         this.messageAppendSegment = messageAppendSegment;
         this.messageMetaSegment = messageMetaSegment;
+        this.referenceCount = new AtomicInteger();
+    }
+
+    public int acquire() {
+        while (true) {
+            int current = referenceCount.get();
+            if (current >= 0) {
+                int next = current + 1;
+                if (referenceCount.compareAndSet(current, next)) {
+                    return next;
+                }
+            } else return current;
+        }
+    }
+
+    public int release() {
+        return referenceCount.decrementAndGet();
+    }
+
+    public boolean releaseGarbage() {
+        return referenceCount.compareAndSet(0, -1);
     }
 
     private QueueMessage readMessage(QueueMessageMeta meta) throws IOException {
@@ -114,5 +137,16 @@ public class QueueMessageSegment implements TransactionalQueueSegment {
     public void close() throws IOException {
         messageAppendSegment.close();
         messageMetaSegment.close();
+    }
+
+    @Override
+    public boolean isGarbage() throws IOException {
+        return messageMetaSegment.isGarbage();
+    }
+
+    @Override
+    public void delete() throws IOException {
+        messageAppendSegment.delete();
+        messageMetaSegment.delete();
     }
 }

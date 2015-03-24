@@ -6,20 +6,22 @@ import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCacheSegment;
 import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCacheSegmented;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Closeable {
+    private final File file;
     private final RandomAccessFile randomAccessFile;
     private final int pageSize;
     private final FileChannel channel;
-
     private final MemoryMappedPageCache pageCache;
 
-    public MemoryMappedFile(RandomAccessFile randomAccessFile, int pageSize, int maxPages) throws IOException {
-        this.randomAccessFile = randomAccessFile;
+    public MemoryMappedFile(File file, int pageSize, int maxPages) throws IOException {
+        this.file = file;
+        this.randomAccessFile = new RandomAccessFile(file, "rw");
         this.pageSize = pageSize;
         channel = randomAccessFile.getChannel();
         pageCache = new MemoryMappedPageCacheSegmented(this, maxPages, 10);
@@ -30,6 +32,13 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
         pageCache.close();
         channel.close();
         randomAccessFile.close();
+    }
+
+    public void delete() throws IOException {
+        close();
+        if (file.exists() && !file.delete()) {
+            throw new IOException("Error delete file " + file);
+        }
     }
 
     public void putLong(long offset, long value) throws IOException {

@@ -6,7 +6,6 @@ import org.mitallast.queue.common.settings.Settings;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 
 public class MemoryMappedFileFactory extends AbstractComponent {
 
@@ -33,6 +32,6 @@ public class MemoryMappedFileFactory extends AbstractComponent {
             throw new IOException("Error create new file " + file);
         }
 
-        return new MemoryMappedFile(new RandomAccessFile(file, "rw"), pageSize, maxPages);
+        return new MemoryMappedFile(file, pageSize, maxPages);
     }
 }

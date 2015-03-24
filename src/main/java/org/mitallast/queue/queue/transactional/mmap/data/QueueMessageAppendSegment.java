@@ -10,4 +10,6 @@ public interface QueueMessageAppendSegment extends Closeable {
     void read(ByteBuf buffer, long offset, int length) throws IOException;
 
     long append(ByteBuf buffer) throws IOException;
+
+    void delete() throws IOException;
 }

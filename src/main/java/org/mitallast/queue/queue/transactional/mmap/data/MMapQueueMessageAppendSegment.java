@@ -33,4 +33,9 @@ public class MMapQueueMessageAppendSegment implements QueueMessageAppendSegment 
         mappedFile.flush();
         mappedFile.close();
     }
+
+    @Override
+    public void delete() throws IOException {
+        mappedFile.delete();
+    }
 }

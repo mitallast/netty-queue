@@ -11,7 +11,6 @@ import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,8 +60,8 @@ public class FileQueueMessageAppendTransactionLog implements Closeable {
                 throw new IOException("File not found, or not writable " + metaFile);
             }
         }
-        metaMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(metaFile, "rw"), pageSize, maxPages);
-        dataMemoryMappedFile = new MemoryMappedFile(new RandomAccessFile(dataFile, "rw"), pageSize, maxPages);
+        metaMemoryMappedFile = new MemoryMappedFile(metaFile, pageSize, maxPages);
+        dataMemoryMappedFile = new MemoryMappedFile(dataFile, pageSize, maxPages);
 
         head = tail = QueueMessageMeta.empty();
     }

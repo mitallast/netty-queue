@@ -9,7 +9,6 @@ import org.mitallast.queue.common.BaseTest;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -21,7 +20,7 @@ public class MemoryMappedFileTest extends BaseTest {
     @Before
     public void setUp() throws Exception {
         file = testFolder.newFile();
-        mappedFile = new MemoryMappedFile(new RandomAccessFile(file, "rw"), 4096, 10);
+        mappedFile = new MemoryMappedFile(file, 4096, 10);
     }
 
     @After
@@ -104,7 +103,7 @@ public class MemoryMappedFileTest extends BaseTest {
         }
         mappedFile.putBytes(0, bytesExpected);
         mappedFile.flush();
-        MemoryMappedFile reopenedMappedFile = new MemoryMappedFile(new RandomAccessFile(file, "rw"), 4096, 10);
+        MemoryMappedFile reopenedMappedFile = new MemoryMappedFile(file, 4096, 10);
         reopenedMappedFile.getBytes(0, bytesActual);
         assert Arrays.equals(bytesExpected, bytesActual);
     }

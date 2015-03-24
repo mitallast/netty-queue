@@ -10,8 +10,6 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.mmap.data.MMapQueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.MMapQueueMessageMetaSegment;
 
-import java.io.RandomAccessFile;
-
 public class QueueMessageSegmentTest extends BaseTest {
 
     private MemoryMappedFile mmapFile1;
@@ -22,8 +20,8 @@ public class QueueMessageSegmentTest extends BaseTest {
     @Before
     public void setUp() throws Exception {
         int pageSize = 1048576;
-        mmapFile1 = new MemoryMappedFile(new RandomAccessFile(testFolder.newFile(), "rw"), pageSize, 50);
-        mmapFile2 = new MemoryMappedFile(new RandomAccessFile(testFolder.newFile(), "rw"), pageSize, 50);
+        mmapFile1 = new MemoryMappedFile(testFolder.newFile(), pageSize, 50);
+        mmapFile2 = new MemoryMappedFile(testFolder.newFile(), pageSize, 50);
         segment = new QueueMessageSegment(
             new MMapQueueMessageAppendSegment(mmapFile1),
             new MMapQueueMessageMetaSegment(mmapFile2, 1024, 0.7f)

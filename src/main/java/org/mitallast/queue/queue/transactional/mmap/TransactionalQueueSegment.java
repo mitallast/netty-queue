@@ -14,4 +14,8 @@ public interface TransactionalQueueSegment extends TransactionalQueueComponent, 
     public boolean writeLock(UUID uuid) throws IOException;
 
     public boolean writeMessage(QueueMessage queueMessage) throws IOException;
+
+    public boolean isGarbage() throws IOException;
+
+    public void delete() throws IOException;
 }

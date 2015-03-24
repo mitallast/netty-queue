@@ -9,7 +9,6 @@ import org.mitallast.queue.common.mmap.MemoryMappedFile;
 import org.mitallast.queue.queue.QueueMessageType;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -22,8 +21,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        int pageSize = 1048576;
-        mmapFile = new MemoryMappedFile(new RandomAccessFile(testFolder.newFile(), "rw"), pageSize, 50);
+        mmapFile = new MemoryMappedFile(testFolder.newFile(), 1048576, 50);
     }
 
     @After

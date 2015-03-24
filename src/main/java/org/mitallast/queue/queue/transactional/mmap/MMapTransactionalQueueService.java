@@ -80,9 +80,15 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
         final int size = current.size();
         for (int i = 0; i < size; i++) {
             final QueueMessageSegment segment = current.get(i);
-            QueueMessage queueMessage = segment.get(uuid);
-            if (queueMessage != null) {
-                return queueMessage;
+            if (segment.acquire() > 0) {
+                try {
+                    QueueMessage queueMessage = segment.get(uuid);
+                    if (queueMessage != null) {
+                        return queueMessage;
+                    }
+                } finally {
+                    segment.release();
+                }
             }
         }
         return null;
@@ -94,9 +100,15 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
         final int size = current.size();
         for (int i = 0; i < size; i++) {
             final QueueMessageSegment segment = current.get(i);
-            QueueMessage queueMessage = segment.lock(uuid);
-            if (queueMessage != null) {
-                return queueMessage;
+            if (segment.acquire() > 0) {
+                try {
+                    QueueMessage queueMessage = segment.lock(uuid);
+                    if (queueMessage != null) {
+                        return queueMessage;
+                    }
+                } finally {
+                    segment.release();
+                }
             }
         }
         return null;
@@ -108,9 +120,15 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
         final int size = current.size();
         for (int i = 0; i < size; i++) {
             final QueueMessageSegment segment = current.get(i);
-            QueueMessage queueMessage = segment.lockAndPop();
-            if (queueMessage != null) {
-                return queueMessage;
+            if (segment.acquire() > 0) {
+                try {
+                    QueueMessage queueMessage = segment.lockAndPop();
+                    if (queueMessage != null) {
+                        return queueMessage;
+                    }
+                } finally {
+                    segment.release();
+                }
             }
         }
         return null;
@@ -122,9 +140,15 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
         final int size = current.size();
         for (int i = 0; i < size; i++) {
             final QueueMessageSegment segment = current.get(i);
-            QueueMessage queueMessage = segment.unlockAndDelete(uuid);
-            if (queueMessage != null) {
-                return queueMessage;
+            if (segment.acquire() > 0) {
+                try {
+                    QueueMessage queueMessage = segment.unlockAndDelete(uuid);
+                    if (queueMessage != null) {
+                        return queueMessage;
+                    }
+                } finally {
+                    segment.release();
+                }
             }
         }
         return null;
@@ -136,9 +160,15 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
         final int size = current.size();
         for (int i = 0; i < size; i++) {
             final QueueMessageSegment segment = current.get(i);
-            QueueMessage queueMessage = segment.unlockAndRollback(uuid);
-            if (queueMessage != null) {
-                return queueMessage;
+            if (segment.acquire() > 0) {
+                try {
+                    QueueMessage queueMessage = segment.unlockAndRollback(uuid);
+                    if (queueMessage != null) {
+                        return queueMessage;
+                    }
+                } finally {
+                    segment.release();
+                }
             }
         }
         return null;
@@ -152,12 +182,18 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
             final int size = current.size();
             for (int i = 0; i < size; i++) {
                 final QueueMessageSegment segment = current.get(i);
-                if (segment.insert(uuid)) {
-                    if (segment.writeLock(uuid)) {
-                        segment.writeMessage(queueMessage);
-                        return true;
-                    } else {
-                        throw new QueueMessageUuidDuplicateException(uuid);
+                if (segment.acquire() > 0) {
+                    try {
+                        if (segment.insert(uuid)) {
+                            if (segment.writeLock(uuid)) {
+                                segment.writeMessage(queueMessage);
+                                return true;
+                            } else {
+                                throw new QueueMessageUuidDuplicateException(uuid);
+                            }
+                        }
+                    } finally {
+                        segment.release();
                     }
                 }
             }
@@ -173,6 +209,37 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
     @Override
     public QueueStats stats() throws IOException {
         return null;
+    }
+
+    public int segmentsSize() {
+        return segments.size();
+    }
+
+    public void garbageCollect() throws IOException {
+        if (segmentsLock.tryLock()) {
+            try {
+                ImmutableList<QueueMessageSegment> current = this.segments;
+                ImmutableList.Builder<QueueMessageSegment> garbageBuilder = ImmutableList.builder();
+                ImmutableList.Builder<QueueMessageSegment> cleanBuilder = ImmutableList.builder();
+
+                for (QueueMessageSegment segment : current) {
+                    if (segment.isGarbage() && segment.releaseGarbage()) {
+                        garbageBuilder.add(segment);
+                    } else {
+                        cleanBuilder.add(segment);
+                    }
+                }
+
+                this.segments = cleanBuilder.build();
+
+                for (QueueMessageSegment segment : garbageBuilder.build()) {
+                    segment.delete();
+                }
+
+            } finally {
+                segmentsLock.unlock();
+            }
+        }
     }
 
     private void addSegment(ImmutableList<QueueMessageSegment> current) throws IOException {

@@ -13,6 +13,7 @@ import java.io.IOException;
 
 public class MMapTransactionalQueueServiceTest extends BaseTest {
 
+    private final static int segmentsSize = 42;
     private MMapTransactionalQueueService service;
 
     @Before
@@ -20,7 +21,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
         service = new MMapTransactionalQueueService(
             ImmutableSettings.builder()
                 .put("work_dir", testFolder.getRoot().getPath())
-                .put("segment.max_size", 65536)
+                .put("segment.max_size", segmentsSize)
                 .build(),
             ImmutableSettings.EMPTY,
             new Queue("test")
@@ -137,7 +138,30 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     }
 
     @Test
+    public void testGarbageCollect() throws Exception {
+        for (int i = 0; i < segmentsSize * 2; i++) {
+            QueueMessage message = createMessageWithUuid();
+            service.push(message);
+            service.lock(message.getUuid());
+            service.unlockAndDelete(message.getUuid());
+        }
+        assert service.segmentsSize() == 2;
+        service.garbageCollect();
+        assert service.segmentsSize() == 0 : service.segmentsSize();
+    }
+
+    @Test
     public void testLongPush() throws Exception {
+        service = new MMapTransactionalQueueService(
+            ImmutableSettings.builder()
+                .put("work_dir", testFolder.getRoot().getPath())
+                .put("segment.max_size", 1048576)
+                .build(),
+            ImmutableSettings.EMPTY,
+            new Queue("test")
+        );
+        service.start();
+
         logger.info("generate test data");
         QueueMessage[][] messagesWithUuid = new QueueMessage[concurrency()][];
         long start = System.currentTimeMillis();

@@ -2,6 +2,7 @@ package org.mitallast.queue.action.queue.enqueue;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.queue.QueueMessage;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
@@ -39,7 +40,7 @@ public class EnQueueRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
-        if (queue == null || queue.isEmpty()) {
+        if (Strings.isEmpty(queue)) {
             validationException = addValidationError("queue is missing", null);
         }
         if (message == null) {

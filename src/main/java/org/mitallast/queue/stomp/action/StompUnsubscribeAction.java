@@ -22,11 +22,11 @@ public class StompUnsubscribeAction extends BaseStompHandler {
 
     @Override
     public void handleRequest(StompSession session, StompFrame request) {
-        String queueName = Strings.toString(request.headers().get(StompHeaders.DESTINATION));
-        if (queueName == null || queueName.isEmpty()) {
+        String queue = Strings.toString(request.headers().get(StompHeaders.DESTINATION));
+        if (Strings.isEmpty(queue)) {
             session.unsubscribe();
         } else {
-            session.unsubscribe(new Queue(queueName));
+            session.unsubscribe(new Queue(queue));
         }
         session.sendResponse(StompCommand.RECEIPT);
     }

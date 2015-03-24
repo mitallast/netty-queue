@@ -46,7 +46,7 @@ public class StompSendAction extends BaseStompHandler {
         }
 
         String messageId = Strings.toString(request.headers().get(StompHeaders.MESSAGE_ID));
-        if (messageId != null && !messageId.isEmpty()) {
+        if (!Strings.isEmpty(messageId)) {
             try {
                 queueMessage.setUuid(UUID.fromString(messageId));
             } catch (IllegalArgumentException e) {

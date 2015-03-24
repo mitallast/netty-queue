@@ -22,12 +22,12 @@ public class StompSubscribeAction extends BaseStompHandler {
 
     @Override
     public void handleRequest(StompSession session, StompFrame request) {
-        String queueName = Strings.toString(request.headers().get(StompHeaders.DESTINATION));
-        if (queueName == null || queueName.isEmpty()) {
+        String queue = Strings.toString(request.headers().get(StompHeaders.DESTINATION));
+        if (Strings.isEmpty(queue)) {
             session.sendError("destination is required");
             return;
         }
-        session.subscribe(new Queue(queueName));
+        session.subscribe(new Queue(queue));
         session.sendResponse(StompCommand.RECEIPT);
     }
 }

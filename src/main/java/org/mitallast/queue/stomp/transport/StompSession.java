@@ -50,7 +50,7 @@ public class StompSession {
 
     public void sendResponse(StompFrame response) {
         String receiptId = Strings.toString(request.headers().get(StompHeaders.RECEIPT));
-        if (receiptId != null && !receiptId.isEmpty()) {
+        if (Strings.isEmpty(receiptId)) {
             response.headers().set(StompHeaders.RECEIPT_ID, receiptId);
         }
         if (response.content().isReadable()) {

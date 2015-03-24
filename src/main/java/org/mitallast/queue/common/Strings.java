@@ -117,4 +117,8 @@ public class Strings {
     public static String toString(CharSequence charSequence) {
         return charSequence == null ? null : charSequence.toString();
     }
+
+    public static boolean isEmpty(String string) {
+        return string == null || string.isEmpty();
+    }
 }

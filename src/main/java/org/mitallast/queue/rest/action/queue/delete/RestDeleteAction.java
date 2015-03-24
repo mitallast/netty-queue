@@ -7,14 +7,13 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.response.StatusRestResponse;
-
-import java.util.UUID;
 
 public class RestDeleteAction extends BaseRestHandler {
 
@@ -31,7 +30,7 @@ public class RestDeleteAction extends BaseRestHandler {
         deleteRequest.setQueue(request.param("queue"));
         String uuid = request.param("uuid");
         if (uuid != null) {
-            deleteRequest.setUuid(UUID.fromString(uuid));
+            deleteRequest.setUuid(UUIDs.fromString(uuid));
         }
 
         client.queue().deleteRequest(deleteRequest, new ActionListener<DeleteResponse>() {

@@ -11,6 +11,7 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.get.GetRequest;
 import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.rest.BaseRestHandler;
@@ -22,7 +23,6 @@ import org.mitallast.queue.rest.response.StatusRestResponse;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.UUID;
 
 public class RestGetAction extends BaseRestHandler {
 
@@ -38,7 +38,7 @@ public class RestGetAction extends BaseRestHandler {
         getRequest.setQueue(request.param("queue"));
         String uuid = request.param("uuid");
         if (uuid != null) {
-            getRequest.setUuid(UUID.fromString(uuid));
+            getRequest.setUuid(UUIDs.fromString(uuid));
         }
 
         client.queue().getRequest(getRequest, new ActionListener<GetResponse>() {

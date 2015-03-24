@@ -11,6 +11,7 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
@@ -63,7 +64,7 @@ public class RestEnQueueAction extends BaseRestHandler {
                         case "uuid":
                             token = parser.nextToken();
                             if (token == JsonToken.VALUE_STRING) {
-                                request.getMessage().setUuid(parser.getText());
+                                request.getMessage().setUuid(UUIDs.fromString(parser.getText()));
                             } else {
                                 throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
                             }

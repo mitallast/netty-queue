@@ -9,14 +9,13 @@ import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.Strings;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.stomp.BaseStompHandler;
 import org.mitallast.queue.stomp.StompController;
 import org.mitallast.queue.stomp.transport.StompSession;
-
-import java.util.UUID;
 
 public class StompSendAction extends BaseStompHandler {
 
@@ -48,7 +47,7 @@ public class StompSendAction extends BaseStompHandler {
         String messageId = Strings.toString(request.headers().get(StompHeaders.MESSAGE_ID));
         if (!Strings.isEmpty(messageId)) {
             try {
-                queueMessage.setUuid(UUID.fromString(messageId));
+                queueMessage.setUuid(UUIDs.fromString(messageId));
             } catch (IllegalArgumentException e) {
                 session.sendError(e);
                 return;

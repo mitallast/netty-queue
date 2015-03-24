@@ -47,10 +47,6 @@ public class QueueMessage {
         this.uuid = uuid;
     }
 
-    public void setUuid(String uuid) {
-        setUuid(UUID.fromString(uuid));
-    }
-
     public QueueMessageType getMessageType() {
         return type;
     }

@@ -1,6 +1,7 @@
 package org.mitallast.queue.stomp.action;
 
 import com.google.inject.Inject;
+import io.netty.handler.codec.AsciiString;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
@@ -29,19 +30,14 @@ public class StompSendAction extends BaseStompHandler {
     public void handleRequest(final StompSession session, final StompFrame request) {
         QueueMessage queueMessage = new QueueMessage();
 
-        String contentType = Strings.toString(request.headers().get(StompHeaders.CONTENT_TYPE, "text/plain"));
-        switch (contentType) {
-            case "text":
-            case "text/plain":
-                queueMessage.setSource(QueueMessageType.STRING, request.content());
-                break;
-            case "json":
-            case "application/json":
-                queueMessage.setSource(QueueMessageType.JSON, request.content());
-                break;
-            default:
-                session.sendError("Unsupported content type");
-                return;
+        CharSequence contentType = request.headers().get(StompHeaders.CONTENT_TYPE, "text/plain");
+        if (AsciiString.equals(contentType, "text/plain") || AsciiString.equals(contentType, "text")) {
+            queueMessage.setSource(QueueMessageType.STRING, request.content());
+        } else if (AsciiString.equals(contentType, "application/json") || AsciiString.equals(contentType, "json")) {
+            queueMessage.setSource(QueueMessageType.JSON, request.content());
+        } else {
+            session.sendError("Unsupported content type");
+            return;
         }
 
         String messageId = Strings.toString(request.headers().get(StompHeaders.MESSAGE_ID));

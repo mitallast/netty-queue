@@ -38,22 +38,25 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     public MemoryMappedPage acquire(final long offset) throws IOException {
         MemoryMappedPage page;
         page = pageMap.get(offset);
-        if (page != null && page.acquire() > 0) {
-            if (gcLock.tryLock()) {
-                try {
-                    page.setTimestamp(System.currentTimeMillis());
-                } finally {
-                    gcLock.unlock();
+        if (page != null) {
+            while (true) {
+                int rc = page.getReferenceCount();
+                if (rc >= 1) {
+                    if (page.setReferenceCount(rc, rc + 1)) {
+                        return page;
+                    }
+                } else {
+                    break;
                 }
             }
-            return page;
         }
         final ReentrantLock lock = pageLock.get(offset);
         lock.lock();
         try {
             page = pageMap.get(offset);
             if (page != null) {
-                assert page.acquire() > 1;
+                int rc = page.acquire();
+                assert rc > 1 : rc;
                 if (gcLock.tryLock()) {
                     try {
                         page.setTimestamp(System.currentTimeMillis());
@@ -120,11 +123,14 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
                     final ReentrantLock lock = pageLock.get(page.getOffset());
                     lock.lock();
                     try {
-                        if (page.release() == 0) {
-                            pageMap.remove(page.getOffset());
-                            garbage.remove(i);
-                            pagesCount.decrementAndGet();
-                            page.close();
+                        int rc = page.getReferenceCount();
+                        if (rc == 1) {
+                            if (page.setReferenceCount(rc, rc - 1)) {
+                                pageMap.remove(page.getOffset());
+                                garbage.remove(i);
+                                pagesCount.decrementAndGet();
+                                page.close();
+                            }
                         }
                     } finally {
                         lock.unlock();

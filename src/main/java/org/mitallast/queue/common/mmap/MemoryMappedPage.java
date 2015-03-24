@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 public class MemoryMappedPage implements Closeable {
 
     private final static AtomicIntegerFieldUpdater<MemoryMappedPage> referenceCountUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(MemoryMappedPage.class, "referenceCount");
+        AtomicIntegerFieldUpdater.newUpdater(MemoryMappedPage.class, "referenceCount");
 
     private final long offset;
     private MappedByteBuffer buffer;
@@ -95,6 +95,14 @@ public class MemoryMappedPage implements Closeable {
         return referenceCountUpdater.decrementAndGet(this);
     }
 
+    public int getReferenceCount() {
+        return referenceCount;
+    }
+
+    public boolean setReferenceCount(int expect, int update) {
+        return referenceCountUpdater.compareAndSet(this, expect, update);
+    }
+
     public long getTimestamp() {
         return timestamp;
     }
@@ -123,5 +131,18 @@ public class MemoryMappedPage implements Closeable {
             buffer = null;
             buf = null;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "MemoryMappedPage{" +
+            "offset=" + offset +
+            ", buffer=" + buffer +
+            ", buf=" + buf +
+            ", dirty=" + dirty +
+            ", closed=" + closed +
+            ", referenceCount=" + referenceCount +
+            ", timestamp=" + timestamp +
+            '}';
     }
 }

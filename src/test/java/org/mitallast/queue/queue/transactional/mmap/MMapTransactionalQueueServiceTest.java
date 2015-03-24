@@ -175,6 +175,6 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
             }
         });
         end = System.currentTimeMillis();
-        printQps("read concurrent", total() * concurrency(), start, end);
+        printQps("read concurrent", total(), start, end);
     }
 }

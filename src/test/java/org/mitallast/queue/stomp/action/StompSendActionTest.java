@@ -4,6 +4,7 @@ import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompFrame;
 import io.netty.handler.codec.stomp.StompHeaders;
 import org.junit.Test;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.stomp.BaseStompTest;
@@ -24,7 +25,8 @@ public class StompSendActionTest extends BaseStompTest {
 
         QueueMessage message = dequeue().getMessage();
         assert message.getMessageType() == QueueMessageType.STRING;
-        assert message.getSource().toString(getUTF8()).equals(send.content().toString(getUTF8())) : message.getSource().toString(getUTF8()) + " != " + send.content().toString(getUTF8());
+        assert message.getSource().toString(Strings.UTF8).equals(send.content().toString(Strings.UTF8))
+            : message.getSource().toString(Strings.UTF8) + " != " + send.content().toString(Strings.UTF8);
         send.content().release();
     }
 }

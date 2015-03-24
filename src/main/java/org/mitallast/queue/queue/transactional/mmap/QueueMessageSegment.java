@@ -3,7 +3,6 @@ package org.mitallast.queue.queue.transactional.mmap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.transactional.TransactionalQueueComponent;
 import org.mitallast.queue.queue.transactional.mmap.data.QueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMeta;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMetaSegment;
@@ -12,12 +11,12 @@ import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus;
 import java.io.IOException;
 import java.util.UUID;
 
-public class MMapQueueMessageSegment implements TransactionalQueueComponent {
+public class QueueMessageSegment implements TransactionalQueueSegment {
 
     private final QueueMessageAppendSegment messageAppendSegment;
     private final QueueMessageMetaSegment messageMetaSegment;
 
-    public MMapQueueMessageSegment(QueueMessageAppendSegment messageAppendSegment, QueueMessageMetaSegment messageMetaSegment) {
+    public QueueMessageSegment(QueueMessageAppendSegment messageAppendSegment, QueueMessageMetaSegment messageMetaSegment) {
         this.messageAppendSegment = messageAppendSegment;
         this.messageMetaSegment = messageMetaSegment;
     }
@@ -39,6 +38,35 @@ public class MMapQueueMessageSegment implements TransactionalQueueComponent {
             return readMessage(meta);
         }
         return null;
+    }
+
+    @Override
+    public boolean insert(UUID uuid) throws IOException {
+        return messageMetaSegment.insert(uuid);
+    }
+
+    @Override
+    public boolean writeLock(UUID uuid) throws IOException {
+        return messageMetaSegment.writeLock(uuid);
+    }
+
+    @Override
+    public boolean writeMessage(QueueMessage queueMessage) throws IOException {
+        ByteBuf source = queueMessage.getSource();
+        source.resetReaderIndex();
+        int length = source.readableBytes();
+        long offset = messageAppendSegment.append(source);
+
+        QueueMessageMeta messageMeta = new QueueMessageMeta(
+            queueMessage.getUuid(),
+            QueueMessageStatus.QUEUED,
+            offset,
+            length,
+            queueMessage.getMessageType()
+        );
+
+        messageMetaSegment.writeMeta(messageMeta);
+        return true;
     }
 
     @Override
@@ -78,29 +106,13 @@ public class MMapQueueMessageSegment implements TransactionalQueueComponent {
     }
 
     @Override
-    public boolean push(QueueMessage queueMessage) throws IOException {
-        if (messageMetaSegment.writeLock(queueMessage.getUuid())) {
-            ByteBuf source = queueMessage.getSource();
-            source.resetReaderIndex();
-            int length = source.readableBytes();
-            long offset = messageAppendSegment.append(source);
-
-            QueueMessageMeta messageMeta = new QueueMessageMeta(
-                queueMessage.getUuid(),
-                QueueMessageStatus.INIT,
-                offset,
-                length,
-                queueMessage.getMessageType()
-            );
-
-            messageMetaSegment.writeMeta(messageMeta);
-            return true;
-        }
-        return false;
+    public long size() {
+        return 0;
     }
 
     @Override
-    public long size() {
-        return 0;
+    public void close() throws IOException {
+        messageAppendSegment.close();
+        messageMetaSegment.close();
     }
 }

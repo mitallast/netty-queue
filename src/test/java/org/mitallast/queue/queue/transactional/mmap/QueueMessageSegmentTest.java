@@ -12,19 +12,19 @@ import org.mitallast.queue.queue.transactional.mmap.meta.MMapQueueMessageMetaSeg
 
 import java.io.RandomAccessFile;
 
-public class MMapQueueMessageSegmentTest extends BaseTest {
+public class QueueMessageSegmentTest extends BaseTest {
 
     private MemoryMappedFile mmapFile1;
     private MemoryMappedFile mmapFile2;
 
-    private MMapQueueMessageSegment segment;
+    private QueueMessageSegment segment;
 
     @Before
     public void setUp() throws Exception {
         int pageSize = 1048576;
         mmapFile1 = new MemoryMappedFile(new RandomAccessFile(testFolder.newFile(), "rw"), pageSize, 50);
         mmapFile2 = new MemoryMappedFile(new RandomAccessFile(testFolder.newFile(), "rw"), pageSize, 50);
-        segment = new MMapQueueMessageSegment(
+        segment = new QueueMessageSegment(
             new MMapQueueMessageAppendSegment(mmapFile1),
             new MMapQueueMessageMetaSegment(mmapFile2, 1024, 0.7f)
         );
@@ -42,9 +42,13 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        Assert.assertTrue(segment.push(message1));
-        Assert.assertTrue(segment.push(message2));
-        Assert.assertTrue(segment.push(message3));
+        segment.writeLock(message1.getUuid());
+        segment.writeLock(message2.getUuid());
+        segment.writeLock(message3.getUuid());
+
+        Assert.assertTrue(segment.writeMessage(message1));
+        Assert.assertTrue(segment.writeMessage(message2));
+        Assert.assertTrue(segment.writeMessage(message3));
     }
 
     @Test
@@ -53,9 +57,13 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.push(message1);
-        segment.push(message2);
-        segment.push(message3);
+        segment.writeLock(message1.getUuid());
+        segment.writeLock(message2.getUuid());
+        segment.writeLock(message3.getUuid());
+
+        segment.writeMessage(message1);
+        segment.writeMessage(message2);
+        segment.writeMessage(message3);
 
         Assert.assertEquals(message1, segment.get(message1.getUuid()));
         Assert.assertEquals(message2, segment.get(message2.getUuid()));
@@ -68,9 +76,13 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.push(message1);
-        segment.push(message2);
-        segment.push(message3);
+        segment.writeLock(message1.getUuid());
+        segment.writeLock(message2.getUuid());
+        segment.writeLock(message3.getUuid());
+
+        segment.writeMessage(message1);
+        segment.writeMessage(message2);
+        segment.writeMessage(message3);
 
         Assert.assertEquals(message1, segment.lock(message1.getUuid()));
         Assert.assertEquals(message2, segment.lock(message2.getUuid()));
@@ -87,9 +99,13 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.push(message1);
-        segment.push(message2);
-        segment.push(message3);
+        segment.writeLock(message1.getUuid());
+        segment.writeLock(message2.getUuid());
+        segment.writeLock(message3.getUuid());
+
+        segment.writeMessage(message1);
+        segment.writeMessage(message2);
+        segment.writeMessage(message3);
 
         Assert.assertNotNull(segment.lockAndPop());
         Assert.assertNotNull(segment.lockAndPop());
@@ -104,9 +120,13 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.push(message1);
-        segment.push(message2);
-        segment.push(message3);
+        segment.writeLock(message1.getUuid());
+        segment.writeLock(message2.getUuid());
+        segment.writeLock(message3.getUuid());
+
+        segment.writeMessage(message1);
+        segment.writeMessage(message2);
+        segment.writeMessage(message3);
 
         segment.lock(message1.getUuid());
         segment.lock(message2.getUuid());
@@ -123,9 +143,13 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.push(message1);
-        segment.push(message2);
-        segment.push(message3);
+        segment.writeLock(message1.getUuid());
+        segment.writeLock(message2.getUuid());
+        segment.writeLock(message3.getUuid());
+
+        segment.writeMessage(message1);
+        segment.writeMessage(message2);
+        segment.writeMessage(message3);
 
         segment.lock(message1.getUuid());
         segment.lock(message2.getUuid());

@@ -1,9 +1,10 @@
 package org.mitallast.queue.queue.transactional.mmap.meta;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.UUID;
 
-public interface QueueMessageMetaSegment {
+public interface QueueMessageMetaSegment extends Closeable {
 
     QueueMessageMeta lockAndPop() throws IOException;
 
@@ -12,6 +13,8 @@ public interface QueueMessageMetaSegment {
     QueueMessageMeta unlockAndDelete(UUID uuid) throws IOException;
 
     QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException;
+
+    boolean insert(UUID uuid) throws IOException;
 
     boolean writeLock(UUID uuid) throws IOException;
 

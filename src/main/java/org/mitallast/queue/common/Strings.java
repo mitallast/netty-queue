@@ -1,6 +1,10 @@
 package org.mitallast.queue.common;
 
+import java.nio.charset.Charset;
+
 public class Strings {
+
+    public static final Charset UTF8 = Charset.forName("UTF-8");
 
     public static final String[] EMPTY_ARRAY = new String[0];
 

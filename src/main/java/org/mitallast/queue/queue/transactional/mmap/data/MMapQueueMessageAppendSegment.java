@@ -11,9 +11,9 @@ public class MMapQueueMessageAppendSegment implements QueueMessageAppendSegment 
     private final MemoryMappedFile mappedFile;
     private final AtomicLong messageWriteOffset;
 
-    public MMapQueueMessageAppendSegment(MemoryMappedFile mappedFile) {
+    public MMapQueueMessageAppendSegment(MemoryMappedFile mappedFile) throws IOException {
         this.mappedFile = mappedFile;
-        this.messageWriteOffset = new AtomicLong();
+        this.messageWriteOffset = new AtomicLong(mappedFile.length());
     }
 
     @Override
@@ -26,5 +26,11 @@ public class MMapQueueMessageAppendSegment implements QueueMessageAppendSegment 
         long offset = messageWriteOffset.getAndAdd(buffer.readableBytes());
         mappedFile.putBytes(offset, buffer);
         return offset;
+    }
+
+    @Override
+    public void close() throws IOException {
+        mappedFile.flush();
+        mappedFile.close();
     }
 }

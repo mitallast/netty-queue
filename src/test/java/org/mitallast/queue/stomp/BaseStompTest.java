@@ -8,6 +8,7 @@ import io.netty.handler.codec.stomp.StompHeaders;
 import org.junit.After;
 import org.junit.Before;
 import org.mitallast.queue.common.BaseQueueTest;
+import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.stomp.transport.StompClient;
 
 import java.util.ArrayList;
@@ -55,7 +56,7 @@ abstract public class BaseStompTest extends BaseQueueTest {
     }
 
     public StompFrame sendFrame(String string) {
-        return sendFrame(string.getBytes(getUTF8()));
+        return sendFrame(string.getBytes(Strings.UTF8));
     }
 
     public StompFrame sendFrame(byte[] data) {

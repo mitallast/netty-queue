@@ -3,8 +3,9 @@ package org.mitallast.queue.common;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.queue.QueueMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 public class BaseTest {
 
-    protected final static Charset UTF8 = Charset.forName("UTF-8");
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
@@ -30,10 +31,6 @@ public class BaseTest {
 
     protected final int total() {
         return max() * concurrency();
-    }
-
-    protected Charset getUTF8() {
-        return UTF8;
     }
 
     protected UUID randomUUID() {

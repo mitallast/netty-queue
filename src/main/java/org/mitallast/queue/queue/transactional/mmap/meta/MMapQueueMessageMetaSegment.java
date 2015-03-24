@@ -144,12 +144,14 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     }
 
     @Override
+    public boolean insert(UUID uuid) throws IOException {
+        return insertKey(uuid) >= 0;
+    }
+
+    @Override
     public boolean writeLock(UUID uuid) throws IOException {
-        int index = insert(uuid);
-        if (index >= 0) {
-            return setStatusInit(index);
-        }
-        return false;
+        int index = insertKey(uuid);
+        return index >= 0 && setStatusInit(index);
     }
 
     private boolean comparePosition(UUID uuid, int pos) {
@@ -206,7 +208,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     @Override
     public boolean writeMeta(QueueMessageMeta meta) throws IOException {
-        final int index = insert(meta.getUuid());
+        final int index = insertKey(meta.getUuid());
         if (index >= 0) {
             if (statusMap.compareAndSet(index, INIT, LOCKED)) {
                 writeMeta(meta, index);
@@ -269,7 +271,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         return -1;
     }
 
-    private int insert(final UUID uuid) {
+    private int insertKey(final UUID uuid) {
         final int hash = uuid.hashCode() & 0x7fffffff;
         int index = hash % size;
 
@@ -295,5 +297,11 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     private long getMetaOffset(int pos) {
         return MESSAGE_META_OFFSET + MESSAGE_META_SIZE * pos;
+    }
+
+    @Override
+    public void close() throws IOException {
+        mappedFile.flush();
+        mappedFile.close();
     }
 }

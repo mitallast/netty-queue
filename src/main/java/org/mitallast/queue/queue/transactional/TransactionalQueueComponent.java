@@ -17,7 +17,5 @@ public interface TransactionalQueueComponent {
 
     public QueueMessage unlockAndRollback(UUID uuid) throws IOException;
 
-    public boolean push(QueueMessage queueMessage) throws IOException;
-
     long size();
 }

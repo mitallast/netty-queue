@@ -24,7 +24,7 @@ public class RestClient extends NettyClient {
 
     @Override
     protected void init() {
-        channel.attr(attr).set(new ConcurrentLinkedDeque<BasicFuture<FullHttpResponse>>());
+        channel.attr(attr).set(new ConcurrentLinkedDeque<>());
     }
 
     public Future<FullHttpResponse> send(HttpRequest request) {

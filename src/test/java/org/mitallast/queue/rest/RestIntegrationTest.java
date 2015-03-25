@@ -27,7 +27,7 @@ public class RestIntegrationTest extends BaseQueueTest {
     public void testConcurrent() throws Exception {
         createQueue();
         assertQueueEmpty();
-        warmUp();
+//        warmUp();
         long start = System.currentTimeMillis();
         executeConcurrent(() -> {
             try {
@@ -37,7 +37,7 @@ public class RestIntegrationTest extends BaseQueueTest {
             }
         });
         long end = System.currentTimeMillis();
-        printQps("send", max(), start, end);
+        printQps("send", total(), start, end);
     }
 
     private void warmUp() throws Exception {
@@ -48,24 +48,29 @@ public class RestIntegrationTest extends BaseQueueTest {
         RestClient restClient = new RestClient(settings());
         restClient.start();
         try {
-            byte[] bytes = "{\"message\":\"hello world\"}".getBytes();
-            List<Future<FullHttpResponse>> futures = new ArrayList<>(max);
-            for (int i = 0; i < max; i++) {
-                DefaultFullHttpRequest request = new DefaultFullHttpRequest(
+            while (true) {
+                logger.info("send");
+                byte[] bytes = "{\"message\":\"hello world\"}".getBytes();
+                List<Future<FullHttpResponse>> futures = new ArrayList<>(max);
+                for (int i = 0; i < max; i++) {
+                    DefaultFullHttpRequest request = new DefaultFullHttpRequest(
                         HttpVersion.HTTP_1_1,
                         HttpMethod.PUT,
                         "/" + queueName() + "/message",
                         Unpooled.wrappedBuffer(bytes)
-                );
-                request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
-                futures.add(restClient.send(request));
-            }
-            restClient.flush();
-            for (Future<FullHttpResponse> future : futures) {
-                FullHttpResponse response = future.get();
-                assert response.status().code() >= 200 : response.status();
-                assert response.status().code() < 300 : response.status();
-                response.content().release();
+                    );
+                    request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
+                    futures.add(restClient.send(request));
+                }
+                restClient.flush();
+                logger.info("await");
+                for (Future<FullHttpResponse> future : futures) {
+                    FullHttpResponse response = future.get();
+                    assert response.status().code() >= 200 : response.status();
+                    assert response.status().code() < 300 : response.status();
+                    response.content().release();
+                }
+                logger.info("await done");
             }
         } finally {
             restClient.stop();

@@ -29,13 +29,13 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     private final float segmentLoadFactor;
     private final ReentrantLock segmentsLock = new ReentrantLock();
     private MemoryMappedFileFactory mmapFileFactory;
-    private volatile ImmutableList<QueueMessageSegment> segments = ImmutableList.of();
+    private volatile ImmutableList<MMapQueueMessageSegment> segments = ImmutableList.of();
 
     public MMapTransactionalQueueService(Settings settings, Settings queueSettings, Queue queue) {
         super(settings, queueSettings, queue);
         workDir = this.settings.get("work_dir", "data");
-        segmentMaxSize = this.settings.getAsInt("segment.max_size", 655360);
-        segmentLoadFactor = this.settings.getAsFloat("segment.load_factor", 0.75f);
+        segmentMaxSize = this.settings.getAsInt("segment.max_size", MMapQueueMessageMetaSegment.DEFAULT_MAX_SIZE);
+        segmentLoadFactor = this.settings.getAsFloat("segment.load_factor", MMapQueueMessageMetaSegment.DEFAULT_LOAD_FACTOR);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     protected void doStop() throws QueueException {
-        for (QueueMessageSegment segment : segments) {
+        for (MMapQueueMessageSegment segment : segments) {
             try {
                 segment.close();
             } catch (IOException e) {
@@ -76,10 +76,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public QueueMessage get(UUID uuid) throws IOException {
-        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final ImmutableList<MMapQueueMessageSegment> current = this.segments;
         final int size = current.size();
         for (int i = 0; i < size; i++) {
-            final QueueMessageSegment segment = current.get(i);
+            final MMapQueueMessageSegment segment = current.get(i);
             if (segment.acquire() > 0) {
                 try {
                     QueueMessage queueMessage = segment.get(uuid);
@@ -96,10 +96,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public QueueMessage lock(UUID uuid) throws IOException {
-        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final ImmutableList<MMapQueueMessageSegment> current = this.segments;
         final int size = current.size();
         for (int i = 0; i < size; i++) {
-            final QueueMessageSegment segment = current.get(i);
+            final MMapQueueMessageSegment segment = current.get(i);
             if (segment.acquire() > 0) {
                 try {
                     QueueMessage queueMessage = segment.lock(uuid);
@@ -116,10 +116,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public QueueMessage peek() throws IOException {
-        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final ImmutableList<MMapQueueMessageSegment> current = this.segments;
         final int size = current.size();
         for (int i = 0; i < size; i++) {
-            final QueueMessageSegment segment = current.get(i);
+            final MMapQueueMessageSegment segment = current.get(i);
             if (segment.acquire() > 0) {
                 try {
                     QueueMessage queueMessage = segment.peek();
@@ -136,10 +136,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public QueueMessage lockAndPop() throws IOException {
-        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final ImmutableList<MMapQueueMessageSegment> current = this.segments;
         final int size = current.size();
         for (int i = 0; i < size; i++) {
-            final QueueMessageSegment segment = current.get(i);
+            final MMapQueueMessageSegment segment = current.get(i);
             if (segment.acquire() > 0) {
                 try {
                     QueueMessage queueMessage = segment.lockAndPop();
@@ -156,10 +156,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public QueueMessage unlockAndDelete(UUID uuid) throws IOException {
-        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final ImmutableList<MMapQueueMessageSegment> current = this.segments;
         final int size = current.size();
         for (int i = 0; i < size; i++) {
-            final QueueMessageSegment segment = current.get(i);
+            final MMapQueueMessageSegment segment = current.get(i);
             if (segment.acquire() > 0) {
                 try {
                     QueueMessage queueMessage = segment.unlockAndDelete(uuid);
@@ -176,10 +176,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public QueueMessage unlockAndRollback(UUID uuid) throws IOException {
-        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final ImmutableList<MMapQueueMessageSegment> current = this.segments;
         final int size = current.size();
         for (int i = 0; i < size; i++) {
-            final QueueMessageSegment segment = current.get(i);
+            final MMapQueueMessageSegment segment = current.get(i);
             if (segment.acquire() > 0) {
                 try {
                     QueueMessage queueMessage = segment.unlockAndRollback(uuid);
@@ -204,10 +204,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
             uuid = queueMessage.getUuid();
         }
         while (true) {
-            final ImmutableList<QueueMessageSegment> current = this.segments;
+            final ImmutableList<MMapQueueMessageSegment> current = this.segments;
             final int size = current.size();
             for (int i = 0; i < size; i++) {
-                final QueueMessageSegment segment = current.get(i);
+                final MMapQueueMessageSegment segment = current.get(i);
                 if (segment.acquire() > 0) {
                     try {
                         if (segment.insert(uuid)) {
@@ -244,11 +244,11 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     public void garbageCollect() throws IOException {
         segmentsLock.lock();
         try {
-            ImmutableList<QueueMessageSegment> current = this.segments;
-            ImmutableList.Builder<QueueMessageSegment> garbageBuilder = ImmutableList.builder();
-            ImmutableList.Builder<QueueMessageSegment> cleanBuilder = ImmutableList.builder();
+            ImmutableList<MMapQueueMessageSegment> current = this.segments;
+            ImmutableList.Builder<MMapQueueMessageSegment> garbageBuilder = ImmutableList.builder();
+            ImmutableList.Builder<MMapQueueMessageSegment> cleanBuilder = ImmutableList.builder();
 
-            for (QueueMessageSegment segment : current) {
+            for (MMapQueueMessageSegment segment : current) {
                 if (segment.isGarbage() && segment.releaseGarbage()) {
                     garbageBuilder.add(segment);
                 } else {
@@ -258,7 +258,7 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
             this.segments = cleanBuilder.build();
 
-            for (QueueMessageSegment segment : garbageBuilder.build()) {
+            for (MMapQueueMessageSegment segment : garbageBuilder.build()) {
                 segment.delete();
             }
 
@@ -267,12 +267,12 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         }
     }
 
-    private void addSegment(ImmutableList<QueueMessageSegment> current) throws IOException {
+    private void addSegment(ImmutableList<MMapQueueMessageSegment> current) throws IOException {
         // create new segment
         if (segmentsLock.tryLock()) {
             try {
                 if (this.segments == current) {
-                    this.segments = ImmutableList.<QueueMessageSegment>builder()
+                    this.segments = ImmutableList.<MMapQueueMessageSegment>builder()
                         .addAll(current)
                         .add(createSegment())
                         .build();
@@ -297,9 +297,9 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         );
     }
 
-    private QueueMessageSegment createSegment() throws IOException {
+    private MMapQueueMessageSegment createSegment() throws IOException {
         logger.info("create new segment");
-        return new QueueMessageSegment(
+        return new MMapQueueMessageSegment(
             createAppendSegment(),
             createMetaSegment()
         );

@@ -16,8 +16,8 @@ public class MemoryMappedFileFactory extends AbstractComponent {
     public MemoryMappedFileFactory(Settings settings, File directory) throws IOException {
         super(settings);
         this.directory = directory;
-        pageSize = this.settings.getAsInt("page_size", 65536);
-        maxPages = this.settings.getAsInt("max_pages", 10);
+        pageSize = this.settings.getAsInt("page_size", MemoryMappedFile.DEFAULT_PAGE_SIZE);
+        maxPages = this.settings.getAsInt("max_pages", MemoryMappedFile.DEFAULT_MAX_PAGES);
         if (!directory.exists()) {
             if (!directory.mkdir()) {
                 throw new IOException("Error create directory " + directory);

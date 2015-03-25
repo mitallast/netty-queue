@@ -22,7 +22,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        mmapFile = new MemoryMappedFile(testFolder.newFile(), 1048576, 50);
+        mmapFile = new MemoryMappedFile(testFolder.newFile());
     }
 
     @After
@@ -85,7 +85,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
             }
         });
         end = System.currentTimeMillis();
-        printQps("read/write", total() * concurrency() * 2, start, end);
+        printQps("read/write concurrent", total() * concurrency() * 2, start, end);
     }
 
     @Test

@@ -10,21 +10,20 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.mmap.data.MMapQueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.MMapQueueMessageMetaSegment;
 
-public class QueueMessageSegmentTest extends BaseTest {
+public class MMapQueueMessageSegmentTest extends BaseTest {
 
     private MemoryMappedFile mmapFile1;
     private MemoryMappedFile mmapFile2;
 
-    private QueueMessageSegment segment;
+    private MMapQueueMessageSegment segment;
 
     @Before
     public void setUp() throws Exception {
-        int pageSize = 1048576;
-        mmapFile1 = new MemoryMappedFile(testFolder.newFile(), pageSize, 50);
-        mmapFile2 = new MemoryMappedFile(testFolder.newFile(), pageSize, 50);
-        segment = new QueueMessageSegment(
+        mmapFile1 = new MemoryMappedFile(testFolder.newFile());
+        mmapFile2 = new MemoryMappedFile(testFolder.newFile());
+        segment = new MMapQueueMessageSegment(
             new MMapQueueMessageAppendSegment(mmapFile1),
-            new MMapQueueMessageMetaSegment(mmapFile2, 1024, 0.7f)
+            new MMapQueueMessageMetaSegment(mmapFile2, total(), 0.7f)
         );
     }
 

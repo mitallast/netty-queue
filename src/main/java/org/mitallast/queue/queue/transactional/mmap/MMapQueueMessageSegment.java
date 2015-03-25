@@ -12,13 +12,13 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class QueueMessageSegment implements TransactionalQueueSegment {
+public class MMapQueueMessageSegment implements TransactionalQueueSegment {
 
     private final QueueMessageAppendSegment messageAppendSegment;
     private final QueueMessageMetaSegment messageMetaSegment;
     private final AtomicInteger referenceCount;
 
-    public QueueMessageSegment(QueueMessageAppendSegment messageAppendSegment, QueueMessageMetaSegment messageMetaSegment) {
+    public MMapQueueMessageSegment(QueueMessageAppendSegment messageAppendSegment, QueueMessageMetaSegment messageMetaSegment) {
         this.messageAppendSegment = messageAppendSegment;
         this.messageMetaSegment = messageMetaSegment;
         this.referenceCount = new AtomicInteger();

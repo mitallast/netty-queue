@@ -13,11 +13,17 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
 public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Closeable {
+    public final static int DEFAULT_PAGE_SIZE = 1048576;
+    public final static int DEFAULT_MAX_PAGES = 64;
     private final File file;
     private final RandomAccessFile randomAccessFile;
     private final int pageSize;
     private final FileChannel channel;
     private final MemoryMappedPageCache pageCache;
+
+    public MemoryMappedFile(File file) throws IOException {
+        this(file, DEFAULT_PAGE_SIZE, DEFAULT_MAX_PAGES);
+    }
 
     public MemoryMappedFile(File file, int pageSize, int maxPages) throws IOException {
         this.file = file;

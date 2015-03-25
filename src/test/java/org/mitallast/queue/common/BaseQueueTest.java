@@ -22,7 +22,7 @@ public abstract class BaseQueueTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED);
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
         settings = ImmutableSettings.builder()
                 .put("work_dir", testFolder.newFolder().getAbsolutePath())
                 .put("rest.transport.host", "127.0.0.1")

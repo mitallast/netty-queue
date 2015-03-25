@@ -14,7 +14,7 @@ import java.io.IOException;
 
 public class MMapTransactionalQueueServiceTest extends BaseTest {
 
-    private final static int segmentsSize = 1000;
+    private final static int segmentsSize = 256;
     private MMapTransactionalQueueService service;
 
     @Before
@@ -155,7 +155,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     public void testGarbageCollectConcurrent() throws Exception {
         executeConcurrent(() -> {
             try {
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < 4; i++) {
                     for (QueueMessage message : createMessagesWithUuid(segmentsSize)) {
                         service.push(message);
                         service.lock(message.getUuid());

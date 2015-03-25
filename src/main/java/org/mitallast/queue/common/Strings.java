@@ -117,6 +117,19 @@ public class Strings {
         return buffer;
     }
 
+    public static void writeChar(ByteBuf buffer, char c) {
+        if (c < 0x80) {
+            buffer.writeByte((byte) c);
+        } else if (c < 0x800) {
+            buffer.writeByte((byte) (0xc0 | (c >> 6)));
+            buffer.writeByte((byte) (0x80 | (c & 0x3f)));
+        } else {
+            buffer.writeByte((byte) (0xe0 | (c >> 12)));
+            buffer.writeByte((byte) (0x80 | ((c >> 6) & 0x3f)));
+            buffer.writeByte((byte) (0x80 | (c & 0x3f)));
+        }
+    }
+
     public static boolean isEmpty(String string) {
         return string == null || string.isEmpty();
     }

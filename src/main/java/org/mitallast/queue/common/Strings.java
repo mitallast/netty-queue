@@ -1,6 +1,8 @@
 package org.mitallast.queue.common;
 
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Strings {
 
@@ -67,41 +69,24 @@ public class Strings {
         return splitStringToArray(s, ',');
     }
 
-    public static String[] splitStringToArray(final String s, final char c) {
-        if (s == null || s.length() == 0) {
+    public static String[] splitStringToArray(final String s, final char delimiter) {
+        if (s == null || s.isEmpty()) {
             return Strings.EMPTY_ARRAY;
         }
-        int count = 1;
-        char[] chars = s.toCharArray();
-        for (char cc : chars) {
-            if (cc == c) {
-                count++;
+        int length = s.length();
+        List<String> list = new ArrayList<>(8);
+        int start = 0;
+        for (int index = 0; index < length; index++) {
+            char currentChar = s.charAt(index);
+            if (currentChar == delimiter) {
+                list.add(s.substring(start, index));
+                start = index + 1;
             }
         }
-        final String[] result = new String[count];
-        final StringBuilder builder = new StringBuilder();
-        int res = 0;
-        for (char aChar : chars) {
-            if (aChar == c) {
-                if (builder.length() > 0) {
-                    result[res++] = builder.toString();
-                    builder.setLength(0);
-                }
-
-            } else {
-                builder.append(aChar);
-            }
+        if (start < length) {
+            list.add(s.substring(start, length));
         }
-        if (builder.length() > 0) {
-            result[res++] = builder.toString();
-        }
-        if (res != count) {
-            // we have empty strings, copy over to a new array
-            String[] result1 = new String[res];
-            System.arraycopy(result, 0, result1, 0, res);
-            return result1;
-        }
-        return result;
+        return list.toArray(new String[list.size()]);
     }
 
     public static boolean hasLength(CharSequence str) {

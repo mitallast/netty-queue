@@ -7,7 +7,7 @@ import org.mitallast.queue.client.ClientModule;
 import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queues.InternalQueuesService;
+import org.mitallast.queue.queues.transactional.InternalTransactionalQueuesService;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.rest.transport.HttpServer;
@@ -59,7 +59,7 @@ public class InternalNode implements Node {
             return this;
         }
         logger.info("starting...");
-        injector.getInstance(InternalQueuesService.class).start();
+        injector.getInstance(InternalTransactionalQueuesService.class).start();
         injector.getInstance(HttpServer.class).start();
         injector.getInstance(StompServer.class).start();
         logger.info("started");
@@ -74,7 +74,7 @@ public class InternalNode implements Node {
         logger.info("stopping...");
         injector.getInstance(StompServer.class).stop();
         injector.getInstance(HttpServer.class).stop();
-        injector.getInstance(InternalQueuesService.class).stop();
+        injector.getInstance(InternalTransactionalQueuesService.class).stop();
         logger.info("stopped");
         return this;
     }
@@ -90,7 +90,7 @@ public class InternalNode implements Node {
         logger.info("closing...");
         injector.getInstance(StompServer.class).close();
         injector.getInstance(HttpServer.class).close();
-        injector.getInstance(InternalQueuesService.class).close();
+        injector.getInstance(InternalTransactionalQueuesService.class).close();
         logger.info("closed");
     }
 

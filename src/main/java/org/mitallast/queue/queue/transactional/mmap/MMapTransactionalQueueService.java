@@ -216,29 +216,28 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
     }
 
     public void garbageCollect() throws IOException {
-        if (segmentsLock.tryLock()) {
-            try {
-                ImmutableList<QueueMessageSegment> current = this.segments;
-                ImmutableList.Builder<QueueMessageSegment> garbageBuilder = ImmutableList.builder();
-                ImmutableList.Builder<QueueMessageSegment> cleanBuilder = ImmutableList.builder();
+        segmentsLock.lock();
+        try {
+            ImmutableList<QueueMessageSegment> current = this.segments;
+            ImmutableList.Builder<QueueMessageSegment> garbageBuilder = ImmutableList.builder();
+            ImmutableList.Builder<QueueMessageSegment> cleanBuilder = ImmutableList.builder();
 
-                for (QueueMessageSegment segment : current) {
-                    if (segment.isGarbage() && segment.releaseGarbage()) {
-                        garbageBuilder.add(segment);
-                    } else {
-                        cleanBuilder.add(segment);
-                    }
+            for (QueueMessageSegment segment : current) {
+                if (segment.isGarbage() && segment.releaseGarbage()) {
+                    garbageBuilder.add(segment);
+                } else {
+                    cleanBuilder.add(segment);
                 }
-
-                this.segments = cleanBuilder.build();
-
-                for (QueueMessageSegment segment : garbageBuilder.build()) {
-                    segment.delete();
-                }
-
-            } finally {
-                segmentsLock.unlock();
             }
+
+            this.segments = cleanBuilder.build();
+
+            for (QueueMessageSegment segment : garbageBuilder.build()) {
+                segment.delete();
+            }
+
+        } finally {
+            segmentsLock.unlock();
         }
     }
 

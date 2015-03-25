@@ -13,7 +13,7 @@ import java.io.IOException;
 
 public class MMapTransactionalQueueServiceTest extends BaseTest {
 
-    private final static int segmentsSize = 42;
+    private final static int segmentsSize = 1000;
     private MMapTransactionalQueueService service;
 
     @Before
@@ -148,6 +148,25 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
         assert service.segmentsSize() == 2;
         service.garbageCollect();
         assert service.segmentsSize() == 0 : service.segmentsSize();
+    }
+
+    @Test
+    public void testGarbageCollectConcurrent() throws Exception {
+        executeConcurrent(() -> {
+            try {
+                for (int i = 0; i < 20; i++) {
+                    for (QueueMessage message : createMessagesWithUuid(segmentsSize)) {
+                        service.push(message);
+                        service.lock(message.getUuid());
+                        service.unlockAndDelete(message.getUuid());
+                    }
+                    service.garbageCollect();
+                }
+            } catch (IOException e) {
+                assert false : e;
+            }
+        });
+        assert service.segmentsSize() == 0;
     }
 
     @Test

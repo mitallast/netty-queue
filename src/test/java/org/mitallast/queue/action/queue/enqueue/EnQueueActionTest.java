@@ -26,7 +26,7 @@ public class EnQueueActionTest extends BaseQueueTest {
         send(max());
 
         long start = System.currentTimeMillis();
-        executeConcurrent((Task) () -> send(max()));
+        executeConcurrent(() -> send(max()));
         long end = System.currentTimeMillis();
         printQps("send", total(), start, end);
     }

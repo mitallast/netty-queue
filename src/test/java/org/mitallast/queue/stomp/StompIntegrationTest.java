@@ -29,7 +29,7 @@ public class StompIntegrationTest extends BaseStompTest {
         createQueue();
         warmUp();
         long start = System.currentTimeMillis();
-        executeConcurrent((Task) () -> send(max()));
+        executeConcurrent(() -> send(max()));
         long end = System.currentTimeMillis();
         printQps("send", total(), start, end);
     }

@@ -88,7 +88,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
 
     @Test
     public void testEnqueueAndGetConcurrent() throws Exception {
-        executeConcurrent((Task) () -> {
+        executeConcurrent(() -> {
             for (int i = 0; i < max(); i++) {
                 QueueMessage queueMessage = createMessage();
                 queueService.enqueue(queueMessage);
@@ -103,14 +103,14 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
 
     @Test
     public void testEnqueueAndDeQueueConcurrent() throws Exception {
-        executeConcurrent((Task) () -> {
+        executeConcurrent(() -> {
             for (int i = 0; i < max(); i++) {
                 QueueMessage queueMessage = createMessage();
                 queueService.enqueue(queueMessage);
             }
         });
         assert queueService.size() == total();
-        executeConcurrent((Task) () -> {
+        executeConcurrent(() -> {
             for (int i = 0; i < max(); i++) {
                 QueueMessage queueMessage = queueService.dequeue();
                 assert queueMessage != null;
@@ -200,7 +200,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
         warmUp();
         createMessages(total()).forEach(queueService::enqueue);
         long start = System.currentTimeMillis();
-        executeConcurrent((Task) () -> {
+        executeConcurrent(() -> {
             for (int i = 0; i < max(); i++) {
                 QueueMessage message = queueService.dequeue();
                 assert message != null;
@@ -216,7 +216,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
         warmUp();
         createMessagesWithUuid(total()).forEach(queueService::enqueue);
         long start = System.currentTimeMillis();
-        executeConcurrent((Task) () -> {
+        executeConcurrent(() -> {
             for (int i = 0; i < max(); i++) {
                 QueueMessage message = queueService.dequeue();
                 assert message != null;

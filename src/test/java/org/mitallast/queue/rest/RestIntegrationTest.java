@@ -29,7 +29,7 @@ public class RestIntegrationTest extends BaseQueueTest {
         assertQueueEmpty();
         warmUp();
         long start = System.currentTimeMillis();
-        executeConcurrent((Task) () -> {
+        executeConcurrent(() -> {
             try {
                 send(max());
             } catch (Exception e) {

@@ -1,8 +1,5 @@
 package org.mitallast.queue.common.mmap.cache;
 
-import gnu.trove.impl.sync.TSynchronizedLongObjectMap;
-import gnu.trove.map.TLongObjectMap;
-import gnu.trove.map.hash.TLongObjectHashMap;
 import org.mitallast.queue.common.concurrent.MapReentrantLock;
 import org.mitallast.queue.common.mmap.MemoryMappedPage;
 
@@ -10,8 +7,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
 
@@ -19,18 +18,18 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
         (o1, o2) -> (int) (o2.getTimestamp() - o1.getTimestamp());
     private final Loader loader;
     private final int maxPages;
-    private final TLongObjectMap<MemoryMappedPage> pageMap;
+    private final ConcurrentHashMap<Long, MemoryMappedPage> pageMap;
     private final ArrayList<MemoryMappedPage> garbage = new ArrayList<>();
     private final MapReentrantLock pageLock;
-    private final ReentrantLock gcLock;
+    private final ReentrantReadWriteLock gcLock;
     private final AtomicInteger pagesCount;
 
     public MemoryMappedPageCacheSegment(Loader loader, int maxPages) {
         this.loader = loader;
         this.maxPages = maxPages;
-        pageMap = new TSynchronizedLongObjectMap<>(new TLongObjectHashMap<>());
+        pageMap = new ConcurrentHashMap<>();
         pageLock = new MapReentrantLock(maxPages);
-        gcLock = new ReentrantLock();
+        gcLock = new ReentrantReadWriteLock();
         pagesCount = new AtomicInteger();
     }
 
@@ -43,6 +42,13 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
                 int rc = page.getReferenceCount();
                 if (rc >= 1) {
                     if (page.setReferenceCount(rc, rc + 1)) {
+                        if (gcLock.readLock().tryLock()) {
+                            try {
+                                page.setTimestamp(System.currentTimeMillis());
+                            } finally {
+                                gcLock.readLock().unlock();
+                            }
+                        }
                         return page;
                     }
                 } else {
@@ -55,22 +61,29 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
         try {
             page = pageMap.get(offset);
             if (page != null) {
-                int rc = page.acquire();
-                assert rc > 1 : rc;
-                if (gcLock.tryLock()) {
-                    try {
-                        page.setTimestamp(System.currentTimeMillis());
-                    } finally {
-                        gcLock.unlock();
+                while (true) {
+                    int rc = page.getReferenceCount();
+                    if (rc >= 1) {
+                        if (page.setReferenceCount(rc, rc + 1)) {
+                            if (gcLock.readLock().tryLock()) {
+                                try {
+                                    page.setTimestamp(System.currentTimeMillis());
+                                } finally {
+                                    gcLock.readLock().unlock();
+                                }
+                            }
+                            return page;
+                        } else {
+                            break;
+                        }
                     }
                 }
-                return page;
             }
             page = loader.load(offset);
             assert page.acquire() == 1; // allocation
             assert page.acquire() == 2; // acquire
             page.setTimestamp(System.currentTimeMillis());
-            assert pageMap.put(offset, page) == null;
+            pageMap.put(offset, page);
             pagesCount.incrementAndGet();
             return page;
         } finally {
@@ -86,7 +99,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
 
     @Override
     public synchronized void flush() throws IOException {
-        for (MemoryMappedPage page : pageMap.valueCollection()) {
+        for (MemoryMappedPage page : pageMap.values()) {
             final ReentrantLock lock = pageLock.get(page.getOffset());
             lock.lock();
             try {
@@ -99,7 +112,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
 
     @Override
     public synchronized void close() throws IOException {
-        for (MemoryMappedPage page : pageMap.valueCollection()) {
+        for (MemoryMappedPage page : pageMap.values()) {
             final ReentrantLock lock = pageLock.get(page.getOffset());
             lock.lock();
             try {
@@ -111,25 +124,28 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
     }
 
     private void garbageCollect() throws IOException {
-        if (pagesCount.get() > maxPages
-            && !gcLock.isLocked()
-            && gcLock.tryLock()) {
+        if (pagesCount.get() > maxPages && gcLock.writeLock().tryLock()) {
             try {
                 garbage.clear();
-                garbage.addAll(pageMap.valueCollection());
+                garbage.addAll(pageMap.values());
                 Collections.sort(garbage, reserveComparator);
                 for (int i = garbage.size() - 1; i > 0 && garbage.size() > maxPages; i--) {
                     MemoryMappedPage page = garbage.get(i);
                     final ReentrantLock lock = pageLock.get(page.getOffset());
                     lock.lock();
                     try {
-                        int rc = page.getReferenceCount();
-                        if (rc == 1) {
-                            if (page.setReferenceCount(rc, rc - 1)) {
-                                pageMap.remove(page.getOffset());
-                                garbage.remove(i);
-                                pagesCount.decrementAndGet();
-                                page.close();
+                        while (true) {
+                            int rc = page.getReferenceCount();
+                            if (rc == 1) {
+                                if (page.setReferenceCount(rc, rc - 1)) {
+                                    pageMap.remove(page.getOffset(), page);
+                                    garbage.remove(i);
+                                    pagesCount.decrementAndGet();
+                                    page.close();
+                                    break;
+                                }
+                            } else {
+                                break;
                             }
                         }
                     } finally {
@@ -137,7 +153,7 @@ public class MemoryMappedPageCacheSegment implements MemoryMappedPageCache {
                     }
                 }
             } finally {
-                gcLock.unlock();
+                gcLock.writeLock().unlock();
             }
         }
     }

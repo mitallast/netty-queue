@@ -29,14 +29,11 @@ public class RestIntegrationTest extends BaseQueueTest {
         assertQueueEmpty();
         warmUp();
         long start = System.currentTimeMillis();
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    send(max());
-                } catch (Exception e) {
-                    assert false : e;
-                }
+        executeConcurrent((Task) () -> {
+            try {
+                send(max());
+            } catch (Exception e) {
+                assert false : e;
             }
         });
         long end = System.currentTimeMillis();

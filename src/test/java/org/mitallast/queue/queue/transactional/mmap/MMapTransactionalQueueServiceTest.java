@@ -184,7 +184,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
         logger.info("generate test data");
         QueueMessage[][] messagesWithUuid = new QueueMessage[concurrency()][];
         long start = System.currentTimeMillis();
-        executeConcurrent((t, c) -> () -> {
+        executeConcurrent((t, c) -> {
             messagesWithUuid[t] = createMessagesWithUuid(max());
         });
         long end = System.currentTimeMillis();
@@ -192,7 +192,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
 
         logger.info("write test data");
         start = System.currentTimeMillis();
-        executeConcurrent((t, c) -> () -> {
+        executeConcurrent((t, c) -> {
             try {
                 for (QueueMessage expected : messagesWithUuid[t]) {
                     Assert.assertTrue(service.push(expected));
@@ -206,7 +206,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
 
         logger.info("read test data");
         start = System.currentTimeMillis();
-        executeConcurrent((t, c) -> () -> {
+        executeConcurrent((t, c) -> {
             try {
                 for (QueueMessage expected : messagesWithUuid[t]) {
                     QueueMessage actual = service.get(expected.getUuid());

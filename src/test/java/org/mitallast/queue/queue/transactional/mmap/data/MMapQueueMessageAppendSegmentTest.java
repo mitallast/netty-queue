@@ -88,7 +88,7 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
         }
 
         start = System.currentTimeMillis();
-        executeConcurrent((thread, concurrency) -> () -> {
+        executeConcurrent((thread, concurrency) -> {
             try {
                 for (int i = thread; i < max(); i += concurrency) {
                     long offset = segment.append(bufferList.get(i));

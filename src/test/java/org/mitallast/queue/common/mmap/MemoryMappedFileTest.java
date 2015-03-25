@@ -148,25 +148,17 @@ public class MemoryMappedFileTest extends BaseTest {
 
     @Test
     public void testPageConcurrent() throws Exception {
-        executeConcurrent(new RunnableFactory() {
-            @Override
-            public Runnable create(int thread, int concurrency) {
-                return new Runnable() {
-                    @Override
-                    public void run() {
-                        Random random = new Random();
-                        for (long i = 0; i < 1000; i++) {
-                            try {
-                                long offset = (long) random.nextInt(8192) * 8;
-                                MemoryMappedPage mappedPage = mappedFile.getPage(offset);
-                                mappedPage.getInt(offset);
-                                mappedFile.releasePage(mappedPage);
-                            } catch (Exception e) {
-                                assert false : e;
-                            }
-                        }
-                    }
-                };
+        executeConcurrent((thread, concurrency) -> {
+            Random random = new Random();
+            for (long i = 0; i < 1000; i++) {
+                try {
+                    long offset = (long) random.nextInt(8192) * 8;
+                    MemoryMappedPage mappedPage = mappedFile.getPage(offset);
+                    mappedPage.getInt(offset);
+                    mappedFile.releasePage(mappedPage);
+                } catch (Exception e) {
+                    assert false : e;
+                }
             }
         });
     }

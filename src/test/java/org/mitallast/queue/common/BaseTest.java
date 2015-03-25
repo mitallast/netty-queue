@@ -37,12 +37,18 @@ public class BaseTest {
         return UUIDs.generateRandom();
     }
 
-    protected void executeConcurrent(Runnable runnable) throws Exception {
+    protected void executeConcurrent(Task task) throws Exception {
         final ExecutorService executorService = Executors.newFixedThreadPool(concurrency());
         try {
             final List<Future> futures = new ArrayList<>(concurrency());
             for (int i = 0; i < concurrency(); i++) {
-                Future future = executorService.submit(runnable);
+                Future future = executorService.submit(() -> {
+                    try {
+                        task.execute();
+                    } catch (Exception e) {
+                        assert false : e;
+                    }
+                });
                 futures.add(future);
             }
             for (Future future : futures) {
@@ -54,12 +60,19 @@ public class BaseTest {
         }
     }
 
-    protected void executeConcurrent(RunnableFactory runnable) throws Exception {
+    protected void executeConcurrent(ThreadTask task) throws Exception {
         final ExecutorService executorService = Executors.newFixedThreadPool(concurrency());
         try {
             final List<Future> futures = new ArrayList<>(concurrency());
             for (int i = 0; i < concurrency(); i++) {
-                Future future = executorService.submit(runnable.create(i, concurrency()));
+                final int thread = i;
+                Future future = executorService.submit(() -> {
+                    try {
+                        task.execute(thread, concurrency());
+                    } catch (Exception e) {
+                        assert false : e;
+                    }
+                });
                 futures.add(future);
             }
             for (Future future : futures) {
@@ -114,7 +127,16 @@ public class BaseTest {
         return message;
     }
 
+    @Deprecated
     public static interface RunnableFactory {
         public Runnable create(int thread, int concurrency);
+    }
+
+    public static interface Task {
+        public void execute() throws Exception;
+    }
+
+    public static interface ThreadTask {
+        public void execute(int thread, int concurrency) throws Exception;
     }
 }

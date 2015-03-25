@@ -66,7 +66,7 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         }
 
         start = System.currentTimeMillis();
-        executeConcurrent((thread, concurrency) -> () -> {
+        executeConcurrent((thread, concurrency) -> {
             try {
                 for (int i = thread; i < total(); i += concurrency) {
                     QueueMessageMeta expected = metaList.get(i);

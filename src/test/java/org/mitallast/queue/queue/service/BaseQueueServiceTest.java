@@ -86,17 +86,14 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
 
     @Test
     public void testEnqueueAndGetConcurrent() throws Exception {
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < max(); i++) {
-                    QueueMessage queueMessage = createMessage();
-                    queueService.enqueue(queueMessage);
-                    assert queueMessage.getUuid() != null;
-                    QueueMessage queueMessageActual = queueService.get(queueMessage.getUuid());
-                    assert queueMessage.equals(queueMessageActual)
-                            : queueMessage + " != " + queueMessageActual;
-                }
+        executeConcurrent((Task) () -> {
+            for (int i = 0; i < max(); i++) {
+                QueueMessage queueMessage = createMessage();
+                queueService.enqueue(queueMessage);
+                assert queueMessage.getUuid() != null;
+                QueueMessage queueMessageActual = queueService.get(queueMessage.getUuid());
+                assert queueMessage.equals(queueMessageActual)
+                    : queueMessage + " != " + queueMessageActual;
             }
         });
         assert queueService.size() == total();
@@ -104,24 +101,18 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
 
     @Test
     public void testEnqueueAndDeQueueConcurrent() throws Exception {
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < max(); i++) {
-                    QueueMessage queueMessage = createMessage();
-                    queueService.enqueue(queueMessage);
-                }
+        executeConcurrent((Task) () -> {
+            for (int i = 0; i < max(); i++) {
+                QueueMessage queueMessage = createMessage();
+                queueService.enqueue(queueMessage);
             }
         });
         assert queueService.size() == total();
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < max(); i++) {
-                    QueueMessage queueMessage = queueService.dequeue();
-                    assert queueMessage != null;
-                    assert queueMessage.getUuid() != null;
-                }
+        executeConcurrent((Task) () -> {
+            for (int i = 0; i < max(); i++) {
+                QueueMessage queueMessage = queueService.dequeue();
+                assert queueMessage != null;
+                assert queueMessage.getUuid() != null;
             }
         });
     }
@@ -143,17 +134,9 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
         warmUp();
         final QueueMessage[] messages = createMessages();
         long start = System.currentTimeMillis();
-        executeConcurrent(new RunnableFactory() {
-            @Override
-            public Runnable create(final int thread, final int concurrency) {
-                return new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int i = thread; i < max(); i += concurrency) {
-                            queueService.enqueue(messages[i]);
-                        }
-                    }
-                };
+        executeConcurrent((thread, concurrency) -> {
+            for (int i = thread; i < max(); i += concurrency) {
+                queueService.enqueue(messages[i]);
             }
         });
         long end = System.currentTimeMillis();
@@ -177,17 +160,9 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
         warmUp();
         final QueueMessage[] messages = createMessagesWithUuid();
         long start = System.currentTimeMillis();
-        executeConcurrent(new RunnableFactory() {
-            @Override
-            public Runnable create(final int thread, final int concurrency) {
-                return new Runnable() {
-                    @Override
-                    public void run() {
-                        for (int i = thread; i < max(); i += concurrency) {
-                            queueService.enqueue(messages[i]);
-                        }
-                    }
-                };
+        executeConcurrent((thread, concurrency) -> {
+            for (int i = thread; i < max(); i += concurrency) {
+                queueService.enqueue(messages[i]);
             }
         });
         long end = System.currentTimeMillis();
@@ -236,14 +211,11 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
             queueService.enqueue(message);
         }
         long start = System.currentTimeMillis();
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < max(); i++) {
-                    QueueMessage message = queueService.dequeue();
-                    assert message != null;
-                    assert message.getUuid() != null;
-                }
+        executeConcurrent((Task) () -> {
+            for (int i = 0; i < max(); i++) {
+                QueueMessage message = queueService.dequeue();
+                assert message != null;
+                assert message.getUuid() != null;
             }
         });
         long end = System.currentTimeMillis();
@@ -258,14 +230,11 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
             queueService.enqueue(message);
         }
         long start = System.currentTimeMillis();
-        executeConcurrent(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < max(); i++) {
-                    QueueMessage message = queueService.dequeue();
-                    assert message != null;
-                    assert message.getUuid() != null;
-                }
+        executeConcurrent((Task) () -> {
+            for (int i = 0; i < max(); i++) {
+                QueueMessage message = queueService.dequeue();
+                assert message != null;
+                assert message.getUuid() != null;
             }
         });
         long end = System.currentTimeMillis();

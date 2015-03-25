@@ -2,10 +2,7 @@ package org.mitallast.queue.queue.transactional.memory;
 
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.AbstractQueueComponent;
-import org.mitallast.queue.queue.Queue;
-import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
+import org.mitallast.queue.queue.*;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.stats.QueueStats;
@@ -64,6 +61,19 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
     }
 
     @Override
+    public QueueMessage peek() throws IOException {
+        Iterator<MessageEntry> iterator = messageMap.values().iterator();
+        MessageEntry messageEntry;
+        while (iterator.hasNext()) {
+            messageEntry = iterator.next();
+            if (messageEntry.messageStatus == QueueMessageStatus.QUEUED) {
+                return messageEntry.queueMessage;
+            }
+        }
+        return null;
+    }
+
+    @Override
     public QueueMessage lockAndPop() throws IOException {
         Iterator<MessageEntry> iterator = messageMap.values().iterator();
         MessageEntry messageEntry;
@@ -97,7 +107,7 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
 
     @Override
     public boolean push(QueueMessage queueMessage) throws IOException {
-        MessageEntry messageEntry = new MessageEntry(queueMessage, MessageStatus.QUEUED);
+        MessageEntry messageEntry = new MessageEntry(queueMessage, QueueMessageStatus.QUEUED);
         if (messageMap.putIfAbsent(queueMessage.getUuid(), messageEntry) != null) {
             throw new QueueMessageUuidDuplicateException(queueMessage.getUuid());
         }
@@ -114,31 +124,34 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
         return null;
     }
 
-    enum MessageStatus {QUEUED, LOCKED, DELETED}
+    @Override
+    public void delete() throws IOException {
+        messageMap.clear();
+    }
 
     private static class MessageEntry {
 
-        final static AtomicReferenceFieldUpdater<MessageEntry, MessageStatus> statusUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(MessageEntry.class, MessageStatus.class, "messageStatus");
+        final static AtomicReferenceFieldUpdater<MessageEntry, QueueMessageStatus> statusUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(MessageEntry.class, QueueMessageStatus.class, "messageStatus");
 
         final QueueMessage queueMessage;
-        volatile MessageStatus messageStatus;
+        volatile QueueMessageStatus messageStatus;
 
-        MessageEntry(QueueMessage queueMessage, MessageStatus messageStatus) {
+        MessageEntry(QueueMessage queueMessage, QueueMessageStatus messageStatus) {
             this.queueMessage = queueMessage;
             this.messageStatus = messageStatus;
         }
 
         boolean setLockedStatus() {
-            return statusUpdater.compareAndSet(this, MessageStatus.QUEUED, MessageStatus.LOCKED);
+            return statusUpdater.compareAndSet(this, QueueMessageStatus.QUEUED, QueueMessageStatus.LOCKED);
         }
 
         boolean setUnlockQueued() {
-            return statusUpdater.compareAndSet(this, MessageStatus.LOCKED, MessageStatus.QUEUED);
+            return statusUpdater.compareAndSet(this, QueueMessageStatus.LOCKED, QueueMessageStatus.QUEUED);
         }
 
         boolean setUnlockDeleted() {
-            return statusUpdater.compareAndSet(this, MessageStatus.LOCKED, MessageStatus.DELETED);
+            return statusUpdater.compareAndSet(this, QueueMessageStatus.LOCKED, QueueMessageStatus.DELETED);
         }
     }
 }

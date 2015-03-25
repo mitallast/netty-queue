@@ -11,6 +11,8 @@ public interface TransactionalQueueComponent {
 
     public QueueMessage lock(UUID uuid) throws IOException;
 
+    public QueueMessage peek() throws IOException;
+
     public QueueMessage lockAndPop() throws IOException;
 
     public QueueMessage unlockAndDelete(UUID uuid) throws IOException;

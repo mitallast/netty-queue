@@ -3,10 +3,10 @@ package org.mitallast.queue.queue.transactional.mmap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queue.QueueMessageStatus;
 import org.mitallast.queue.queue.transactional.mmap.data.QueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMeta;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMetaSegment;
-import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -95,6 +95,15 @@ public class QueueMessageSegment implements TransactionalQueueSegment {
     @Override
     public QueueMessage lock(UUID uuid) throws IOException {
         QueueMessageMeta meta = messageMetaSegment.lock(uuid);
+        if (meta != null) {
+            return readMessage(meta);
+        }
+        return null;
+    }
+
+    @Override
+    public QueueMessage peek() throws IOException {
+        QueueMessageMeta meta = messageMetaSegment.peek();
         if (meta != null) {
             return readMessage(meta);
         }

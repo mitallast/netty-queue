@@ -13,4 +13,6 @@ public interface TransactionalQueueService extends TransactionalQueueComponent, 
     public boolean push(QueueMessage queueMessage) throws IOException;
 
     public QueueStats stats() throws IOException;
+
+    public void delete() throws IOException;
 }

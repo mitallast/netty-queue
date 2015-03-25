@@ -1,4 +1,4 @@
-package org.mitallast.queue.queue.transactional.mmap.meta;
+package org.mitallast.queue.queue;
 
 public enum QueueMessageStatus {
     INIT, QUEUED, LOCKED, DELETED

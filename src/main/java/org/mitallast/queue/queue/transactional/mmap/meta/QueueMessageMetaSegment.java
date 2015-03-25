@@ -6,6 +6,8 @@ import java.util.UUID;
 
 public interface QueueMessageMetaSegment extends Closeable {
 
+    QueueMessageMeta peek() throws IOException;
+
     QueueMessageMeta lockAndPop() throws IOException;
 
     QueueMessageMeta lock(UUID uuid) throws IOException;

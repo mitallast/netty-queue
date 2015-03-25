@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.transactional.mmap.meta;
 
+import org.mitallast.queue.queue.QueueMessageStatus;
 import org.mitallast.queue.queue.QueueMessageType;
 
 import java.util.UUID;

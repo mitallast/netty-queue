@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
+import org.mitallast.queue.queue.QueueMessageStatus;
 import org.mitallast.queue.queue.QueueMessageType;
 
 import java.io.IOException;
@@ -128,6 +129,21 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
 
         Assert.assertEquals(meta, deleted);
         Assert.assertEquals(QueueMessageStatus.QUEUED, deleted.getStatus());
+    }
+
+    @Test
+    public void testPeek() throws IOException {
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
+
+        Assert.assertNull(messageMetaSegment.peek());
+
+        QueueMessageMeta meta = meta();
+        assert messageMetaSegment.insert(meta.getUuid());
+        assert messageMetaSegment.writeLock(meta.getUuid());
+        assert messageMetaSegment.writeMeta(meta);
+
+        Assert.assertEquals(meta, messageMetaSegment.peek());
+        Assert.assertEquals(meta, messageMetaSegment.peek());
     }
 
     @Test

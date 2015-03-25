@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.common.Locks;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
+import org.mitallast.queue.queue.QueueMessageStatus;
 import org.mitallast.queue.queue.QueueMessageType;
 
 import java.io.IOException;
@@ -13,7 +14,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import static org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageStatus.*;
+import static org.mitallast.queue.queue.QueueMessageStatus.*;
 
 public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
@@ -60,6 +61,16 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
                 return false;
             }
         }
+    }
+
+    @Override
+    public QueueMessageMeta peek() throws IOException {
+        for (int index = 0; index < size; index++) {
+            if (statusMap.get(index) == QUEUED) {
+                return readMeta(index);
+            }
+        }
+        return null;
     }
 
     @Override
@@ -250,7 +261,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         for (int i = 0; i < size; i++) {
             QueueMessageStatus status = statusMap.get(i);
             if (status != null) {
-                if (!DELETED.equals(status)) {
+                if (DELETED != status) {
                     return false;
                 }
                 deleted++;

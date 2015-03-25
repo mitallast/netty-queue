@@ -115,6 +115,26 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
     }
 
     @Override
+    public QueueMessage peek() throws IOException {
+        final ImmutableList<QueueMessageSegment> current = this.segments;
+        final int size = current.size();
+        for (int i = 0; i < size; i++) {
+            final QueueMessageSegment segment = current.get(i);
+            if (segment.acquire() > 0) {
+                try {
+                    QueueMessage queueMessage = segment.peek();
+                    if (queueMessage != null) {
+                        return queueMessage;
+                    }
+                } finally {
+                    segment.release();
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
     public QueueMessage lockAndPop() throws IOException {
         final ImmutableList<QueueMessageSegment> current = this.segments;
         final int size = current.size();
@@ -209,6 +229,11 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
     @Override
     public QueueStats stats() throws IOException {
         return null;
+    }
+
+    @Override
+    public void delete() throws IOException {
+
     }
 
     public int segmentsSize() {

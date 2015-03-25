@@ -14,9 +14,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testLock() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -28,9 +28,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testLockAndPop() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -43,9 +43,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void tesUnlockAndDelete() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -59,9 +59,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void tesUnlockAndRollback() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -76,9 +76,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testTransactionPushAndCommit() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -93,9 +93,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testTransactionPushAndRollback() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -110,9 +110,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testTransactionPopAndCommit() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -131,9 +131,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testTransactionPopAndRollback() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -152,9 +152,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testTransactionDeleteAndCommit() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -173,9 +173,9 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
     @Test
     public void testTransactionDeleteAndRollback() throws Exception {
         final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
-                ImmutableSettings.EMPTY,
-                ImmutableSettings.EMPTY,
-                new Queue(randomUUID().toString())
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
         );
 
         final QueueMessage queueMessage = createMessageWithUuid();
@@ -189,5 +189,21 @@ public class MemoryTransactionalQueueComponentServiceTest extends BaseTest {
         transaction.rollback();
         Assert.assertEquals(queueMessage, queueService.lock(queueMessage.getUuid()));
         Assert.assertNull(queueService.lockAndPop());
+    }
+
+    @Test
+    public void testPeek() throws Exception {
+        final TransactionalQueueService queueService = new MemoryTransactionalQueueService(
+            ImmutableSettings.EMPTY,
+            ImmutableSettings.EMPTY,
+            new Queue(randomUUID().toString())
+        );
+
+        Assert.assertNull(queueService.peek());
+        QueueMessage message = createMessageWithUuid();
+        queueService.push(message);
+
+        Assert.assertEquals(message, queueService.peek());
+        Assert.assertEquals(message, queueService.peek());
     }
 }

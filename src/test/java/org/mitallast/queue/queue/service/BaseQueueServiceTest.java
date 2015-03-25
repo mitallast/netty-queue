@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.service;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -11,6 +12,7 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 
 import java.io.IOException;
+import java.util.List;
 
 public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseTest {
 
@@ -21,11 +23,11 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Before
     public void setUp() throws Exception {
         queueService = createQueueService(
-                ImmutableSettings.builder()
-                        .put("work_dir", testFolder.getRoot().getPath())
-                        .build(),
-                ImmutableSettings.builder().build(),
-                new Queue("test_queue")
+            ImmutableSettings.builder()
+                .put("work_dir", testFolder.getRoot().getPath())
+                .build(),
+            ImmutableSettings.builder().build(),
+            new Queue("test_queue")
         );
         queueService.start();
     }
@@ -120,11 +122,9 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testEnqueuePerformance() throws Exception {
         warmUp();
-        QueueMessage[] messages = createMessages();
+        List<QueueMessage> messages = createMessages();
         long start = System.currentTimeMillis();
-        for (QueueMessage message : messages) {
-            queueService.enqueue(message);
-        }
+        messages.forEach(queueService::enqueue);
         long end = System.currentTimeMillis();
         printQps("enqueue", max(), start, end);
     }
@@ -132,11 +132,11 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testEnqueuePerformanceConcurrent() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessages();
+        List<QueueMessage> messages = createMessages();
         long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < max(); i += concurrency) {
-                queueService.enqueue(messages[i]);
+                queueService.enqueue(messages.get(i));
             }
         });
         long end = System.currentTimeMillis();
@@ -146,11 +146,9 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testEnqueuePerformanceWithUid() throws Exception {
         warmUp();
-        QueueMessage[] messages = createMessagesWithUuid();
+        ImmutableList<QueueMessage> messages = createMessagesWithUuid();
         long start = System.currentTimeMillis();
-        for (QueueMessage message : messages) {
-            queueService.enqueue(message);
-        }
+        messages.forEach(queueService::enqueue);
         long end = System.currentTimeMillis();
         printQps("enqueue with uuid", max(), start, end);
     }
@@ -158,11 +156,11 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testEnqueuePerformanceWithUidConcurrent() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessagesWithUuid();
+        ImmutableList<QueueMessage> messages = createMessagesWithUuid();
         long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < max(); i += concurrency) {
-                queueService.enqueue(messages[i]);
+                queueService.enqueue(messages.get(i));
             }
         });
         long end = System.currentTimeMillis();
@@ -172,10 +170,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testDequeuePerformance() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessages();
-        for (QueueMessage message : messages) {
-            queueService.enqueue(message);
-        }
+        createMessages().forEach(queueService::enqueue);
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
             QueueMessage message = queueService.dequeue();
@@ -189,10 +184,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testDequeuePerformanceWithUuid() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessagesWithUuid();
-        for (QueueMessage message : messages) {
-            queueService.enqueue(message);
-        }
+        createMessagesWithUuid().forEach(queueService::enqueue);
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
             QueueMessage message = queueService.dequeue();
@@ -206,10 +198,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testDequeuePerformanceConcurrent() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessages(total());
-        for (QueueMessage message : messages) {
-            queueService.enqueue(message);
-        }
+        createMessages(total()).forEach(queueService::enqueue);
         long start = System.currentTimeMillis();
         executeConcurrent((Task) () -> {
             for (int i = 0; i < max(); i++) {
@@ -225,10 +214,7 @@ public abstract class BaseQueueServiceTest<T extends QueueService> extends BaseT
     @Test
     public void testDequeuePerformanceConcurrentWithUuid() throws Exception {
         warmUp();
-        final QueueMessage[] messages = createMessagesWithUuid(total());
-        for (QueueMessage message : messages) {
-            queueService.enqueue(message);
-        }
+        createMessagesWithUuid(total()).forEach(queueService::enqueue);
         long start = System.currentTimeMillis();
         executeConcurrent((Task) () -> {
             for (int i = 0; i < max(); i++) {

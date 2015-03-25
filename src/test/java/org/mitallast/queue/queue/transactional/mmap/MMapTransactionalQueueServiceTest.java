@@ -1,5 +1,6 @@
 package org.mitallast.queue.queue.transactional.mmap;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -170,6 +171,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void testLongPush() throws Exception {
         service = new MMapTransactionalQueueService(
             ImmutableSettings.builder()
@@ -182,7 +184,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
         service.start();
 
         logger.info("generate test data");
-        QueueMessage[][] messagesWithUuid = new QueueMessage[concurrency()][];
+        ImmutableList<QueueMessage>[] messagesWithUuid = new ImmutableList[concurrency()];
         long start = System.currentTimeMillis();
         executeConcurrent((t, c) -> {
             messagesWithUuid[t] = createMessagesWithUuid(max());

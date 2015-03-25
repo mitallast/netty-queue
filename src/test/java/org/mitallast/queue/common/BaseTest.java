@@ -1,5 +1,6 @@
 package org.mitallast.queue.common;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -90,28 +91,28 @@ public class BaseTest {
         System.out.println(metric + ": " + qps + " qps");
     }
 
-    protected QueueMessage[] createMessages() {
+    protected List<QueueMessage> createMessages() {
         return createMessages(max());
     }
 
-    protected QueueMessage[] createMessages(int messagesCount) {
-        QueueMessage[] messages = new QueueMessage[messagesCount];
+    protected ImmutableList<QueueMessage> createMessages(int messagesCount) {
+        ImmutableList.Builder<QueueMessage> builder = ImmutableList.builder();
         for (int i = 0; i < messagesCount; i++) {
-            messages[i] = createMessage();
+            builder.add(createMessage());
         }
-        return messages;
+        return builder.build();
     }
 
-    protected QueueMessage[] createMessagesWithUuid() {
+    protected ImmutableList<QueueMessage> createMessagesWithUuid() {
         return createMessagesWithUuid(max());
     }
 
-    protected QueueMessage[] createMessagesWithUuid(int messagesCount) {
-        QueueMessage[] messages = new QueueMessage[messagesCount];
+    protected ImmutableList<QueueMessage> createMessagesWithUuid(int messagesCount) {
+        ImmutableList.Builder<QueueMessage> builder = ImmutableList.builder();
         for (int i = 0; i < messagesCount; i++) {
-            messages[i] = createMessageWithUuid();
+            builder.add(createMessageWithUuid());
         }
-        return messages;
+        return builder.build();
     }
 
     protected QueueMessage createMessage() {
@@ -125,11 +126,6 @@ public class BaseTest {
         message.setUuid(randomUUID());
         message.setSource(randomUUID().toString());
         return message;
-    }
-
-    @Deprecated
-    public static interface RunnableFactory {
-        public Runnable create(int thread, int concurrency);
     }
 
     public static interface Task {

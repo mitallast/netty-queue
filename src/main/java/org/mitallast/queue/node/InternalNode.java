@@ -8,7 +8,7 @@ import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.InternalQueuesService;
-import org.mitallast.queue.queues.QueuesModule;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.rest.transport.HttpServer;
 import org.mitallast.queue.stomp.StompModule;
@@ -32,7 +32,7 @@ public class InternalNode implements Node {
         logger.info("initializing...");
 
         ModulesBuilder modules = new ModulesBuilder();
-        modules.add(new QueuesModule(settings));
+        modules.add(new TransactionalQueuesModule(settings));
         modules.add(new ActionModule());
         modules.add(new ClientModule());
         modules.add(new RestModule());

@@ -6,14 +6,16 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueMissingException;
-import org.mitallast.queue.queues.QueuesService;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+
+import java.io.IOException;
 
 public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, DeleteQueueResponse> {
 
-    private final QueuesService queuesService;
+    private final TransactionalQueuesService queuesService;
 
     @Inject
-    public DeleteQueueAction(Settings settings, QueuesService queuesService) {
+    public DeleteQueueAction(Settings settings, TransactionalQueuesService queuesService) {
         super(settings);
         this.queuesService = queuesService;
     }
@@ -30,6 +32,8 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
             listener.onResponse(new DeleteQueueResponse(true));
         } catch (QueueMissingException e) {
             listener.onResponse(new DeleteQueueResponse(false, e));
+        } catch (IOException e) {
+            listener.onFailure(e);
         }
     }
 }

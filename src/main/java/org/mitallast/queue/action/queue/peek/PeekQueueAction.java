@@ -6,16 +6,18 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.service.QueueService;
+import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
-import org.mitallast.queue.queues.QueuesService;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+
+import java.io.IOException;
 
 public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueResponse> {
 
-    private final QueuesService queuesService;
+    private final TransactionalQueuesService queuesService;
 
     @Inject
-    public PeekQueueAction(Settings settings, QueuesService queuesService) {
+    public PeekQueueAction(Settings settings, TransactionalQueuesService queuesService) {
         super(settings);
         this.queuesService = queuesService;
     }
@@ -30,8 +32,12 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
         if (!queuesService.hasQueue(request.getQueue())) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
         }
-        QueueService queueService = queuesService.queue(request.getQueue());
-        QueueMessage message = queueService.peek();
-        listener.onResponse(new PeekQueueResponse(message));
+        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        try {
+            QueueMessage message = queueService.peek();
+            listener.onResponse(new PeekQueueResponse(message));
+        } catch (IOException e) {
+            listener.onFailure(e);
+        }
     }
 }

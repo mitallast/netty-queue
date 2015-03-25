@@ -6,16 +6,18 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
-import org.mitallast.queue.queue.service.QueueService;
+import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
-import org.mitallast.queue.queues.QueuesService;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+
+import java.io.IOException;
 
 public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueResponse> {
 
-    private final QueuesService queuesService;
+    private final TransactionalQueuesService queuesService;
 
     @Inject
-    public EnQueueAction(Settings settings, QueuesService queuesService) {
+    public EnQueueAction(Settings settings, TransactionalQueuesService queuesService) {
         super(settings);
         this.queuesService = queuesService;
     }
@@ -27,15 +29,15 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
             listener.onFailure(validationException);
             return;
         }
-        QueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
             return;
         }
         try {
-            queueService.enqueue(request.getMessage());
+            queueService.push(request.getMessage());
             listener.onResponse(new EnQueueResponse(request.getMessage().getUuid()));
-        } catch (QueueMessageUuidDuplicateException e) {
+        } catch (QueueMessageUuidDuplicateException | IOException e) {
             listener.onFailure(e);
         }
     }

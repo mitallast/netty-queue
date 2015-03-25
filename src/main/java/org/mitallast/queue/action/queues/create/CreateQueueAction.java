@@ -5,14 +5,16 @@ import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queues.QueuesService;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+
+import java.io.IOException;
 
 public class CreateQueueAction extends AbstractAction<CreateQueueRequest, CreateQueueResponse> {
 
-    private final QueuesService queuesService;
+    private final TransactionalQueuesService queuesService;
 
     @Inject
-    public CreateQueueAction(Settings settings, QueuesService queuesService) {
+    public CreateQueueAction(Settings settings, TransactionalQueuesService queuesService) {
         super(settings);
         this.queuesService = queuesService;
     }
@@ -24,7 +26,11 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
             listener.onFailure(validationException);
             return;
         }
-        queuesService.createQueue(request.getQueue(), request.getSettings());
-        listener.onResponse(new CreateQueueResponse());
+        try {
+            queuesService.createQueue(request.getQueue(), request.getSettings());
+            listener.onResponse(new CreateQueueResponse());
+        } catch (IOException e) {
+            listener.onFailure(e);
+        }
     }
 }

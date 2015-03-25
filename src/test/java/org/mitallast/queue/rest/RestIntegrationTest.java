@@ -57,7 +57,7 @@ public class RestIntegrationTest extends BaseQueueTest {
                         "/" + queueName() + "/message",
                         Unpooled.wrappedBuffer(bytes)
                 );
-                request.headers().set(HttpHeaders.Names.CONTENT_LENGTH, bytes.length);
+                request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
                 futures.add(restClient.send(request));
             }
             restClient.flush();

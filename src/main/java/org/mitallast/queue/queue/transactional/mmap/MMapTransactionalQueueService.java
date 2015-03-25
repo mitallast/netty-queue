@@ -2,12 +2,13 @@ package org.mitallast.queue.queue.transactional.mmap;
 
 import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.QueueException;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.mmap.MemoryMappedFileFactory;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.AbstractQueueComponent;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
+import org.mitallast.queue.queue.transactional.AbstractQueueService;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queue.transactional.memory.MemoryQueueTransaction;
@@ -15,14 +16,13 @@ import org.mitallast.queue.queue.transactional.mmap.data.MMapQueueMessageAppendS
 import org.mitallast.queue.queue.transactional.mmap.data.QueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.MMapQueueMessageMetaSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMetaSegment;
-import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class MMapTransactionalQueueService extends AbstractQueueComponent implements TransactionalQueueService {
+public class MMapTransactionalQueueService extends AbstractQueueService implements TransactionalQueueService {
 
     private final String workDir;
     private final int segmentMaxSize;
@@ -196,7 +196,13 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
 
     @Override
     public boolean push(QueueMessage queueMessage) throws IOException {
-        final UUID uuid = queueMessage.getUuid();
+        final UUID uuid;
+        if (queueMessage.getUuid() == null) {
+            uuid = UUIDs.generateRandom();
+            queueMessage.setUuid(uuid);
+        } else {
+            uuid = queueMessage.getUuid();
+        }
         while (true) {
             final ImmutableList<QueueMessageSegment> current = this.segments;
             final int size = current.size();
@@ -224,11 +230,6 @@ public class MMapTransactionalQueueService extends AbstractQueueComponent implem
     @Override
     public long size() {
         return 0;
-    }
-
-    @Override
-    public QueueStats stats() throws IOException {
-        return null;
     }
 
     @Override

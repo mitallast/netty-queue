@@ -5,15 +5,17 @@ import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.service.QueueService;
+import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
-import org.mitallast.queue.queues.QueuesService;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+
+import java.io.IOException;
 
 public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueStatsResponse> {
-    private QueuesService queuesService;
+    private TransactionalQueuesService queuesService;
 
     @Inject
-    public QueueStatsAction(Settings settings, QueuesService queuesService) {
+    public QueueStatsAction(Settings settings, TransactionalQueuesService queuesService) {
         super(settings);
         this.queuesService = queuesService;
     }
@@ -28,7 +30,11 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
         if (!queuesService.hasQueue(request.getQueue())) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
         }
-        QueueService queueService = queuesService.queue(request.getQueue());
-        listener.onResponse(new QueueStatsResponse(queueService.stats()));
+        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        try {
+            listener.onResponse(new QueueStatsResponse(queueService.stats()));
+        } catch (IOException e) {
+            listener.onFailure(e);
+        }
     }
 }

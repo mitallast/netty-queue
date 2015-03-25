@@ -6,16 +6,18 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.service.QueueService;
+import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
-import org.mitallast.queue.queues.QueuesService;
+import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+
+import java.io.IOException;
 
 public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueResponse> {
 
-    private final QueuesService queuesService;
+    private final TransactionalQueuesService queuesService;
 
     @Inject
-    public DeQueueAction(Settings settings, QueuesService queuesService) {
+    public DeQueueAction(Settings settings, TransactionalQueuesService queuesService) {
         super(settings);
         this.queuesService = queuesService;
     }
@@ -30,8 +32,12 @@ public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueRespons
         if (!queuesService.hasQueue(request.getQueue())) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
         }
-        QueueService queueService = queuesService.queue(request.getQueue());
-        QueueMessage message = queueService.dequeue();
-        listener.onResponse(new DeQueueResponse(message));
+        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        try {
+            QueueMessage message = queueService.lockAndPop();
+            listener.onResponse(new DeQueueResponse(message));
+        } catch (IOException e) {
+            listener.onFailure(e);
+        }
     }
 }

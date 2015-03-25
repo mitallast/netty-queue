@@ -2,10 +2,13 @@ package org.mitallast.queue.queue.transactional.memory;
 
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queue.*;
+import org.mitallast.queue.queue.Queue;
+import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queue.QueueMessageStatus;
+import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
+import org.mitallast.queue.queue.transactional.AbstractQueueService;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
-import org.mitallast.queue.queues.stats.QueueStats;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -13,7 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-public class MemoryTransactionalQueueService extends AbstractQueueComponent implements TransactionalQueueService {
+public class MemoryTransactionalQueueService extends AbstractQueueService implements TransactionalQueueService {
 
     private final ConcurrentHashMap<UUID, MessageEntry> messageMap;
 
@@ -117,11 +120,6 @@ public class MemoryTransactionalQueueService extends AbstractQueueComponent impl
     @Override
     public long size() {
         return messageMap.size();
-    }
-
-    @Override
-    public QueueStats stats() throws IOException {
-        return null;
     }
 
     @Override

@@ -68,7 +68,7 @@ public class StompClient extends NettyClient {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, StompFrame frame) throws Exception {
             String receipt = Strings.toString(frame.headers().get(StompHeaders.RECEIPT_ID));
-            assert !Strings.isEmpty(receipt);
+            assert !Strings.isEmpty(receipt) : frame;
             BasicFuture<StompFrame> frameFuture = ctx.channel().attr(attr).get().remove(receipt);
             if (frameFuture != null) {
                 frameFuture.set(frame);

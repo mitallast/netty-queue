@@ -49,8 +49,8 @@ public class StompSession {
     }
 
     public void sendResponse(StompFrame response) {
-        String receiptId = Strings.toString(request.headers().get(StompHeaders.RECEIPT));
-        if (Strings.isEmpty(receiptId)) {
+        CharSequence receiptId = request.headers().get(StompHeaders.RECEIPT);
+        if (!Strings.isEmpty(receiptId)) {
             response.headers().set(StompHeaders.RECEIPT_ID, receiptId);
         }
         if (response.content().isReadable()) {

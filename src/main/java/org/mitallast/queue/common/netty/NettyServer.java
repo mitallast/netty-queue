@@ -9,12 +9,10 @@ import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
+import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.settings.Settings;
-
-import java.util.concurrent.ThreadFactory;
 
 public abstract class NettyServer extends AbstractLifecycleComponent {
 
@@ -49,12 +47,8 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         this.threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors() * 2);
     }
 
-    private ThreadFactory threadFactory(String name) {
-        return new DefaultThreadFactory(name, true);
-    }
-
     private NioEventLoopGroup group(String name) {
-        return new NioEventLoopGroup(threads, threadFactory(name));
+        return new NioEventLoopGroup(threads, NamedExecutors.newThreadFactory(name));
     }
 
     @Override

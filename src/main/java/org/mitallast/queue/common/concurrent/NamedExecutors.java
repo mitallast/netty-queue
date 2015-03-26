@@ -15,6 +15,10 @@ public class NamedExecutors {
         );
     }
 
+    public static ThreadFactory newThreadFactory(String name) {
+        return new NamedThreadFactory(name);
+    }
+
     private static class NamedThreadFactory implements ThreadFactory {
         private final static AtomicInteger poolNumber = new AtomicInteger(1);
         private final ThreadGroup group;

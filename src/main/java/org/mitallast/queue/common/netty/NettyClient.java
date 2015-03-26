@@ -8,8 +8,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.settings.Settings;
 
 import java.util.concurrent.ThreadFactory;
@@ -47,7 +47,7 @@ public abstract class NettyClient extends AbstractComponent {
     }
 
     private ThreadFactory threadFactory(String name) {
-        return new DefaultThreadFactory(name, true);
+        return NamedExecutors.newThreadFactory(name);
     }
 
     public final void start() {

@@ -35,7 +35,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     private final AtomicInteger sizeCounter;
     private final int maxSize;
 
-    public MMapQueueMessageMetaSegment(MemoryMappedFile mappedFile, int maxSize, float loadFactor) {
+    public MMapQueueMessageMetaSegment(MemoryMappedFile mappedFile, int maxSize, float loadFactor) throws IOException {
         this.mappedFile = mappedFile;
         this.sizeCounter = new AtomicInteger();
         this.maxSize = maxSize;
@@ -49,6 +49,20 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
                 return Unpooled.buffer(512);
             }
         };
+
+        init();
+    }
+
+    private void init() throws IOException {
+        if (mappedFile.isEmpty()) return;
+        for (int pos = 0; pos < size; pos++) {
+            QueueMessageMeta meta = readMeta(pos);
+            if (meta != null) {
+                uuidMap.set(pos, meta.getUuid());
+                statusMap.set(pos, meta.getStatus());
+                sizeCounter.incrementAndGet();
+            }
+        }
     }
 
     private boolean incrementSize() {
@@ -271,6 +285,11 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
             }
         }
         return deleted == maxSize;
+    }
+
+    @Override
+    public int size() {
+        return sizeCounter.get();
     }
 
     private void writeMeta(QueueMessageMeta messageMeta, int pos) throws IOException {

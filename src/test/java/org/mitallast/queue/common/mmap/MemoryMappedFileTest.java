@@ -3,6 +3,7 @@ package org.mitallast.queue.common.mmap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
@@ -161,5 +162,12 @@ public class MemoryMappedFileTest extends BaseTest {
                 }
             }
         });
+    }
+
+    @Test
+    public void testEmpty() throws Exception {
+        Assert.assertTrue(mappedFile.isEmpty());
+        mappedFile.putLong(0, 0);
+        Assert.assertFalse(mappedFile.isEmpty());
     }
 }

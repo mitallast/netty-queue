@@ -26,5 +26,7 @@ public interface QueueMessageMetaSegment extends Closeable {
 
     boolean isGarbage() throws IOException;
 
+    int size();
+
     void delete() throws IOException;
 }

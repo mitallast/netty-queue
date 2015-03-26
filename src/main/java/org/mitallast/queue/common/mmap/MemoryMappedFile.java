@@ -33,6 +33,10 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
         pageCache = new MemoryMappedPageCacheSegmented(this, maxPages, 10);
     }
 
+    public File getFile() {
+        return file;
+    }
+
     @Override
     public void close() throws IOException {
         pageCache.close();
@@ -188,6 +192,10 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
 
     public long length() throws IOException {
         return randomAccessFile.length();
+    }
+
+    public boolean isEmpty() throws IOException {
+        return randomAccessFile.length() == 0;
     }
 
     public void flush() throws IOException {

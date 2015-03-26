@@ -178,6 +178,39 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         assert messageMetaSegment.isGarbage();
     }
 
+    @Test
+    public void testReopen() throws IOException {
+        final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, 3, 0.7f);
+        Assert.assertEquals(0, messageMetaSegment.size());
+
+        QueueMessageMeta meta1 = meta();
+        QueueMessageMeta meta2 = meta();
+        QueueMessageMeta meta3 = meta();
+
+        messageMetaSegment.insert(meta1.getUuid());
+        messageMetaSegment.insert(meta2.getUuid());
+        messageMetaSegment.insert(meta3.getUuid());
+
+        messageMetaSegment.writeLock(meta1.getUuid());
+        messageMetaSegment.writeLock(meta2.getUuid());
+        messageMetaSegment.writeLock(meta3.getUuid());
+
+        messageMetaSegment.writeMeta(meta1);
+        messageMetaSegment.writeMeta(meta2);
+        messageMetaSegment.writeMeta(meta3);
+
+        messageMetaSegment.close();
+
+        MemoryMappedFile mmapFileReopen = new MemoryMappedFile(mmapFile.getFile());
+        final MMapQueueMessageMetaSegment messageMetaSegmentReopen = new MMapQueueMessageMetaSegment(mmapFileReopen, 3, 0.7f);
+        Assert.assertEquals(3, messageMetaSegment.size());
+
+
+        Assert.assertEquals(meta1, messageMetaSegmentReopen.readMeta(meta1.getUuid()));
+        Assert.assertEquals(meta2, messageMetaSegmentReopen.readMeta(meta2.getUuid()));
+        Assert.assertEquals(meta3, messageMetaSegmentReopen.readMeta(meta3.getUuid()));
+    }
+
     private QueueMessageMeta meta() {
         return new QueueMessageMeta(
             randomUUID(),

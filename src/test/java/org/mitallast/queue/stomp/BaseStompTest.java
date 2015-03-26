@@ -26,9 +26,7 @@ abstract public class BaseStompTest extends BaseQueueTest {
 
     @After
     public void tearDownStomp() {
-        for (StompClient client : clients) {
-            client.stop();
-        }
+        clients.forEach(org.mitallast.queue.stomp.transport.StompClient::stop);
     }
 
     public StompClient stompClient() {
@@ -65,7 +63,7 @@ abstract public class BaseStompTest extends BaseQueueTest {
         frame.headers().set(StompHeaders.DESTINATION, queueName());
         frame.headers().set(StompHeaders.CONTENT_TYPE, "text");
         frame.headers().set(StompHeaders.RECEIPT, receipt);
-        frame.headers().setInt(StompHeaders.CONTENT_LENGTH, data.length);
+        frame.headers().setInt(StompHeaders.CONTENT_LENGTH, frame.content().readableBytes());
         return frame;
     }
 }

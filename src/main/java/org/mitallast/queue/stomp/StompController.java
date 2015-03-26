@@ -7,15 +7,12 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.stomp.transport.StompSession;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * @link http://stomp.github.io/stomp-specification-1.2.html#Protocol_Overview
  */
 public class StompController extends AbstractComponent {
 
-    private final Map<StompCommand, StompHandler> handlers = new HashMap<>();
+    private StompHandler[] handlers = new StompHandler[StompCommand.values().length];
 
     @Inject
     public StompController(Settings settings) {
@@ -23,11 +20,11 @@ public class StompController extends AbstractComponent {
     }
 
     public synchronized void registerHandler(StompCommand command, StompHandler handler) {
-        handlers.put(command, handler);
+        handlers[command.ordinal()] = handler;
     }
 
     public void dispatchRequest(StompSession session, StompFrame request) {
-        StompHandler handler = handlers.get(request.command());
+        StompHandler handler = handlers[request.command().ordinal()];
         handler.handleRequest(session, request);
     }
 }

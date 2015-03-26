@@ -83,7 +83,9 @@ public class Strings {
         for (int index = 0; index < length; index++) {
             char currentChar = s.charAt(index);
             if (currentChar == delimiter) {
-                list.add(s.substring(start, index));
+                if (start < index) {
+                    list.add(s.substring(start, index));
+                }
                 start = index + 1;
             }
         }

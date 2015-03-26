@@ -42,4 +42,10 @@ public class StringsTest {
         Assert.assertEquals(1, strings.length);
         Assert.assertEquals(strings[0], "qweqweqw");
     }
+
+    @Test
+    public void testEmpty() {
+        String[] strings = Strings.splitStringToArray("-", '-');
+        Assert.assertEquals(0, strings.length);
+    }
 }

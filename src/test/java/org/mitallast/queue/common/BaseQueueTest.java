@@ -14,6 +14,8 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.node.Node;
 
+import java.util.Random;
+
 public abstract class BaseQueueTest extends BaseTest {
 
     private Node node;
@@ -24,12 +26,12 @@ public abstract class BaseQueueTest extends BaseTest {
     public void setUp() throws Exception {
         ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.DISABLED);
         settings = ImmutableSettings.builder()
-                .put("work_dir", testFolder.newFolder().getAbsolutePath())
-                .put("rest.transport.host", "127.0.0.1")
-                .put("rest.transport.port", 18080)
-                .put("stomp.transport.host", "127.0.0.1")
-                .put("stomp.transport.port", 19080)
-                .build();
+            .put("work_dir", testFolder.newFolder().getAbsolutePath())
+            .put("rest.transport.host", "127.0.0.1")
+            .put("rest.transport.port", 18000 + new Random().nextInt(500))
+            .put("stomp.transport.host", "127.0.0.1")
+            .put("stomp.transport.port", 19000 + new Random().nextInt(500))
+            .build();
         queueName = randomUUID().toString();
         node = new InternalNode(settings);
         node.start();
@@ -60,8 +62,8 @@ public abstract class BaseQueueTest extends BaseTest {
 
     public void createQueue() throws Exception {
         client().queues()
-                .createQueue(new CreateQueueRequest(queueName(), ImmutableSettings.EMPTY))
-                .get();
+            .createQueue(new CreateQueueRequest(queueName(), ImmutableSettings.EMPTY))
+            .get();
         assertQueueEmpty();
     }
 
@@ -73,8 +75,8 @@ public abstract class BaseQueueTest extends BaseTest {
 
     public void assertQueueEmpty() throws Exception {
         QueueStatsResponse response = client().queue()
-                .queueStatsRequest(new QueueStatsRequest(queueName()))
-                .get();
+            .queueStatsRequest(new QueueStatsRequest(queueName()))
+            .get();
         assert response.getStats().getSize() == 0 : response.getStats();
     }
 }

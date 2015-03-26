@@ -1,5 +1,6 @@
 package org.mitallast.queue.common;
 
+import com.eaio.util.lang.Hex;
 import com.eaio.uuid.UUIDGen;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -20,6 +21,23 @@ public class UUIDs {
 
     public static UUID generateRandom() {
         return new UUID(UUIDGen.newTime(), UUIDGen.getClockSeqAndNode());
+    }
+
+    public static CharSequence toCharSequence(UUID uuid) {
+        return toCharSequence(new StringBuilder(36), uuid);
+    }
+
+    public static CharSequence toCharSequence(StringBuilder out, UUID uuid) {
+        Hex.append(out, (int) (uuid.getMostSignificantBits() >> 32));
+        out.append('-');
+        Hex.append(out, (short) (uuid.getMostSignificantBits() >> 16));
+        out.append('-');
+        Hex.append(out, (short) uuid.getMostSignificantBits());
+        out.append('-');
+        Hex.append(out, (short) (uuid.getLeastSignificantBits() >> 48));
+        out.append('-');
+        Hex.append(out, uuid.getLeastSignificantBits(), 12);
+        return out;
     }
 
     public static UUID fromString(CharSequence sequence) {

@@ -1,7 +1,7 @@
 package org.mitallast.queue.common.path;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
-import org.mitallast.queue.common.Strings;
+import org.mitallast.queue.common.StringReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,48 +18,48 @@ public class PathTrie<TrieType> {
         this('/', "*");
     }
 
-    public PathTrie(char separator, String wildcard) {
+    public PathTrie(char separator, CharSequence wildcard) {
         this.separator = separator;
-        root = new TrieNode<>(String.valueOf(separator), null, wildcard);
+        root = new TrieNode<>(String.valueOf(separator), null, StringReference.of(wildcard));
     }
 
     public void insert(String path, TrieType value) {
-        String[] strings = Strings.splitStringToArray(path, separator);
-        if (strings.length == 0) {
+        CharSequence[] parts = StringReference.splitStringToArray(path, separator);
+        if (parts.length == 0) {
             rootValue = value;
             return;
         }
         int index = 0;
         // supports initial delimiter.
-        if (strings.length > 0 && strings[0].isEmpty()) {
+        if (parts.length > 0 && parts[0].length() == 0) {
             index = 1;
         }
-        root.insert(strings, index, value);
+        root.insert(parts, index, value);
     }
 
-    public TrieType retrieve(String path, Map<String, List<String>> params) {
+    public TrieType retrieve(CharSequence path, Map<String, List<String>> params) {
         if (path.length() == 0) {
             return rootValue;
         }
-        String[] strings = Strings.splitStringToArray(path, separator);
+        CharSequence[] strings = StringReference.splitStringToArray(path, separator);
         if (strings.length == 0) {
             return rootValue;
         }
         int index = 0;
         // supports initial delimiter.
-        if (strings.length > 0 && strings[0].isEmpty()) {
+        if (strings.length > 0 && strings[0].length() == 0) {
             index = 1;
         }
         return root.retrieve(strings, index, params);
     }
 
     public class TrieNode<NodeType> {
-        private final Map<String, TrieNode<NodeType>> children;
-        private final String wildcard;
+        private final Map<StringReference, TrieNode<NodeType>> children;
+        private final StringReference wildcard;
         private NodeType value;
         private String namedWildcard;
 
-        public TrieNode(String key, NodeType value, String wildcard) {
+        public TrieNode(CharSequence key, NodeType value, StringReference wildcard) {
             this.wildcard = wildcard;
             this.value = value;
             this.children = new HashMap<>();
@@ -70,19 +70,31 @@ public class PathTrie<TrieType> {
             }
         }
 
-        public void updateKeyWithNamedWildcard(String key) {
-            namedWildcard = key.substring(key.indexOf('{') + 1, key.indexOf('}'));
+        public void updateKeyWithNamedWildcard(CharSequence key) {
+            int len = key.length();
+            for (int start = 0; start < len - 1; start++) {
+                if (key.charAt(start) == '{') {
+                    for (int end = len - 1; end > 0; end--) {
+                        if (key.charAt(end) == '}') {
+                            namedWildcard = key.subSequence(start + 1, end).toString();
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
-        public synchronized void insert(String[] path, int index, NodeType value) {
+        public synchronized void insert(CharSequence[] path, int index, NodeType value) {
             if (index >= path.length) {
                 return;
             }
 
-            String token = path[index];
-            String key = token;
+            CharSequence token = path[index];
+            final StringReference key;
             if (isNamedWildcard(token)) {
-                key = wildcard;
+                key = StringReference.of(wildcard);
+            } else {
+                key = StringReference.of(token);
             }
             TrieNode<NodeType> node = children.get(key);
             if (node == null) {
@@ -110,8 +122,18 @@ public class PathTrie<TrieType> {
             node.insert(path, index + 1, value);
         }
 
-        private boolean isNamedWildcard(String key) {
-            return key.indexOf('{') != -1 && key.indexOf('}') != -1;
+        private boolean isNamedWildcard(CharSequence key) {
+            int len = key.length();
+            for (int start = 0; start < len - 1; start++) {
+                if (key.charAt(start) == '{') {
+                    for (int end = len - 1; end > 0; end--) {
+                        if (key.charAt(end) == '}') {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         private String namedWildcard() {
@@ -122,12 +144,12 @@ public class PathTrie<TrieType> {
             return namedWildcard != null;
         }
 
-        public NodeType retrieve(String[] path, int index, Map<String, List<String>> params) {
+        public NodeType retrieve(CharSequence[] path, int index, Map<String, List<String>> params) {
             if (index >= path.length) {
                 return null;
             }
 
-            String token = path[index];
+            StringReference token = StringReference.of(path[index]);
             TrieNode<NodeType> node = children.get(token);
             boolean usedWildcard;
             if (node == null) {
@@ -158,14 +180,14 @@ public class PathTrie<TrieType> {
             return res;
         }
 
-        private void put(Map<String, List<String>> params, TrieNode<NodeType> node, String value) {
+        private void put(Map<String, List<String>> params, TrieNode<NodeType> node, CharSequence value) {
             if (params != null && node.isNamedWildcard()) {
                 List<String> list = params.get(node.namedWildcard());
                 if (list == null) {
                     list = new ArrayList<>(1);
                     params.put(node.namedWildcard(), list);
                 }
-                list.add(QueryStringDecoder.decodeComponent(value));
+                list.add(QueryStringDecoder.decodeComponent(value.toString()));
             }
         }
     }

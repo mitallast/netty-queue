@@ -54,6 +54,7 @@ public class RestController extends AbstractComponent {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private RestHandler getHandler(RestRequest request) {
         String path = request.getQueryPath();
         HttpMethod method = request.getHttpMethod();

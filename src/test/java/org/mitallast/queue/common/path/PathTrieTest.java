@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.path;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,7 +23,7 @@ public class PathTrieTest {
     public void testRoot() {
         pathTrie.insert("/", "root");
         pathTrie.insert("/foo", "foo");
-        assert pathTrie.retrieve("/", params).equals("root");
+        Assert.assertEquals("root", pathTrie.retrieve("/", params));
     }
 
     @Test
@@ -30,11 +31,11 @@ public class PathTrieTest {
         pathTrie.insert("/", "root");
         pathTrie.insert("/{named}", "{named}");
 
-        assert pathTrie.retrieve("/foo", params).equals("{named}");
-        assert params.containsKey("named");
-        assert params.get("named") != null;
-        assert !params.get("named").isEmpty();
-        assert params.get("named").get(0).equals("foo");
+        Assert.assertEquals("{named}", pathTrie.retrieve("/foo", params));
+        Assert.assertTrue(params.containsKey("named"));
+        Assert.assertNotNull(params.get("named"));
+        Assert.assertFalse(params.get("named").isEmpty());
+        Assert.assertEquals("foo", params.get("named").get(0));
     }
 
     @Test
@@ -43,11 +44,11 @@ public class PathTrieTest {
         pathTrie.insert("/_all", "_all");
         pathTrie.insert("/{named}", "{named}");
 
-        assert pathTrie.retrieve("/foo", params).equals("{named}");
-        assert params.containsKey("named");
-        assert params.get("named") != null;
-        assert !params.get("named").isEmpty();
-        assert params.get("named").get(0).equals("foo");
+        Assert.assertEquals("{named}", pathTrie.retrieve("/foo", params));
+        Assert.assertTrue(params.containsKey("named"));
+        Assert.assertNotNull(params.get("named"));
+        Assert.assertFalse(params.get("named").isEmpty());
+        Assert.assertEquals("foo", params.get("named").get(0));
     }
 
     @Test
@@ -56,8 +57,8 @@ public class PathTrieTest {
         pathTrie.insert("/_all", "_all");
         pathTrie.insert("/{named}", "{named}");
 
-        assert pathTrie.retrieve("/_all", params).equals("_all");
-        assert params.isEmpty();
+        Assert.assertEquals("_all", pathTrie.retrieve("/_all", params));
+        Assert.assertTrue(params.isEmpty());
     }
 
     @Test
@@ -67,11 +68,11 @@ public class PathTrieTest {
         pathTrie.insert("/foo/foo", "two");
         pathTrie.insert("/foo/foo/foo", "three");
 
-        assert pathTrie.retrieve("/", params).equals("root");
-        assert pathTrie.retrieve("/foo", params).equals("one");
-        assert pathTrie.retrieve("/foo/foo", params).equals("two");
-        assert pathTrie.retrieve("/foo/foo/foo", params).equals("three");
+        Assert.assertEquals("root", pathTrie.retrieve("/", params));
+        Assert.assertEquals("one", pathTrie.retrieve("/foo", params));
+        Assert.assertEquals("two", pathTrie.retrieve("/foo/foo", params));
+        Assert.assertEquals("three", pathTrie.retrieve("/foo/foo/foo", params));
 
-        assert params.isEmpty();
+        Assert.assertTrue(params.isEmpty());
     }
 }

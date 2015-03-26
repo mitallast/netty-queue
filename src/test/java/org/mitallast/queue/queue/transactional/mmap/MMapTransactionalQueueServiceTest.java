@@ -19,7 +19,11 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        service = new MMapTransactionalQueueService(
+        service = createService();
+    }
+
+    private MMapTransactionalQueueService createService() throws Exception {
+        MMapTransactionalQueueService service = new MMapTransactionalQueueService(
             ImmutableSettings.builder()
                 .put("work_dir", testFolder.getRoot().getPath())
                 .put("segment.max_size", segmentsSize)
@@ -27,15 +31,17 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
             ImmutableSettings.EMPTY,
             new Queue("test")
         );
-
         service.start();
+        return service;
     }
 
     @After
     public void tearDown() throws Exception {
-        service.stop();
-        service.close();
-        service = null;
+        if (service != null) {
+            service.stop();
+            service.close();
+            service = null;
+        }
     }
 
     @Test
@@ -149,6 +155,31 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
         assert service.segmentsSize() == 2;
         service.garbageCollect();
         assert service.segmentsSize() == 0 : service.segmentsSize();
+    }
+
+    @Test
+    public void testReopen() throws Exception {
+        QueueMessage message1 = createMessageWithUuid();
+        QueueMessage message2 = createMessageWithUuid();
+        QueueMessage message3 = createMessageWithUuid();
+
+        service.push(message1);
+        service.push(message2);
+        service.push(message3);
+
+        service.stop();
+        service.close();
+        service = null;
+
+        MMapTransactionalQueueService reopenService = createService();
+        try {
+            Assert.assertEquals(message1, reopenService.get(message1.getUuid()));
+            Assert.assertEquals(message2, reopenService.get(message2.getUuid()));
+            Assert.assertEquals(message3, reopenService.get(message3.getUuid()));
+        } finally {
+            reopenService.stop();
+            reopenService.close();
+        }
     }
 
     @Test

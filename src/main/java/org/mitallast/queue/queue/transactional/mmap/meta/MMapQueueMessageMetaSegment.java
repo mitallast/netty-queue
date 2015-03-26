@@ -53,6 +53,10 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         init();
     }
 
+    public MemoryMappedFile getMappedFile() {
+        return mappedFile;
+    }
+
     private void init() throws IOException {
         if (mappedFile.isEmpty()) return;
         for (int pos = 0; pos < size; pos++) {

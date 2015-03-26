@@ -25,13 +25,17 @@ public class MemoryMappedFileFactory extends AbstractComponent {
         }
     }
 
-    public MemoryMappedFile createFile(String ext) throws IOException {
-        String fileName = UUIDs.generateRandom().toString() + '.' + ext;
-        File file = new File(directory, fileName);
-        if (!file.createNewFile()) {
+    public MemoryMappedFile createFile(File file) throws IOException {
+        if (!file.exists() && !file.createNewFile()) {
             throw new IOException("Error create new file " + file);
         }
 
         return new MemoryMappedFile(file, pageSize, maxPages);
+    }
+
+    public MemoryMappedFile createFile(String ext) throws IOException {
+        String fileName = UUIDs.generateRandom().toString() + '.' + ext;
+        File file = new File(directory, fileName);
+        return createFile(file);
     }
 }

@@ -4,9 +4,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageStatus;
-import org.mitallast.queue.queue.transactional.mmap.data.QueueMessageAppendSegment;
+import org.mitallast.queue.queue.transactional.mmap.data.MMapQueueMessageAppendSegment;
+import org.mitallast.queue.queue.transactional.mmap.meta.MMapQueueMessageMetaSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMeta;
-import org.mitallast.queue.queue.transactional.mmap.meta.QueueMessageMetaSegment;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -14,14 +14,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MMapQueueMessageSegment implements TransactionalQueueSegment {
 
-    private final QueueMessageAppendSegment messageAppendSegment;
-    private final QueueMessageMetaSegment messageMetaSegment;
+    private final MMapQueueMessageAppendSegment messageAppendSegment;
+    private final MMapQueueMessageMetaSegment messageMetaSegment;
     private final AtomicInteger referenceCount;
 
-    public MMapQueueMessageSegment(QueueMessageAppendSegment messageAppendSegment, QueueMessageMetaSegment messageMetaSegment) {
+    public MMapQueueMessageSegment(MMapQueueMessageAppendSegment messageAppendSegment, MMapQueueMessageMetaSegment messageMetaSegment) {
         this.messageAppendSegment = messageAppendSegment;
         this.messageMetaSegment = messageMetaSegment;
         this.referenceCount = new AtomicInteger();
+    }
+
+    public MMapQueueMessageAppendSegment getMessageAppendSegment() {
+        return messageAppendSegment;
+    }
+
+    public MMapQueueMessageMetaSegment getMessageMetaSegment() {
+        return messageMetaSegment;
     }
 
     public int acquire() {

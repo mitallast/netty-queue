@@ -7,13 +7,11 @@ Goals:
 
  - REST for simple integration
  - JSON for flexible message structures
- - STOMP for fast and asynchronous api
  - Netty for fastest TCP/IP and HTTP server realization
  - Memory mapped files to access data as an transaction log
 
 As result one instance allows:
  - send up to 165175 REST messages-at-request per second in concurrent mode
- - send up to 176600 STOMP messages-at-request per second in concurrent mode
 
 See integration test benchmarks for more details.
 
@@ -74,43 +72,6 @@ dequeue message
 delete queue
 
     curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue?reason=test&pretty'
-
-
-STOMP usage
------------
-
-Connect and send json messages async:
-
-    $ telnet 127.0.0.1 9080
-    Trying 127.0.0.1...
-    Connected to localhost.
-    Escape character is '^]'.
-    CONNECT
-
-    ^@
-    CONNECTED
-    version:1.2
-
-    SEND
-    destination:my_queue
-    content-type:json
-    content-length:26
-    receipt:1
-
-    {"message":"Hello world 1"}
-    ^@
-    SEND
-    destination:my_queue
-    content-type:json
-    content-length:26
-    receipt:2
-
-    {"message":"Hello world 2"}
-    ^@
-    RECEIPT
-    receipt-id:1
-    RECEIPT
-    receipt-id:2
 
 See tests for communication example
 

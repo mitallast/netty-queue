@@ -2,20 +2,20 @@ package org.mitallast.queue.queue;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.UUID;
 
 public class QueueMessage {
 
     public static final Charset defaultCharset = Charset.forName("UTF-8");
-    private static final JsonFactory jsonFactory = new JsonFactory(new ObjectMapper());
 
     private UUID uuid;
     private QueueMessageType type;
@@ -85,18 +85,6 @@ public class QueueMessage {
         this.buffer = buffer;
     }
 
-    @Deprecated
-    public InputStream getSourceAsStream() throws IOException {
-        buffer.resetReaderIndex();
-        return new ByteBufInputStream(buffer);
-    }
-
-    @Deprecated
-    public TreeNode getSourceAsTreeNode() throws IOException {
-        JsonParser parser = jsonFactory.createParser(getSourceAsStream());
-        return parser.readValueAsTree();
-    }
-
     public void writeTo(JsonGenerator generator) throws IOException {
         generator.writeStartObject();
         if (uuid != null) {
@@ -109,7 +97,7 @@ public class QueueMessage {
                 generator.writeString(buffer.toString(defaultCharset));
             } else if (getMessageType() == QueueMessageType.JSON) {
                 while (buffer.isReadable()) {
-                    buffer.writeChar(buffer.readChar());
+                    generator.writeRaw(buffer.readChar());
                 }
             }
         }
@@ -141,9 +129,9 @@ public class QueueMessage {
     @Override
     public String toString() {
         return "QueueMessage{" +
-                "uuid=" + uuid +
-                ", type=" + type +
-                ", buffer=" + buffer.toString(defaultCharset) +
-                '}';
+            "uuid=" + uuid +
+            ", type=" + type +
+            ", buffer=" + buffer.toString(defaultCharset) +
+            '}';
     }
 }

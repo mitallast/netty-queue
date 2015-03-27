@@ -3,7 +3,6 @@ package org.mitallast.queue.common.xstream.json;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.base.GeneratorBase;
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.common.Streams;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.common.xstream.XStreamParser;
 import org.mitallast.queue.common.xstream.XStreamString;
@@ -272,50 +271,78 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
     }
 
     @Override
-    public XStreamBuilder writeRawField(String fieldName, byte[] content, OutputStream bos) throws IOException {
+    public XStreamBuilder writeRawField(String fieldName, byte[] content) throws IOException {
         generator.writeFieldName(fieldName);
         generator.writeRaw(':');
         flush();
-        bos.write(content);
+        writeRaw(content, 0, content.length);
         finishWriteRaw();
         return this;
     }
 
     @Override
-    public XStreamBuilder writeRawField(String fieldName, byte[] content, int offset, int length, OutputStream bos) throws IOException {
+    public XStreamBuilder writeRawField(String fieldName, byte[] content, int offset, int length) throws IOException {
         generator.writeFieldName(fieldName);
         generator.writeRaw(':');
         flush();
-        bos.write(content, offset, length);
+        writeRaw(content, offset, length);
         finishWriteRaw();
         return this;
     }
 
     @Override
-    public XStreamBuilder writeRawField(String fieldName, InputStream content, OutputStream bos) throws IOException {
+    public XStreamBuilder writeRawField(String fieldName, InputStream content) throws IOException {
         generator.writeFieldName(fieldName);
         generator.writeRaw(':');
         flush();
-        Streams.copy(content, bos);
+        writeRaw(content);
         finishWriteRaw();
         return this;
     }
 
     @Override
-    public final XStreamBuilder writeRawField(String fieldName, ByteBuf content, OutputStream bos) throws IOException {
+    public final XStreamBuilder writeRawField(String fieldName, ByteBuf content) throws IOException {
         generator.writeFieldName(fieldName);
         generator.writeRaw(':');
         flush();
+        writeRaw(content);
+        finishWriteRaw();
+        return this;
+    }
+
+    private void writeRaw(InputStream content) throws IOException {
+        try {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = content.read(buffer)) != -1) {
+                writeRaw(buffer, 0, bytesRead);
+            }
+        } finally {
+            content.close();
+        }
+    }
+
+    private void writeRaw(ByteBuf content) throws IOException {
         if (content.hasArray()) {
-            content.array();
-            bos.write(content.array(), content.arrayOffset(), content.readableBytes());
+            writeRaw(content.array(), content.arrayOffset(), content.readableBytes());
         } else {
-            for (int i = content.readableBytes(); i > 0; i--) {
-                bos.write(content.readByte());
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while (content.readableBytes() > 0) {
+                bytesRead = Math.min(buffer.length, content.readableBytes());
+                content.readBytes(buffer, 0, bytesRead);
+                writeRaw(buffer, 0, bytesRead);
             }
         }
-        finishWriteRaw();
-        return this;
+    }
+
+    private void writeRaw(byte[] buffer, int offset, int length) throws IOException {
+        Object output = generator.getOutputTarget();
+        if (output instanceof OutputStream) {
+            ((OutputStream) output).write(buffer, offset, length);
+        } else {
+            generator.writeRawUTF8String(buffer, offset, length);
+        }
     }
 
     @SuppressWarnings("ConstantConditions")

@@ -4,8 +4,10 @@ import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.ByteBufOutputStream;
 import org.mitallast.queue.common.xstream.XStream;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.common.xstream.XStreamParser;
@@ -17,10 +19,10 @@ public class JsonXStream implements XStream {
 
     public final static JsonXStream jsonXContent;
 
-    private final static JsonFactory jsonFactory;
+    protected final static JsonFactory jsonFactory;
 
     static {
-        jsonFactory = new JsonFactory();
+        jsonFactory = new JsonFactory(new ObjectMapper());
         jsonFactory.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
         jsonFactory.configure(JsonGenerator.Feature.QUOTE_FIELD_NAMES, true);
         jsonFactory.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
@@ -44,6 +46,11 @@ public class JsonXStream implements XStream {
     @Override
     public XStreamBuilder createGenerator(Writer writer) throws IOException {
         return new JsonXStreamBuilder(jsonFactory.createGenerator(writer));
+    }
+
+    @Override
+    public XStreamBuilder createGenerator(ByteBuf buffer) throws IOException {
+        return createGenerator(new ByteBufOutputStream(buffer));
     }
 
     @Override

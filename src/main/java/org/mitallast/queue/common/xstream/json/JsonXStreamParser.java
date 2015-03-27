@@ -1,8 +1,11 @@
 package org.mitallast.queue.common.xstream.json;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.base.GeneratorBase;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.common.strings.CharReference;
 import org.mitallast.queue.common.strings.Strings;
@@ -10,6 +13,7 @@ import org.mitallast.queue.common.xstream.XStreamType;
 import org.mitallast.queue.common.xstream.support.AbstractXStreamParser;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 public class JsonXStreamParser extends AbstractXStreamParser {
 
@@ -133,6 +137,87 @@ public class JsonXStreamParser extends AbstractXStreamParser {
         } else {
             //TODO should this really do UTF-8 conversion?
             return utf8Bytes();
+        }
+    }
+
+    @Override
+    public ByteBuf rawBytes() throws IOException {
+        ByteBuf buffer = Unpooled.buffer();
+        readRawBytes(new ByteBufOutputStream(buffer));
+        return buffer;
+    }
+
+    @Override
+    public void readRawBytes(OutputStream outputStream) throws IOException {
+        try (JsonGenerator generator = parser.getCodec().getFactory().createGenerator(outputStream)) {
+            copyValue(generator);
+        }
+    }
+
+    private void copyValue(JsonGenerator generator) throws IOException {
+        JsonToken token = parser.getCurrentToken();
+        switch (token) {
+            case START_OBJECT:
+                generator.writeStartObject();
+                do {
+                    token = parser.nextToken();
+                    copyValue(generator);
+                } while (token != JsonToken.END_OBJECT);
+                break;
+            case END_OBJECT:
+                generator.writeEndObject();
+                break;
+            case START_ARRAY:
+                generator.writeStartArray();
+                do {
+                    token = parser.nextToken();
+                    copyValue(generator);
+                } while (token != JsonToken.END_ARRAY);
+                break;
+            case END_ARRAY:
+                generator.writeEndArray();
+                break;
+            case FIELD_NAME:
+                generator.writeFieldName(parser.getCurrentName());
+                parser.nextToken();
+                copyValue(generator);
+                break;
+            case VALUE_STRING:
+                if (parser.getParsingContext().inObject()) {
+                    generator.writeRaw(':');
+                }
+                if (parser.getParsingContext().inArray() && parser.getParsingContext().getCurrentIndex() > 0) {
+                    generator.writeRaw(',');
+                }
+                generator.writeRaw('"');
+                generator.writeRaw(
+                    parser.getTextCharacters(),
+                    parser.getTextOffset(),
+                    parser.getTextLength()
+                );
+                generator.writeRaw('"');
+                ((GeneratorBase) generator).getOutputContext().writeValue();
+                break;
+            case VALUE_NUMBER_INT:
+            case VALUE_NUMBER_FLOAT:
+            case VALUE_TRUE:
+            case VALUE_FALSE:
+            case VALUE_NULL:
+                if (parser.getParsingContext().inObject()) {
+                    generator.writeRaw(':');
+                }
+                if (parser.getParsingContext().inArray() && parser.getParsingContext().getCurrentIndex() > 0) {
+                    generator.writeRaw(',');
+                }
+                generator.writeRaw(
+                    parser.getTextCharacters(),
+                    parser.getTextOffset(),
+                    parser.getTextLength()
+                );
+                ((GeneratorBase) generator).getOutputContext().writeValue();
+                break;
+            default:
+                throw new IllegalStateException("Unexpected token: " + token);
         }
     }
 

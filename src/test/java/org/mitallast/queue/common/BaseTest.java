@@ -1,13 +1,17 @@
 package org.mitallast.queue.common;
 
 import com.google.common.collect.ImmutableList;
+import io.netty.buffer.ByteBuf;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
+import org.mitallast.queue.common.xstream.XStreamBuilder;
+import org.mitallast.queue.common.xstream.XStreamFactory;
 import org.mitallast.queue.queue.QueueMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -126,6 +130,10 @@ public class BaseTest {
         message.setUuid(randomUUID());
         message.setSource(randomUUID().toString());
         return message;
+    }
+
+    protected XStreamBuilder jsonBuilder(ByteBuf buffer) throws IOException {
+        return XStreamFactory.jsonStream().createGenerator(buffer);
     }
 
     public static interface Task {

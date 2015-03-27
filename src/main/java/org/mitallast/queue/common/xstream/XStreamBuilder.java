@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 public interface XStreamBuilder extends Closeable {
 
@@ -87,13 +86,13 @@ public interface XStreamBuilder extends Closeable {
 
     XStreamBuilder writeObjectFieldStart(XStreamString fieldName) throws IOException;
 
-    XStreamBuilder writeRawField(String fieldName, byte[] content, OutputStream bos) throws IOException;
+    XStreamBuilder writeRawField(String fieldName, byte[] content) throws IOException;
 
-    XStreamBuilder writeRawField(String fieldName, byte[] content, int offset, int length, OutputStream bos) throws IOException;
+    XStreamBuilder writeRawField(String fieldName, byte[] content, int offset, int length) throws IOException;
 
-    XStreamBuilder writeRawField(String fieldName, InputStream content, OutputStream bos) throws IOException;
+    XStreamBuilder writeRawField(String fieldName, InputStream content) throws IOException;
 
-    XStreamBuilder writeRawField(String fieldName, ByteBuf content, OutputStream bos) throws IOException;
+    XStreamBuilder writeRawField(String fieldName, ByteBuf content) throws IOException;
 
     XStreamBuilder copyCurrentStructure(XStreamParser parser) throws IOException;
 

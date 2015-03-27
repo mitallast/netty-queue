@@ -21,6 +21,11 @@ public interface XStream {
     XStreamBuilder createGenerator(Writer writer) throws IOException;
 
     /**
+     * Creates a new generator using the provided byte buffer
+     */
+    XStreamBuilder createGenerator(ByteBuf buffer) throws IOException;
+
+    /**
      * Creates a parser over the provided string content.
      */
     XStreamParser createParser(String content) throws IOException;

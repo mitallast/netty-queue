@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public interface XStreamParser extends Closeable {
 
@@ -32,6 +33,10 @@ public interface XStreamParser extends Closeable {
     Object objectText() throws IOException;
 
     Object objectBytes() throws IOException;
+
+    ByteBuf rawBytes() throws IOException;
+
+    void readRawBytes(OutputStream outputStream) throws IOException;
 
     boolean hasTextCharacters();
 
@@ -83,7 +88,7 @@ public interface XStreamParser extends Closeable {
         END_OBJECT,
         START_ARRAY,
         END_ARRAY,
-        VALUE_EMBEDDED_OBJECT
+        token, VALUE_EMBEDDED_OBJECT
     }
 
     enum NumberType {

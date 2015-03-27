@@ -17,6 +17,8 @@ public class JsonXStream implements XStream {
 
     public final static JsonXStream jsonXContent;
 
+    private final static JsonFactory jsonFactory;
+
     static {
         jsonFactory = new JsonFactory();
         jsonFactory.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
@@ -25,8 +27,6 @@ public class JsonXStream implements XStream {
         jsonFactory.configure(JsonFactory.Feature.FAIL_ON_SYMBOL_HASH_OVERFLOW, false);
         jsonXContent = new JsonXStream();
     }
-
-    private final static JsonFactory jsonFactory;
 
     private JsonXStream() {
     }

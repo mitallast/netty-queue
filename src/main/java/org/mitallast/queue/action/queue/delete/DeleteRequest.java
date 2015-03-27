@@ -2,7 +2,7 @@ package org.mitallast.queue.action.queue.delete;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
-import org.mitallast.queue.common.Strings;
+import org.mitallast.queue.common.strings.Strings;
 
 import java.util.UUID;
 

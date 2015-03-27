@@ -2,6 +2,7 @@ package org.mitallast.queue.common;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mitallast.queue.common.strings.Strings;
 
 public class StringsTest {
 

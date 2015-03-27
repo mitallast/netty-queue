@@ -1,6 +1,6 @@
 package org.mitallast.queue.common.property;
 
-import org.mitallast.queue.common.Strings;
+import org.mitallast.queue.common.strings.Strings;
 
 import java.util.HashSet;
 import java.util.Set;

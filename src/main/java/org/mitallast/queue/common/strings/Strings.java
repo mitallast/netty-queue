@@ -1,4 +1,4 @@
-package org.mitallast.queue.common;
+package org.mitallast.queue.common.strings;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;

@@ -1,10 +1,10 @@
 package org.mitallast.queue.common.settings;
 
 import org.mitallast.queue.common.Booleans;
-import org.mitallast.queue.common.Strings;
 import org.mitallast.queue.common.property.PropertyPlaceholder;
 import org.mitallast.queue.common.settings.loader.SettingsLoader;
 import org.mitallast.queue.common.settings.loader.SettingsLoaderFactory;
+import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.common.unit.*;
 
 import java.io.IOException;
@@ -13,7 +13,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static org.mitallast.queue.common.Strings.toCamelCase;
+import static org.mitallast.queue.common.strings.Strings.toCamelCase;
 import static org.mitallast.queue.common.unit.ByteSizeValue.parseBytesSizeValue;
 import static org.mitallast.queue.common.unit.SizeValue.parseSizeValue;
 import static org.mitallast.queue.common.unit.TimeValue.parseTimeValue;

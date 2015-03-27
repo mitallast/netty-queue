@@ -1,7 +1,7 @@
 package org.mitallast.queue.common.path;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
-import org.mitallast.queue.common.StringReference;
+import org.mitallast.queue.common.strings.CharSequenceReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,11 +20,11 @@ public class PathTrie<TrieType> {
 
     public PathTrie(char separator, CharSequence wildcard) {
         this.separator = separator;
-        root = new TrieNode<>(String.valueOf(separator), null, StringReference.of(wildcard));
+        root = new TrieNode<>(String.valueOf(separator), null, CharSequenceReference.of(wildcard));
     }
 
     public void insert(String path, TrieType value) {
-        CharSequence[] parts = StringReference.splitStringToArray(path, separator);
+        CharSequence[] parts = CharSequenceReference.splitStringToArray(path, separator);
         if (parts.length == 0) {
             rootValue = value;
             return;
@@ -41,7 +41,7 @@ public class PathTrie<TrieType> {
         if (path.length() == 0) {
             return rootValue;
         }
-        CharSequence[] strings = StringReference.splitStringToArray(path, separator);
+        CharSequence[] strings = CharSequenceReference.splitStringToArray(path, separator);
         if (strings.length == 0) {
             return rootValue;
         }
@@ -54,12 +54,12 @@ public class PathTrie<TrieType> {
     }
 
     public class TrieNode<NodeType> {
-        private final Map<StringReference, TrieNode<NodeType>> children;
-        private final StringReference wildcard;
+        private final Map<CharSequenceReference, TrieNode<NodeType>> children;
+        private final CharSequenceReference wildcard;
         private NodeType value;
         private String namedWildcard;
 
-        public TrieNode(CharSequence key, NodeType value, StringReference wildcard) {
+        public TrieNode(CharSequence key, NodeType value, CharSequenceReference wildcard) {
             this.wildcard = wildcard;
             this.value = value;
             this.children = new HashMap<>();
@@ -90,11 +90,11 @@ public class PathTrie<TrieType> {
             }
 
             CharSequence token = path[index];
-            final StringReference key;
+            final CharSequenceReference key;
             if (isNamedWildcard(token)) {
-                key = StringReference.of(wildcard);
+                key = CharSequenceReference.of(wildcard);
             } else {
-                key = StringReference.of(token);
+                key = CharSequenceReference.of(token);
             }
             TrieNode<NodeType> node = children.get(key);
             if (node == null) {
@@ -149,7 +149,7 @@ public class PathTrie<TrieType> {
                 return null;
             }
 
-            StringReference token = StringReference.of(path[index]);
+            CharSequenceReference token = CharSequenceReference.of(path[index]);
             TrieNode<NodeType> node = children.get(token);
             boolean usedWildcard;
             if (node == null) {

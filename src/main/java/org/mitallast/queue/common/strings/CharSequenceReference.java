@@ -1,9 +1,9 @@
-package org.mitallast.queue.common;
+package org.mitallast.queue.common.strings;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class StringReference implements CharSequence {
+public class CharSequenceReference implements CharSequence {
 
     public static final CharSequence[] EMPTY = new CharSequence[0];
     private final CharSequence sequence;
@@ -11,11 +11,11 @@ public class StringReference implements CharSequence {
     private final int end;
     private int hash;
 
-    public StringReference(CharSequence sequence) {
+    public CharSequenceReference(CharSequence sequence) {
         this(sequence, 0, sequence.length());
     }
 
-    public StringReference(CharSequence sequence, int start, int end) {
+    public CharSequenceReference(CharSequence sequence, int start, int end) {
         this.sequence = sequence;
         this.start = start;
         this.end = end;
@@ -44,10 +44,10 @@ public class StringReference implements CharSequence {
     }
 
     public static CharSequence subSequence(CharSequence sequence, int start, int end) {
-        if (sequence instanceof StringReference) {
+        if (sequence instanceof CharSequenceReference) {
             return sequence.subSequence(start, end);
         } else {
-            return new StringReference(sequence, start, end);
+            return new CharSequenceReference(sequence, start, end);
         }
     }
 
@@ -66,11 +66,11 @@ public class StringReference implements CharSequence {
         return true;
     }
 
-    public static StringReference of(CharSequence sequence) {
-        if (sequence instanceof StringReference) {
-            return (StringReference) sequence;
+    public static CharSequenceReference of(CharSequence sequence) {
+        if (sequence instanceof CharSequenceReference) {
+            return (CharSequenceReference) sequence;
         } else {
-            return new StringReference(sequence);
+            return new CharSequenceReference(sequence);
         }
     }
 
@@ -86,7 +86,7 @@ public class StringReference implements CharSequence {
 
     @Override
     public CharSequence subSequence(int start, int end) {
-        return new StringReference(sequence, this.start + start, this.start + end);
+        return new CharSequenceReference(sequence, this.start + start, this.start + end);
     }
 
     @Override

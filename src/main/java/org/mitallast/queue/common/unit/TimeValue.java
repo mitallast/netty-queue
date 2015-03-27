@@ -5,7 +5,7 @@ import org.joda.time.PeriodType;
 import org.joda.time.format.PeriodFormat;
 import org.joda.time.format.PeriodFormatter;
 import org.mitallast.queue.QueueParseException;
-import org.mitallast.queue.common.Strings;
+import org.mitallast.queue.common.strings.Strings;
 
 import java.util.concurrent.TimeUnit;
 

@@ -1,7 +1,7 @@
 package org.mitallast.queue.common.unit;
 
 import org.mitallast.queue.QueueParseException;
-import org.mitallast.queue.common.Strings;
+import org.mitallast.queue.common.strings.Strings;
 
 import java.io.Serializable;
 import java.util.Locale;

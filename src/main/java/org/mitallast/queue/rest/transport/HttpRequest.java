@@ -1,5 +1,6 @@
 package org.mitallast.queue.rest.transport;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -45,8 +46,8 @@ public class HttpRequest implements RestRequest {
     public String param(String param) {
         List<String> params = paramMap.get(param);
         return (params == null || params.isEmpty())
-                ? null
-                : params.get(0);
+            ? null
+            : params.get(0);
     }
 
     @Override
@@ -62,6 +63,11 @@ public class HttpRequest implements RestRequest {
     @Override
     public InputStream getInputStream() {
         return new ByteBufInputStream(httpRequest.content());
+    }
+
+    @Override
+    public ByteBuf content() {
+        return httpRequest.content();
     }
 
     @Override

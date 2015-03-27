@@ -1,5 +1,6 @@
 package org.mitallast.queue.rest;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 
@@ -23,4 +24,6 @@ public interface RestRequest {
     boolean hasParam(String param);
 
     InputStream getInputStream();
+
+    ByteBuf content();
 }

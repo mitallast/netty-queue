@@ -8,12 +8,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import org.mitallast.queue.common.xstream.ToXStream;
+import org.mitallast.queue.common.xstream.XStreamBuilder;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.UUID;
 
-public class QueueMessage {
+public class QueueMessage implements ToXStream {
 
     public static final Charset defaultCharset = Charset.forName("UTF-8");
 
@@ -85,23 +87,22 @@ public class QueueMessage {
         this.buffer = buffer;
     }
 
-    public void writeTo(JsonGenerator generator) throws IOException {
-        generator.writeStartObject();
+    @Override
+    public void toXStream(XStreamBuilder builder) throws IOException {
+        builder.writeStartObject();
         if (uuid != null) {
-            generator.writeStringField("uuid", uuid.toString());
+            builder.writeStringField("uuid", uuid.toString());
         }
         if (buffer != null) {
             buffer.resetReaderIndex();
-            generator.writeFieldName("message");
             if (getMessageType() == QueueMessageType.STRING) {
-                generator.writeString(buffer.toString(defaultCharset));
+                builder.writeFieldName("message");
+                builder.writeString(buffer.toString(defaultCharset));
             } else if (getMessageType() == QueueMessageType.JSON) {
-                while (buffer.isReadable()) {
-                    generator.writeRaw(buffer.readChar());
-                }
+                builder.writeRawField("message", buffer);
             }
         }
-        generator.writeEndObject();
+        builder.writeEndObject();
     }
 
     @Override

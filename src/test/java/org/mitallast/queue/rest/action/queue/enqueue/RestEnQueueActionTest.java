@@ -1,7 +1,8 @@
 package org.mitallast.queue.rest.action.queue.enqueue;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.action.ActionListener;
@@ -10,6 +11,7 @@ import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.rest.RestController;
@@ -20,8 +22,6 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.UUID;
 
@@ -62,17 +62,16 @@ public class RestEnQueueActionTest extends BaseTest {
 
         UUID uuid = randomUUID();
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        JsonFactory factory = new JsonFactory();
-        JsonGenerator generator = factory.createGenerator(outputStream);
-        generator.writeStartObject();
-        generator.writeStringField("message", "Hello world");
-        generator.writeStringField("uuid", uuid.toString());
-        generator.writeEndObject();
-        generator.close();
+        ByteBuf buffer = Unpooled.buffer();
+        try (XStreamBuilder builder = jsonBuilder(buffer)) {
+            builder.writeStartObject();
+            builder.writeStringField("message", "Hello world");
+            builder.writeStringField("uuid", uuid.toString());
+            builder.writeEndObject();
+        }
 
         when(restRequest.param("queue")).thenReturn("testQueue");
-        when(restRequest.getInputStream()).thenReturn(new ByteArrayInputStream(outputStream.toByteArray()));
+        when(restRequest.content()).thenReturn(buffer);
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
@@ -92,22 +91,21 @@ public class RestEnQueueActionTest extends BaseTest {
 
         UUID uuid = randomUUID();
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        JsonFactory factory = new JsonFactory();
-        JsonGenerator generator = factory.createGenerator(outputStream);
-        generator.writeStartObject();
-        generator.writeFieldName("message");
-        generator.writeStartObject();
-        generator.writeStringField("title", "Hello title");
-        generator.writeStringField("description", "Hello description");
-        generator.writeEndObject();
+        ByteBuf buffer = Unpooled.buffer();
+        try (XStreamBuilder builder = jsonBuilder(buffer)) {
+            builder.writeStartObject();
+            builder.writeFieldName("message");
+            builder.writeStartObject();
+            builder.writeStringField("title", "Hello title");
+            builder.writeStringField("description", "Hello description");
+            builder.writeEndObject();
 
-        generator.writeStringField("uuid", uuid.toString());
-        generator.writeEndObject();
-        generator.close();
+            builder.writeStringField("uuid", uuid.toString());
+            builder.writeEndObject();
+        }
 
         when(restRequest.param("queue")).thenReturn("testQueue");
-        when(restRequest.getInputStream()).thenReturn(new ByteArrayInputStream(outputStream.toByteArray()));
+        when(restRequest.content()).thenReturn(buffer);
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
@@ -116,7 +114,7 @@ public class RestEnQueueActionTest extends BaseTest {
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
         assert "testQueue".equals(queue);
-        assert "{\"title\":\"Hello title\",\"description\":\"Hello description\"}".equals(queueMessage.getMessage());
+        Assert.assertEquals("{\"title\":\"Hello title\",\"description\":\"Hello description\"}", queueMessage.getMessage());
         assert uuid.equals(queueMessage.getUuid());
         assert queueMessage.getMessageType() == QueueMessageType.JSON;
     }
@@ -127,22 +125,21 @@ public class RestEnQueueActionTest extends BaseTest {
 
         UUID uuid = randomUUID();
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        JsonFactory factory = new JsonFactory();
-        JsonGenerator generator = factory.createGenerator(outputStream);
-        generator.writeStartObject();
-        generator.writeFieldName("message");
-        generator.writeStartArray();
-        generator.writeString("Hello title");
-        generator.writeString("Hello description");
-        generator.writeEndArray();
+        ByteBuf buffer = Unpooled.buffer();
+        try (XStreamBuilder builder = jsonBuilder(buffer)) {
+            builder.writeStartObject();
+            builder.writeFieldName("message");
+            builder.writeStartArray();
+            builder.writeString("Hello title");
+            builder.writeString("Hello description");
+            builder.writeEndArray();
 
-        generator.writeStringField("uuid", uuid.toString());
-        generator.writeEndObject();
-        generator.close();
+            builder.writeStringField("uuid", uuid.toString());
+            builder.writeEndObject();
+        }
 
         when(restRequest.param("queue")).thenReturn("testQueue");
-        when(restRequest.getInputStream()).thenReturn(new ByteArrayInputStream(outputStream.toByteArray()));
+        when(restRequest.content()).thenReturn(buffer);
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 

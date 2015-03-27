@@ -1,9 +1,7 @@
 package org.mitallast.queue.rest.action.queue.peek;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -12,6 +10,7 @@ import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
@@ -21,7 +20,6 @@ import org.mitallast.queue.rest.response.JsonRestResponse;
 import org.mitallast.queue.rest.response.StatusRestResponse;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
 public class RestPeekQueueAction extends BaseRestHandler {
 
@@ -45,9 +43,9 @@ public class RestPeekQueueAction extends BaseRestHandler {
                 }
                 QueueMessage queueMessage = peekQueueResponse.getMessage();
                 ByteBuf buffer = Unpooled.buffer();
-                try (OutputStream stream = new ByteBufOutputStream(buffer)) {
-                    try (JsonGenerator generator = createGenerator(request, stream)) {
-                        queueMessage.writeTo(generator);
+                try {
+                    try (XStreamBuilder builder = createBuilder(request, buffer)) {
+                        queueMessage.toXStream(builder);
                     }
                     session.sendResponse(new JsonRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {

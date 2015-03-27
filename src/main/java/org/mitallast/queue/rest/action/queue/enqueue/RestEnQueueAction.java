@@ -1,9 +1,7 @@
 package org.mitallast.queue.rest.action.queue.enqueue;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.TreeNode;
 import com.google.inject.Inject;
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.QueueParseException;
@@ -13,7 +11,9 @@ import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.xstream.XStreamParser;
 import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
@@ -23,7 +23,6 @@ import org.mitallast.queue.rest.response.StringRestResponse;
 import org.mitallast.queue.rest.response.UUIDRestResponse;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 public class RestEnQueueAction extends BaseRestHandler {
 
@@ -34,38 +33,37 @@ public class RestEnQueueAction extends BaseRestHandler {
         controller.registerHandler(HttpMethod.PUT, "/{queue}/message", this);
     }
 
-    private void parse(EnQueueRequest request, InputStream inputStream) throws IOException {
-        try (JsonParser parser = createParser(inputStream)) {
+    private void parse(EnQueueRequest request, ByteBuf buffer) throws IOException {
+        try (XStreamParser parser = createParser(buffer)) {
             String currentFieldName;
-            JsonToken token;
+            XStreamParser.Token token;
 
             token = parser.nextToken();
             if (token == null) {
                 throw new QueueParseException("malformed, expected settings to start with 'object', actual [null]");
             }
-            if (token != JsonToken.START_OBJECT) {
+            if (token != XStreamParser.Token.START_OBJECT) {
                 throw new QueueParseException("malformed, expected settings to start with 'object', actual [" + token + "]");
             }
 
-            while ((token = parser.nextToken()) != JsonToken.END_OBJECT) {
-                if (token == JsonToken.FIELD_NAME) {
-                    currentFieldName = parser.getCurrentName();
+            while ((token = parser.nextToken()) != XStreamParser.Token.END_OBJECT) {
+                if (token == XStreamParser.Token.FIELD_NAME) {
+                    currentFieldName = parser.currentName();
                     switch (currentFieldName) {
                         case "message":
                             token = parser.nextToken();
-                            if (token == JsonToken.VALUE_STRING) {
-                                request.getMessage().setSource(parser.getText());
-                            } else if (token == JsonToken.START_OBJECT || token == JsonToken.START_ARRAY) {
-                                TreeNode treeNode = parser.readValueAsTree();
-                                request.getMessage().setSource(treeNode);
+                            if (token == XStreamParser.Token.VALUE_STRING) {
+                                request.getMessage().setSource(parser.text());
+                            } else if (token == XStreamParser.Token.START_OBJECT || token == XStreamParser.Token.START_ARRAY) {
+                                request.getMessage().setSource(QueueMessageType.JSON, parser.rawBytes());
                             } else {
                                 throw new QueueParseException("malformed, expected string, object or array value at field [" + currentFieldName + "]");
                             }
                             break;
                         case "uuid":
                             token = parser.nextToken();
-                            if (token == JsonToken.VALUE_STRING) {
-                                request.getMessage().setUuid(UUIDs.fromString(parser.getText()));
+                            if (token == XStreamParser.Token.VALUE_STRING) {
+                                request.getMessage().setUuid(UUIDs.fromString(parser.text()));
                             } else {
                                 throw new QueueParseException("malformed, expected string value at field [" + currentFieldName + "]");
                             }
@@ -86,8 +84,8 @@ public class RestEnQueueAction extends BaseRestHandler {
         enQueueRequest.setQueue(request.param("queue"));
         enQueueRequest.setMessage(queueMessage);
 
-        try (InputStream stream = request.getInputStream()) {
-            parse(enQueueRequest, stream);
+        try {
+            parse(enQueueRequest, request.content());
         } catch (IOException e) {
             session.sendResponse(e);
             return;

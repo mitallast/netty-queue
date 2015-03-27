@@ -92,7 +92,7 @@ public class PathTrie<TrieType> {
             CharSequence token = path[index];
             final CharSequenceReference key;
             if (isNamedWildcard(token)) {
-                key = CharSequenceReference.of(wildcard);
+                key = wildcard;
             } else {
                 key = CharSequenceReference.of(token);
             }

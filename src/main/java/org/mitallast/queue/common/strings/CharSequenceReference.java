@@ -105,7 +105,7 @@ public class CharSequenceReference implements CharSequence {
             return hash;
         }
 
-        for (int i = start; i < end; i++) {
+        for (int i = start, end = Math.min(start + 5, this.end); i < end; i++) {
             hash = hash * 31 ^ sequence.charAt(i) & 31;
         }
 

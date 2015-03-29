@@ -303,13 +303,15 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     @Override
     public boolean push(QueueMessage queueMessage) throws IOException {
-        final UUID uuid;
         if (queueMessage.getUuid() == null) {
-            uuid = UUIDs.generateRandom();
-            queueMessage.setUuid(uuid);
+            return pushNew(queueMessage);
         } else {
-            uuid = queueMessage.getUuid();
+            return pushExist(queueMessage);
         }
+    }
+
+    private boolean pushExist(QueueMessage queueMessage) throws IOException {
+        final UUID uuid = queueMessage.getUuid();
         ImmutableList<MMapQueueMessageSegment> prev = null;
         while (true) {
             final ImmutableList<MMapQueueMessageSegment> current = this.segments;
@@ -335,6 +337,34 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                 }
             }
             prev = current;
+            addSegment(current);
+        }
+    }
+
+    private boolean pushNew(QueueMessage queueMessage) throws IOException {
+        final UUID uuid = UUIDs.generateRandom();
+        queueMessage.setUuid(uuid);
+        MMapQueueMessageSegment prev = null;
+        while (true) {
+            ImmutableList<MMapQueueMessageSegment> current = this.segments;
+            if (!current.isEmpty()) {
+                MMapQueueMessageSegment segment = current.get(current.size() - 1);
+                if (prev != segment && segment.acquire() > 0) {
+                    try {
+                        if (segment.insert(uuid)) {
+                            if (segment.writeLock(uuid)) {
+                                segment.writeMessage(queueMessage);
+                                return true;
+                            } else {
+                                throw new QueueMessageUuidDuplicateException(uuid);
+                            }
+                        }
+                    } finally {
+                        segment.release();
+                    }
+                }
+                prev = segment;
+            }
             addSegment(current);
         }
     }

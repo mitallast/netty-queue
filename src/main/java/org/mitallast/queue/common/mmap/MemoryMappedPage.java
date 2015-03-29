@@ -7,11 +7,15 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 public class MemoryMappedPage implements Closeable {
 
     private final static AtomicIntegerFieldUpdater<MemoryMappedPage> referenceCountUpdater =
         AtomicIntegerFieldUpdater.newUpdater(MemoryMappedPage.class, "referenceCount");
+
+    private final static AtomicLongFieldUpdater<MemoryMappedPage> timestampUpdater =
+        AtomicLongFieldUpdater.newUpdater(MemoryMappedPage.class, "timestamp");
 
     private final long offset;
     private MappedByteBuffer buffer;
@@ -87,28 +91,53 @@ public class MemoryMappedPage implements Closeable {
         }
     }
 
-    public int acquire() {
-        return referenceCountUpdater.incrementAndGet(this);
+    public boolean acquire() {
+        while (true) {
+            int current = referenceCount;
+            if (current >= 0) {
+                if (referenceCountUpdater.compareAndSet(this, current, current + 1)) {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
     }
 
     public int release() {
         return referenceCountUpdater.decrementAndGet(this);
     }
 
-    public int getReferenceCount() {
-        return referenceCount;
+    public boolean garbage() {
+        while (true) {
+            int current = referenceCount;
+            if (current == 0) {
+                if (referenceCountUpdater.compareAndSet(this, current, current - 1)) {
+                    return true;
+                }
+            } else {
+                return false;
+            }
+        }
     }
 
-    public boolean setReferenceCount(int expect, int update) {
-        return referenceCountUpdater.compareAndSet(this, expect, update);
+    public void lockTimestamp() {
+        timestamp = -Math.abs(timestamp);
+    }
+
+    public void unlockTimestamp() {
+        timestamp = Math.abs(timestamp);
     }
 
     public long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(long newTimestamp) {
-        timestamp = newTimestamp;
+    public void updateTimestamp(long newTimestamp) {
+        long current = timestampUpdater.get(this);
+        if (current > 0 && current < newTimestamp) {
+            timestampUpdater.compareAndSet(this, current, newTimestamp);
+        }
     }
 
     public void flush() throws IOException {

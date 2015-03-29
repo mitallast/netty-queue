@@ -27,11 +27,11 @@ public class BaseTest {
     public TemporaryFolder testFolder = new TemporaryFolder();
 
     protected int concurrency() {
-        return 24;
+        return Runtime.getRuntime().availableProcessors();
     }
 
     protected int max() {
-        return 10000;
+        return 20000;
     }
 
     protected final int total() {

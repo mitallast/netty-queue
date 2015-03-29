@@ -44,7 +44,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         this.rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
         this.wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
         this.wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
-        this.threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors() * 2);
+        this.threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors());
     }
 
     private NioEventLoopGroup group(String name) {

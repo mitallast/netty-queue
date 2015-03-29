@@ -125,7 +125,9 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     }
 
     private void writeState() throws IOException {
+        ImmutableList<MMapQueueMessageSegment> segments = this.segments;
         logger.info("write state of {} segments", segments.size());
+        long start = System.currentTimeMillis();
         File state = new File(queueDir, "state.json");
         if (!state.exists() && !state.createNewFile()) {
             throw new IOException("error create new file " + state);
@@ -151,6 +153,9 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
             generator.writeEndObject();
             generator.close();
+        } finally {
+            long end = System.currentTimeMillis();
+            logger.info("write state of {} segments done at {}ms", segments.size(), end - start);
         }
     }
 
@@ -305,11 +310,15 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         } else {
             uuid = queueMessage.getUuid();
         }
+        ImmutableList<MMapQueueMessageSegment> prev = null;
         while (true) {
             final ImmutableList<MMapQueueMessageSegment> current = this.segments;
             final int size = current.size();
             for (int i = 0; i < size; i++) {
                 final MMapQueueMessageSegment segment = current.get(i);
+                if (prev != null && prev.contains(segment)) {
+                    continue;
+                }
                 if (segment.acquire() > 0) {
                     try {
                         if (segment.insert(uuid)) {
@@ -325,6 +334,7 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                     }
                 }
             }
+            prev = current;
             addSegment(current);
         }
     }
@@ -370,24 +380,27 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     }
 
     private void addSegment(ImmutableList<MMapQueueMessageSegment> current) throws IOException {
-        // create new segment
-        if (segmentsLock.tryLock()) {
-            try {
-                if (this.segments == current) {
-                    this.segments = ImmutableList.<MMapQueueMessageSegment>builder()
-                        .addAll(current)
-                        .add(createSegment())
-                        .build();
-                    writeState();
-                }
-            } finally {
-                segmentsLock.unlock();
+        segmentsLock.lock();
+        try {
+            if (this.segments == current) {
+                this.segments = ImmutableList.<MMapQueueMessageSegment>builder()
+                    .addAll(current)
+                    .add(createSegment())
+                    .build();
+                writeState();
             }
+        } finally {
+            segmentsLock.unlock();
         }
     }
 
     private MMapQueueMessageAppendSegment createAppendSegment() throws IOException {
-        return createAppendSegment(mmapFileFactory.createFile("data"));
+        logger.info("create new data segment");
+        long start = System.currentTimeMillis();
+        MMapQueueMessageAppendSegment data = createAppendSegment(mmapFileFactory.createFile("data"));
+        long end = System.currentTimeMillis();
+        logger.info("create new data segment at {}ms", end - start);
+        return data;
     }
 
     private MMapQueueMessageAppendSegment createAppendSegment(MemoryMappedFile file) throws IOException {
@@ -395,7 +408,12 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     }
 
     private MMapQueueMessageMetaSegment createMetaSegment() throws IOException {
-        return createMetaSegment(mmapFileFactory.createFile("meta"));
+        logger.info("create new meta segment");
+        long start = System.currentTimeMillis();
+        MMapQueueMessageMetaSegment meta = createMetaSegment(mmapFileFactory.createFile("meta"));
+        long end = System.currentTimeMillis();
+        logger.info("create new meta segment at {}ms", end - start);
+        return meta;
     }
 
     private MMapQueueMessageMetaSegment createMetaSegment(MemoryMappedFile file) throws IOException {
@@ -408,9 +426,13 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     private MMapQueueMessageSegment createSegment() throws IOException {
         logger.info("create new segment");
-        return new MMapQueueMessageSegment(
+        long start = System.currentTimeMillis();
+        MMapQueueMessageSegment segment = new MMapQueueMessageSegment(
             createAppendSegment(),
             createMetaSegment()
         );
+        long end = System.currentTimeMillis();
+        logger.info("create new segment done at {}ms", end - start);
+        return segment;
     }
 }

@@ -18,7 +18,7 @@ import static org.mitallast.queue.queue.QueueMessageStatus.*;
 
 public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
-    public final static int DEFAULT_MAX_SIZE = 262144;
+    public final static int DEFAULT_MAX_SIZE = 1048576;
     public final static float DEFAULT_LOAD_FACTOR = 0.7f;
 
     private final static long INT_SIZE = 4;

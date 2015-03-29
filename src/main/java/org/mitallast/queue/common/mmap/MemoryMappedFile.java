@@ -1,9 +1,6 @@
 package org.mitallast.queue.common.mmap;
 
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCache;
-import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCacheSegment;
-import org.mitallast.queue.common.mmap.cache.MemoryMappedPageCacheSegmented;
 
 import java.io.Closeable;
 import java.io.File;
@@ -12,7 +9,7 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
-public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Closeable {
+public class MemoryMappedFile implements MemoryMappedPageCacheLoader, Closeable {
     public final static int DEFAULT_PAGE_SIZE = 1048576;
     public final static int DEFAULT_MAX_PAGES = 64;
     private final File file;
@@ -30,7 +27,7 @@ public class MemoryMappedFile implements MemoryMappedPageCacheSegment.Loader, Cl
         this.randomAccessFile = new RandomAccessFile(file, "rw");
         this.pageSize = pageSize;
         channel = randomAccessFile.getChannel();
-        pageCache = new MemoryMappedPageCacheSegmented(this, maxPages, 10);
+        pageCache = new MemoryMappedPageCacheImpl(this, maxPages);
     }
 
     public File getFile() {

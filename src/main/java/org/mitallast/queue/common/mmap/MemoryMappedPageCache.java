@@ -1,6 +1,4 @@
-package org.mitallast.queue.common.mmap.cache;
-
-import org.mitallast.queue.common.mmap.MemoryMappedPage;
+package org.mitallast.queue.common.mmap;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -13,7 +11,4 @@ public interface MemoryMappedPageCache extends Closeable {
 
     void flush() throws IOException;
 
-    public static interface Loader {
-        public MemoryMappedPage load(long offset) throws IOException;
-    }
 }

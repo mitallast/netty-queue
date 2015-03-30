@@ -69,6 +69,12 @@ public class MemoryMappedPage implements Closeable {
         dirty = true;
     }
 
+    public void putBytes(final long offset, ByteBuf byteBuf, int start, int length) {
+        int index = getIndex(offset);
+        buf.setBytes(index, byteBuf, start, length);
+        dirty = true;
+    }
+
     public void putBytes(long offset, byte[] data, int start, int length) {
         int index = getIndex(offset);
         for (int i = 0; i < length; i++, index++, start++) {
@@ -81,6 +87,14 @@ public class MemoryMappedPage implements Closeable {
         int index = getIndex(offset);
         for (int i = 0; i < length; i++, index++) {
             buffer.writeByte(this.buffer.get(index));
+        }
+    }
+
+    public void getBytes(long offset, ByteBuf buffer, int start, int length) {
+        int index = getIndex(offset);
+        for (int i = 0, j = start; i < length; i++, index++, j++) {
+            byte byteValue = this.buffer.get(index);
+            buffer.setByte(j, byteValue);
         }
     }
 

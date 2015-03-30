@@ -137,6 +137,7 @@ public class DefaultSmartFuture<Type> implements SmartFuture<Type> {
                     Consumer<FutureResult<Type, Throwable>> consumer = (Consumer) callbacks;
                     invokeListener(consumer);
                 }
+                callbacks = null;
             }
         }
     }

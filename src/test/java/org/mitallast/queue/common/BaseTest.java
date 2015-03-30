@@ -89,6 +89,17 @@ public class BaseTest {
         }
     }
 
+    protected void executeAsync(Task task) throws Exception {
+        Thread thread = new Thread(() -> {
+            try {
+                task.execute();
+            } catch (Exception e) {
+                assert false : e;
+            }
+        });
+        thread.start();
+    }
+
     protected void printQps(String metric, long total, long start, long end) {
         long qps = (long) (total / (double) (end - start) * 1000.);
         logger.info(metric + ": " + total + " at " + (end - start) + "ms");

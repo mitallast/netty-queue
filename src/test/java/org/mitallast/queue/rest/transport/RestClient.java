@@ -7,7 +7,8 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.AttributeKey;
-import org.mitallast.queue.common.concurrent.BasicFuture;
+import org.mitallast.queue.common.concurrent.futures.Futures;
+import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.Future;
 
 public class RestClient extends NettyClient {
 
-    private final static AttributeKey<ConcurrentLinkedDeque<BasicFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
+    private final static AttributeKey<ConcurrentLinkedDeque<SmartFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
 
     public RestClient(Settings settings) {
         super(settings);
@@ -32,7 +33,7 @@ public class RestClient extends NettyClient {
     }
 
     public Future<FullHttpResponse> send(HttpRequest request, boolean flush) {
-        final BasicFuture<FullHttpResponse> future = new BasicFuture<>();
+        final SmartFuture<FullHttpResponse> future = Futures.future();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().push(future);
         if (flush) {
@@ -56,7 +57,7 @@ public class RestClient extends NettyClient {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse response) throws Exception {
                         response.content().retain();
-                        ctx.channel().attr(attr).get().poll().set(response);
+                        ctx.channel().attr(attr).get().poll().invoke(response);
                     }
                 });
             }

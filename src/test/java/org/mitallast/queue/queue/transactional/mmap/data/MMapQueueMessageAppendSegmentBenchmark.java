@@ -1,21 +1,17 @@
 package org.mitallast.queue.queue.transactional.mmap.data;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.BaseBenchmark;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MMapQueueMessageAppendSegmentTest extends BaseTest {
-
+public class MMapQueueMessageAppendSegmentBenchmark extends BaseBenchmark {
     private MemoryMappedFile mmapFile;
     private QueueMessageAppendSegment segment;
     private List<ByteBuf> bufferList;
@@ -24,7 +20,7 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        mmapFile = new MemoryMappedFile(testFolder.newFile(), 65536, 50);
+        mmapFile = new MemoryMappedFile(testFolder.newFile());
         segment = new MMapQueueMessageAppendSegment(mmapFile);
         bufferList = new ArrayList<>(max());
         offsets = new long[max()];
@@ -43,6 +39,13 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
     }
 
     @Test
+    public void testWrite() throws Exception {
+        for (int i = 0; i < max(); i++) {
+            segment.append(bufferList.get(i));
+        }
+    }
+
+    @Test
     public void testReadWrite() throws Exception {
         for (int i = 0; i < max(); i++) {
             offsets[i] = segment.append(bufferList.get(i));
@@ -51,33 +54,6 @@ public class MMapQueueMessageAppendSegmentTest extends BaseTest {
         for (int i = 0; i < max(); i++) {
             buffer.clear();
             segment.read(buffer, offsets[i], length);
-            buffer.resetReaderIndex();
-            ByteBuf expected = bufferList.get(i);
-            expected.resetReaderIndex();
-            Assert.assertTrue(ByteBufUtil.equals(expected, buffer));
         }
-    }
-
-    @Test
-    public void testReadWriteConcurrent() throws Exception {
-        executeConcurrent((thread, concurrency) -> {
-            try {
-                for (int i = thread; i < max(); i += concurrency) {
-                    offsets[i] = segment.append(bufferList.get(i));
-                }
-                ByteBuf buffer = Unpooled.buffer();
-                for (int i = thread; i < max(); i += concurrency) {
-                    buffer.resetWriterIndex();
-                    segment.read(buffer, offsets[i], length);
-                    buffer.resetReaderIndex();
-                    ByteBuf expected = bufferList.get(i);
-                    expected.resetReaderIndex();
-                    Assert.assertTrue(ByteBufUtil.equals(expected, buffer));
-                }
-                buffer.release();
-            } catch (IOException e) {
-                assert false : e;
-            }
-        });
     }
 }

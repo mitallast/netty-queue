@@ -9,11 +9,11 @@ import java.util.UUID;
 
 public interface TransactionalQueueSegment extends TransactionalQueueComponent, Closeable {
 
-    public boolean insert(UUID uuid) throws IOException;
+    public int insert(UUID uuid) throws IOException;
 
-    public boolean writeLock(UUID uuid) throws IOException;
+    public boolean writeLock(int pos) throws IOException;
 
-    public boolean writeMessage(QueueMessage queueMessage) throws IOException;
+    public boolean writeMessage(QueueMessage queueMessage, int pos) throws IOException;
 
     public boolean isGarbage() throws IOException;
 

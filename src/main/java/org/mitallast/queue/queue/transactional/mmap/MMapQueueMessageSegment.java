@@ -72,17 +72,17 @@ public class MMapQueueMessageSegment implements TransactionalQueueSegment {
     }
 
     @Override
-    public boolean insert(UUID uuid) throws IOException {
+    public int insert(UUID uuid) throws IOException {
         return messageMetaSegment.insert(uuid);
     }
 
     @Override
-    public boolean writeLock(UUID uuid) throws IOException {
-        return messageMetaSegment.writeLock(uuid);
+    public boolean writeLock(int pos) throws IOException {
+        return messageMetaSegment.writeLock(pos);
     }
 
     @Override
-    public boolean writeMessage(QueueMessage queueMessage) throws IOException {
+    public boolean writeMessage(QueueMessage queueMessage, int pos) throws IOException {
         ByteBuf source = queueMessage.getSource();
         source.resetReaderIndex();
         int length = source.readableBytes();
@@ -96,7 +96,7 @@ public class MMapQueueMessageSegment implements TransactionalQueueSegment {
             queueMessage.getMessageType()
         );
 
-        messageMetaSegment.writeMeta(messageMeta);
+        messageMetaSegment.writeMeta(messageMeta, pos);
         return true;
     }
 

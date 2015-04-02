@@ -39,17 +39,17 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.insert(message1.getUuid());
-        segment.insert(message2.getUuid());
-        segment.insert(message3.getUuid());
+        int pos1 = segment.insert(message1.getUuid());
+        int pos2 = segment.insert(message2.getUuid());
+        int pos3 = segment.insert(message3.getUuid());
 
-        segment.writeLock(message1.getUuid());
-        segment.writeLock(message2.getUuid());
-        segment.writeLock(message3.getUuid());
+        segment.writeLock(pos1);
+        segment.writeLock(pos2);
+        segment.writeLock(pos3);
 
-        Assert.assertTrue(segment.writeMessage(message1));
-        Assert.assertTrue(segment.writeMessage(message2));
-        Assert.assertTrue(segment.writeMessage(message3));
+        Assert.assertTrue(segment.writeMessage(message1, pos1));
+        Assert.assertTrue(segment.writeMessage(message2, pos2));
+        Assert.assertTrue(segment.writeMessage(message3, pos3));
     }
 
     @Test
@@ -58,17 +58,17 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.insert(message1.getUuid());
-        segment.insert(message2.getUuid());
-        segment.insert(message3.getUuid());
+        int pos1 = segment.insert(message1.getUuid());
+        int pos2 = segment.insert(message2.getUuid());
+        int pos3 = segment.insert(message3.getUuid());
 
-        segment.writeLock(message1.getUuid());
-        segment.writeLock(message2.getUuid());
-        segment.writeLock(message3.getUuid());
+        segment.writeLock(pos1);
+        segment.writeLock(pos2);
+        segment.writeLock(pos3);
 
-        segment.writeMessage(message1);
-        segment.writeMessage(message2);
-        segment.writeMessage(message3);
+        segment.writeMessage(message1, pos1);
+        segment.writeMessage(message2, pos2);
+        segment.writeMessage(message3, pos3);
 
         Assert.assertEquals(message1, segment.get(message1.getUuid()));
         Assert.assertEquals(message2, segment.get(message2.getUuid()));
@@ -81,17 +81,17 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.insert(message1.getUuid());
-        segment.insert(message2.getUuid());
-        segment.insert(message3.getUuid());
+        int pos1 = segment.insert(message1.getUuid());
+        int pos2 = segment.insert(message2.getUuid());
+        int pos3 = segment.insert(message3.getUuid());
 
-        segment.writeLock(message1.getUuid());
-        segment.writeLock(message2.getUuid());
-        segment.writeLock(message3.getUuid());
+        segment.writeLock(pos1);
+        segment.writeLock(pos2);
+        segment.writeLock(pos3);
 
-        segment.writeMessage(message1);
-        segment.writeMessage(message2);
-        segment.writeMessage(message3);
+        segment.writeMessage(message1, pos1);
+        segment.writeMessage(message2, pos2);
+        segment.writeMessage(message3, pos3);
 
         Assert.assertEquals(message1, segment.lock(message1.getUuid()));
         Assert.assertEquals(message2, segment.lock(message2.getUuid()));
@@ -108,17 +108,17 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.insert(message1.getUuid());
-        segment.insert(message2.getUuid());
-        segment.insert(message3.getUuid());
+        int pos1 = segment.insert(message1.getUuid());
+        int pos2 = segment.insert(message2.getUuid());
+        int pos3 = segment.insert(message3.getUuid());
 
-        segment.writeLock(message1.getUuid());
-        segment.writeLock(message2.getUuid());
-        segment.writeLock(message3.getUuid());
+        segment.writeLock(pos1);
+        segment.writeLock(pos2);
+        segment.writeLock(pos3);
 
-        segment.writeMessage(message1);
-        segment.writeMessage(message2);
-        segment.writeMessage(message3);
+        segment.writeMessage(message1, pos1);
+        segment.writeMessage(message2, pos2);
+        segment.writeMessage(message3, pos3);
 
         Assert.assertNotNull(segment.lockAndPop());
         Assert.assertNotNull(segment.lockAndPop());
@@ -133,17 +133,17 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.insert(message1.getUuid());
-        segment.insert(message2.getUuid());
-        segment.insert(message3.getUuid());
+        int pos1 = segment.insert(message1.getUuid());
+        int pos2 = segment.insert(message2.getUuid());
+        int pos3 = segment.insert(message3.getUuid());
 
-        segment.writeLock(message1.getUuid());
-        segment.writeLock(message2.getUuid());
-        segment.writeLock(message3.getUuid());
+        segment.writeLock(pos1);
+        segment.writeLock(pos2);
+        segment.writeLock(pos3);
 
-        segment.writeMessage(message1);
-        segment.writeMessage(message2);
-        segment.writeMessage(message3);
+        segment.writeMessage(message1, pos1);
+        segment.writeMessage(message2, pos2);
+        segment.writeMessage(message3, pos3);
 
         segment.lock(message1.getUuid());
         segment.lock(message2.getUuid());
@@ -160,17 +160,17 @@ public class MMapQueueMessageSegmentTest extends BaseTest {
         QueueMessage message2 = createMessageWithUuid();
         QueueMessage message3 = createMessageWithUuid();
 
-        segment.insert(message1.getUuid());
-        segment.insert(message2.getUuid());
-        segment.insert(message3.getUuid());
+        int pos1 = segment.insert(message1.getUuid());
+        int pos2 = segment.insert(message2.getUuid());
+        int pos3 = segment.insert(message3.getUuid());
 
-        segment.writeLock(message1.getUuid());
-        segment.writeLock(message2.getUuid());
-        segment.writeLock(message3.getUuid());
+        segment.writeLock(pos1);
+        segment.writeLock(pos2);
+        segment.writeLock(pos3);
 
-        segment.writeMessage(message1);
-        segment.writeMessage(message2);
-        segment.writeMessage(message3);
+        segment.writeMessage(message1, pos1);
+        segment.writeMessage(message2, pos2);
+        segment.writeMessage(message3, pos3);
 
         segment.lock(message1.getUuid());
         segment.lock(message2.getUuid());

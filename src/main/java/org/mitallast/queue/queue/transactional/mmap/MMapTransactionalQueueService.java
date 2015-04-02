@@ -323,9 +323,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                 }
                 if (segment.acquire() > 0) {
                     try {
-                        if (segment.insert(uuid)) {
-                            if (segment.writeLock(uuid)) {
-                                segment.writeMessage(queueMessage);
+                        int pos = segment.insert(uuid);
+                        if (pos >= 0) {
+                            if (segment.writeLock(pos)) {
+                                segment.writeMessage(queueMessage, pos);
                                 return true;
                             } else {
                                 throw new QueueMessageUuidDuplicateException(uuid);
@@ -351,9 +352,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                 MMapQueueMessageSegment segment = current.get(current.size() - 1);
                 if (prev != segment && segment.acquire() > 0) {
                     try {
-                        if (segment.insert(uuid)) {
-                            if (segment.writeLock(uuid)) {
-                                segment.writeMessage(queueMessage);
+                        int pos = segment.insert(uuid);
+                        if (pos >= 0) {
+                            if (segment.writeLock(pos)) {
+                                segment.writeMessage(queueMessage, pos);
                                 return true;
                             } else {
                                 throw new QueueMessageUuidDuplicateException(uuid);

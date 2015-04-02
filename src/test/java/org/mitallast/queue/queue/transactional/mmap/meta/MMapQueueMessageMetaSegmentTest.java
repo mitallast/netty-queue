@@ -39,9 +39,10 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         for (int i = 0; i < total(); i++) {
             QueueMessageMeta meta = meta();
             metaList.add(meta);
-            assert messageMetaSegment.insert(meta.getUuid());
-            assert messageMetaSegment.writeLock(meta.getUuid());
-            assert messageMetaSegment.writeMeta(meta);
+            int pos = messageMetaSegment.insert(meta.getUuid());
+            assert pos >= 0;
+            assert messageMetaSegment.writeLock(pos);
+            assert messageMetaSegment.writeMeta(meta, pos);
         }
         end = System.currentTimeMillis();
         printQps("write", total(), start, end);
@@ -71,9 +72,10 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
             try {
                 for (int i = thread; i < total(); i += concurrency) {
                     QueueMessageMeta expected = metaList.get(i);
-                    Assert.assertTrue("insert i=" + i, messageMetaSegment.insert(expected.getUuid()));
-                    Assert.assertTrue("lock   i=" + i, messageMetaSegment.writeLock(expected.getUuid()));
-                    Assert.assertTrue("write  i=" + i, messageMetaSegment.writeMeta(expected));
+                    int pos = messageMetaSegment.insert(expected.getUuid());
+                    assert pos >= 0;
+                    assert messageMetaSegment.writeLock(pos);
+                    assert messageMetaSegment.writeMeta(expected, pos);
                 }
                 for (int i = thread; i < total(); i += concurrency) {
                     QueueMessageMeta expected = metaList.get(i);
@@ -93,9 +95,10 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
-        assert messageMetaSegment.insert(meta.getUuid());
-        assert messageMetaSegment.writeLock(meta.getUuid());
-        assert messageMetaSegment.writeMeta(meta);
+        int pos = messageMetaSegment.insert(meta.getUuid());
+        assert pos >= 0;
+        assert messageMetaSegment.writeLock(pos);
+        assert messageMetaSegment.writeMeta(meta, pos);
         QueueMessageMeta metaLocked = messageMetaSegment.lock(meta.getUuid());
         Assert.assertEquals(meta, metaLocked);
         Assert.assertEquals(QueueMessageStatus.LOCKED, metaLocked.getStatus());
@@ -106,9 +109,10 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
-        assert messageMetaSegment.insert(meta.getUuid());
-        assert messageMetaSegment.writeLock(meta.getUuid());
-        assert messageMetaSegment.writeMeta(meta);
+        int pos = messageMetaSegment.insert(meta.getUuid());
+        assert pos >= 0;
+        assert messageMetaSegment.writeLock(pos);
+        assert messageMetaSegment.writeMeta(meta, pos);
         assert messageMetaSegment.lock(meta.getUuid()) != null;
         QueueMessageMeta deleted = messageMetaSegment.unlockAndDelete(meta.getUuid());
 
@@ -121,9 +125,10 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         final MMapQueueMessageMetaSegment messageMetaSegment = new MMapQueueMessageMetaSegment(mmapFile, total(), 0.7f);
         QueueMessageMeta meta = meta();
 
-        assert messageMetaSegment.insert(meta.getUuid());
-        assert messageMetaSegment.writeLock(meta.getUuid());
-        assert messageMetaSegment.writeMeta(meta);
+        int pos = messageMetaSegment.insert(meta.getUuid());
+        assert pos >= 0;
+        assert messageMetaSegment.writeLock(pos);
+        assert messageMetaSegment.writeMeta(meta, pos);
         assert messageMetaSegment.lock(meta.getUuid()) != null;
         QueueMessageMeta deleted = messageMetaSegment.unlockAndQueue(meta.getUuid());
 
@@ -138,9 +143,10 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         Assert.assertNull(messageMetaSegment.peek());
 
         QueueMessageMeta meta = meta();
-        assert messageMetaSegment.insert(meta.getUuid());
-        assert messageMetaSegment.writeLock(meta.getUuid());
-        assert messageMetaSegment.writeMeta(meta);
+        int pos = messageMetaSegment.insert(meta.getUuid());
+        assert pos >= 0;
+        assert messageMetaSegment.writeLock(pos);
+        assert messageMetaSegment.writeMeta(meta, pos);
 
         Assert.assertEquals(meta, messageMetaSegment.peek());
         Assert.assertEquals(meta, messageMetaSegment.peek());
@@ -154,17 +160,17 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         QueueMessageMeta meta2 = meta();
         QueueMessageMeta meta3 = meta();
 
-        messageMetaSegment.insert(meta1.getUuid());
-        messageMetaSegment.insert(meta2.getUuid());
-        messageMetaSegment.insert(meta3.getUuid());
+        int pos1 = messageMetaSegment.insert(meta1.getUuid());
+        int pos2 = messageMetaSegment.insert(meta2.getUuid());
+        int pos3 = messageMetaSegment.insert(meta3.getUuid());
 
-        messageMetaSegment.writeLock(meta1.getUuid());
-        messageMetaSegment.writeLock(meta2.getUuid());
-        messageMetaSegment.writeLock(meta3.getUuid());
+        messageMetaSegment.writeLock(pos1);
+        messageMetaSegment.writeLock(pos2);
+        messageMetaSegment.writeLock(pos3);
 
-        messageMetaSegment.writeMeta(meta1);
-        messageMetaSegment.writeMeta(meta2);
-        messageMetaSegment.writeMeta(meta3);
+        messageMetaSegment.writeMeta(meta1, pos1);
+        messageMetaSegment.writeMeta(meta2, pos2);
+        messageMetaSegment.writeMeta(meta3, pos3);
 
         messageMetaSegment.lock(meta1.getUuid());
         messageMetaSegment.lock(meta2.getUuid());
@@ -187,17 +193,17 @@ public class MMapQueueMessageMetaSegmentTest extends BaseTest {
         QueueMessageMeta meta2 = meta();
         QueueMessageMeta meta3 = meta();
 
-        messageMetaSegment.insert(meta1.getUuid());
-        messageMetaSegment.insert(meta2.getUuid());
-        messageMetaSegment.insert(meta3.getUuid());
+        int pos1 = messageMetaSegment.insert(meta1.getUuid());
+        int pos2 = messageMetaSegment.insert(meta2.getUuid());
+        int pos3 = messageMetaSegment.insert(meta3.getUuid());
 
-        messageMetaSegment.writeLock(meta1.getUuid());
-        messageMetaSegment.writeLock(meta2.getUuid());
-        messageMetaSegment.writeLock(meta3.getUuid());
+        messageMetaSegment.writeLock(pos1);
+        messageMetaSegment.writeLock(pos2);
+        messageMetaSegment.writeLock(pos3);
 
-        messageMetaSegment.writeMeta(meta1);
-        messageMetaSegment.writeMeta(meta2);
-        messageMetaSegment.writeMeta(meta3);
+        messageMetaSegment.writeMeta(meta1, pos1);
+        messageMetaSegment.writeMeta(meta2, pos2);
+        messageMetaSegment.writeMeta(meta3, pos3);
 
         messageMetaSegment.close();
 

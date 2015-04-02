@@ -4,7 +4,6 @@ import gnu.trove.impl.HashFunctions;
 import gnu.trove.impl.PrimeFinder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.mitallast.queue.common.Locks;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
 import org.mitallast.queue.queue.QueueMessageStatus;
 import org.mitallast.queue.queue.QueueMessageType;
@@ -21,17 +20,25 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     public final static int DEFAULT_MAX_SIZE = 1048576;
     public final static float DEFAULT_LOAD_FACTOR = 0.7f;
 
-    private final static long INT_SIZE = 4;
-    private final static long LONG_SIZE = 8;
-    private final static long MESSAGE_META_SIZE = LONG_SIZE * 8;
-    private final static long MESSAGE_COUNT_OFFSET = 0;
-    private final static long MESSAGE_META_OFFSET = MESSAGE_COUNT_OFFSET + INT_SIZE;
+    private final static int INT_SIZE = 4;
+    private final static int LONG_SIZE = 8;
+    private final static int MESSAGE_META_SIZE = LONG_SIZE * 8;
+    private final static int MESSAGE_META_SIZE_WITHOUT_UUID = MESSAGE_META_SIZE - LONG_SIZE * 2;
+    private final static int MESSAGE_META_SIZE_WITHOUT_UUID_STATUS = MESSAGE_META_SIZE_WITHOUT_UUID - INT_SIZE;
+    private final static int MESSAGE_COUNT_OFFSET = 0;
+    private final static int MESSAGE_META_OFFSET = MESSAGE_COUNT_OFFSET + INT_SIZE;
+
+    private final static ThreadLocal<ByteBuf> localBuffer = new ThreadLocal<ByteBuf>() {
+        @Override
+        protected ByteBuf initialValue() {
+            return Unpooled.buffer(512);
+        }
+    };
 
     private final MemoryMappedFile mappedFile;
     private final int size;
     private final AtomicReferenceArray<UUID> uuidMap;
     private final AtomicReferenceArray<QueueMessageStatus> statusMap;
-    private final ThreadLocal<ByteBuf> localBuffer;
     private final AtomicInteger sizeCounter;
     private final int maxSize;
 
@@ -43,14 +50,11 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         size = PrimeFinder.nextPrime(ceil);
         uuidMap = new AtomicReferenceArray<>(size);
         statusMap = new AtomicReferenceArray<>(size);
-        localBuffer = new ThreadLocal<ByteBuf>() {
-            @Override
-            protected ByteBuf initialValue() {
-                return Unpooled.buffer(512);
-            }
-        };
-
         init();
+    }
+
+    private static long getMetaOffset(int pos) {
+        return MESSAGE_META_OFFSET + MESSAGE_META_SIZE * pos;
     }
 
     public MemoryMappedFile getMappedFile() {
@@ -59,13 +63,19 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     private void init() throws IOException {
         if (mappedFile.isEmpty()) return;
+        ByteBuf buffer = localBuffer.get();
         for (int pos = 0; pos < size; pos++) {
-            QueueMessageMeta meta = readMeta(pos);
-            if (meta != null) {
-                uuidMap.set(pos, meta.getUuid());
-                statusMap.set(pos, meta.getStatus());
-                sizeCounter.incrementAndGet();
+            long metaOffset = getMetaOffset(pos);
+            buffer.clear();
+            mappedFile.getBytes(metaOffset, buffer, LONG_SIZE * 2 + INT_SIZE);
+            long most = buffer.readLong();
+            long least = buffer.readLong();
+            if (most == 0 && least == 0) {
+                continue;
             }
+            uuidMap.set(pos, new UUID(most, least));
+            statusMap.set(pos, QueueMessageStatus.values()[buffer.readInt()]);
+            sizeCounter.incrementAndGet();
         }
     }
 
@@ -75,8 +85,6 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
             if (currentSize < maxSize) {
                 if (sizeCounter.compareAndSet(currentSize, currentSize + 1)) {
                     return true;
-                } else {
-                    Locks.parkNanos();
                 }
             } else {
                 return false;
@@ -117,12 +125,12 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     @Override
     public QueueMessageMeta unlockAndDelete(UUID uuid) throws IOException {
-        final int index = index(uuid);
-        if (index >= 0) {
-            boolean deleted = setStatusDeleted(index);
-            QueueMessageMeta meta = readMeta(index);
+        final int pos = index(uuid);
+        if (pos >= 0) {
+            boolean deleted = setStatusDeleted(pos);
+            QueueMessageMeta meta = readMeta(pos);
             if (deleted) {
-                writeMeta(meta);
+                writeMetaRaw(meta, pos);
             }
             return meta;
         }
@@ -131,12 +139,12 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
     @Override
     public QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException {
-        final int index = index(uuid);
-        if (index >= 0) {
-            boolean queued = setStatusQueued(index);
-            QueueMessageMeta meta = readMeta(index);
+        final int pos = index(uuid);
+        if (pos >= 0) {
+            boolean queued = setStatusQueued(pos);
+            QueueMessageMeta meta = readMeta(pos);
             if (queued) {
-                writeMeta(meta);
+                writeMetaRaw(meta, pos);
             }
             return meta;
         }
@@ -196,14 +204,17 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     }
 
     @Override
-    public boolean insert(UUID uuid) throws IOException {
-        return incrementSize() && insertKey(uuid) >= 0;
+    public int insert(UUID uuid) throws IOException {
+        int pos = -1;
+        if (incrementSize()) {
+            pos = insertKey(uuid);
+        }
+        return pos;
     }
 
     @Override
-    public boolean writeLock(UUID uuid) throws IOException {
-        int index = insertKey(uuid);
-        return index >= 0 && setStatusInit(index);
+    public boolean writeLock(int pos) throws IOException {
+        return setStatusInit(pos);
     }
 
     /**
@@ -237,26 +248,21 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         return null;
     }
 
-    private QueueMessageMeta readMeta(int pos) throws IOException {
-        long metaOffset = getMetaOffset(pos);
-        ByteBuf buffer = localBuffer.get();
-        buffer.clear();
-        mappedFile.getBytes(metaOffset, buffer, (int) MESSAGE_META_SIZE);
-        buffer.resetReaderIndex();
-        UUID uuid;
-        long UUIDMost = buffer.readLong();
-        long UUIDLeast = buffer.readLong();
-        if (UUIDMost != 0 && UUIDLeast != 0) {
-            uuid = new UUID(UUIDMost, UUIDLeast);
-        } else {
-            // does not read entry without uuid
+    @Override
+    public QueueMessageMeta readMeta(int pos) throws IOException {
+        UUID uuid = uuidMap.get(pos);
+        if (uuid == null) {
             return null;
         }
-        QueueMessageStatus statusSaved = QueueMessageStatus.values()[buffer.readInt()];
         QueueMessageStatus status = statusMap.get(pos);
-        if (status == null) {
-            status = statusSaved;
+        if (status == null || status == INIT) {
+            return null;
         }
+        long metaOffset = getMetaOffset(pos) + LONG_SIZE * 2 + INT_SIZE; // skip UUID and status
+
+        ByteBuf buffer = localBuffer.get();
+        buffer.clear();
+        mappedFile.getBytes(metaOffset, buffer, MESSAGE_META_SIZE_WITHOUT_UUID_STATUS);
         long offset = buffer.readLong();
         int length = buffer.readInt();
         int type = buffer.readInt();
@@ -264,14 +270,11 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     }
 
     @Override
-    public boolean writeMeta(QueueMessageMeta meta) throws IOException {
-        final int index = insertKey(meta.getUuid());
-        if (index >= 0) {
-            if (statusMap.compareAndSet(index, INIT, LOCKED)) {
-                writeMeta(meta, index);
-                statusMap.set(index, QUEUED);
-                return true;
-            }
+    public boolean writeMeta(QueueMessageMeta meta, int pos) throws IOException {
+        if (statusMap.compareAndSet(pos, INIT, LOCKED)) {
+            writeMetaRaw(meta, pos);
+            statusMap.set(pos, QUEUED);
+            return true;
         }
         return false;
     }
@@ -296,10 +299,9 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         return sizeCounter.get();
     }
 
-    private void writeMeta(QueueMessageMeta messageMeta, int pos) throws IOException {
+    private void writeMetaRaw(QueueMessageMeta messageMeta, int pos) throws IOException {
         long offset = getMetaOffset(pos);
         ByteBuf buffer = localBuffer.get();
-        buffer.clear();
         buffer.clear();
         buffer.writeLong(messageMeta.getUuid().getMostSignificantBits());
         buffer.writeLong(messageMeta.getUuid().getLeastSignificantBits());
@@ -372,10 +374,6 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
             // Detect loop
         } while (index != loopIndex);
         return -1;
-    }
-
-    private long getMetaOffset(int pos) {
-        return MESSAGE_META_OFFSET + MESSAGE_META_SIZE * pos;
     }
 
     @Override

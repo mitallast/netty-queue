@@ -1,10 +1,5 @@
 package org.mitallast.queue.queue.transactional.mmap.meta;
 
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.carrotsearch.junitbenchmarks.annotation.AxisRange;
-import com.carrotsearch.junitbenchmarks.annotation.BenchmarkHistoryChart;
-import com.carrotsearch.junitbenchmarks.annotation.BenchmarkMethodChart;
-import com.carrotsearch.junitbenchmarks.annotation.LabelType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,10 +11,6 @@ import org.mitallast.queue.queue.QueueMessageType;
 import java.util.ArrayList;
 import java.util.List;
 
-@AxisRange(min = 0, max = 1)
-@BenchmarkOptions(callgc = true, warmupRounds = 2, benchmarkRounds = 6)
-@BenchmarkMethodChart(filePrefix = "benchmark-lists")
-@BenchmarkHistoryChart(labelWith = LabelType.CUSTOM_KEY, maxRuns = 20)
 public class MMapQueueMessageMetaSegmentBenchmark extends BaseBenchmark {
 
     private MemoryMappedFile mmapFile;
@@ -42,11 +33,39 @@ public class MMapQueueMessageMetaSegmentBenchmark extends BaseBenchmark {
     }
 
     @Test
-    public void testWrite() throws Exception {
+    public void testInsert() throws Exception {
         for (QueueMessageMeta meta : metaList) {
-            assert messageMetaSegment.insert(meta.getUuid());
-            assert messageMetaSegment.writeLock(meta.getUuid());
-            assert messageMetaSegment.writeMeta(meta);
+            assert messageMetaSegment.insert(meta.getUuid()) >= 0;
+        }
+    }
+
+    @Test
+    public void testWriteLock() throws Exception {
+        for (QueueMessageMeta meta : metaList) {
+            int pos = messageMetaSegment.insert(meta.getUuid());
+            assert pos >= 0;
+            assert messageMetaSegment.writeLock(pos);
+        }
+    }
+
+    @Test
+    public void testWriteMeta() throws Exception {
+        for (QueueMessageMeta meta : metaList) {
+            int pos = messageMetaSegment.insert(meta.getUuid());
+            assert pos >= 0;
+            assert messageMetaSegment.writeLock(pos);
+            assert messageMetaSegment.writeMeta(meta, pos);
+        }
+    }
+
+    @Test
+    public void testReadMeta() throws Exception {
+        for (QueueMessageMeta meta : metaList) {
+            int pos = messageMetaSegment.insert(meta.getUuid());
+            assert pos >= 0;
+            assert messageMetaSegment.writeLock(pos);
+            assert messageMetaSegment.writeMeta(meta, pos);
+            assert messageMetaSegment.readMeta(pos) != null;
         }
     }
 

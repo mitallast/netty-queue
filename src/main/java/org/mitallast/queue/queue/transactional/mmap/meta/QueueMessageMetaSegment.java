@@ -16,13 +16,15 @@ public interface QueueMessageMetaSegment extends Closeable {
 
     QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException;
 
-    boolean insert(UUID uuid) throws IOException;
+    int insert(UUID uuid) throws IOException;
 
-    boolean writeLock(UUID uuid) throws IOException;
+    boolean writeLock(int pos) throws IOException;
 
-    boolean writeMeta(QueueMessageMeta meta) throws IOException;
+    boolean writeMeta(QueueMessageMeta meta, int pos) throws IOException;
 
     QueueMessageMeta readMeta(UUID uuid) throws IOException;
+
+    QueueMessageMeta readMeta(int pos) throws IOException;
 
     boolean isGarbage() throws IOException;
 

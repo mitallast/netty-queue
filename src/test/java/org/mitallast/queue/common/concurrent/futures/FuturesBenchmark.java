@@ -1,33 +1,33 @@
 package org.mitallast.queue.common.concurrent.futures;
 
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
-import com.carrotsearch.junitbenchmarks.BenchmarkRule;
-import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.BaseBenchmark;
 
-import java.util.ArrayList;
-import java.util.List;
+public class FuturesBenchmark extends BaseBenchmark {
 
-public class FuturesBenchmark extends BaseTest {
-    @Rule
-    public TestRule benchmarkRule = new BenchmarkRule();
+    private int max = 1000000;
 
     @Test(timeout = 1000)
-    @BenchmarkOptions(callgc = false, benchmarkRounds = 20, warmupRounds = 3)
-    public void testSmartFuture() throws Exception {
-        final int max = 1000000;
-        final List<SmartFuture<String>> futureList = new ArrayList<>(max);
+    public void testCreateSmartFuture() throws Exception {
         for (int i = 0; i < max; i++) {
-            futureList.add(Futures.future());
+            Futures.future();
         }
-        for (SmartFuture<String> future : futureList) {
+    }
+
+    @Test(timeout = 1000)
+    public void testInvokeSmartFuture() throws Exception {
+        for (int i = 0; i < max; i++) {
+            SmartFuture<Object> future = Futures.future();
             future.invoke("foo");
         }
-        for (SmartFuture<String> future : futureList) {
-            Assert.assertEquals("foo", future.get());
+    }
+
+    @Test(timeout = 1000)
+    public void testGetSmartFuture() throws Exception {
+        for (int i = 0; i < max; i++) {
+            SmartFuture<Object> future = Futures.future();
+            future.invoke("foo");
+            future.get();
         }
     }
 }

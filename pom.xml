@@ -25,6 +25,7 @@
         <leveldb.version>1.8</leveldb.version>
         <uuid.version>3.4</uuid.version>
         <trove.version>3.0.3</trove.version>
+        <h2database.version>1.4.186</h2database.version>
     </properties>
 
     <dependencies>
@@ -145,6 +146,12 @@
             <groupId>com.carrotsearch</groupId>
             <artifactId>junit-benchmarks</artifactId>
             <version>${junit.benchmarks.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2database.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

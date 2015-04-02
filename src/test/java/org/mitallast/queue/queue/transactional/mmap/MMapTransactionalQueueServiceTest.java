@@ -25,7 +25,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     private MMapTransactionalQueueService createService() throws Exception {
         MMapTransactionalQueueService service = new MMapTransactionalQueueService(
             ImmutableSettings.builder()
-                .put("work_dir", testFolder.getRoot().getPath())
+                .put("work_dir", testFolder.newFolder())
                 .put("segment.max_size", segmentsSize)
                 .build(),
             ImmutableSettings.EMPTY,
@@ -206,7 +206,7 @@ public class MMapTransactionalQueueServiceTest extends BaseTest {
     public void testLongPush() throws Exception {
         service = new MMapTransactionalQueueService(
             ImmutableSettings.builder()
-                .put("work_dir", testFolder.getRoot().getPath())
+                .put("work_dir", testFolder.newFolder())
                 .put("segment.max_size", 1048576)
                 .build(),
             ImmutableSettings.EMPTY,

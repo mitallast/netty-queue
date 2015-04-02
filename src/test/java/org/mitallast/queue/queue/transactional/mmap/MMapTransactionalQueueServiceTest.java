@@ -10,22 +10,25 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.queue.Queue;
 import org.mitallast.queue.queue.QueueMessage;
 
+import java.io.File;
 import java.io.IOException;
 
 public class MMapTransactionalQueueServiceTest extends BaseTest {
 
     private final static int segmentsSize = 256;
+    private File folder;
     private MMapTransactionalQueueService service;
 
     @Before
     public void setUp() throws Exception {
+        folder = testFolder.newFolder();
         service = createService();
     }
 
     private MMapTransactionalQueueService createService() throws Exception {
         MMapTransactionalQueueService service = new MMapTransactionalQueueService(
             ImmutableSettings.builder()
-                .put("work_dir", testFolder.newFolder())
+                .put("work_dir", folder)
                 .put("segment.max_size", segmentsSize)
                 .build(),
             ImmutableSettings.EMPTY,

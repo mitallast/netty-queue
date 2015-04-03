@@ -9,6 +9,8 @@ import io.netty.handler.codec.http.*;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.rest.RestResponse;
 import org.mitallast.queue.rest.RestSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -18,6 +20,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class HttpSession implements RestSession {
 
+    private final static Logger logger = LoggerFactory.getLogger(HttpSession.class);
     private final ChannelHandlerContext ctx;
     private final FullHttpRequest httpRequest;
 
@@ -26,23 +29,32 @@ public class HttpSession implements RestSession {
         this.httpRequest = httpRequest;
     }
 
-    private static boolean isKeepAlive(FullHttpRequest request) {
-        return request.protocolVersion().isKeepAliveDefault()
-                || KEEP_ALIVE.equalsIgnoreCase(request.headers().get(HttpHeaderNames.CONNECTION));
-    }
-
     @Override
     public void sendResponse(RestResponse response) {
         ByteBuf buffer = response.getBuffer();
-        DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, response.getResponseStatus(), buffer, false);
-        httpResponse.headers().set(response.getHeaders());
-        httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, httpResponse.content().readableBytes());
-        write(httpResponse);
+        DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(
+            HTTP_1_1, response.getResponseStatus(), buffer, false, true);
+
+        int bytes = httpResponse.content().readableBytes();
+        if (bytes >= 0) {
+            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes);
+        }
+        if (!httpRequest.protocolVersion().isKeepAliveDefault()) {
+            boolean isKeepAlive = KEEP_ALIVE.equalsIgnoreCase(httpRequest.headers().get(HttpHeaderNames.CONNECTION));
+            if (isKeepAlive) {
+                httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
+            } else {
+                httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+                ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
+                return;
+            }
+        }
+        ctx.write(httpResponse, ctx.voidPromise());
     }
 
     @Override
     public void sendResponse(Throwable response) {
-        response.printStackTrace(System.err);
+        logger.error("send error", response);
         ByteBuf buffer = Unpooled.buffer();
         try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
             try (PrintWriter printWriter = new PrintWriter(outputStream)) {
@@ -51,21 +63,11 @@ public class HttpSession implements RestSession {
         } catch (IOException e) {
             throw new QueueRuntimeException(e);
         }
-        DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR, buffer, false);
+        DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(
+            HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR, buffer, false, true);
         httpResponse.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, httpResponse.content().readableBytes());
-        write(httpResponse);
-    }
-
-    private void write(DefaultFullHttpResponse httpResponse) {
-        boolean isKeepAlive = isKeepAlive(httpRequest);
-        if (isKeepAlive) {
-            httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, httpResponse.content().readableBytes());
-            httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-            ctx.write(httpResponse, ctx.voidPromise());
-        } else {
-            httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
-        }
+        httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
     }
 }

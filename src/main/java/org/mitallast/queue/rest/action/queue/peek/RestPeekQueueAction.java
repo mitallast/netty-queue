@@ -16,7 +16,7 @@ import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
-import org.mitallast.queue.rest.response.JsonRestResponse;
+import org.mitallast.queue.rest.response.ByteBufRestResponse;
 import org.mitallast.queue.rest.response.StatusRestResponse;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class RestPeekQueueAction extends BaseRestHandler {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {
                         queueMessage.toXStream(builder);
                     }
-                    session.sendResponse(new JsonRestResponse(HttpResponseStatus.OK, buffer));
+                    session.sendResponse(new ByteBufRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }

@@ -16,7 +16,7 @@ import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
-import org.mitallast.queue.rest.response.JsonRestResponse;
+import org.mitallast.queue.rest.response.ByteBufRestResponse;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ public class RestQueueStatsAction extends BaseRestHandler {
                         builder.writeNumberField("size", queueStats.getSize());
                         builder.writeEndObject();
                     }
-                    session.sendResponse(new JsonRestResponse(HttpResponseStatus.OK, buffer));
+                    session.sendResponse(new ByteBufRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }

@@ -43,6 +43,16 @@ public class CharSequenceReference implements CharSequence {
         return list.toArray(new CharSequence[list.size()]);
     }
 
+    public static int indexOf(CharSequence sequence, int start, char delimiter) {
+        int len = sequence.length();
+        for (int i = start; i < len; i++) {
+            if (sequence.charAt(i) == delimiter) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public static CharSequence subSequence(CharSequence sequence, int start, int end) {
         if (sequence instanceof CharSequenceReference) {
             return sequence.subSequence(start, end);
@@ -60,6 +70,18 @@ public class CharSequenceReference implements CharSequence {
         }
         for (int i = 0; i < a.length(); i++) {
             if (a.charAt(i) != b.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean equals(CharSequence a, CharSequence b, int start, int end) {
+        if (a.length() != (end - start)) {
+            return false;
+        }
+        for (int b_i = start, a_i = 0; b_i < end; b_i++, a_i++) {
+            if (a.charAt(a_i) != b.charAt(b_i)) {
                 return false;
             }
         }

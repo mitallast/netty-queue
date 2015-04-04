@@ -18,7 +18,7 @@ public class PathTrie<TrieType> {
 
     public PathTrie(char separator) {
         this.separator = separator;
-        root = new TrieNode<>(String.valueOf(separator), null);
+        root = new TrieNode<>(String.valueOf(separator), null, separator);
     }
 
     public void insert(String path, TrieType value) {
@@ -39,11 +39,11 @@ public class PathTrie<TrieType> {
         if (path.length() == 0 || path.length() == 1 && path.charAt(0) == separator) {
             return root.value;
         }
-        CharSequence[] strings = CharSequenceReference.splitStringToArray(path, separator);
-        if (strings.length == 0) {
-            return root.value;
+        int index = 0;
+        if (path.charAt(0) == separator) {
+            index = 1;
         }
-        return root.retrieve(strings, 0, params);
+        return root.retrieve(path, index, params);
     }
 
     public void prettyPrint() {
@@ -53,6 +53,7 @@ public class PathTrie<TrieType> {
     private static class TrieNode<NodeType> {
         private final static float loadFactor = 0.7f;
         private final static TrieNode[] empty = new TrieNode[0];
+        private final char separator;
         private final CharSequence key;
         private final int keyHash;
         private TrieNode<NodeType>[] children;
@@ -60,7 +61,8 @@ public class PathTrie<TrieType> {
         private NodeType value;
         private String namedWildcard;
 
-        public TrieNode(CharSequence key, NodeType value) {
+        public TrieNode(CharSequence key, NodeType value, char separator) {
+            this.separator = separator;
             this.value = value;
             this.children = new TrieNode[HashFunctions.fastCeil(42 / loadFactor)];
             this.childrenNamedWildcard = empty;
@@ -100,7 +102,7 @@ public class PathTrie<TrieType> {
                         }
                     }
                     if (node == null) {
-                        node = new TrieNode<>(token, null);
+                        node = new TrieNode<>(token, null, separator);
                         TrieNode<NodeType>[] tmp = new TrieNode[childrenNamedWildcard.length + 1];
                         System.arraycopy(childrenNamedWildcard, 0, tmp, 0, childrenNamedWildcard.length);
                         tmp[tmp.length - 1] = node;
@@ -112,7 +114,7 @@ public class PathTrie<TrieType> {
                         node = children[keyIndex];
                     }
                     if (node == null) {
-                        node = new TrieNode<>(token, null);
+                        node = new TrieNode<>(token, null, separator);
                         children[keyIndex] = node;
                     }
                 }
@@ -162,15 +164,15 @@ public class PathTrie<TrieType> {
             return insertKey(sequence);
         }
 
-        private int indexKey(CharSequence sequence) {
+        private int indexKey(CharSequence sequence, int start, int end) {
             final TrieNode<NodeType>[] children = this.children;
             final int size = children.length;
-            final int hash = hash(sequence);
+            final int hash = hash(sequence, start, end);
             int index = hash % size;
 
             if (children[index] == null) {
                 return -1;
-            } else if (children[index].keyEquals(sequence, hash)) {
+            } else if (children[index].keyEquals(sequence, start, end, hash)) {
                 return index;
             }
             final int loopIndex = index;
@@ -183,7 +185,7 @@ public class PathTrie<TrieType> {
 
                 if (children[index] == null) {
                     return -1;
-                } else if (children[index].keyEquals(sequence, hash)) {
+                } else if (children[index].keyEquals(sequence, start, end, hash)) {
                     return index;
                 }
                 // Detect loop
@@ -196,12 +198,21 @@ public class PathTrie<TrieType> {
                 && CharSequenceReference.equals(sequence, key);
         }
 
+        private boolean keyEquals(CharSequence sequence, int start, int end, int hash) {
+            return hash == keyHash
+                && CharSequenceReference.equals(key, sequence, start, end);
+        }
+
         private int hash(CharSequence sequence) {
+            return hash(sequence, 0, sequence.length());
+        }
+
+        private int hash(CharSequence sequence, int start, int end) {
             if (sequence == null) return 0;
-            int len = sequence.length();
+            int len = end - start;
             if (len == 0) return 0;
             int hash = 0;
-            for (int i = 0, end = Math.min(10, len); i < end; i++) {
+            for (int i = start, max = start + Math.min(10, len); i < max; i++) {
                 hash = hash * 31 ^ sequence.charAt(i) & 31;
             }
             return hash & 0x7fffffff;
@@ -211,43 +222,49 @@ public class PathTrie<TrieType> {
             return namedWildcard != null;
         }
 
-        public NodeType retrieve(CharSequence[] path, int index, Map<String, CharSequence> params) {
-            if (index >= path.length) {
+        public NodeType retrieve(CharSequence path, int start, Map<String, CharSequence> params) {
+            int len = path.length();
+            if (start >= len) {
                 return null;
             }
-            final CharSequence token = path[index];
-            int keyIndex = indexKey(token);
+            int end = CharSequenceReference.indexOf(path, start, separator);
+            if (end == -1) {
+                end = len;
+            }
+            int keyIndex = indexKey(path, start, end);
             if (keyIndex >= 0) {
                 TrieNode<NodeType> node = children[keyIndex];
                 final NodeType res;
-                if (index == (path.length - 1)) {
+                if (end == len) {
                     res = node.value;
                 } else {
-                    res = node.retrieve(path, index + 1, params);
+                    res = node.retrieve(path, end + 1, params);
                 }
                 if (res != null) {
-                    put(params, node, token);
+                    put(params, node, path, start, end);
                     return res;
                 }
             }
+
             for (TrieNode<NodeType> child : childrenNamedWildcard) {
                 final NodeType res;
-                if (index == (path.length - 1)) {
+                if (end == len) {
                     res = child.value;
                 } else {
-                    res = child.retrieve(path, index + 1, params);
+                    res = child.retrieve(path, end + 1, params);
                 }
                 if (res != null) {
-                    put(params, child, token);
+                    put(params, child, path, start, end);
                     return res;
                 }
             }
+
             return null;
         }
 
-        private void put(Map<String, CharSequence> params, TrieNode<NodeType> node, CharSequence value) {
+        private void put(Map<String, CharSequence> params, TrieNode<NodeType> node, CharSequence value, int start, int end) {
             if (node.isNamedWildcard()) {
-                params.put(node.namedWildcard, QueryStringDecoder.decodeComponent(value));
+                params.put(node.namedWildcard, QueryStringDecoder.decodeComponent(value.subSequence(start, end)));
             }
         }
 

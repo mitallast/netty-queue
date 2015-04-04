@@ -28,7 +28,7 @@ public class RestCreateQueueAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
-        CreateQueueRequest createQueueRequest = new CreateQueueRequest(request.param("queue"));
+        CreateQueueRequest createQueueRequest = new CreateQueueRequest(request.param("queue").toString());
         createQueueRequest.setSettings(ImmutableSettings.EMPTY);
 
         client.queues().createQueue(createQueueRequest, new ActionListener<CreateQueueResponse>() {

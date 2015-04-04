@@ -27,8 +27,8 @@ public class RestDeleteQueueAction extends BaseRestHandler {
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
         DeleteQueueRequest deleteQueueRequest = new DeleteQueueRequest();
-        deleteQueueRequest.setQueue(request.param("queue"));
-        deleteQueueRequest.setReason(request.param("reason"));
+        deleteQueueRequest.setQueue(request.param("queue").toString());
+        deleteQueueRequest.setReason(request.param("reason").toString());
 
         client.queues().deleteQueue(deleteQueueRequest, new ActionListener<DeleteQueueResponse>() {
             @Override

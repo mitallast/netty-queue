@@ -81,7 +81,7 @@ public class RestEnQueueAction extends BaseRestHandler {
         QueueMessage queueMessage = new QueueMessage();
 
         final EnQueueRequest enQueueRequest = new EnQueueRequest();
-        enQueueRequest.setQueue(request.param("queue"));
+        enQueueRequest.setQueue(request.param("queue").toString());
         enQueueRequest.setMessage(queueMessage);
 
         try {

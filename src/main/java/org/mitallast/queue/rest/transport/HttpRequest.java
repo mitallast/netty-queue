@@ -21,7 +21,7 @@ public class HttpRequest implements RestRequest {
     private HttpMethod httpMethod;
     private HttpHeaders httpHeaders;
 
-    private Map<String, List<String>> paramMap;
+    private Map<String, CharSequence> paramMap;
     private String queryPath;
 
     public HttpRequest(FullHttpRequest request) {
@@ -38,16 +38,13 @@ public class HttpRequest implements RestRequest {
     }
 
     @Override
-    public Map<String, List<String>> getParamMap() {
+    public Map<String, CharSequence> getParamMap() {
         return paramMap;
     }
 
     @Override
-    public String param(String param) {
-        List<String> params = paramMap.get(param);
-        return (params == null || params.isEmpty())
-            ? null
-            : params.get(0);
+    public CharSequence param(String param) {
+        return paramMap.get(param);
     }
 
     @Override
@@ -103,9 +100,14 @@ public class HttpRequest implements RestRequest {
 
         QueryStringDecoder decoder = new QueryStringDecoder(uri);
         queryPath = decoder.path();
-        paramMap = decoder.parameters();
-        if (paramMap == Collections.<String, List<String>>emptyMap()) {
-            paramMap = new HashMap<>();
+        Map<String, List<String>> parameters = decoder.parameters();
+        if (parameters.isEmpty()) {
+            paramMap = Collections.emptyMap();
+        } else {
+            paramMap = new HashMap<>(parameters.size());
+            parameters.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
+                .forEach(entry -> paramMap.put(entry.getKey(), entry.getValue().get(0)));
         }
     }
 }

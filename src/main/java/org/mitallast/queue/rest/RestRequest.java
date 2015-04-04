@@ -5,7 +5,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 
 import java.io.InputStream;
-import java.util.List;
 import java.util.Map;
 
 public interface RestRequest {
@@ -17,9 +16,9 @@ public interface RestRequest {
 
     String getUri();
 
-    Map<String, List<String>> getParamMap();
+    Map<String, CharSequence> getParamMap();
 
-    String param(String param);
+    CharSequence param(String param);
 
     boolean hasParam(String param);
 

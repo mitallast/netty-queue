@@ -32,7 +32,7 @@ public class RestPeekQueueAction extends BaseRestHandler {
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
         PeekQueueRequest peekQueueRequest = new PeekQueueRequest();
-        peekQueueRequest.setQueue(request.param("queue"));
+        peekQueueRequest.setQueue(request.param("queue").toString());
 
         client.queue().peekQueueRequest(peekQueueRequest, new ActionListener<PeekQueueResponse>() {
             @Override

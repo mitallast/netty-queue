@@ -33,8 +33,8 @@ public class RestGetAction extends BaseRestHandler {
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
         GetRequest getRequest = new GetRequest();
-        getRequest.setQueue(request.param("queue"));
-        String uuid = request.param("uuid");
+        getRequest.setQueue(request.param("queue").toString());
+        CharSequence uuid = request.param("uuid");
         if (uuid != null) {
             getRequest.setUuid(UUIDs.fromString(uuid));
         }

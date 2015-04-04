@@ -31,7 +31,7 @@ public class RestQueueStatsAction extends BaseRestHandler {
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
         QueueStatsRequest queueStatsRequest = new QueueStatsRequest();
-        queueStatsRequest.setQueue(request.param("queue"));
+        queueStatsRequest.setQueue(request.param("queue").toString());
         client.queue().queueStatsRequest(queueStatsRequest, new ActionListener<QueueStatsResponse>() {
             @Override
             public void onResponse(QueueStatsResponse queueStatsResponse) {

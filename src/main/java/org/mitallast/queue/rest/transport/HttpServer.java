@@ -12,7 +12,7 @@ public class HttpServer extends NettyServer {
 
     @Inject
     public HttpServer(Settings settings, RestController restController) {
-        super(settings);
+        super(settings, HttpServer.class, HttpServer.class);
         this.restController = restController;
     }
 

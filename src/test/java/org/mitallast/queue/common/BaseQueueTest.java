@@ -14,8 +14,6 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.node.Node;
 
-import java.util.Random;
-
 public abstract class BaseQueueTest extends BaseTest {
 
     private Node node;
@@ -28,12 +26,14 @@ public abstract class BaseQueueTest extends BaseTest {
         settings = ImmutableSettings.builder()
             .put("work_dir", testFolder.newFolder().getAbsolutePath())
             .put("rest.transport.host", "127.0.0.1")
-            .put("rest.transport.port", 18000 + new Random().nextInt(500))
+            .put("rest.transport.port", 18000 + random.nextInt(500))
             .put("stomp.transport.host", "127.0.0.1")
-            .put("stomp.transport.port", 19000 + new Random().nextInt(500))
+            .put("stomp.transport.port", 19000 + random.nextInt(500))
+            .put("transport.host", "127.0.0.1")
+            .put("transport.port", 20000 + random.nextInt(500))
             .build();
         queueName = randomUUID().toString();
-        node = new InternalNode(settings);
+        node = new InternalNode(settings());
         node.start();
     }
 

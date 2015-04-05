@@ -30,12 +30,12 @@ public abstract class NettyClient extends AbstractComponent {
     protected volatile Channel channel;
     private volatile Bootstrap bootstrap;
 
-    public NettyClient(Settings settings) {
-        super(settings);
+    public NettyClient(Settings settings, Class loggerClass, Class componentClass) {
+        super(settings, loggerClass, componentClass);
         host = componentSettings.get("host", "127.0.0.1");
-        port = componentSettings.getAsInt("port", 9080);
+        port = componentSettings.getAsInt("port", defaultPort());
         maxContentLength = componentSettings.getAsInt("max_content_length", 1048576);
-        threads = componentSettings.getAsInt("threads", 2);
+        threads = componentSettings.getAsInt("threads", 1);
 
         reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
         keepAlive = componentSettings.getAsBoolean("keep_alive", true);
@@ -44,6 +44,10 @@ public abstract class NettyClient extends AbstractComponent {
         rcvBuf = componentSettings.getAsInt("rcv_buf", 1048576);
         wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
         wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
+    }
+
+    protected int defaultPort() {
+        return 9080;
     }
 
     private ThreadFactory threadFactory(String name) {

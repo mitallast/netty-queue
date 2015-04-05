@@ -20,7 +20,7 @@ public class RestClient extends NettyClient {
     private final static AttributeKey<ConcurrentLinkedDeque<SmartFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
 
     public RestClient(Settings settings) {
-        super(settings);
+        super(settings, RestClient.class, RestClient.class);
     }
 
     @Override

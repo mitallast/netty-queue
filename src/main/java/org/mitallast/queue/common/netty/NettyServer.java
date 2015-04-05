@@ -32,10 +32,10 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private NioEventLoopGroup worker;
     private Channel channel;
 
-    public NettyServer(Settings settings) {
-        super(settings);
+    public NettyServer(Settings settings, Class loggerClass, Class componentClass) {
+        super(settings, loggerClass, componentClass);
         this.host = componentSettings.get("host", "127.0.0.1");
-        this.port = componentSettings.getAsInt("port", 9080);
+        this.port = componentSettings.getAsInt("port", defaultPort());
         this.backlog = componentSettings.getAsInt("backlog", 128);
         this.reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
         this.keepAlive = componentSettings.getAsBoolean("keep_alive", true);
@@ -45,6 +45,10 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         this.wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
         this.wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
         this.threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors());
+    }
+
+    protected int defaultPort() {
+        return 8080;
     }
 
     private NioEventLoopGroup group(String name) {

@@ -14,13 +14,10 @@ import org.mitallast.queue.transport.transport.TransportFrameEncoder;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class TransportClient extends NettyClient {
 
     private final static AttributeKey<ConcurrentMap<Long, SmartFuture<TransportFrame>>> attr = AttributeKey.valueOf("queue");
-
-    private final AtomicLong requestCount = new AtomicLong();
 
     public TransportClient(Settings settings) {
         super(settings, TransportClient.class, TransportModule.class);
@@ -37,9 +34,6 @@ public class TransportClient extends NettyClient {
     }
 
     public SmartFuture<TransportFrame> send(TransportFrame frame) throws IOException {
-        if (frame.getRequest() == 0) {
-            frame.setRequest(requestCount.incrementAndGet());
-        }
         final SmartFuture<TransportFrame> future = Futures.future();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().put(frame.getRequest(), future);

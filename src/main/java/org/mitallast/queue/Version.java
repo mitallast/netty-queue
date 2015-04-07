@@ -6,6 +6,9 @@ public class Version {
     public static final int V1_0_0_ID = 10000;
     public static final Version V1_0_0 = new Version(V1_0_0_ID);
 
+    public static final Version CURRENT = V1_0_0;
+    public static final int CURRENT_ID = V1_0_0_ID;
+
     public final int id;
 
     Version(int id) {
@@ -14,7 +17,7 @@ public class Version {
 
     public static Version fromId(int id) throws IOException {
         switch (id) {
-            case V1_0_0_ID:
+            case CURRENT_ID:
                 return V1_0_0;
             default:
                 throw new IOException("Unexpected id[" + id + "]");

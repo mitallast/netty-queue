@@ -1,10 +1,8 @@
 package org.mitallast.queue.transport;
 
-import io.netty.buffer.Unpooled;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
-import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.transport.client.TransportClient;
 import org.mitallast.queue.transport.transport.TransportFrame;
 
@@ -23,12 +21,10 @@ public class TransportIntegrationTest extends BaseQueueTest {
         TransportClient client = new TransportClient(settings());
         client.start();
 
-        byte[] bytes = "hello world".getBytes(Strings.UTF8);
-
         List<SmartFuture<TransportFrame>> futures = new ArrayList<>(max());
         List<TransportFrame> frames = new ArrayList<>(max());
-        for (int i = 0; i < max(); i++) {
-            frames.add(TransportFrame.of(Unpooled.wrappedBuffer(bytes)));
+        for (long i = 0; i < max(); i++) {
+            frames.add(TransportFrame.of(i));
         }
 
         long start = System.currentTimeMillis();
@@ -37,7 +33,7 @@ public class TransportIntegrationTest extends BaseQueueTest {
         }
         client.flush();
         for (SmartFuture<TransportFrame> future : futures) {
-            future.get();
+            TransportFrame frame = future.get();
         }
 
         long end = System.currentTimeMillis();
@@ -47,13 +43,11 @@ public class TransportIntegrationTest extends BaseQueueTest {
 
     @Test
     public void testConcurrent() throws Exception {
-        byte[] bytes = "hello world".getBytes(Strings.UTF8);
-
         long start = System.currentTimeMillis();
         List<SmartFuture<TransportFrame>> futures = new ArrayList<>(total());
         List<TransportFrame> frames = new ArrayList<>(total());
         for (int i = 0; i < total(); i++) {
-            frames.add(TransportFrame.of(Unpooled.wrappedBuffer(bytes)));
+            frames.add(TransportFrame.of(i));
         }
 
         TransportClient[] clients = new TransportClient[concurrency()];
@@ -76,6 +70,6 @@ public class TransportIntegrationTest extends BaseQueueTest {
         for (TransportClient client : clients) {
             client.stop();
         }
-        printQps("send", total(), start, end);
+        printQps("send concurrent", total(), start, end);
     }
 }

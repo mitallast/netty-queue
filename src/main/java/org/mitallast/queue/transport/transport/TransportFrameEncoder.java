@@ -13,6 +13,9 @@ public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> 
         out.writeInt(msg.getVersion().id);
         out.writeLong(msg.getRequest());
         out.writeInt(msg.getSize());
-        msg.getContent().readBytes(out, msg.getSize());
+        if (msg.getSize() > 0) {
+            out.ensureWritable(msg.getSize());
+            msg.getContent().readBytes(out, msg.getSize());
+        }
     }
 }

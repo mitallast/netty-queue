@@ -19,18 +19,22 @@ public class TransportServerHandler extends SimpleChannelInboundHandler<Transpor
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) throws Exception {
-        TransportFrame response = new TransportFrame(
-            request.getVersion(),
-            request.getRequest(),
-            request.getSize(),
-            request.getContent().retain()
-        );
-
-        ctx.write(response, ctx.voidPromise());
+//        if (request.isPing()) {
+//            ctx.write(TransportFrame.of(request), ctx.voidPromise());
+//        } else {
+//        }
+        TransportChannel channel = new TransportChannel(ctx, request);
+        transportController.dispatchRequest(channel, request);
     }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         ctx.flush();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.error("unexpected channel error, close channel", cause);
+        ctx.close();
     }
 }

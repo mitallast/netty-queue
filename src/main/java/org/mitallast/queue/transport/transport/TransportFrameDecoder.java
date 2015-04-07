@@ -25,15 +25,22 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
             final long request = buffer.getLong(readerIndex + 2 + 4);
             final int size = buffer.getInt(readerIndex + 2 + 4 + 8);
 
-            if (buffer.readableBytes() < size + TransportFrame.HEADER_SIZE) {
-                break;
+            final ByteBuf content;
+            if (size <= 0) {
+                // ping request
+                content = null;
+                buffer.skipBytes(TransportFrame.HEADER_SIZE);
+            } else {
+                // standard request
+                if (buffer.readableBytes() < size + TransportFrame.HEADER_SIZE) {
+                    break;
+                }
+                buffer.skipBytes(TransportFrame.HEADER_SIZE);
+                content = buffer.readSlice(size).retain();
             }
 
-            buffer.skipBytes(TransportFrame.HEADER_SIZE);
 
-            ByteBuf content = buffer.readSlice(size).retain();
-            TransportFrame frame = new TransportFrame(version, request, size, content);
-            out.add(frame);
+            out.add(TransportFrame.of(version, request, size, content));
         }
     }
 }

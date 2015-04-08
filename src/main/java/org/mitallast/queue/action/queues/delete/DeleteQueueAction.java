@@ -13,6 +13,7 @@ import java.io.IOException;
 
 public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, DeleteQueueResponse> {
 
+    public final static int ACTION_ID = 8;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -36,5 +37,15 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public DeleteQueueRequest createRequest() {
+        return new DeleteQueueRequest();
     }
 }

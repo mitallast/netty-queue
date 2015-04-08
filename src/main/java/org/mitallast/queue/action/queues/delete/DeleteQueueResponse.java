@@ -1,10 +1,14 @@
 package org.mitallast.queue.action.queues.delete;
 
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
+
+import java.io.IOException;
 
 public class DeleteQueueResponse extends ActionResponse {
-    private final boolean deleted;
-    private final Throwable error;
+    private boolean deleted;
+    private Throwable error;
 
     public DeleteQueueResponse(boolean deleted) {
         this(deleted, null);
@@ -21,5 +25,15 @@ public class DeleteQueueResponse extends ActionResponse {
 
     public Throwable getError() {
         return error;
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        deleted = stream.readBoolean();
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeBoolean(deleted);
     }
 }

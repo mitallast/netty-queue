@@ -2,11 +2,13 @@ package org.mitallast.queue.action;
 
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.transport.TransportController;
 
 public abstract class AbstractAction<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
 
-    public AbstractAction(Settings settings) {
+    public AbstractAction(Settings settings, TransportController controller) {
         super(settings);
+        controller.registerHandler(this, getActionId());
     }
 
     public FutureActionListener<Response> execute(Request request) {
@@ -16,4 +18,12 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
     }
 
     public abstract void execute(Request request, ActionListener<Response> listener);
+
+    public int getActionId() {
+        return hashCode();
+    }
+
+    public Request createRequest() {
+        throw new UnsupportedOperationException();
+    }
 }

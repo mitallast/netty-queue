@@ -8,6 +8,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.xstream.ToXStream;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 
@@ -15,7 +18,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.UUID;
 
-public class QueueMessage implements ToXStream {
+public class QueueMessage implements ToXStream, Streamable {
 
     public static final Charset defaultCharset = Charset.forName("UTF-8");
 
@@ -103,6 +106,20 @@ public class QueueMessage implements ToXStream {
             }
         }
         builder.writeEndObject();
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        uuid = stream.readUUIDOrNull();
+        type = stream.readEnumOrNull(QueueMessageType.class);
+        buffer = stream.readByteBufOrNull();
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeUUIDOrNull(uuid);
+        stream.writeEnumOrNull(type);
+        stream.writeByteBufOrNull(buffer);
     }
 
     @Override

@@ -9,6 +9,7 @@ import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
 
@@ -17,8 +18,8 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
     private final TransactionalQueuesService queuesService;
 
     @Inject
-    public PeekQueueAction(Settings settings, TransactionalQueuesService queuesService) {
-        super(settings);
+    public PeekQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 

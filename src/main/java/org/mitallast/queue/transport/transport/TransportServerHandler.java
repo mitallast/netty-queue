@@ -19,10 +19,9 @@ public class TransportServerHandler extends SimpleChannelInboundHandler<Transpor
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) throws Exception {
-//        if (request.isPing()) {
-//            ctx.write(TransportFrame.of(request), ctx.voidPromise());
-//        } else {
-//        }
+        if (request.isPing()) {
+            ctx.write(TransportFrame.of(request), ctx.voidPromise());
+        }
         TransportChannel channel = new TransportChannel(ctx, request);
         transportController.dispatchRequest(channel, request);
     }

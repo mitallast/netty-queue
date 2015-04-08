@@ -1,8 +1,17 @@
 package org.mitallast.queue.transport;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.Test;
+import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
+import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
+import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+import org.mitallast.queue.common.stream.ByteBufStreamOutput;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.transport.client.TransportClient;
 import org.mitallast.queue.transport.transport.TransportFrame;
 
@@ -14,6 +23,38 @@ public class TransportIntegrationTest extends BaseQueueTest {
     @Override
     protected int max() {
         return super.max() * 10;
+    }
+
+    @Test
+    public void testEnqueue() throws Exception {
+        createQueue();
+        assertQueueEmpty();
+
+        TransportClient client = new TransportClient(settings());
+        client.start();
+
+        EnQueueRequest enQueueRequest = new EnQueueRequest();
+        enQueueRequest.setQueue(queueName());
+        enQueueRequest.setMessage(new QueueMessage("Hello world"));
+
+        ByteBuf buffer = Unpooled.buffer();
+        try (StreamOutput output = new ByteBufStreamOutput(buffer)) {
+            output.writeInt(EnQueueAction.ACTION_ID);
+            enQueueRequest.writeTo(output);
+        }
+        TransportFrame request = TransportFrame.of(1l, buffer);
+        SmartFuture<TransportFrame> send = client.send(request);
+        client.flush();
+        TransportFrame response = send.get();
+
+        try (StreamInput streamInput = response.inputStream()) {
+            EnQueueResponse enQueueResponse = new EnQueueResponse();
+            enQueueResponse.readFrom(streamInput);
+
+            assert enQueueResponse.getUUID() != null;
+            assert enQueueResponse.getUUID().getMostSignificantBits() != 0;
+            assert enQueueResponse.getUUID().getLeastSignificantBits() != 0;
+        }
     }
 
     @Test

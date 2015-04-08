@@ -6,6 +6,7 @@ import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
 
@@ -14,8 +15,8 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
     private final TransactionalQueuesService queuesService;
 
     @Inject
-    public CreateQueueAction(Settings settings, TransactionalQueuesService queuesService) {
-        super(settings);
+    public CreateQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 

@@ -2,12 +2,17 @@ package org.mitallast.queue.action.queue.enqueue;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.queue.QueueMessage;
 
+import java.io.IOException;
+
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
-public class EnQueueRequest extends ActionRequest {
+public class EnQueueRequest extends ActionRequest implements Streamable {
 
     private String queue;
 
@@ -51,5 +56,25 @@ public class EnQueueRequest extends ActionRequest {
             validationException = addValidationError("message source is missing", validationException);
         }
         return validationException;
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        queue = stream.readTextOrNull();
+        if (stream.readBoolean()) {
+            message = new QueueMessage();
+            message.readFrom(stream);
+        }
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeTextOrNull(queue);
+        if (message != null) {
+            stream.writeBoolean(true);
+            message.writeTo(stream);
+        } else {
+            stream.writeBoolean(false);
+        }
     }
 }

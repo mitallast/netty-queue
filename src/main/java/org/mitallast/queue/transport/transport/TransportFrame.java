@@ -1,9 +1,11 @@
 package org.mitallast.queue.transport.transport;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
-import io.netty.buffer.ByteBufOutputStream;
 import org.mitallast.queue.Version;
+import org.mitallast.queue.common.stream.ByteBufStreamInput;
+import org.mitallast.queue.common.stream.ByteBufStreamOutput;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
 
 public class TransportFrame {
 
@@ -37,6 +39,10 @@ public class TransportFrame {
 
     public static TransportFrame of(Version version, long request) {
         return of(version, request, 0, null);
+    }
+
+    public static TransportFrame of(long request, ByteBuf content) {
+        return of(Version.CURRENT, request, content);
     }
 
     public static TransportFrame of(ByteBuf content) {
@@ -87,12 +93,12 @@ public class TransportFrame {
         this.content = content;
     }
 
-    public ByteBufInputStream inputStream() {
-        return new ByteBufInputStream(content, size);
+    public StreamInput inputStream() {
+        return new ByteBufStreamInput(content, size);
     }
 
-    public ByteBufOutputStream outputStream() {
-        return new ByteBufOutputStream(content);
+    public StreamOutput outputStream() {
+        return new ByteBufStreamOutput(content);
     }
 
     public boolean isPing() {

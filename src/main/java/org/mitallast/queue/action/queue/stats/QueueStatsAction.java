@@ -8,6 +8,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
+import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
 
@@ -15,8 +16,8 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
     private TransactionalQueuesService queuesService;
 
     @Inject
-    public QueueStatsAction(Settings settings, TransactionalQueuesService queuesService) {
-        super(settings);
+    public QueueStatsAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 

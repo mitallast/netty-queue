@@ -19,11 +19,7 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
 
     public abstract void execute(Request request, ActionListener<Response> listener);
 
-    public int getActionId() {
-        return hashCode();
-    }
+    public abstract int getActionId();
 
-    public Request createRequest() {
-        throw new UnsupportedOperationException();
-    }
+    public abstract Request createRequest();
 }

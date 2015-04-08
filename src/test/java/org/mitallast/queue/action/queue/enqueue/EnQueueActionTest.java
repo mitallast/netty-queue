@@ -9,12 +9,11 @@ public class EnQueueActionTest extends BaseQueueTest {
     @Test
     public void testSingleThread() throws Exception {
         createQueue();
-        int max = 1000000;
         // warm up
-        send(max);
+        send(max());
 
         long start = System.currentTimeMillis();
-        send(max);
+        send(max());
         long end = System.currentTimeMillis();
         printQps("send", max(), start, end);
     }

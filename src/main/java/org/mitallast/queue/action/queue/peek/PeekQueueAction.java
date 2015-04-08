@@ -15,6 +15,7 @@ import java.io.IOException;
 
 public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueResponse> {
 
+    public final static int ACTION_ID = 5;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -40,5 +41,15 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public PeekQueueRequest createRequest() {
+        return new PeekQueueRequest();
     }
 }

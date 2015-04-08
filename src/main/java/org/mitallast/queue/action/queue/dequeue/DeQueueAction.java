@@ -15,6 +15,7 @@ import java.io.IOException;
 
 public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueResponse> {
 
+    public final static int ACTION_ID = 3;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -40,5 +41,15 @@ public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueRespons
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public DeQueueRequest createRequest() {
+        return new DeQueueRequest();
     }
 }

@@ -1,8 +1,13 @@
 package org.mitallast.queue.queues.stats;
 
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.queue.Queue;
 
-public class QueueStats {
+import java.io.IOException;
+
+public class QueueStats implements Streamable {
     private Queue queue;
     private long size;
 
@@ -20,6 +25,16 @@ public class QueueStats {
 
     public void setSize(long size) {
         this.size = size;
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeTextOrNull(queue != null ? queue.getName() : null);
+        stream.writeLong(size);
     }
 
     @Override
@@ -53,8 +68,8 @@ public class QueueStats {
     @Override
     public String toString() {
         return "QueueStats{" +
-                "queue=" + queue +
-                ", size=" + size +
-                '}';
+            "queue=" + queue +
+            ", size=" + size +
+            '}';
     }
 }

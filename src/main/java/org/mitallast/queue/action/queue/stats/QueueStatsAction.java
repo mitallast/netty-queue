@@ -13,6 +13,8 @@ import org.mitallast.queue.transport.TransportController;
 import java.io.IOException;
 
 public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueStatsResponse> {
+
+    public final static int ACTION_ID = 6;
     private TransactionalQueuesService queuesService;
 
     @Inject
@@ -37,5 +39,15 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public QueueStatsRequest createRequest() {
+        return new QueueStatsRequest();
     }
 }

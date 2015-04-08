@@ -2,8 +2,11 @@ package org.mitallast.queue.action.queue.delete;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.strings.Strings;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
@@ -39,5 +42,17 @@ public class DeleteRequest extends ActionRequest {
             validationException = addValidationError("uuid is missing", null);
         }
         return validationException;
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        queue = stream.readTextOrNull();
+        uuid = stream.readUUIDOrNull();
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeTextOrNull(queue);
+        stream.writeUUIDOrNull(uuid);
     }
 }

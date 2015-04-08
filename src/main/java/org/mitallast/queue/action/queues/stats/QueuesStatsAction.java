@@ -13,6 +13,7 @@ import java.io.IOException;
 
 public class QueuesStatsAction extends AbstractAction<QueuesStatsRequest, QueuesStatsResponse> {
 
+    public final static int ACTION_ID = 9;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -34,5 +35,15 @@ public class QueuesStatsAction extends AbstractAction<QueuesStatsRequest, Queues
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public QueuesStatsRequest createRequest() {
+        return new QueuesStatsRequest();
     }
 }

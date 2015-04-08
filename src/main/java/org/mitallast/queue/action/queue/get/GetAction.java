@@ -15,6 +15,7 @@ import java.io.IOException;
 
 public class GetAction extends AbstractAction<GetRequest, GetResponse> {
 
+    public final static int ACTION_ID = 4;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -34,12 +35,21 @@ public class GetAction extends AbstractAction<GetRequest, GetResponse> {
             listener.onFailure(new QueueMissingException(request.getQueue()));
         }
         TransactionalQueueService queueService = queuesService.queue(request.getQueue());
-        QueueMessage message = null;
         try {
-            message = queueService.get(request.getUuid());
+            QueueMessage message = queueService.get(request.getUuid());
             listener.onResponse(new GetResponse(message));
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public GetRequest createRequest() {
+        return new GetRequest();
     }
 }

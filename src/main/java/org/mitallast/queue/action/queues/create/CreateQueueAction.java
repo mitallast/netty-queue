@@ -12,6 +12,7 @@ import java.io.IOException;
 
 public class CreateQueueAction extends AbstractAction<CreateQueueRequest, CreateQueueResponse> {
 
+    public final static int ACTION_ID = 7;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -33,5 +34,15 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
         } catch (IOException e) {
             listener.onFailure(e);
         }
+    }
+
+    @Override
+    public int getActionId() {
+        return ACTION_ID;
+    }
+
+    @Override
+    public CreateQueueRequest createRequest() {
+        return new CreateQueueRequest();
     }
 }

@@ -3,6 +3,8 @@ package org.mitallast.queue.common.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
+import org.mitallast.queue.common.settings.ImmutableSettings;
+import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -84,5 +86,22 @@ public class ByteBufStreamInput extends ByteBufInputStream implements StreamInpu
             return null;
         }
         return buffer.readSlice(size).retain();
+    }
+
+    @Override
+    public Settings readSettings() throws IOException {
+        int size = buffer.readInt();
+        if (size == 0) {
+            return ImmutableSettings.EMPTY;
+        } else {
+            ImmutableSettings.Builder builder = ImmutableSettings.builder();
+            for (int i = 0; i < size; i++) {
+                builder.put(
+                    readText(),
+                    readText()
+                );
+            }
+            return builder.build();
+        }
     }
 }

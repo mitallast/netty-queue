@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
+import org.mitallast.queue.common.settings.Settings;
 
 import java.io.Closeable;
 import java.io.DataInput;
@@ -63,4 +64,6 @@ public interface StreamInput extends DataInput, Closeable {
     ByteBuf readByteBuf() throws IOException;
 
     ByteBuf readByteBufOrNull() throws IOException;
+
+    Settings readSettings() throws IOException;
 }

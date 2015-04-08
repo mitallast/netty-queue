@@ -2,8 +2,10 @@ package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
+import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
 public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOutput {
@@ -104,6 +106,16 @@ public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOu
                 this.buffer.ensureWritable(length);
                 buffer.readBytes(this.buffer, length);
             }
+        }
+    }
+
+    @Override
+    public void writeSettings(Settings settings) throws IOException {
+        Map<String, String> asMap = settings.getAsMap();
+        buffer.writeInt(asMap.size());
+        for (Map.Entry<String, String> entry : asMap.entrySet()) {
+            writeUTF(entry.getKey());
+            writeUTF(entry.getValue());
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
+import org.mitallast.queue.common.settings.Settings;
 
 import java.io.Closeable;
 import java.io.DataOutput;
@@ -61,4 +62,6 @@ public interface StreamOutput extends DataOutput, Closeable {
     void writeByteBufOrNull(ByteBuf buffer) throws IOException;
 
     void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException;
+
+    void writeSettings(Settings settings) throws IOException;
 }

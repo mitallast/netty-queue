@@ -1,9 +1,8 @@
-package org.mitallast.queue.common;
+package org.mitallast.queue.common.collection;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.mitallast.queue.common.collection.ImmutableIntMap;
-import org.mitallast.queue.common.collection.ImmutableIntMapBuilder;
+import org.mitallast.queue.common.BaseTest;
 
 import java.util.Random;
 

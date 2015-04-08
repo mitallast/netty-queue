@@ -1,11 +1,16 @@
 package org.mitallast.queue.common.collection;
 
+import gnu.trove.impl.PrimeFinder;
+
+import static gnu.trove.impl.HashFunctions.fastCeil;
+
 public class HashFunctions {
 
     public static int emptyKey = -1;
 
-    public static int fastCeil(float v) {
-        return gnu.trove.impl.HashFunctions.fastCeil(v);
+    public static int nextPrime(int size, float loadFactor) {
+        int ceil = fastCeil(size / loadFactor);
+        return PrimeFinder.nextPrime(ceil);
     }
 
     public static int insert(int key, int[] keys) {

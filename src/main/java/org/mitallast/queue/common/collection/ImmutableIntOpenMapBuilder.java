@@ -8,7 +8,7 @@ import java.util.Arrays;
 
 public class ImmutableIntOpenMapBuilder<V> implements ImmutableIntMapBuilder<V> {
 
-    private final static float loadFactor = 0.5f;
+    private final static float loadFactor = 0.7f;
     private final TIntObjectMap<V> map;
     private final int emptyKey;
 
@@ -37,7 +37,7 @@ public class ImmutableIntOpenMapBuilder<V> implements ImmutableIntMapBuilder<V> 
     @SuppressWarnings("unchecked")
     public ImmutableIntMap<V> build() {
         final int size = map.size();
-        final int length = HashFunctions.fastCeil(size / loadFactor);
+        final int length = HashFunctions.nextPrime(size, loadFactor);
         int[] keys = new int[length];
         Arrays.fill(keys, emptyKey);
         V[] values = (V[]) new Object[length];

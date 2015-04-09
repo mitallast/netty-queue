@@ -8,7 +8,7 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
 
     public AbstractAction(Settings settings, TransportController controller) {
         super(settings);
-        controller.registerHandler(this, getActionId());
+        controller.registerHandler(this);
     }
 
     public FutureActionListener<Response> execute(Request request) {
@@ -19,7 +19,7 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
 
     public abstract void execute(Request request, ActionListener<Response> listener);
 
-    public abstract int getActionId();
+    public abstract ActionType getActionId();
 
     public abstract Request createRequest();
 }

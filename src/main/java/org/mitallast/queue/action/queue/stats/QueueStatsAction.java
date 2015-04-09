@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
@@ -14,7 +15,6 @@ import java.io.IOException;
 
 public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueStatsResponse> {
 
-    public final static int ACTION_ID = 6;
     private TransactionalQueuesService queuesService;
 
     @Inject
@@ -42,8 +42,8 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
     }
 
     @Override
-    public int getActionId() {
-        return ACTION_ID;
+    public ActionType getActionId() {
+        return ActionType.QUEUE_STATS;
     }
 
     @Override

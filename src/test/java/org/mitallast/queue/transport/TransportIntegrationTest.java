@@ -3,7 +3,7 @@ package org.mitallast.queue.transport;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Test;
-import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.common.BaseQueueTest;
@@ -39,7 +39,7 @@ public class TransportIntegrationTest extends BaseQueueTest {
 
         ByteBuf buffer = Unpooled.buffer();
         try (StreamOutput output = new ByteBufStreamOutput(buffer)) {
-            output.writeInt(EnQueueAction.ACTION_ID);
+            output.writeInt(ActionType.QUEUE_ENQUEUE.id());
             enQueueRequest.writeTo(output);
         }
         TransportFrame request = TransportFrame.of(1l, buffer);

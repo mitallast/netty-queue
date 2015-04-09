@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
 import org.mitallast.queue.transport.TransportController;
@@ -12,7 +13,6 @@ import java.io.IOException;
 
 public class CreateQueueAction extends AbstractAction<CreateQueueRequest, CreateQueueResponse> {
 
-    public final static int ACTION_ID = 7;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -37,8 +37,8 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
     }
 
     @Override
-    public int getActionId() {
-        return ACTION_ID;
+    public ActionType getActionId() {
+        return ActionType.QUEUES_CREATE;
     }
 
     @Override

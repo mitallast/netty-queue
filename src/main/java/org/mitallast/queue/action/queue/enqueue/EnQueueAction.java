@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
@@ -15,7 +16,6 @@ import java.io.IOException;
 
 public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueResponse> {
 
-    public final static int ACTION_ID = 1;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -50,7 +50,7 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
     }
 
     @Override
-    public int getActionId() {
-        return ACTION_ID;
+    public ActionType getActionId() {
+        return ActionType.QUEUE_ENQUEUE;
     }
 }

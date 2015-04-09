@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
@@ -16,7 +17,6 @@ import java.io.IOException;
 
 public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> {
 
-    public final static int ACTION_ID = 2;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -49,8 +49,8 @@ public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> 
     }
 
     @Override
-    public int getActionId() {
-        return ACTION_ID;
+    public ActionType getActionId() {
+        return ActionType.QUEUE_DELETE;
     }
 
     @Override

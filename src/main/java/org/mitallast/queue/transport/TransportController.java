@@ -24,10 +24,10 @@ public class TransportController extends AbstractComponent {
         super(settings);
     }
 
-    public synchronized void registerHandler(AbstractAction action, int id) {
+    public synchronized void registerHandler(AbstractAction action) {
         actionMap = ImmutableIntMap.<AbstractAction>builder()
             .putAll(actionMap)
-            .put(id, action)
+            .put(action.getActionId().id(), action)
             .build();
     }
 

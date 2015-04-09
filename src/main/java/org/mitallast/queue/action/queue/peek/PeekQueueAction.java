@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
@@ -15,7 +16,6 @@ import java.io.IOException;
 
 public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueResponse> {
 
-    public final static int ACTION_ID = 5;
     private final TransactionalQueuesService queuesService;
 
     @Inject
@@ -44,8 +44,8 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
     }
 
     @Override
-    public int getActionId() {
-        return ACTION_ID;
+    public ActionType getActionId() {
+        return ActionType.QUEUE_PEEK;
     }
 
     @Override

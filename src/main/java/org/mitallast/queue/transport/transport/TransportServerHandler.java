@@ -21,6 +21,7 @@ public class TransportServerHandler extends SimpleChannelInboundHandler<Transpor
     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) throws Exception {
         if (request.isPing()) {
             ctx.write(TransportFrame.of(request), ctx.voidPromise());
+            return;
         }
         TransportChannel channel = new TransportChannel(ctx, request);
         transportController.dispatchRequest(channel, request);

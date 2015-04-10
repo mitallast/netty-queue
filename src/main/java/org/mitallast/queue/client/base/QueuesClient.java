@@ -8,11 +8,13 @@ import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
+import java.io.IOException;
+
 public interface QueuesClient {
 
-    SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request);
+    SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) throws IOException;
 
-    SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request);
+    SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) throws IOException;
 
-    SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request);
+    SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) throws IOException;
 }

@@ -10,6 +10,9 @@ import java.io.IOException;
 public class PeekQueueResponse extends ActionResponse {
     private QueueMessage message;
 
+    public PeekQueueResponse() {
+    }
+
     public PeekQueueResponse(QueueMessage message) {
         this.message = message;
     }

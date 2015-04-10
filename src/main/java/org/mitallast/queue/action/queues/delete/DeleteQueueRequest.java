@@ -2,6 +2,7 @@ package org.mitallast.queue.action.queues.delete;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 
@@ -30,6 +31,11 @@ public class DeleteQueueRequest extends ActionRequest {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    @Override
+    public ActionType actionType() {
+        return ActionType.QUEUES_DELETE;
     }
 
     @Override

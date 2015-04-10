@@ -10,6 +10,9 @@ import java.io.IOException;
 public class DeQueueResponse extends ActionResponse {
     private QueueMessage message;
 
+    public DeQueueResponse() {
+    }
+
     public DeQueueResponse(QueueMessage message) {
         this.message = message;
     }

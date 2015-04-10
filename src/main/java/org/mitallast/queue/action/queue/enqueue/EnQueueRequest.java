@@ -2,6 +2,7 @@ package org.mitallast.queue.action.queue.enqueue;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -40,6 +41,11 @@ public class EnQueueRequest extends ActionRequest implements Streamable {
 
     public void setMessage(QueueMessage message) {
         this.message = message;
+    }
+
+    @Override
+    public ActionType actionType() {
+        return ActionType.QUEUE_ENQUEUE;
     }
 
     @Override

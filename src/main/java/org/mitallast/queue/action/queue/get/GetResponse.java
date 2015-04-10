@@ -10,6 +10,9 @@ import java.io.IOException;
 public class GetResponse extends ActionResponse {
     private QueueMessage message;
 
+    public GetResponse() {
+    }
+
     public GetResponse(QueueMessage message) {
         this.message = message;
     }

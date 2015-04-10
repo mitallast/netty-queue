@@ -10,6 +10,9 @@ public class DeleteQueueResponse extends ActionResponse {
     private boolean deleted;
     private Throwable error;
 
+    public DeleteQueueResponse() {
+    }
+
     public DeleteQueueResponse(boolean deleted) {
         this(deleted, null);
     }

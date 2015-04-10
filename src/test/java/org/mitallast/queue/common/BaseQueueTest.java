@@ -13,6 +13,7 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.node.Node;
+import org.mitallast.queue.transport.client.TransportClient;
 
 public abstract class BaseQueueTest extends BaseTest {
 
@@ -58,6 +59,10 @@ public abstract class BaseQueueTest extends BaseTest {
 
     public Client client() {
         return node.client();
+    }
+
+    public TransportClient transportClient() {
+        return node.transportClient();
     }
 
     public void createQueue() throws Exception {

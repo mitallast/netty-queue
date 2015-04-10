@@ -12,6 +12,7 @@ import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.rest.transport.HttpServer;
 import org.mitallast.queue.transport.TransportModule;
+import org.mitallast.queue.transport.client.TransportClient;
 import org.mitallast.queue.transport.transport.TransportServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,11 @@ public class InternalNode implements Node {
     }
 
     @Override
+    public TransportClient transportClient() {
+        return injector.getInstance(TransportClient.class);
+    }
+
+    @Override
     public Settings settings() {
         return settings;
     }
@@ -62,6 +68,7 @@ public class InternalNode implements Node {
         injector.getInstance(InternalTransactionalQueuesService.class).start();
         injector.getInstance(HttpServer.class).start();
         injector.getInstance(TransportServer.class).start();
+        injector.getInstance(TransportClient.class).start();
         logger.info("started");
         return this;
     }
@@ -73,6 +80,7 @@ public class InternalNode implements Node {
         }
         logger.info("stopping...");
         injector.getInstance(HttpServer.class).stop();
+        injector.getInstance(TransportClient.class).stop();
         injector.getInstance(TransportServer.class).stop();
         injector.getInstance(InternalTransactionalQueuesService.class).stop();
         logger.info("stopped");

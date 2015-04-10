@@ -10,6 +10,9 @@ import java.io.IOException;
 public class DeleteResponse extends ActionResponse {
     private QueueMessage message;
 
+    public DeleteResponse() {
+    }
+
     public DeleteResponse(QueueMessage message) {
         this.message = message;
     }

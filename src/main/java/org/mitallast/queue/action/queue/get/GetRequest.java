@@ -2,6 +2,7 @@ package org.mitallast.queue.action.queue.get;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
+import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.strings.Strings;
@@ -30,6 +31,11 @@ public class GetRequest extends ActionRequest {
 
     public void setUuid(UUID uuid) {
         this.uuid = uuid;
+    }
+
+    @Override
+    public ActionType actionType() {
+        return ActionType.QUEUE_GET;
     }
 
     @Override

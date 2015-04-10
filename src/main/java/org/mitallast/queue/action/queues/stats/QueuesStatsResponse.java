@@ -10,6 +10,9 @@ import java.io.IOException;
 public class QueuesStatsResponse extends ActionResponse {
     private QueuesStats stats;
 
+    public QueuesStatsResponse() {
+    }
+
     public QueuesStatsResponse(QueuesStats stats) {
         this.stats = stats;
     }

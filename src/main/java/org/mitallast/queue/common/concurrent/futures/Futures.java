@@ -12,4 +12,8 @@ public final class Futures {
     public static <Type> SmartFuture<Type> future(Throwable value) {
         return new FailImmediatelyFuture<>(value);
     }
+
+    public static <From, To> SmartMappedFuture<From, To> mappedFuture(Mapper<From, To> mapper) {
+        return new DefaultSmartMappedFuture<>(mapper);
+    }
 }

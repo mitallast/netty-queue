@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.concurrent.futures;
 
 import com.google.common.base.Preconditions;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
-import java.util.function.Consumer;
 
 public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer implements SmartFuture<Type> {
 
@@ -36,8 +36,8 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
         head = tail = new Node<>(null);
     }
 
-    private boolean offer(Consumer<FutureResult<Type, Throwable>> consumer) {
-        final Node<Type> newNode = new Node<>(consumer);
+    private boolean offer(Listener<Type> listener) {
+        final Node<Type> newNode = new Node<>(listener);
         for (Node<Type> t = tail, p = t; ; ) {
             Node<Type> q = p.next;
             if (q == null) {
@@ -63,11 +63,11 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
         }
     }
 
-    private Consumer<FutureResult<Type, Throwable>> poll() {
+    private Listener<Type> poll() {
         restartFromHead:
         for (; ; ) {
             for (Node<Type> h = head, p = h, q; ; ) {
-                Consumer<FutureResult<Type, Throwable>> item = p.item;
+                Listener<Type> item = p.item;
 
                 if (item != null && p.casItem(item, null)) {
                     // Successful CAS is the linearization point
@@ -115,8 +115,7 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public void on(Consumer<FutureResult<Type, Throwable>> listener) {
+    public void on(Listener<Type> listener) {
         if (isDone()) {
             invokeListener(listener);
             return;
@@ -134,19 +133,8 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
         return isCanceled;
     }
 
-    @Override
-    public Type getOrNull() {
-        return value;
-    }
-
-    @Override
-    public boolean isError() {
+    private boolean isError() {
         return isDone() && exception != null;
-    }
-
-    @Override
-    public Throwable getError() {
-        return exception;
     }
 
     @Override
@@ -179,19 +167,21 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
      */
     @SuppressWarnings("unchecked")
     private void invokeListeners() {
-        Consumer<FutureResult<Type, Throwable>> poll;
+        Listener<Type> poll;
         while ((poll = poll()) != null) {
             invokeListener(poll);
         }
     }
 
-    protected void invokeListener(Consumer<FutureResult<Type, Throwable>> consumer) {
+    protected void invokeListener(Listener<Type> listener) {
         try {
-            if (consumer != null) {
-                consumer.accept(this);
+            if (isError()) {
+                listener.onFailure(exception);
+            } else {
+                listener.onResponse(value);
             }
         } catch (Throwable e) {
-            logger.warn("An exception was thrown by {}.accept()", consumer.getClass(), e);
+            logger.warn("An exception was thrown by {}.accept()", listener.getClass(), e);
         }
     }
 
@@ -252,18 +242,18 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
     private final static class Node<Type> {
         private final static AtomicReferenceFieldUpdater<Node, Node> nextUpdater =
             AtomicReferenceFieldUpdater.newUpdater(Node.class, Node.class, "next");
-        private final static AtomicReferenceFieldUpdater<Node, Consumer> itemUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(Node.class, Consumer.class, "item");
+        private final static AtomicReferenceFieldUpdater<Node, Listener> itemUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(Node.class, Listener.class, "item");
 
-        private volatile Consumer<FutureResult<Type, Throwable>> item;
+        private volatile Listener<Type> item;
         private volatile Node<Type> next;
 
-        private Node(Consumer<FutureResult<Type, Throwable>> item) {
+        private Node(Listener<Type> item) {
             this.item = item;
             this.next = null;
         }
 
-        private boolean casItem(Consumer<FutureResult<Type, Throwable>> cmp, Consumer<FutureResult<Type, Throwable>> val) {
+        private boolean casItem(Listener<Type> cmp, Listener<Type> val) {
             return itemUpdater.compareAndSet(this, cmp, val);
         }
 

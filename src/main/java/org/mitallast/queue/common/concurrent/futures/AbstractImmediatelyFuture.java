@@ -1,7 +1,5 @@
 package org.mitallast.queue.common.concurrent.futures;
 
-import java.util.function.Consumer;
-
 public abstract class AbstractImmediatelyFuture<Type> implements SmartFuture<Type> {
 
     @Override
@@ -15,11 +13,6 @@ public abstract class AbstractImmediatelyFuture<Type> implements SmartFuture<Typ
     @Override
     public boolean isCancelled() {
         return false;
-    }
-
-    @Override
-    public void on(Consumer<FutureResult<Type, Throwable>> listener) {
-        listener.accept(this);
     }
 
     @Override

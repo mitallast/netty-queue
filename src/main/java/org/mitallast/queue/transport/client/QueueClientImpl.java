@@ -15,7 +15,7 @@ import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.base.QueueClient;
-import org.mitallast.queue.common.concurrent.futures.Futures;
+import org.mitallast.queue.common.concurrent.futures.Mapper;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.stream.ByteBufStreamOutput;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -39,28 +39,16 @@ public class QueueClientImpl implements QueueClient {
         ByteBuf buffer = transportClient.alloc().heapBuffer();
         request.writeTo(new ByteBufStreamOutput(buffer));
         TransportFrame requestFrame = TransportFrame.of(requestCounter.incrementAndGet(), buffer);
-        SmartFuture<EnQueueResponse> future = Futures.future();
-        transportClient.send(requestFrame).on(result -> {
-            if (result.isValuableDone()) {
-                TransportFrame response = result.getOrNull();
-                if (response != null) {
-                    EnQueueResponse enQueueResponse = null;
-                    try (StreamInput streamInput = response.inputStream()) {
-                        enQueueResponse = new EnQueueResponse();
-                        enQueueResponse.readFrom(streamInput);
-                    } catch (IOException e) {
-                        future.invokeException(e);
-                        return;
-                    }
-                    future.invoke(enQueueResponse);
-                } else {
-                    future.invokeException(new IllegalArgumentException());
+        return transportClient.send(requestFrame).map(new Mapper<TransportFrame, EnQueueResponse>() {
+            @Override
+            public EnQueueResponse map(TransportFrame response) throws Exception {
+                try (StreamInput streamInput = response.inputStream()) {
+                    EnQueueResponse enQueueResponse = new EnQueueResponse();
+                    enQueueResponse.readFrom(streamInput);
+                    return enQueueResponse;
                 }
-            } else {
-                future.invokeException(result.getError());
             }
         });
-        return future;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package org.mitallast.queue.common.concurrent.futures;
 
+import org.mitallast.queue.common.concurrent.Listener;
+
 import java.util.concurrent.TimeUnit;
 
 public class SuccessImmediatelyFuture<T> extends AbstractImmediatelyFuture<T> {
@@ -20,23 +22,12 @@ public class SuccessImmediatelyFuture<T> extends AbstractImmediatelyFuture<T> {
     }
 
     @Override
-    public T getOrNull() {
-        return value;
-    }
-
-    @Override
     public boolean isDone() {
         return true;
     }
 
-
     @Override
-    public boolean isError() {
-        return false;
-    }
-
-    @Override
-    public Throwable getError() {
-        return null;
+    public void on(Listener<T> listener) {
+        listener.onResponse(value);
     }
 }

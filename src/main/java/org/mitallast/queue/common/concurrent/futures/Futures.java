@@ -16,4 +16,8 @@ public final class Futures {
     public static <From, To> SmartMappedFuture<From, To> mappedFuture(Mapper<From, To> mapper) {
         return new DefaultSmartMappedFuture<>(mapper);
     }
+
+    public static <Type> ListenerSmartFuture<Type> listenerFuture() {
+        return new DefaultListenerSmartFuture<>();
+    }
 }

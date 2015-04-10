@@ -3,6 +3,7 @@ package org.mitallast.queue.transport.client;
 import org.junit.Test;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
+import org.mitallast.queue.client.base.Client;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.queue.QueueMessage;
@@ -13,7 +14,7 @@ public class TransportClientIntegrationTest extends BaseQueueTest {
         createQueue();
         assertQueueEmpty();
 
-        TransportClient client = transportClient();
+        Client client = transportClient();
 
         SmartFuture<EnQueueResponse> future = client.queue().enqueueRequest(new EnQueueRequest(queueName(), new QueueMessage("Hello world")));
         client.flush();

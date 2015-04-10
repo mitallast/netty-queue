@@ -14,7 +14,7 @@ public class ActionIntegrationTest extends BaseQueueTest {
 
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
-            client().queue()
+            localClient().queue()
                     .enqueueRequest(new EnQueueRequest(queueName(), new QueueMessage("foo")))
                     .get();
         }

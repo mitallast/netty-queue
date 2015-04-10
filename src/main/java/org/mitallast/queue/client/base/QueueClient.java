@@ -21,25 +21,25 @@ public interface QueueClient {
 
     SmartFuture<EnQueueResponse> enqueueRequest(EnQueueRequest request) throws IOException;
 
-    void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) throws IOException;
+    void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener);
 
     SmartFuture<DeQueueResponse> dequeueRequest(DeQueueRequest request) throws IOException;
 
-    void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) throws IOException;
+    void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener);
 
     SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) throws IOException;
 
-    void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) throws IOException;
+    void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener);
 
     SmartFuture<DeleteResponse> deleteRequest(DeleteRequest request) throws IOException;
 
-    void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) throws IOException;
+    void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener);
 
     SmartFuture<GetResponse> getRequest(GetRequest request) throws IOException;
 
-    void getRequest(GetRequest request, Listener<GetResponse> listener) throws IOException;
+    void getRequest(GetRequest request, Listener<GetResponse> listener);
 
     SmartFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) throws IOException;
 
-    void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) throws IOException;
+    void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener);
 }

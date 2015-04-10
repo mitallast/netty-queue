@@ -35,7 +35,7 @@ public class LocalQueuesClient implements QueuesClient {
     }
 
     @Override
-    public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) throws IOException {
+    public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) {
         queuesStatsAction.execute(request, listener);
     }
 
@@ -45,7 +45,7 @@ public class LocalQueuesClient implements QueuesClient {
     }
 
     @Override
-    public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) throws IOException {
+    public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
         createQueueAction.execute(request, listener);
     }
 
@@ -55,7 +55,7 @@ public class LocalQueuesClient implements QueuesClient {
     }
 
     @Override
-    public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) throws IOException {
+    public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) {
         deleteQueueAction.execute(request, listener);
     }
 }

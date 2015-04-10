@@ -55,7 +55,7 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) throws IOException {
+    public void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) {
         enQueueAction.execute(request, listener);
     }
 
@@ -65,7 +65,7 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) throws IOException {
+    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) {
         deQueueAction.execute(request, listener);
     }
 
@@ -75,7 +75,7 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) throws IOException {
+    public void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) {
         queueStatsAction.execute(request, listener);
     }
 
@@ -85,7 +85,7 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) throws IOException {
+    public void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) {
         deleteAction.execute(request, listener);
     }
 
@@ -95,7 +95,7 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public void getRequest(GetRequest request, Listener<GetResponse> listener) throws IOException {
+    public void getRequest(GetRequest request, Listener<GetResponse> listener) {
         getAction.execute(request, listener);
     }
 
@@ -105,7 +105,7 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) throws IOException {
+    public void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
         peekQueueAction.execute(request, listener);
     }
 }

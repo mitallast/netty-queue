@@ -34,7 +34,7 @@ public class EnQueueActionTest extends BaseQueueTest {
         for (int i = 0; i < max; i++) {
             QueueMessage message = createMessage();
             EnQueueRequest request = new EnQueueRequest(queueName(), message);
-            EnQueueResponse response = client().queue().enqueueRequest(request).get();
+            EnQueueResponse response = localClient().queue().enqueueRequest(request).get();
             assert response.getUUID().equals(message.getUuid());
         }
     }

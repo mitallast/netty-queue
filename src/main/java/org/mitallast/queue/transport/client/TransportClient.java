@@ -49,7 +49,7 @@ public class TransportClient extends NettyClient implements Client {
         channel.attr(attr).set(new ConcurrentHashMap<>());
     }
 
-    public SmartFuture<TransportFrame> send(TransportFrame frame) throws IOException {
+    public SmartFuture<TransportFrame> send(TransportFrame frame) {
         final SmartFuture<TransportFrame> future = Futures.future();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().put(frame.getRequest(), future);
@@ -58,11 +58,13 @@ public class TransportClient extends NettyClient implements Client {
     }
 
     public <Request extends ActionRequest, Response extends ActionResponse>
-    SmartFuture<Response> send(Request request, ResponseMapper<Response> mapper) throws IOException {
+    SmartFuture<Response> send(Request request, ResponseMapper<Response> mapper) {
         ByteBuf buffer = channel.alloc().heapBuffer();
         try (ByteBufStreamOutput streamOutput = new ByteBufStreamOutput(buffer)) {
             streamOutput.writeInt(request.actionType().id());
             request.writeTo(streamOutput);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         TransportFrame requestFrame = TransportFrame.of(requestCounter.incrementAndGet(), buffer);
         return send(requestFrame).map(mapper);

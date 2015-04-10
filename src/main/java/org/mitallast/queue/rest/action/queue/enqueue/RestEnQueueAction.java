@@ -7,7 +7,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.QueueParseException;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
-import org.mitallast.queue.client.Client;
+import org.mitallast.queue.client.base.Client;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;

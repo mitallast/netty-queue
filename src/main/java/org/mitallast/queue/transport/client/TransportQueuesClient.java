@@ -30,7 +30,7 @@ public class TransportQueuesClient implements QueuesClient {
     }
 
     @Override
-    public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) throws IOException {
+    public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) {
         transportClient.send(request, QUEUES_STATS_RESPONSE_MAPPER).on(listener);
     }
 
@@ -40,7 +40,7 @@ public class TransportQueuesClient implements QueuesClient {
     }
 
     @Override
-    public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) throws IOException {
+    public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
         transportClient.send(request, CREATE_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 
@@ -50,7 +50,7 @@ public class TransportQueuesClient implements QueuesClient {
     }
 
     @Override
-    public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) throws IOException {
+    public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) {
         transportClient.send(request, DELETE_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 }

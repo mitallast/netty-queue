@@ -39,7 +39,7 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) throws IOException {
+    public void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) {
         transportClient.send(request, EN_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 
@@ -49,7 +49,7 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) throws IOException {
+    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) {
         transportClient.send(request, DE_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 
@@ -59,7 +59,7 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) throws IOException {
+    public void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) {
         transportClient.send(request, QUEUE_STATS_RESPONSE_MAPPER).on(listener);
     }
 
@@ -69,7 +69,7 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) throws IOException {
+    public void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) {
         transportClient.send(request, DELETE_RESPONSE_MAPPER).on(listener);
     }
 
@@ -79,7 +79,7 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public void getRequest(GetRequest request, Listener<GetResponse> listener) throws IOException {
+    public void getRequest(GetRequest request, Listener<GetResponse> listener) {
         transportClient.send(request, GET_RESPONSE_MAPPER).on(listener);
     }
 
@@ -89,7 +89,7 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) throws IOException {
+    public void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
         transportClient.send(request, PEEK_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 }

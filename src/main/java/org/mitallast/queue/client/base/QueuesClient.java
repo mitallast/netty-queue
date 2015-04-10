@@ -15,13 +15,13 @@ public interface QueuesClient {
 
     SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) throws IOException;
 
-    void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) throws IOException;
+    void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener);
 
     SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) throws IOException;
 
-    void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) throws IOException;
+    void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener);
 
     SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) throws IOException;
 
-    void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) throws IOException;
+    void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener);
 }

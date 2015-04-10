@@ -8,13 +8,11 @@ import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
-import org.mitallast.queue.client.Client;
-import org.mitallast.queue.client.local.LocalClient;
+import org.mitallast.queue.client.base.Client;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.node.Node;
-import org.mitallast.queue.transport.client.TransportClient;
 
 public abstract class BaseQueueTest extends BaseTest {
 
@@ -58,20 +56,16 @@ public abstract class BaseQueueTest extends BaseTest {
         return node;
     }
 
-    public Client client() {
-        return node.client();
-    }
-
-    public LocalClient localClient() {
+    public Client localClient() {
         return node.localClient();
     }
 
-    public TransportClient transportClient() {
+    public Client transportClient() {
         return node.transportClient();
     }
 
     public void createQueue() throws Exception {
-        client().queues()
+        localClient().queues()
             .createQueue(new CreateQueueRequest(queueName(), ImmutableSettings.EMPTY))
             .get();
         assertQueueEmpty();
@@ -80,11 +74,11 @@ public abstract class BaseQueueTest extends BaseTest {
     public DeQueueResponse dequeue() throws Exception {
         DeQueueRequest request = new DeQueueRequest();
         request.setQueue(queueName);
-        return client().queue().dequeueRequest(request).get();
+        return localClient().queue().dequeueRequest(request).get();
     }
 
     public void assertQueueEmpty() throws Exception {
-        QueueStatsResponse response = client().queue()
+        QueueStatsResponse response = localClient().queue()
             .queueStatsRequest(new QueueStatsRequest(queueName()))
             .get();
         assert response.getStats().getSize() == 0 : response.getStats();

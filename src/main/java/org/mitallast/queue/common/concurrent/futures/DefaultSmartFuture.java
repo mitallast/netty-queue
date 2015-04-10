@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.concurrent.futures;
 
+import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,6 +101,7 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
 
     @Override
     public void invoke(Type result) {
+        Preconditions.checkNotNull(result);
         if (complete(result, null, COMPLETED)) {
             invokeListeners();
         }

@@ -1,10 +1,16 @@
 package org.mitallast.queue.common.concurrent.futures;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public interface FutureResult<Type, Error> {
 
+    @Nullable
     Type getOrNull();
 
-    default Type getOrDefault(Type defValue) {
+    default
+    @Nonnull
+    Type getOrDefault(@Nonnull Type defValue) {
         Type value = this.getOrNull();
         return value == null ? defValue : value;
     }

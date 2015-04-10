@@ -1,5 +1,7 @@
 package org.mitallast.queue.common.concurrent.futures;
 
+import javax.annotation.Nonnull;
+
 public interface SmartFuture<Type> extends ListenableFuture<Type>, FutureResult<Type, Throwable> {
 
     /**
@@ -7,12 +9,12 @@ public interface SmartFuture<Type> extends ListenableFuture<Type>, FutureResult<
      *
      * @param result значение которое установлено во фьючер
      */
-    public void invoke(Type result);
+    public void invoke(@Nonnull Type result);
 
     /**
      * Данный метод вызывается при установке ошибки выполнения фьючера
      *
      * @param ex ошибка
      */
-    public void invokeException(Throwable ex);
+    public void invokeException(@Nonnull Throwable ex);
 }

@@ -14,10 +14,12 @@ import org.mitallast.queue.common.settings.Settings;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class RestClient extends NettyClient {
 
     private final static AttributeKey<ConcurrentLinkedDeque<SmartFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
+    private final AtomicLong flushCount = new AtomicLong();
 
     public RestClient(Settings settings) {
         super(settings, RestClient.class, RestClient.class);
@@ -29,18 +31,20 @@ public class RestClient extends NettyClient {
     }
 
     public Future<FullHttpResponse> send(HttpRequest request) {
-        return send(request, false);
-    }
-
-    public Future<FullHttpResponse> send(HttpRequest request, boolean flush) {
         final SmartFuture<FullHttpResponse> future = Futures.future();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().push(future);
-        if (flush) {
-            localChannel.writeAndFlush(request, localChannel.voidPromise());
-        } else {
-            localChannel.write(request, localChannel.voidPromise());
-        }
+
+
+        flushCount.incrementAndGet();
+        localChannel.write(request, localChannel.voidPromise());
+        // automatic flush
+        localChannel.pipeline().lastContext().executor().execute(() -> {
+            if (flushCount.decrementAndGet() == 0) {
+                logger.info("flush");
+                localChannel.flush();
+            }
+        });
         return future;
     }
 
@@ -64,7 +68,7 @@ public class RestClient extends NettyClient {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                cause.printStackTrace();
+                logger.error("unexpected error {}", ctx, cause);
                 ctx.close();
             }
         };

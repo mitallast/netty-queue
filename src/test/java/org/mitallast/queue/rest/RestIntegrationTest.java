@@ -81,7 +81,6 @@ public class RestIntegrationTest extends BaseQueueTest {
             request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
             futures.add(restClient.send(request));
         }
-        restClient.flush();
         logger.info("await");
         for (Future<FullHttpResponse> future : futures) {
             FullHttpResponse response = future.get();

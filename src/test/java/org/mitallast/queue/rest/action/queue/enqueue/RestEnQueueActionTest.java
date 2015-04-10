@@ -5,11 +5,11 @@ import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -75,7 +75,7 @@ public class RestEnQueueActionTest extends BaseTest {
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(ActionListener.class));
+        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(Listener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
@@ -109,7 +109,7 @@ public class RestEnQueueActionTest extends BaseTest {
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(ActionListener.class));
+        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(Listener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
@@ -143,7 +143,7 @@ public class RestEnQueueActionTest extends BaseTest {
 
         restEnQueueAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(ActionListener.class));
+        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(Listener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();

@@ -3,10 +3,10 @@ package org.mitallast.queue.rest.action.queues.delete;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
 import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.rest.BaseRestHandler;
@@ -30,7 +30,7 @@ public class RestDeleteQueueAction extends BaseRestHandler {
         deleteQueueRequest.setQueue(request.param("queue").toString());
         deleteQueueRequest.setReason(request.param("reason").toString());
 
-        client.queues().deleteQueue(deleteQueueRequest, new ActionListener<DeleteQueueResponse>() {
+        client.queues().deleteQueue(deleteQueueRequest, new Listener<DeleteQueueResponse>() {
             @Override
             public void onResponse(DeleteQueueResponse response) {
                 if (response.isDeleted()) {

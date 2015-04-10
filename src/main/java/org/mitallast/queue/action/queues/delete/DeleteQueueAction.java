@@ -2,9 +2,9 @@ package org.mitallast.queue.action.queues.delete;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
@@ -23,7 +23,7 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
     }
 
     @Override
-    public void execute(DeleteQueueRequest request, ActionListener<DeleteQueueResponse> listener) {
+    public void execute(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {
             listener.onFailure(validationException);

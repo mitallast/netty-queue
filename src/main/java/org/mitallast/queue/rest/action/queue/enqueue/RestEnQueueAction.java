@@ -5,11 +5,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.QueueParseException;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamParser;
 import org.mitallast.queue.queue.QueueMessage;
@@ -91,7 +91,7 @@ public class RestEnQueueAction extends BaseRestHandler {
             return;
         }
 
-        client.queue().enqueueRequest(enQueueRequest, new ActionListener<EnQueueResponse>() {
+        client.queue().enqueueRequest(enQueueRequest, new Listener<EnQueueResponse>() {
 
             @Override
             public void onResponse(EnQueueResponse response) {

@@ -3,10 +3,10 @@ package org.mitallast.queue.rest.action.queues.create;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.action.queues.create.CreateQueueResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueAlreadyExistsException;
@@ -31,7 +31,7 @@ public class RestCreateQueueAction extends BaseRestHandler {
         CreateQueueRequest createQueueRequest = new CreateQueueRequest(request.param("queue").toString());
         createQueueRequest.setSettings(ImmutableSettings.EMPTY);
 
-        client.queues().createQueue(createQueueRequest, new ActionListener<CreateQueueResponse>() {
+        client.queues().createQueue(createQueueRequest, new Listener<CreateQueueResponse>() {
             @Override
             public void onResponse(CreateQueueResponse response) {
                 session.sendResponse(new StatusRestResponse(HttpResponseStatus.CREATED));

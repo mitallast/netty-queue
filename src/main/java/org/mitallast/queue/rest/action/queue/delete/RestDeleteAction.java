@@ -3,11 +3,11 @@ package org.mitallast.queue.rest.action.queue.delete;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
@@ -33,7 +33,7 @@ public class RestDeleteAction extends BaseRestHandler {
             deleteRequest.setUuid(UUIDs.fromString(uuid));
         }
 
-        client.queue().deleteRequest(deleteRequest, new ActionListener<DeleteResponse>() {
+        client.queue().deleteRequest(deleteRequest, new Listener<DeleteResponse>() {
             @Override
             public void onResponse(DeleteResponse deleteResponse) {
                 session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));

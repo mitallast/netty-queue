@@ -5,11 +5,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.get.GetRequest;
 import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -39,7 +39,7 @@ public class RestGetAction extends BaseRestHandler {
             getRequest.setUuid(UUIDs.fromString(uuid));
         }
 
-        client.queue().getRequest(getRequest, new ActionListener<GetResponse>() {
+        client.queue().getRequest(getRequest, new Listener<GetResponse>() {
             @Override
             public void onResponse(GetResponse getResponse) {
                 if (getResponse.getMessage() == null) {

@@ -5,10 +5,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queues.stats.QueueStats;
@@ -30,7 +30,7 @@ public class RestQueuesStatsAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        client.queues().queuesStatsRequest(new QueuesStatsRequest(), new ActionListener<QueuesStatsResponse>() {
+        client.queues().queuesStatsRequest(new QueuesStatsRequest(), new Listener<QueuesStatsResponse>() {
             @Override
             public void onResponse(QueuesStatsResponse response) {
                 ByteBuf buffer = Unpooled.buffer();

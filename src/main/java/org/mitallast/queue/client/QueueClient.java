@@ -1,8 +1,6 @@
 package org.mitallast.queue.client;
 
 import com.google.inject.Inject;
-import org.mitallast.queue.action.ActionListener;
-import org.mitallast.queue.action.FutureActionListener;
 import org.mitallast.queue.action.queue.delete.DeleteAction;
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
@@ -21,6 +19,8 @@ import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
+import org.mitallast.queue.common.concurrent.Listener;
+import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
 public class QueueClient {
     private final EnQueueAction enQueueAction;
@@ -45,51 +45,51 @@ public class QueueClient {
         this.queueStatsAction = queueStatsAction;
     }
 
-    public FutureActionListener<EnQueueResponse> enqueueRequest(EnQueueRequest request) {
+    public SmartFuture<EnQueueResponse> enqueueRequest(EnQueueRequest request) {
         return enQueueAction.execute(request);
     }
 
-    public void enqueueRequest(EnQueueRequest request, ActionListener<EnQueueResponse> listener) {
+    public void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) {
         enQueueAction.execute(request, listener);
     }
 
-    public FutureActionListener<DeQueueResponse> dequeueRequest(DeQueueRequest request) {
+    public SmartFuture<DeQueueResponse> dequeueRequest(DeQueueRequest request) {
         return deQueueAction.execute(request);
     }
 
-    public void dequeueRequest(DeQueueRequest request, ActionListener<DeQueueResponse> listener) {
+    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) {
         deQueueAction.execute(request, listener);
     }
 
-    public FutureActionListener<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
+    public SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
         return queueStatsAction.execute(request);
     }
 
-    public void queueStatsRequest(QueueStatsRequest request, ActionListener<QueueStatsResponse> listener) {
+    public void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) {
         queueStatsAction.execute(request, listener);
     }
 
-    public FutureActionListener<DeleteResponse> deleteRequest(DeleteRequest request) {
+    public SmartFuture<DeleteResponse> deleteRequest(DeleteRequest request) {
         return deleteAction.execute(request);
     }
 
-    public void deleteRequest(DeleteRequest request, ActionListener<DeleteResponse> listener) {
+    public void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) {
         deleteAction.execute(request, listener);
     }
 
-    public FutureActionListener<GetResponse> getRequest(GetRequest request) {
+    public SmartFuture<GetResponse> getRequest(GetRequest request) {
         return getAction.execute(request);
     }
 
-    public void getRequest(GetRequest request, ActionListener<GetResponse> listener) {
+    public void getRequest(GetRequest request, Listener<GetResponse> listener) {
         getAction.execute(request, listener);
     }
 
-    public FutureActionListener<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
+    public SmartFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
         return peekQueueAction.execute(request);
     }
 
-    public void peekQueueRequest(PeekQueueRequest request, ActionListener<PeekQueueResponse> listener) {
+    public void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
         peekQueueAction.execute(request, listener);
     }
 }

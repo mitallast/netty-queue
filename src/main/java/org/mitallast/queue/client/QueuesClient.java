@@ -1,8 +1,6 @@
 package org.mitallast.queue.client;
 
 import com.google.inject.Inject;
-import org.mitallast.queue.action.ActionListener;
-import org.mitallast.queue.action.FutureActionListener;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.action.queues.create.CreateQueueResponse;
@@ -12,6 +10,8 @@ import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
+import org.mitallast.queue.common.concurrent.Listener;
+import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
 public class QueuesClient {
 
@@ -26,27 +26,27 @@ public class QueuesClient {
         this.deleteQueueAction = deleteQueueAction;
     }
 
-    public FutureActionListener<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
+    public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
         return queuesStatsAction.execute(request);
     }
 
-    public void queuesStatsRequest(QueuesStatsRequest request, ActionListener<QueuesStatsResponse> listener) {
+    public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) {
         queuesStatsAction.execute(request, listener);
     }
 
-    public FutureActionListener<CreateQueueResponse> createQueue(CreateQueueRequest request) {
+    public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
         return createQueueAction.execute(request);
     }
 
-    public void createQueue(CreateQueueRequest request, ActionListener<CreateQueueResponse> listener) {
+    public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
         createQueueAction.execute(request, listener);
     }
 
-    public FutureActionListener<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
+    public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
         return deleteQueueAction.execute(request);
     }
 
-    public void deleteQueue(DeleteQueueRequest request, ActionListener<DeleteQueueResponse> listener) {
+    public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) {
         deleteQueueAction.execute(request, listener);
     }
 }

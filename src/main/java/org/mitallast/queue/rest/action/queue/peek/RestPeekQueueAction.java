@@ -5,10 +5,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -34,7 +34,7 @@ public class RestPeekQueueAction extends BaseRestHandler {
         PeekQueueRequest peekQueueRequest = new PeekQueueRequest();
         peekQueueRequest.setQueue(request.param("queue").toString());
 
-        client.queue().peekQueueRequest(peekQueueRequest, new ActionListener<PeekQueueResponse>() {
+        client.queue().peekQueueRequest(peekQueueRequest, new Listener<PeekQueueResponse>() {
             @Override
             public void onResponse(PeekQueueResponse peekQueueResponse) {
                 if (peekQueueResponse.getMessage() == null) {

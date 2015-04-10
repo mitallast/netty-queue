@@ -2,9 +2,9 @@ package org.mitallast.queue.action.queues.stats;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.stats.QueuesStats;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
@@ -23,7 +23,7 @@ public class QueuesStatsAction extends AbstractAction<QueuesStatsRequest, Queues
     }
 
     @Override
-    public void execute(QueuesStatsRequest request, ActionListener<QueuesStatsResponse> listener) {
+    public void execute(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {
             listener.onFailure(validationException);

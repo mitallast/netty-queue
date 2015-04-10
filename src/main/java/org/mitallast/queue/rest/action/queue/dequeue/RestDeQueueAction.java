@@ -5,10 +5,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.ActionListener;
 import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
 import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -34,7 +34,7 @@ public class RestDeQueueAction extends BaseRestHandler {
         DeQueueRequest deQueueRequest = new DeQueueRequest();
         deQueueRequest.setQueue(request.param("queue").toString());
 
-        client.queue().dequeueRequest(deQueueRequest, new ActionListener<DeQueueResponse>() {
+        client.queue().dequeueRequest(deQueueRequest, new Listener<DeQueueResponse>() {
             @Override
             public void onResponse(DeQueueResponse deQueueResponse) {
                 if (deQueueResponse.getMessage() == null) {

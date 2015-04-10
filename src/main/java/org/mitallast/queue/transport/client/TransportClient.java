@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.client;
 
+import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.util.AttributeKey;
 import org.mitallast.queue.common.concurrent.futures.Futures;
@@ -19,6 +20,7 @@ public class TransportClient extends NettyClient {
 
     private final static AttributeKey<ConcurrentMap<Long, SmartFuture<TransportFrame>>> attr = AttributeKey.valueOf("queue");
 
+    @Inject
     public TransportClient(Settings settings) {
         super(settings, TransportClient.class, TransportModule.class);
     }

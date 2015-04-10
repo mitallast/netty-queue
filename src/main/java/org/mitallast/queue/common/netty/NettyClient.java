@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.netty;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -86,6 +87,10 @@ public abstract class NettyClient extends AbstractComponent {
             bootstrap.group().shutdownGracefully();
         }
         bootstrap = null;
+    }
+
+    public ByteBufAllocator alloc() {
+        return channel.alloc();
     }
 
     public final void flush() {

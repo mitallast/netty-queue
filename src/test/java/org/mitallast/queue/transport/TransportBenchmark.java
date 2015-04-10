@@ -31,7 +31,6 @@ public class TransportBenchmark extends BaseQueueTest {
         for (int i = 0; i < max(); i++) {
             futures.add(client.send(frames.get(i)));
         }
-        client.flush();
         for (SmartFuture<TransportFrame> future : futures) {
             TransportFrame frame = future.get();
         }
@@ -61,7 +60,6 @@ public class TransportBenchmark extends BaseQueueTest {
             for (int i = t; i < total(); i += c) {
                 futures.add(client.send(frames.get(i)));
             }
-            client.flush();
             for (int i = t; i < max(); i += c) {
                 futures.get(i).get();
             }

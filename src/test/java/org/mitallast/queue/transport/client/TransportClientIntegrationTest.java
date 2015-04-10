@@ -8,6 +8,9 @@ import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.queue.QueueMessage;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class TransportClientIntegrationTest extends BaseQueueTest {
     @Test
     public void testEnqueue() throws Exception {
@@ -16,12 +19,18 @@ public class TransportClientIntegrationTest extends BaseQueueTest {
 
         Client client = transportClient();
 
-        SmartFuture<EnQueueResponse> future = client.queue().enqueueRequest(new EnQueueRequest(queueName(), new QueueMessage("Hello world")));
-        client.flush();
-        EnQueueResponse response = future.get();
+        List<SmartFuture<EnQueueResponse>> futures = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            EnQueueRequest request = new EnQueueRequest(queueName(), new QueueMessage("Hello world"));
+            SmartFuture<EnQueueResponse> future = client.queue().enqueueRequest(request);
+            futures.add(future);
+        }
 
-        assert response.getUUID() != null;
-        assert response.getUUID().getMostSignificantBits() != 0;
-        assert response.getUUID().getLeastSignificantBits() != 0;
+        for (SmartFuture<EnQueueResponse> future : futures) {
+            EnQueueResponse response = future.get();
+            assert response.getUUID() != null;
+            assert response.getUUID().getMostSignificantBits() != 0;
+            assert response.getUUID().getLeastSignificantBits() != 0;
+        }
     }
 }

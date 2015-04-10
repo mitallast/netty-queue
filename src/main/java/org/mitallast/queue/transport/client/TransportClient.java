@@ -31,6 +31,7 @@ public class TransportClient extends NettyClient implements Client {
 
     private final TransportQueueClient queueClient;
     private final TransportQueuesClient queuesClient;
+    private final AtomicLong flushCount = new AtomicLong();
 
     @Inject
     public TransportClient(Settings settings) {
@@ -53,7 +54,15 @@ public class TransportClient extends NettyClient implements Client {
         final SmartFuture<TransportFrame> future = Futures.future();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().put(frame.getRequest(), future);
+        flushCount.incrementAndGet();
         localChannel.write(frame, localChannel.voidPromise());
+        // automatic flush
+        localChannel.pipeline().lastContext().executor().execute(() -> {
+            if (flushCount.decrementAndGet() == 0) {
+                logger.info("flush");
+                localChannel.flush();
+            }
+        });
         return future;
     }
 
@@ -64,7 +73,8 @@ public class TransportClient extends NettyClient implements Client {
             streamOutput.writeInt(request.actionType().id());
             request.writeTo(streamOutput);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("error write", e);
+            return Futures.future(e);
         }
         TransportFrame requestFrame = TransportFrame.of(requestCounter.incrementAndGet(), buffer);
         return send(requestFrame).map(mapper);
@@ -88,13 +98,12 @@ public class TransportClient extends NettyClient implements Client {
                             future.invoke(response);
                         }
                     }
-                });
-            }
 
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                cause.printStackTrace();
-                ctx.close();
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logger.error("unexpected exception {}", ctx, cause);
+                    }
+                });
             }
         };
     }

@@ -9,6 +9,7 @@ import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.client.local.LocalClient;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
@@ -59,6 +60,10 @@ public abstract class BaseQueueTest extends BaseTest {
 
     public Client client() {
         return node.client();
+    }
+
+    public LocalClient localClient() {
+        return node.localClient();
     }
 
     public TransportClient transportClient() {

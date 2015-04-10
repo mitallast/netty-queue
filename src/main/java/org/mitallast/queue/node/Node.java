@@ -2,6 +2,7 @@ package org.mitallast.queue.node;
 
 import com.google.inject.Injector;
 import org.mitallast.queue.client.Client;
+import org.mitallast.queue.client.local.LocalClient;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.transport.client.TransportClient;
 
@@ -36,4 +37,6 @@ public interface Node {
     Client client();
 
     TransportClient transportClient();
+
+    LocalClient localClient();
 }

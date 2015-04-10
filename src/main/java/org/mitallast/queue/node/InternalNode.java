@@ -4,6 +4,7 @@ import com.google.inject.Injector;
 import org.mitallast.queue.action.ActionModule;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.ClientModule;
+import org.mitallast.queue.client.local.LocalClient;
 import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.settings.Settings;
@@ -52,6 +53,11 @@ public class InternalNode implements Node {
     @Override
     public TransportClient transportClient() {
         return injector.getInstance(TransportClient.class);
+    }
+
+    @Override
+    public LocalClient localClient() {
+        return injector.getInstance(LocalClient.class);
     }
 
     @Override

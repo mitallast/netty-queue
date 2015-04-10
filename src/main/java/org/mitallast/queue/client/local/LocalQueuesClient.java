@@ -1,9 +1,13 @@
-package org.mitallast.queue.transport.client;
+package org.mitallast.queue.client.local;
 
+import com.google.inject.Inject;
+import org.mitallast.queue.action.queues.create.CreateQueueAction;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.action.queues.create.CreateQueueResponse;
+import org.mitallast.queue.action.queues.delete.DeleteQueueAction;
 import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
 import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
+import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.base.QueuesClient;
@@ -12,45 +16,46 @@ import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
 import java.io.IOException;
 
-public class TransportQueuesClient implements QueuesClient {
+public class LocalQueuesClient implements QueuesClient {
 
-    private final static ResponseMapper<QueuesStatsResponse> QUEUES_STATS_RESPONSE_MAPPER = new ResponseMapper<>(QueuesStatsResponse::new);
-    private final static ResponseMapper<CreateQueueResponse> CREATE_QUEUE_RESPONSE_MAPPER = new ResponseMapper<>(CreateQueueResponse::new);
-    private final static ResponseMapper<DeleteQueueResponse> DELETE_QUEUE_RESPONSE_MAPPER = new ResponseMapper<>(DeleteQueueResponse::new);
+    private final QueuesStatsAction queuesStatsAction;
+    private final CreateQueueAction createQueueAction;
+    private final DeleteQueueAction deleteQueueAction;
 
-    private final TransportClient transportClient;
-
-    public TransportQueuesClient(TransportClient transportClient) {
-        this.transportClient = transportClient;
+    @Inject
+    public LocalQueuesClient(QueuesStatsAction queuesStatsAction, CreateQueueAction createQueueAction, DeleteQueueAction deleteQueueAction) {
+        this.queuesStatsAction = queuesStatsAction;
+        this.createQueueAction = createQueueAction;
+        this.deleteQueueAction = deleteQueueAction;
     }
 
     @Override
     public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) throws IOException {
-        return transportClient.send(request, QUEUES_STATS_RESPONSE_MAPPER);
+        return queuesStatsAction.execute(request);
     }
 
     @Override
     public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) throws IOException {
-        transportClient.send(request, QUEUES_STATS_RESPONSE_MAPPER).on(listener);
+        queuesStatsAction.execute(request, listener);
     }
 
     @Override
     public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) throws IOException {
-        return transportClient.send(request, CREATE_QUEUE_RESPONSE_MAPPER);
+        return createQueueAction.execute(request);
     }
 
     @Override
     public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) throws IOException {
-        transportClient.send(request, CREATE_QUEUE_RESPONSE_MAPPER).on(listener);
+        createQueueAction.execute(request, listener);
     }
 
     @Override
     public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) throws IOException {
-        return transportClient.send(request, DELETE_QUEUE_RESPONSE_MAPPER);
+        return deleteQueueAction.execute(request);
     }
 
     @Override
     public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) throws IOException {
-        transportClient.send(request, DELETE_QUEUE_RESPONSE_MAPPER).on(listener);
+        deleteQueueAction.execute(request, listener);
     }
 }

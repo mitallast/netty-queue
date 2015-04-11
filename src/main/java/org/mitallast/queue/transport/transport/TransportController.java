@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport;
+package org.mitallast.queue.transport.transport;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
@@ -12,8 +12,6 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.ByteBufStreamOutput;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.transport.transport.TransportChannel;
-import org.mitallast.queue.transport.transport.TransportFrame;
 
 public class TransportController extends AbstractComponent {
 
@@ -66,18 +64,5 @@ public class TransportController extends AbstractComponent {
                 });
             }
         }
-
-//        Random random = new Random();
-//        ByteBuf buffer = Unpooled.buffer(random.nextInt(400) + 400);
-//        byte[] data = buffer.array();
-//        random.nextBytes(data);
-//        buffer.writerIndex(buffer.writerIndex() + data.length);
-//        TransportFrame response = TransportFrame.of(
-//            request.getVersion(),
-//            request.getRequest(),
-//            data.length,
-//            buffer
-//        );
-//        channel.send(response);
     }
 }

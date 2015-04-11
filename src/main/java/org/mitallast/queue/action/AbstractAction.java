@@ -6,7 +6,7 @@ import org.mitallast.queue.common.concurrent.futures.Futures;
 import org.mitallast.queue.common.concurrent.futures.ListenerSmartFuture;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.transport.TransportController;
+import org.mitallast.queue.transport.transport.TransportController;
 
 public abstract class AbstractAction<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
 

@@ -7,7 +7,7 @@ import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
-import org.mitallast.queue.transport.TransportController;
+import org.mitallast.queue.transport.transport.TransportController;
 
 import java.io.IOException;
 

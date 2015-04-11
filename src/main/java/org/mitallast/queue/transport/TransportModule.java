@@ -2,6 +2,7 @@ package org.mitallast.queue.transport;
 
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.transport.client.TransportClient;
+import org.mitallast.queue.transport.transport.TransportController;
 import org.mitallast.queue.transport.transport.TransportServer;
 
 public class TransportModule extends AbstractModule {

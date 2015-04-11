@@ -5,7 +5,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportModule;
 
 public class TransportServer extends NettyServer {

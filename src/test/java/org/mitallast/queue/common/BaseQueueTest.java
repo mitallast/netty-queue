@@ -27,8 +27,6 @@ public abstract class BaseQueueTest extends BaseTest {
             .put("work_dir", testFolder.newFolder().getAbsolutePath())
             .put("rest.transport.host", "127.0.0.1")
             .put("rest.transport.port", 18000 + random.nextInt(500))
-            .put("stomp.transport.host", "127.0.0.1")
-            .put("stomp.transport.port", 19000 + random.nextInt(500))
             .put("transport.host", "127.0.0.1")
             .put("transport.port", 20000 + random.nextInt(500))
             .build();

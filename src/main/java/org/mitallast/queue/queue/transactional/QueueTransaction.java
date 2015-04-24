@@ -7,9 +7,7 @@ import java.util.UUID;
 
 public interface QueueTransaction {
 
-    public String id() throws IOException;
-
-    public void begin() throws IOException;
+    public UUID id() throws IOException;
 
     public void commit() throws IOException;
 
@@ -20,5 +18,4 @@ public interface QueueTransaction {
     public QueueMessage pop() throws IOException;
 
     public QueueMessage delete(UUID uuid) throws IOException;
-
 }

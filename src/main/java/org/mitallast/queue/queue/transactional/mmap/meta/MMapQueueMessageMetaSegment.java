@@ -180,7 +180,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     private boolean setStatusDeleted(int index) {
         while (true) {
             QueueMessageStatus current = statusMap.get(index);
-            if (current == QueueMessageStatus.LOCKED) {
+            if (current == QueueMessageStatus.LOCKED || current == QueueMessageStatus.INIT) {
                 if (statusMap.compareAndSet(index, current, DELETED)) {
                     return true;
                 }

@@ -16,7 +16,6 @@ import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.queue.transactional.AbstractQueueService;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
-import org.mitallast.queue.queue.transactional.memory.MemoryQueueTransaction;
 import org.mitallast.queue.queue.transactional.mmap.data.MMapQueueMessageAppendSegment;
 import org.mitallast.queue.queue.transactional.mmap.meta.MMapQueueMessageMetaSegment;
 
@@ -24,7 +23,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class MMapTransactionalQueueService extends AbstractQueueService implements TransactionalQueueService {
@@ -33,6 +36,7 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     private final int segmentMaxSize;
     private final float segmentLoadFactor;
     private final ReentrantLock segmentsLock = new ReentrantLock();
+    private final ConcurrentMap<UUID, MMapMemoryQueueTransaction> transactionMap;
     private File queueDir;
     private MemoryMappedFileFactory mmapFileFactory;
     private volatile ImmutableList<MMapQueueMessageSegment> segments = ImmutableList.of();
@@ -42,6 +46,7 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         workDir = this.settings.get("work_dir", "data");
         segmentMaxSize = this.settings.getAsInt("segment.max_size", MMapQueueMessageMetaSegment.DEFAULT_MAX_SIZE);
         segmentLoadFactor = this.settings.getAsFloat("segment.load_factor", MMapQueueMessageMetaSegment.DEFAULT_LOAD_FACTOR);
+        transactionMap = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -177,8 +182,8 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     }
 
     @Override
-    public QueueTransaction transaction(String id) throws IOException {
-        return new MemoryQueueTransaction(id, this);
+    public QueueTransaction transaction(UUID id) {
+        return transactionMap.computeIfAbsent(id, MMapMemoryQueueTransaction::new);
     }
 
     @Override
@@ -466,5 +471,184 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         long end = System.currentTimeMillis();
         logger.info("create new segment done at {}ms", end - start);
         return segment;
+    }
+
+    private static enum TransactionStatus {INIT, BEGIN, COMMIT, ROLLBACK}
+
+    private static enum MessageStatus {PUSH, POP, DELETE}
+
+    private class MMapMemoryQueueTransaction implements QueueTransaction {
+
+        private final UUID id;
+        private final ConcurrentHashMap<UUID, MessageStatus> messageStatusMap;
+        private final ConcurrentHashMap<UUID, MMapQueueMessageSegment> messageSegmentMap;
+        private final ConcurrentHashMap<UUID, QueueMessage> messageMap;
+        private AtomicReference<TransactionStatus> status;
+
+        public MMapMemoryQueueTransaction(UUID id) {
+            this.id = id;
+            this.messageStatusMap = new ConcurrentHashMap<>();
+            this.messageSegmentMap = new ConcurrentHashMap<>();
+            this.messageMap = new ConcurrentHashMap<>();
+            this.status = new AtomicReference<>(TransactionStatus.BEGIN);
+        }
+
+        @Override
+        public UUID id() throws IOException {
+            return id;
+        }
+
+        @Override
+        public void push(QueueMessage queueMessage) throws IOException {
+            assertStatus(TransactionStatus.BEGIN);
+            // optimized insert
+            if (queueMessage.getUuid() == null) {
+                insertNew(queueMessage);
+            } else {
+                insertExist(queueMessage);
+            }
+
+            messageStatusMap.put(queueMessage.getUuid(), MessageStatus.PUSH);
+            messageMap.put(queueMessage.getUuid(), queueMessage);
+        }
+
+        private void insertNew(QueueMessage queueMessage) throws IOException {
+            final UUID uuid = UUIDs.generateRandom();
+            queueMessage.setUuid(uuid);
+            MMapQueueMessageSegment prev = null;
+            while (true) {
+                ImmutableList<MMapQueueMessageSegment> current = segments;
+                if (!current.isEmpty()) {
+                    MMapQueueMessageSegment segment = current.get(current.size() - 1);
+                    if (prev != segment && segment.acquire() > 0) {
+                        try {
+                            int pos = segment.insert(uuid);
+                            if (pos >= 0) {
+                                if (segment.writeLock(pos)) {
+                                    messageSegmentMap.put(uuid, segment);
+                                    return;
+                                } else {
+                                    throw new QueueMessageUuidDuplicateException(uuid);
+                                }
+                            }
+                        } finally {
+                            segment.release();
+                        }
+                    }
+                    prev = segment;
+                }
+                addSegment(current);
+            }
+        }
+
+        private void insertExist(QueueMessage queueMessage) throws IOException {
+            final UUID uuid = queueMessage.getUuid();
+            ImmutableList<MMapQueueMessageSegment> prev = null;
+            while (true) {
+                final ImmutableList<MMapQueueMessageSegment> current = segments;
+                final int size = current.size();
+                for (int i = 0; i < size; i++) {
+                    final MMapQueueMessageSegment segment = current.get(i);
+                    if (prev != null && prev.contains(segment)) {
+                        continue;
+                    }
+                    if (segment.acquire() > 0) {
+                        try {
+                            int pos = segment.insert(uuid);
+                            if (pos >= 0) {
+                                if (segment.writeLock(pos)) {
+                                    messageSegmentMap.put(uuid, segment);
+                                    return;
+                                } else {
+                                    throw new QueueMessageUuidDuplicateException(uuid);
+                                }
+                            }
+                        } finally {
+                            segment.release();
+                        }
+                    }
+                }
+                prev = current;
+                addSegment(current);
+            }
+        }
+
+        @Override
+        public QueueMessage pop() throws IOException {
+            assertStatus(TransactionStatus.BEGIN);
+            QueueMessage queueMessage = lockAndPop();
+            messageStatusMap.put(queueMessage.getUuid(), MessageStatus.POP);
+            messageMap.put(queueMessage.getUuid(), queueMessage);
+            return queueMessage;
+        }
+
+        @Override
+        public QueueMessage delete(UUID uuid) throws IOException {
+            assertStatus(TransactionStatus.BEGIN);
+            QueueMessage queueMessage = lock(uuid);
+            messageStatusMap.put(uuid, MessageStatus.DELETE);
+            messageMap.put(uuid, queueMessage);
+            return queueMessage;
+        }
+
+        @Override
+        public void commit() throws IOException {
+            updateStatus(TransactionStatus.BEGIN, TransactionStatus.COMMIT);
+            for (Map.Entry<UUID, MessageStatus> entry : messageStatusMap.entrySet()) {
+                UUID uuid = entry.getKey();
+                switch (entry.getValue()) {
+                    case PUSH:
+                        MMapQueueMessageSegment segment = messageSegmentMap.get(entry.getKey());
+                        int pos = segment.insert(entry.getKey());
+                        segment.writeMessage(messageMap.get(entry.getKey()), pos);
+                        break;
+                    case POP:
+                        unlockAndDelete(uuid);
+                        break;
+                    case DELETE:
+                        unlockAndDelete(uuid);
+                        break;
+                }
+                messageStatusMap.remove(entry.getKey());
+                messageMap.remove(entry.getKey());
+            }
+            transactionMap.remove(id);
+        }
+
+        @Override
+        public void rollback() throws IOException {
+            updateStatus(TransactionStatus.BEGIN, TransactionStatus.ROLLBACK);
+            for (Map.Entry<UUID, MessageStatus> entry : messageStatusMap.entrySet()) {
+                switch (entry.getValue()) {
+                    case PUSH:
+                        // ignore
+                        MMapQueueMessageSegment segment = messageSegmentMap.get(entry.getKey());
+                        segment.unlockAndDelete(entry.getKey());
+                        break;
+                    case POP:
+                        unlockAndRollback(entry.getKey());
+                        break;
+                    case DELETE:
+                        unlockAndRollback(entry.getKey());
+                        break;
+                }
+                messageStatusMap.remove(entry.getKey());
+                messageMap.remove(entry.getKey());
+            }
+            transactionMap.remove(id);
+
+        }
+
+        private void updateStatus(TransactionStatus expected, TransactionStatus update) throws IOException {
+            if (!status.compareAndSet(expected, update)) {
+                throw new IOException("Expected status [" + expected + "], actual " + status.get());
+            }
+        }
+
+        private void assertStatus(TransactionStatus expected) throws IOException {
+            if (status.get() != expected) {
+                throw new IOException("Expected status [" + expected + "], actual " + status.get());
+            }
+        }
     }
 }

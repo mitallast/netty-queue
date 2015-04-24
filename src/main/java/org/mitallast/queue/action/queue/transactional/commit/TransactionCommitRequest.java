@@ -15,7 +15,7 @@ import static org.mitallast.queue.action.ValidateActions.addValidationError;
 public class TransactionCommitRequest extends ActionRequest {
 
     private String queue;
-    private UUID transactionUuid;
+    private UUID transactionUUID;
 
     @Override
     public ActionType actionType() {
@@ -28,8 +28,8 @@ public class TransactionCommitRequest extends ActionRequest {
         if (Strings.isEmpty(queue)) {
             validationException = addValidationError("queue is missing", null);
         }
-        if (transactionUuid == null) {
-            validationException = addValidationError("transactionUuid is missing", null);
+        if (transactionUUID == null) {
+            validationException = addValidationError("transactionUUID is missing", null);
         }
         return validationException;
     }
@@ -42,23 +42,23 @@ public class TransactionCommitRequest extends ActionRequest {
         this.queue = queue;
     }
 
-    public UUID getTransactionUuid() {
-        return transactionUuid;
+    public UUID getTransactionUUID() {
+        return transactionUUID;
     }
 
-    public void setTransactionUuid(UUID transactionUuid) {
-        this.transactionUuid = transactionUuid;
+    public void setTransactionUUID(UUID transactionUUID) {
+        this.transactionUUID = transactionUUID;
     }
 
     @Override
     public void readFrom(StreamInput stream) throws IOException {
-        queue = stream.readTextOrNull();
-        transactionUuid = stream.readUUIDOrNull();
+        queue = stream.readText();
+        transactionUUID = stream.readUUID();
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeTextOrNull(queue);
-        stream.writeUUIDOrNull(transactionUuid);
+        stream.writeText(queue);
+        stream.writeUUID(transactionUUID);
     }
 }

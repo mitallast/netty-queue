@@ -36,14 +36,14 @@ public class TransactionCommitAction extends AbstractAction<TransactionCommitReq
             listener.onFailure(new QueueMissingException(request.getQueue()));
             return;
         }
-        QueueTransaction transaction = queueService.transaction(request.getTransactionUuid());
+        QueueTransaction transaction = queueService.transaction(request.getTransactionUUID());
         if (transaction == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
             return;
         }
         try {
             transaction.commit();
-            listener.onResponse(new TransactionCommitResponse(request.getQueue(), request.getTransactionUuid()));
+            listener.onResponse(new TransactionCommitResponse(request.getQueue(), request.getTransactionUUID()));
         } catch (IOException e) {
             listener.onFailure(e);
         }

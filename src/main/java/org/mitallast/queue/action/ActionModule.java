@@ -7,6 +7,7 @@ import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queue.get.GetAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
+import org.mitallast.queue.action.queue.transactional.commit.TransactionCommitAction;
 import org.mitallast.queue.action.queues.create.CreateQueueAction;
 import org.mitallast.queue.action.queues.delete.DeleteQueueAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
@@ -19,6 +20,8 @@ public class ActionModule extends AbstractModule {
         bind(PeekQueueAction.class).asEagerSingleton();
         bind(DeleteAction.class).asEagerSingleton();
         bind(GetAction.class).asEagerSingleton();
+
+        bind(TransactionCommitAction.class).asEagerSingleton();
 
         bind(QueueStatsAction.class).asEagerSingleton();
 

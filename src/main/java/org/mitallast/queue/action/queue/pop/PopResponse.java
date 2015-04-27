@@ -8,6 +8,7 @@ import org.mitallast.queue.queue.QueueMessage;
 import java.io.IOException;
 
 public class PopResponse extends ActionResponse {
+
     private QueueMessage message;
 
     public PopResponse() {

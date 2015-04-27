@@ -44,7 +44,7 @@ public class TransactionPopAction extends AbstractAction<TransactionPopRequest, 
         }
         try {
             QueueMessage message = transaction.pop();
-            listener.onResponse(new TransactionPopResponse(request.getQueue(), request.getTransactionUUID(), message));
+            listener.onResponse(new TransactionPopResponse(request.getTransactionUUID(), message));
         } catch (IOException e) {
             listener.onFailure(e);
         }

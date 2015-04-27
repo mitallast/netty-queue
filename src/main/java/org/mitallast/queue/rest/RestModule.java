@@ -21,6 +21,9 @@ public class RestModule extends AbstractModule {
         bind(RestDeleteAction.class).asEagerSingleton();
         bind(RestGetAction.class).asEagerSingleton();
 
+        bind(RestTransactionCommitAction.class).asEagerSingleton();
+        bind(RestTransactionRollbackAction.class).asEagerSingleton();
+
         bind(RestQueueStatsAction.class).asEagerSingleton();
 
         bind(RestCreateQueueAction.class).asEagerSingleton();

@@ -36,14 +36,14 @@ public class TransactionRollbackAction extends AbstractAction<TransactionRollbac
             listener.onFailure(new QueueMissingException(request.getQueue()));
             return;
         }
-        QueueTransaction transaction = queueService.transaction(request.getTransactionUuid());
+        QueueTransaction transaction = queueService.transaction(request.getTransactionUUID());
         if (transaction == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
             return;
         }
         try {
             transaction.rollback();
-            listener.onResponse(new TransactionRollbackResponse(request.getQueue(), request.getTransactionUuid()));
+            listener.onResponse(new TransactionRollbackResponse(request.getQueue(), request.getTransactionUUID()));
         } catch (IOException e) {
             listener.onFailure(e);
         }

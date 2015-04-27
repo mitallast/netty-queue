@@ -5,9 +5,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.queue.pop.PopRequest;
-import org.mitallast.queue.action.queue.pop.PopResponse;
+import org.mitallast.queue.action.queue.transactional.pop.TransactionPopRequest;
+import org.mitallast.queue.action.queue.transactional.pop.TransactionPopResponse;
 import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
@@ -26,17 +27,18 @@ public class RestPopAction extends BaseRestHandler {
     @Inject
     public RestPopAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(HttpMethod.GET, "/{queue}/message", this);
+        controller.registerHandler(HttpMethod.GET, "/{queue}/{transaction}/message", this);
     }
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        PopRequest popRequest = new PopRequest();
+        TransactionPopRequest popRequest = new TransactionPopRequest();
         popRequest.setQueue(request.param("queue").toString());
+        popRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
 
-        client.queue().popRequest(popRequest, new Listener<PopResponse>() {
+        client.queue().transactional().popRequest(popRequest, new Listener<TransactionPopResponse>() {
             @Override
-            public void onResponse(PopResponse popResponse) {
+            public void onResponse(TransactionPopResponse popResponse) {
                 if (popResponse.getMessage() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;

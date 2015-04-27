@@ -20,6 +20,7 @@ import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.base.QueueClient;
+import org.mitallast.queue.client.base.QueueTransactionalClient;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
@@ -33,20 +34,30 @@ public class LocalQueueClient implements QueueClient {
     private final DeleteAction deleteAction;
     private final GetAction getAction;
     private final QueueStatsAction queueStatsAction;
+    private final LocalQueueTransactionalClient queueTransactionalClient;
 
     @Inject
-    public LocalQueueClient(EnQueueAction enQueueAction,
-                            DeQueueAction deQueueAction,
-                            PeekQueueAction peekQueueAction,
-                            DeleteAction deleteAction,
-                            GetAction getAction,
-                            QueueStatsAction queueStatsAction) {
+    public LocalQueueClient(
+        EnQueueAction enQueueAction,
+        DeQueueAction deQueueAction,
+        PeekQueueAction peekQueueAction,
+        DeleteAction deleteAction,
+        GetAction getAction,
+        QueueStatsAction queueStatsAction,
+        LocalQueueTransactionalClient queueTransactionalClient
+    ) {
         this.enQueueAction = enQueueAction;
         this.deQueueAction = deQueueAction;
         this.peekQueueAction = peekQueueAction;
         this.deleteAction = deleteAction;
         this.getAction = getAction;
         this.queueStatsAction = queueStatsAction;
+        this.queueTransactionalClient = queueTransactionalClient;
+    }
+
+    @Override
+    public QueueTransactionalClient transactional() {
+        return queueTransactionalClient;
     }
 
     @Override

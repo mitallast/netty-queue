@@ -13,6 +13,7 @@ import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.base.QueueClient;
+import org.mitallast.queue.client.base.QueueTransactionalClient;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
@@ -28,9 +29,20 @@ public class TransportQueueClient implements QueueClient {
     private final static ResponseMapper<PeekQueueResponse> PEEK_QUEUE_RESPONSE_MAPPER = new ResponseMapper<>(PeekQueueResponse::new);
 
     private final TransportClient transportClient;
+    private final TransportQueueTransactionalClient queueTransactionalClient;
 
     public TransportQueueClient(TransportClient transportClient) {
+        this(transportClient, new TransportQueueTransactionalClient(transportClient));
+    }
+
+    public TransportQueueClient(TransportClient transportClient, TransportQueueTransactionalClient queueTransactionalClient) {
         this.transportClient = transportClient;
+        this.queueTransactionalClient = queueTransactionalClient;
+    }
+
+    @Override
+    public QueueTransactionalClient transactional() {
+        return queueTransactionalClient;
     }
 
     @Override

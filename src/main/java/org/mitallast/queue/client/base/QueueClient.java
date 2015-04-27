@@ -19,6 +19,8 @@ import java.io.IOException;
 
 public interface QueueClient {
 
+    QueueTransactionalClient transactional();
+
     SmartFuture<EnQueueResponse> enqueueRequest(EnQueueRequest request) throws IOException;
 
     void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener);

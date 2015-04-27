@@ -2,15 +2,10 @@ package org.mitallast.queue.rest;
 
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.rest.action.RestIndexAction;
-import org.mitallast.queue.rest.action.queue.delete.RestDeleteAction;
-import org.mitallast.queue.rest.action.queue.get.RestGetAction;
-import org.mitallast.queue.rest.action.queue.peek.RestPeekQueueAction;
-import org.mitallast.queue.rest.action.queue.pop.RestPopAction;
-import org.mitallast.queue.rest.action.queue.push.RestPushAction;
-import org.mitallast.queue.rest.action.queue.stats.RestQueueStatsAction;
-import org.mitallast.queue.rest.action.queues.create.RestCreateQueueAction;
-import org.mitallast.queue.rest.action.queues.delete.RestDeleteQueueAction;
-import org.mitallast.queue.rest.action.queues.stats.RestQueuesStatsAction;
+import org.mitallast.queue.rest.action.queue.*;
+import org.mitallast.queue.rest.action.queues.RestCreateQueueAction;
+import org.mitallast.queue.rest.action.queues.RestDeleteQueueAction;
+import org.mitallast.queue.rest.action.queues.RestQueuesStatsAction;
 import org.mitallast.queue.rest.transport.HttpServer;
 
 public class RestModule extends AbstractModule {

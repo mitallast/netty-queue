@@ -17,6 +17,7 @@ import org.mitallast.queue.queue.QueueMessageType;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
+import org.mitallast.queue.rest.action.queue.RestPushAction;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;

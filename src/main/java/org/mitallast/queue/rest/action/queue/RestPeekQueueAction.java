@@ -1,50 +1,51 @@
-package org.mitallast.queue.rest.action.queues.stats;
+package org.mitallast.queue.rest.action.queue;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
-import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
+import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
+import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.client.base.Client;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
-import org.mitallast.queue.queues.stats.QueueStats;
+import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.response.ByteBufRestResponse;
+import org.mitallast.queue.rest.response.StatusRestResponse;
 
 import java.io.IOException;
 
-public class RestQueuesStatsAction extends BaseRestHandler {
+public class RestPeekQueueAction extends BaseRestHandler {
 
     @Inject
-    public RestQueuesStatsAction(Settings settings, Client client, RestController controller) {
+    public RestPeekQueueAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(HttpMethod.GET, "/_stats", this);
+        controller.registerHandler(HttpMethod.HEAD, "/{queue}/message", this);
     }
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        client.queues().queuesStatsRequest(new QueuesStatsRequest(), new Listener<QueuesStatsResponse>() {
+        PeekQueueRequest peekQueueRequest = new PeekQueueRequest();
+        peekQueueRequest.setQueue(request.param("queue").toString());
+
+        client.queue().peekQueueRequest(peekQueueRequest, new Listener<PeekQueueResponse>() {
             @Override
-            public void onResponse(QueuesStatsResponse response) {
+            public void onResponse(PeekQueueResponse peekQueueResponse) {
+                if (peekQueueResponse.getMessage() == null) {
+                    session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
+                    return;
+                }
+                QueueMessage queueMessage = peekQueueResponse.getMessage();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {
-                        builder.writeStartObject();
-                        builder.writeArrayFieldStart("queues");
-                        for (QueueStats queueStats : response.stats().getQueueStats()) {
-                            builder.writeStartObject();
-                            builder.writeStringField("name", queueStats.getQueue().getName());
-                            builder.writeNumberField("size", queueStats.getSize());
-                            builder.writeEndObject();
-                        }
-                        builder.writeEndArray();
+                        queueMessage.toXStream(builder);
                     }
                     session.sendResponse(new ByteBufRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {

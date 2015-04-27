@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest.action.queue.push;
+package org.mitallast.queue.rest.action.queue;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;

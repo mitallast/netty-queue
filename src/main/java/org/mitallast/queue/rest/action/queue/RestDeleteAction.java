@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest.action.queue.delete;
+package org.mitallast.queue.rest.action.queue;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;

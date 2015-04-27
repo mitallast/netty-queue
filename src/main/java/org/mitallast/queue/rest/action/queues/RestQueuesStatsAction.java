@@ -1,56 +1,50 @@
-package org.mitallast.queue.rest.action.queue.get;
+package org.mitallast.queue.rest.action.queues;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.queue.get.GetRequest;
-import org.mitallast.queue.action.queue.get.GetResponse;
+import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
+import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.base.Client;
-import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
-import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.queues.stats.QueueStats;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.response.ByteBufRestResponse;
-import org.mitallast.queue.rest.response.StatusRestResponse;
 
 import java.io.IOException;
 
-public class RestGetAction extends BaseRestHandler {
+public class RestQueuesStatsAction extends BaseRestHandler {
 
     @Inject
-    public RestGetAction(Settings settings, Client client, RestController controller) {
+    public RestQueuesStatsAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(HttpMethod.HEAD, "/{queue}/message/{uuid}", this);
+        controller.registerHandler(HttpMethod.GET, "/_stats", this);
     }
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        GetRequest getRequest = new GetRequest();
-        getRequest.setQueue(request.param("queue").toString());
-        CharSequence uuid = request.param("uuid");
-        if (uuid != null) {
-            getRequest.setUuid(UUIDs.fromString(uuid));
-        }
-
-        client.queue().getRequest(getRequest, new Listener<GetResponse>() {
+        client.queues().queuesStatsRequest(new QueuesStatsRequest(), new Listener<QueuesStatsResponse>() {
             @Override
-            public void onResponse(GetResponse getResponse) {
-                if (getResponse.getMessage() == null) {
-                    session.sendResponse(new StatusRestResponse(HttpResponseStatus.NOT_FOUND));
-                    return;
-                }
-                QueueMessage queueMessage = getResponse.getMessage();
+            public void onResponse(QueuesStatsResponse response) {
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {
-                        queueMessage.toXStream(builder);
+                        builder.writeStartObject();
+                        builder.writeArrayFieldStart("queues");
+                        for (QueueStats queueStats : response.stats().getQueueStats()) {
+                            builder.writeStartObject();
+                            builder.writeStringField("name", queueStats.getQueue().getName());
+                            builder.writeNumberField("size", queueStats.getSize());
+                            builder.writeEndObject();
+                        }
+                        builder.writeEndArray();
                     }
                     session.sendResponse(new ByteBufRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {

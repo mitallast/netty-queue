@@ -50,7 +50,7 @@ public class LocalQueueTransactionalClient implements QueueTransactionalClient {
     }
 
     @Override
-    public void enqueueRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
+    public void commitRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
         commitAction.execute(request, listener);
     }
 

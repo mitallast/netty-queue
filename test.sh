@@ -30,13 +30,13 @@ curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
 echo
 echo
 
-echo enqueue
+echo push
 echo
 curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
 echo
 echo
 
-echo enqueue
+echo push
 echo
 curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"message":"Hello world 2"}'
 echo
@@ -96,19 +96,19 @@ curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
 echo
 echo
 
-echo my_queue enqueue uuid
+echo my_queue push uuid
 echo
 curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
 echo
 echo
 
-echo my_queue enqueue uuid fail
+echo my_queue push uuid fail
 echo
 curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b256-8bf9021fffbd","message":"Hello world custom_uid"}'
 echo
 echo
 
-echo my_queue enqueue json uuid fail
+echo my_queue push json uuid fail
 echo
 curl -i -s -XPOST 'localhost:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b255-8bf9021fffbd","message":{"foo":"bar"}}'
 echo

@@ -36,7 +36,7 @@ public class TransportQueueTransactionalClient implements QueueTransactionalClie
     }
 
     @Override
-    public void enqueueRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
+    public void commitRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
         transportClient.send(request, COMMIT_RESPONSE_MAPPER).on(listener);
     }
 

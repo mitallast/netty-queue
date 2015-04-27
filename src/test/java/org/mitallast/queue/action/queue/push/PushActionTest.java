@@ -1,10 +1,10 @@
-package org.mitallast.queue.action.queue.enqueue;
+package org.mitallast.queue.action.queue.push;
 
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.queue.QueueMessage;
 
-public class EnQueueActionTest extends BaseQueueTest {
+public class PushActionTest extends BaseQueueTest {
 
     @Test
     public void testSingleThread() throws Exception {
@@ -33,8 +33,8 @@ public class EnQueueActionTest extends BaseQueueTest {
     private void send(int max) throws Exception {
         for (int i = 0; i < max; i++) {
             QueueMessage message = createMessage();
-            EnQueueRequest request = new EnQueueRequest(queueName(), message);
-            EnQueueResponse response = localClient().queue().enqueueRequest(request).get();
+            PushRequest request = new PushRequest(queueName(), message);
+            PushResponse response = localClient().queue().pushRequest(request).get();
             assert response.getUUID().equals(message.getUuid());
         }
     }

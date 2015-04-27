@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queue.enqueue;
+package org.mitallast.queue.action.queue.push;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
@@ -13,16 +13,16 @@ import java.io.IOException;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
-public class EnQueueRequest extends ActionRequest implements Streamable {
+public class PushRequest extends ActionRequest implements Streamable {
 
     private String queue;
 
     private QueueMessage message;
 
-    public EnQueueRequest() {
+    public PushRequest() {
     }
 
-    public EnQueueRequest(String queue, QueueMessage message) {
+    public PushRequest(String queue, QueueMessage message) {
         this.queue = queue;
         this.message = message;
     }
@@ -45,7 +45,7 @@ public class EnQueueRequest extends ActionRequest implements Streamable {
 
     @Override
     public ActionType actionType() {
-        return ActionType.QUEUE_ENQUEUE;
+        return ActionType.QUEUE_PUSH;
     }
 
     @Override

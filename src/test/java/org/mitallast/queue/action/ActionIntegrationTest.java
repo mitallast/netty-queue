@@ -1,7 +1,7 @@
 package org.mitallast.queue.action;
 
 import org.junit.Test;
-import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
+import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.queue.QueueMessage;
 
@@ -15,7 +15,7 @@ public class ActionIntegrationTest extends BaseQueueTest {
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
             localClient().queue()
-                    .enqueueRequest(new EnQueueRequest(queueName(), new QueueMessage("foo")))
+                .pushRequest(new PushRequest(queueName(), new QueueMessage("foo")))
                     .get();
         }
         long end = System.currentTimeMillis();

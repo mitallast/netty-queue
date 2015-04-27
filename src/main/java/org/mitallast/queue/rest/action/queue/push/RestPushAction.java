@@ -1,12 +1,12 @@
-package org.mitallast.queue.rest.action.queue.enqueue;
+package org.mitallast.queue.rest.action.queue.push;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.QueueParseException;
-import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
-import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
+import org.mitallast.queue.action.queue.push.PushRequest;
+import org.mitallast.queue.action.queue.push.PushResponse;
 import org.mitallast.queue.client.base.Client;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.concurrent.Listener;
@@ -24,16 +24,16 @@ import org.mitallast.queue.rest.response.UUIDRestResponse;
 
 import java.io.IOException;
 
-public class RestEnQueueAction extends BaseRestHandler {
+public class RestPushAction extends BaseRestHandler {
 
     @Inject
-    public RestEnQueueAction(Settings settings, Client client, RestController controller) {
+    public RestPushAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
         controller.registerHandler(HttpMethod.POST, "/{queue}/message", this);
         controller.registerHandler(HttpMethod.PUT, "/{queue}/message", this);
     }
 
-    private void parse(EnQueueRequest request, ByteBuf buffer) throws IOException {
+    private void parse(PushRequest request, ByteBuf buffer) throws IOException {
         try (XStreamParser parser = createParser(buffer)) {
             String currentFieldName;
             XStreamParser.Token token;
@@ -80,21 +80,21 @@ public class RestEnQueueAction extends BaseRestHandler {
     public void handleRequest(RestRequest request, final RestSession session) {
         QueueMessage queueMessage = new QueueMessage();
 
-        final EnQueueRequest enQueueRequest = new EnQueueRequest();
-        enQueueRequest.setQueue(request.param("queue").toString());
-        enQueueRequest.setMessage(queueMessage);
+        final PushRequest pushRequest = new PushRequest();
+        pushRequest.setQueue(request.param("queue").toString());
+        pushRequest.setMessage(queueMessage);
 
         try {
-            parse(enQueueRequest, request.content());
+            parse(pushRequest, request.content());
         } catch (IOException e) {
             session.sendResponse(e);
             return;
         }
 
-        client.queue().enqueueRequest(enQueueRequest, new Listener<EnQueueResponse>() {
+        client.queue().pushRequest(pushRequest, new Listener<PushResponse>() {
 
             @Override
-            public void onResponse(EnQueueResponse response) {
+            public void onResponse(PushResponse response) {
                 session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.getUUID()));
             }
 

@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queue.enqueue;
+package org.mitallast.queue.action.queue.push;
 
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -8,14 +8,14 @@ import org.mitallast.queue.common.stream.Streamable;
 import java.io.IOException;
 import java.util.UUID;
 
-public class EnQueueResponse extends ActionResponse implements Streamable {
+public class PushResponse extends ActionResponse implements Streamable {
 
     private UUID uuid;
 
-    public EnQueueResponse() {
+    public PushResponse() {
     }
 
-    public EnQueueResponse(UUID uuid) {
+    public PushResponse(UUID uuid) {
         this.uuid = uuid;
     }
 

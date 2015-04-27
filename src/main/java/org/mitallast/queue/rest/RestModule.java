@@ -3,10 +3,10 @@ package org.mitallast.queue.rest;
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.rest.action.RestIndexAction;
 import org.mitallast.queue.rest.action.queue.delete.RestDeleteAction;
-import org.mitallast.queue.rest.action.queue.enqueue.RestEnQueueAction;
 import org.mitallast.queue.rest.action.queue.get.RestGetAction;
 import org.mitallast.queue.rest.action.queue.peek.RestPeekQueueAction;
 import org.mitallast.queue.rest.action.queue.pop.RestPopAction;
+import org.mitallast.queue.rest.action.queue.push.RestPushAction;
 import org.mitallast.queue.rest.action.queue.stats.RestQueueStatsAction;
 import org.mitallast.queue.rest.action.queues.create.RestCreateQueueAction;
 import org.mitallast.queue.rest.action.queues.delete.RestDeleteQueueAction;
@@ -21,7 +21,7 @@ public class RestModule extends AbstractModule {
         bind(RestController.class).asEagerSingleton();
 
         bind(RestPopAction.class).asEagerSingleton();
-        bind(RestEnQueueAction.class).asEagerSingleton();
+        bind(RestPushAction.class).asEagerSingleton();
         bind(RestPeekQueueAction.class).asEagerSingleton();
         bind(RestDeleteAction.class).asEagerSingleton();
         bind(RestGetAction.class).asEagerSingleton();

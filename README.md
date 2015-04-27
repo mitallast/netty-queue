@@ -39,15 +39,15 @@ queue stats
 
     curl -i -s -XGET 'http://127.0.0.1:8080/my_queue/_stats?pretty'
 
-enqueue message as string
+push message as string
 
     curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
 
-enqueue message as json
+push message as json
 
     curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"message":{"Title":"Hello world"}}'
 
-enqueue with uuid message 
+push with uuid message
 
     curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
 

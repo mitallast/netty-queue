@@ -19,7 +19,7 @@ public interface QueueTransactionalClient {
 
     SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) throws IOException;
 
-    void enqueueRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener);
+    void commitRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener);
 
     SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) throws IOException;
 

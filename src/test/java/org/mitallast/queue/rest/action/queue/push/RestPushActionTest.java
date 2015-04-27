@@ -1,11 +1,11 @@
-package org.mitallast.queue.rest.action.queue.enqueue;
+package org.mitallast.queue.rest.action.queue.push;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
+import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.client.base.Client;
 import org.mitallast.queue.client.base.QueueClient;
 import org.mitallast.queue.common.BaseTest;
@@ -28,7 +28,7 @@ import java.util.UUID;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 
-public class RestEnQueueActionTest extends BaseTest {
+public class RestPushActionTest extends BaseTest {
     @Mock
     private Settings settings;
     @Mock
@@ -43,9 +43,9 @@ public class RestEnQueueActionTest extends BaseTest {
     private Client client;
 
     @Captor
-    private ArgumentCaptor<EnQueueRequest> captor;
+    private ArgumentCaptor<PushRequest> captor;
 
-    private RestEnQueueAction restEnQueueAction;
+    private RestPushAction restPushAction;
 
     @Before
     public void setUp() {
@@ -53,7 +53,7 @@ public class RestEnQueueActionTest extends BaseTest {
         when(client.queue()).thenReturn(queueClient);
         assert client != null;
         assert client.queue() != null;
-        restEnQueueAction = new RestEnQueueAction(settings, client, restController);
+        restPushAction = new RestPushAction(settings, client, restController);
     }
 
     @Test
@@ -73,9 +73,9 @@ public class RestEnQueueActionTest extends BaseTest {
         when(restRequest.param("queue")).thenReturn("testQueue");
         when(restRequest.content()).thenReturn(buffer);
 
-        restEnQueueAction.handleRequest(restRequest, restSession);
+        restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(Listener.class));
+        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
@@ -107,9 +107,9 @@ public class RestEnQueueActionTest extends BaseTest {
         when(restRequest.param("queue")).thenReturn("testQueue");
         when(restRequest.content()).thenReturn(buffer);
 
-        restEnQueueAction.handleRequest(restRequest, restSession);
+        restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(Listener.class));
+        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();
@@ -141,9 +141,9 @@ public class RestEnQueueActionTest extends BaseTest {
         when(restRequest.param("queue")).thenReturn("testQueue");
         when(restRequest.content()).thenReturn(buffer);
 
-        restEnQueueAction.handleRequest(restRequest, restSession);
+        restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).enqueueRequest(captor.capture(), any(Listener.class));
+        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
 
         String queue = captor.getValue().getQueue();
         QueueMessage queueMessage = captor.getValue().getMessage();

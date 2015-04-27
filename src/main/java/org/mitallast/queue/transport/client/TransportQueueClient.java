@@ -2,14 +2,14 @@ package org.mitallast.queue.transport.client;
 
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
-import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
-import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.action.queue.get.GetRequest;
 import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.action.queue.pop.PopRequest;
 import org.mitallast.queue.action.queue.pop.PopResponse;
+import org.mitallast.queue.action.queue.push.PushRequest;
+import org.mitallast.queue.action.queue.push.PushResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.base.QueueClient;
@@ -21,7 +21,7 @@ import java.io.IOException;
 
 public class TransportQueueClient implements QueueClient {
 
-    private final static ResponseMapper<EnQueueResponse> EN_QUEUE_RESPONSE_MAPPER = new ResponseMapper<>(EnQueueResponse::new);
+    private final static ResponseMapper<PushResponse> PUSH_RESPONSE_MAPPER = new ResponseMapper<>(PushResponse::new);
     private final static ResponseMapper<PopResponse> POP_RESPONSE_MAPPER = new ResponseMapper<>(PopResponse::new);
     private final static ResponseMapper<QueueStatsResponse> QUEUE_STATS_RESPONSE_MAPPER = new ResponseMapper<>(QueueStatsResponse::new);
     private final static ResponseMapper<DeleteResponse> DELETE_RESPONSE_MAPPER = new ResponseMapper<>(DeleteResponse::new);
@@ -46,13 +46,13 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public SmartFuture<EnQueueResponse> enqueueRequest(EnQueueRequest request) throws IOException {
-        return transportClient.send(request, EN_QUEUE_RESPONSE_MAPPER);
+    public SmartFuture<PushResponse> pushRequest(PushRequest request) throws IOException {
+        return transportClient.send(request, PUSH_RESPONSE_MAPPER);
     }
 
     @Override
-    public void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener) {
-        transportClient.send(request, EN_QUEUE_RESPONSE_MAPPER).on(listener);
+    public void pushRequest(PushRequest request, Listener<PushResponse> listener) {
+        transportClient.send(request, PUSH_RESPONSE_MAPPER).on(listener);
     }
 
     @Override

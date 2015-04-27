@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queue.enqueue;
+package org.mitallast.queue.action.queue.push;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
@@ -14,18 +14,18 @@ import org.mitallast.queue.transport.transport.TransportController;
 
 import java.io.IOException;
 
-public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueResponse> {
+public class PushAction extends AbstractAction<PushRequest, PushResponse> {
 
     private final TransactionalQueuesService queuesService;
 
     @Inject
-    public EnQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
+    public PushAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
         super(settings, controller);
         this.queuesService = queuesService;
     }
 
     @Override
-    public void execute(EnQueueRequest request, Listener<EnQueueResponse> listener) {
+    public void execute(PushRequest request, Listener<PushResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {
             listener.onFailure(validationException);
@@ -38,19 +38,19 @@ public class EnQueueAction extends AbstractAction<EnQueueRequest, EnQueueRespons
         }
         try {
             queueService.push(request.getMessage());
-            listener.onResponse(new EnQueueResponse(request.getMessage().getUuid()));
+            listener.onResponse(new PushResponse(request.getMessage().getUuid()));
         } catch (QueueMessageUuidDuplicateException | IOException e) {
             listener.onFailure(e);
         }
     }
 
     @Override
-    public EnQueueRequest createRequest() {
-        return new EnQueueRequest();
+    public PushRequest createRequest() {
+        return new PushRequest();
     }
 
     @Override
     public ActionType getActionId() {
-        return ActionType.QUEUE_ENQUEUE;
+        return ActionType.QUEUE_PUSH;
     }
 }

@@ -37,11 +37,11 @@ public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> 
         }
         TransactionalQueueService queueService = queuesService.queue(request.getQueue());
         try {
-            QueueMessage message = queueService.unlockAndDelete(request.getUuid());
+            QueueMessage message = queueService.unlockAndDelete(request.getMessageUUID());
             if (message != null) {
                 listener.onResponse(new DeleteResponse(message));
             } else {
-                listener.onFailure(new QueueMessageNotFoundException(request.getUuid()));
+                listener.onFailure(new QueueMessageNotFoundException(request.getMessageUUID()));
             }
         } catch (IOException e) {
             listener.onFailure(e);

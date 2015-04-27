@@ -15,7 +15,7 @@ import static org.mitallast.queue.action.ValidateActions.addValidationError;
 public class DeleteRequest extends ActionRequest {
 
     private String queue;
-    private UUID uuid;
+    private UUID messageUUID;
 
     public String getQueue() {
         return queue;
@@ -25,12 +25,12 @@ public class DeleteRequest extends ActionRequest {
         this.queue = queue;
     }
 
-    public UUID getUuid() {
-        return uuid;
+    public UUID getMessageUUID() {
+        return messageUUID;
     }
 
-    public void setUuid(UUID uuid) {
-        this.uuid = uuid;
+    public void setMessageUUID(UUID messageUUID) {
+        this.messageUUID = messageUUID;
     }
 
     @Override
@@ -44,8 +44,8 @@ public class DeleteRequest extends ActionRequest {
         if (Strings.isEmpty(queue)) {
             validationException = addValidationError("queue is missing", null);
         }
-        if (uuid == null) {
-            validationException = addValidationError("uuid is missing", null);
+        if (messageUUID == null) {
+            validationException = addValidationError("messageUUID is missing", null);
         }
         return validationException;
     }
@@ -53,12 +53,12 @@ public class DeleteRequest extends ActionRequest {
     @Override
     public void readFrom(StreamInput stream) throws IOException {
         queue = stream.readTextOrNull();
-        uuid = stream.readUUIDOrNull();
+        messageUUID = stream.readUUIDOrNull();
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeTextOrNull(queue);
-        stream.writeUUIDOrNull(uuid);
+        stream.writeUUIDOrNull(messageUUID);
     }
 }

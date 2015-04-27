@@ -30,7 +30,7 @@ public class RestDeleteAction extends BaseRestHandler {
         deleteRequest.setQueue(request.param("queue").toString());
         CharSequence uuid = request.param("uuid");
         if (uuid != null) {
-            deleteRequest.setUuid(UUIDs.fromString(uuid));
+            deleteRequest.setMessageUUID(UUIDs.fromString(uuid));
         }
 
         client.queue().deleteRequest(deleteRequest, new Listener<DeleteResponse>() {

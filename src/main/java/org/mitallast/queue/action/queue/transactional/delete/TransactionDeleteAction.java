@@ -45,7 +45,6 @@ public class TransactionDeleteAction extends AbstractAction<TransactionDeleteReq
         try {
             QueueMessage deleted = transaction.delete(request.getMessageUUID());
             listener.onResponse(new TransactionDeleteResponse(
-                request.getQueue(),
                 request.getTransactionUUID(),
                 request.getMessageUUID(),
                 deleted

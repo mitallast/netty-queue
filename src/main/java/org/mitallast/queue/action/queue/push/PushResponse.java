@@ -10,26 +10,30 @@ import java.util.UUID;
 
 public class PushResponse extends ActionResponse implements Streamable {
 
-    private UUID uuid;
+    private UUID messageUUID;
 
     public PushResponse() {
     }
 
-    public PushResponse(UUID uuid) {
-        this.uuid = uuid;
+    public PushResponse(UUID messageUUID) {
+        this.messageUUID = messageUUID;
     }
 
-    public UUID getUUID() {
-        return uuid;
+    public UUID getMessageUUID() {
+        return messageUUID;
+    }
+
+    public void setMessageUUID(UUID messageUUID) {
+        this.messageUUID = messageUUID;
     }
 
     @Override
     public void readFrom(StreamInput stream) throws IOException {
-        uuid = stream.readUUID();
+        messageUUID = stream.readUUID();
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeUUID(uuid);
+        stream.writeUUID(messageUUID);
     }
 }

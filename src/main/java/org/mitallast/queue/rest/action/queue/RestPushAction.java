@@ -95,7 +95,7 @@ public class RestPushAction extends BaseRestHandler {
 
             @Override
             public void onResponse(PushResponse response) {
-                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.getUUID()));
+                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.getMessageUUID()));
             }
 
             @Override

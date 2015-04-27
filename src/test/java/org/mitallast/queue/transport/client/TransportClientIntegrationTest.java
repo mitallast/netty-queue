@@ -28,9 +28,9 @@ public class TransportClientIntegrationTest extends BaseQueueTest {
 
         for (SmartFuture<PushResponse> future : futures) {
             PushResponse response = future.get();
-            assert response.getUUID() != null;
-            assert response.getUUID().getMostSignificantBits() != 0;
-            assert response.getUUID().getLeastSignificantBits() != 0;
+            assert response.getMessageUUID() != null;
+            assert response.getMessageUUID().getMostSignificantBits() != 0;
+            assert response.getMessageUUID().getLeastSignificantBits() != 0;
         }
     }
 }

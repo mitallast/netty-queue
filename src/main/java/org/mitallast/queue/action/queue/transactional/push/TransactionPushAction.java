@@ -44,7 +44,6 @@ public class TransactionPushAction extends AbstractAction<TransactionPushRequest
         try {
             transaction.push(request.getMessage());
             listener.onResponse(new TransactionPushResponse(
-                request.getQueue(),
                 request.getTransactionUUID(),
                 request.getMessage().getUuid()
             ));

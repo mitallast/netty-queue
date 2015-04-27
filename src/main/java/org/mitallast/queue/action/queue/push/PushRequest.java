@@ -5,7 +5,6 @@ import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.queue.QueueMessage;
 
@@ -13,7 +12,7 @@ import java.io.IOException;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
-public class PushRequest extends ActionRequest implements Streamable {
+public class PushRequest extends ActionRequest {
 
     private String queue;
 

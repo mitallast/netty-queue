@@ -2,14 +2,14 @@ package org.mitallast.queue.client.base;
 
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
-import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
-import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.action.queue.get.GetRequest;
 import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
+import org.mitallast.queue.action.queue.pop.PopRequest;
+import org.mitallast.queue.action.queue.pop.PopResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.common.concurrent.Listener;
@@ -25,9 +25,9 @@ public interface QueueClient {
 
     void enqueueRequest(EnQueueRequest request, Listener<EnQueueResponse> listener);
 
-    SmartFuture<DeQueueResponse> dequeueRequest(DeQueueRequest request) throws IOException;
+    SmartFuture<PopResponse> popRequest(PopRequest request) throws IOException;
 
-    void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener);
+    void popRequest(PopRequest request, Listener<PopResponse> listener);
 
     SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) throws IOException;
 

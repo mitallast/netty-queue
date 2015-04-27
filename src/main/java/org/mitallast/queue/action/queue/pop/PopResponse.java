@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queue.dequeue;
+package org.mitallast.queue.action.queue.pop;
 
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -7,13 +7,13 @@ import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
 
-public class DeQueueResponse extends ActionResponse {
+public class PopResponse extends ActionResponse {
     private QueueMessage message;
 
-    public DeQueueResponse() {
+    public PopResponse() {
     }
 
-    public DeQueueResponse(QueueMessage message) {
+    public PopResponse(QueueMessage message) {
         this.message = message;
     }
 

@@ -60,7 +60,7 @@ curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
 echo
 echo
 
-echo dequeue
+echo pop
 echo
 curl -i -s -XGET 'localhost:8080/my_queue/message?pretty'
 echo
@@ -84,7 +84,7 @@ curl -i -s -XGET 'localhost:8080/my_queue/_stats?pretty'
 echo
 echo
 
-echo dequeue
+echo pop
 echo
 curl -i -s -XGET 'localhost:8080/my_queue/message?pretty'
 echo

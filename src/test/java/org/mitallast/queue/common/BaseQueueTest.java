@@ -3,8 +3,8 @@ package org.mitallast.queue.common;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.After;
 import org.junit.Before;
-import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
-import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
+import org.mitallast.queue.action.queue.pop.PopRequest;
+import org.mitallast.queue.action.queue.pop.PopResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
@@ -69,10 +69,10 @@ public abstract class BaseQueueTest extends BaseTest {
         assertQueueEmpty();
     }
 
-    public DeQueueResponse dequeue() throws Exception {
-        DeQueueRequest request = new DeQueueRequest();
+    public PopResponse pop() throws Exception {
+        PopRequest request = new PopRequest();
         request.setQueue(queueName);
-        return localClient().queue().dequeueRequest(request).get();
+        return localClient().queue().popRequest(request).get();
     }
 
     public void assertQueueEmpty() throws Exception {

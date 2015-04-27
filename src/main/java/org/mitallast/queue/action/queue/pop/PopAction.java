@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queue.dequeue;
+package org.mitallast.queue.action.queue.pop;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
@@ -14,18 +14,18 @@ import org.mitallast.queue.transport.transport.TransportController;
 
 import java.io.IOException;
 
-public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueResponse> {
+public class PopAction extends AbstractAction<PopRequest, PopResponse> {
 
     private final TransactionalQueuesService queuesService;
 
     @Inject
-    public DeQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
+    public PopAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
         super(settings, controller);
         this.queuesService = queuesService;
     }
 
     @Override
-    public void execute(DeQueueRequest request, Listener<DeQueueResponse> listener) {
+    public void execute(PopRequest request, Listener<PopResponse> listener) {
         ActionRequestValidationException validationException = request.validate();
         if (validationException != null) {
             listener.onFailure(validationException);
@@ -37,7 +37,7 @@ public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueRespons
         TransactionalQueueService queueService = queuesService.queue(request.getQueue());
         try {
             QueueMessage message = queueService.lockAndPop();
-            listener.onResponse(new DeQueueResponse(message));
+            listener.onResponse(new PopResponse(message));
         } catch (IOException e) {
             listener.onFailure(e);
         }
@@ -45,11 +45,11 @@ public class DeQueueAction extends AbstractAction<DeQueueRequest, DeQueueRespons
 
     @Override
     public ActionType getActionId() {
-        return ActionType.QUEUE_DEQUEUE;
+        return ActionType.QUEUE_POP;
     }
 
     @Override
-    public DeQueueRequest createRequest() {
-        return new DeQueueRequest();
+    public PopRequest createRequest() {
+        return new PopRequest();
     }
 }

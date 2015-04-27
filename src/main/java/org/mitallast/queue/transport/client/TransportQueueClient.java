@@ -2,14 +2,14 @@ package org.mitallast.queue.transport.client;
 
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
-import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
-import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
 import org.mitallast.queue.action.queue.get.GetRequest;
 import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
+import org.mitallast.queue.action.queue.pop.PopRequest;
+import org.mitallast.queue.action.queue.pop.PopResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.base.QueueClient;
@@ -22,7 +22,7 @@ import java.io.IOException;
 public class TransportQueueClient implements QueueClient {
 
     private final static ResponseMapper<EnQueueResponse> EN_QUEUE_RESPONSE_MAPPER = new ResponseMapper<>(EnQueueResponse::new);
-    private final static ResponseMapper<DeQueueResponse> DE_QUEUE_RESPONSE_MAPPER = new ResponseMapper<>(DeQueueResponse::new);
+    private final static ResponseMapper<PopResponse> POP_RESPONSE_MAPPER = new ResponseMapper<>(PopResponse::new);
     private final static ResponseMapper<QueueStatsResponse> QUEUE_STATS_RESPONSE_MAPPER = new ResponseMapper<>(QueueStatsResponse::new);
     private final static ResponseMapper<DeleteResponse> DELETE_RESPONSE_MAPPER = new ResponseMapper<>(DeleteResponse::new);
     private final static ResponseMapper<GetResponse> GET_RESPONSE_MAPPER = new ResponseMapper<>(GetResponse::new);
@@ -56,13 +56,13 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public SmartFuture<DeQueueResponse> dequeueRequest(DeQueueRequest request) throws IOException {
-        return transportClient.send(request, DE_QUEUE_RESPONSE_MAPPER);
+    public SmartFuture<PopResponse> popRequest(PopRequest request) throws IOException {
+        return transportClient.send(request, POP_RESPONSE_MAPPER);
     }
 
     @Override
-    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) {
-        transportClient.send(request, DE_QUEUE_RESPONSE_MAPPER).on(listener);
+    public void popRequest(PopRequest request, Listener<PopResponse> listener) {
+        transportClient.send(request, POP_RESPONSE_MAPPER).on(listener);
     }
 
     @Override

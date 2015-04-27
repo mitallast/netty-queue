@@ -1,4 +1,4 @@
-package org.mitallast.queue.action.queue.dequeue;
+package org.mitallast.queue.action.queue.pop;
 
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionRequestValidationException;
@@ -11,7 +11,7 @@ import java.io.IOException;
 
 import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
-public class DeQueueRequest extends ActionRequest {
+public class PopRequest extends ActionRequest {
 
     private String queue;
 
@@ -25,7 +25,7 @@ public class DeQueueRequest extends ActionRequest {
 
     @Override
     public ActionType actionType() {
-        return ActionType.QUEUE_DEQUEUE;
+        return ActionType.QUEUE_POP;
     }
 
     @Override

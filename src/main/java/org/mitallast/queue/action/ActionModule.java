@@ -2,10 +2,10 @@ package org.mitallast.queue.action;
 
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.action.queue.delete.DeleteAction;
-import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
 import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queue.get.GetAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
+import org.mitallast.queue.action.queue.pop.PopAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queue.transactional.commit.TransactionCommitAction;
 import org.mitallast.queue.action.queue.transactional.delete.TransactionDeleteAction;
@@ -20,7 +20,7 @@ public class ActionModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(EnQueueAction.class).asEagerSingleton();
-        bind(DeQueueAction.class).asEagerSingleton();
+        bind(PopAction.class).asEagerSingleton();
         bind(PeekQueueAction.class).asEagerSingleton();
         bind(DeleteAction.class).asEagerSingleton();
         bind(GetAction.class).asEagerSingleton();

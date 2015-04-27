@@ -64,7 +64,7 @@ get message with uuid
 
     curl -i -s -XHEAD 'http://127.0.0.1:8080/my_queue/message/a57586b7-3eed-4c7c-b256-8bf9021fffbd?pretty'
 
-dequeue message
+pop message
 
     curl -i -s -XGET 'http://127.0.0.1:8080/my_queue/message?pretty'
 

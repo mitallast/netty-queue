@@ -4,9 +4,6 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.queue.delete.DeleteAction;
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
-import org.mitallast.queue.action.queue.dequeue.DeQueueAction;
-import org.mitallast.queue.action.queue.dequeue.DeQueueRequest;
-import org.mitallast.queue.action.queue.dequeue.DeQueueResponse;
 import org.mitallast.queue.action.queue.enqueue.EnQueueAction;
 import org.mitallast.queue.action.queue.enqueue.EnQueueRequest;
 import org.mitallast.queue.action.queue.enqueue.EnQueueResponse;
@@ -16,6 +13,9 @@ import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
 import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
+import org.mitallast.queue.action.queue.pop.PopAction;
+import org.mitallast.queue.action.queue.pop.PopRequest;
+import org.mitallast.queue.action.queue.pop.PopResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsAction;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
@@ -29,7 +29,7 @@ import java.io.IOException;
 public class LocalQueueClient implements QueueClient {
 
     private final EnQueueAction enQueueAction;
-    private final DeQueueAction deQueueAction;
+    private final PopAction popAction;
     private final PeekQueueAction peekQueueAction;
     private final DeleteAction deleteAction;
     private final GetAction getAction;
@@ -39,7 +39,7 @@ public class LocalQueueClient implements QueueClient {
     @Inject
     public LocalQueueClient(
         EnQueueAction enQueueAction,
-        DeQueueAction deQueueAction,
+        PopAction popAction,
         PeekQueueAction peekQueueAction,
         DeleteAction deleteAction,
         GetAction getAction,
@@ -47,7 +47,7 @@ public class LocalQueueClient implements QueueClient {
         LocalQueueTransactionalClient queueTransactionalClient
     ) {
         this.enQueueAction = enQueueAction;
-        this.deQueueAction = deQueueAction;
+        this.popAction = popAction;
         this.peekQueueAction = peekQueueAction;
         this.deleteAction = deleteAction;
         this.getAction = getAction;
@@ -71,13 +71,13 @@ public class LocalQueueClient implements QueueClient {
     }
 
     @Override
-    public SmartFuture<DeQueueResponse> dequeueRequest(DeQueueRequest request) throws IOException {
-        return deQueueAction.execute(request);
+    public SmartFuture<PopResponse> popRequest(PopRequest request) throws IOException {
+        return popAction.execute(request);
     }
 
     @Override
-    public void dequeueRequest(DeQueueRequest request, Listener<DeQueueResponse> listener) {
-        deQueueAction.execute(request, listener);
+    public void popRequest(PopRequest request, Listener<PopResponse> listener) {
+        popAction.execute(request, listener);
     }
 
     @Override

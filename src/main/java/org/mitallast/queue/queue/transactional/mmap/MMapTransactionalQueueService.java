@@ -477,20 +477,30 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
 
     private static enum MessageStatus {PUSH, POP, DELETE}
 
+    private static class QueueMessageTransaction {
+        // only push
+        private QueueMessage message;
+        private MessageStatus status;
+        private MMapQueueMessageSegment segment;
+        // only push
+        private int segmentPos;
+    }
+
     private class MMapMemoryQueueTransaction implements QueueTransaction {
 
         private final UUID id;
-        private final ConcurrentHashMap<UUID, MessageStatus> messageStatusMap;
-        private final ConcurrentHashMap<UUID, MMapQueueMessageSegment> messageSegmentMap;
-        private final ConcurrentHashMap<UUID, QueueMessage> messageMap;
+        private final ConcurrentHashMap<UUID, QueueMessageTransaction> messageTransactionMap;
+
         private AtomicReference<TransactionStatus> status;
 
         public MMapMemoryQueueTransaction(UUID id) {
             this.id = id;
-            this.messageStatusMap = new ConcurrentHashMap<>();
-            this.messageSegmentMap = new ConcurrentHashMap<>();
-            this.messageMap = new ConcurrentHashMap<>();
+            this.messageTransactionMap = new ConcurrentHashMap<>();
             this.status = new AtomicReference<>(TransactionStatus.BEGIN);
+        }
+
+        private QueueMessageTransaction messageTransaction(UUID uuid) {
+            return messageTransactionMap.computeIfAbsent(uuid, uuidNew -> new QueueMessageTransaction());
         }
 
         @Override
@@ -507,9 +517,6 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
             } else {
                 insertExist(queueMessage);
             }
-
-            messageStatusMap.put(queueMessage.getUuid(), MessageStatus.PUSH);
-            messageMap.put(queueMessage.getUuid(), queueMessage);
         }
 
         private void insertNew(QueueMessage queueMessage) throws IOException {
@@ -525,7 +532,11 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                             int pos = segment.insert(uuid);
                             if (pos >= 0) {
                                 if (segment.writeLock(pos)) {
-                                    messageSegmentMap.put(uuid, segment);
+                                    QueueMessageTransaction messageTransaction = messageTransaction(uuid);
+                                    messageTransaction.message = queueMessage;
+                                    messageTransaction.status = MessageStatus.PUSH;
+                                    messageTransaction.segment = segment;
+                                    messageTransaction.segmentPos = pos;
                                     return;
                                 } else {
                                     throw new QueueMessageUuidDuplicateException(uuid);
@@ -557,7 +568,11 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                             int pos = segment.insert(uuid);
                             if (pos >= 0) {
                                 if (segment.writeLock(pos)) {
-                                    messageSegmentMap.put(uuid, segment);
+                                    QueueMessageTransaction messageTransaction = messageTransaction(uuid);
+                                    messageTransaction.message = queueMessage;
+                                    messageTransaction.status = MessageStatus.PUSH;
+                                    messageTransaction.segment = segment;
+                                    messageTransaction.segmentPos = pos;
                                     return;
                                 } else {
                                     throw new QueueMessageUuidDuplicateException(uuid);
@@ -576,41 +591,71 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         @Override
         public QueueMessage pop() throws IOException {
             assertStatus(TransactionStatus.BEGIN);
-            QueueMessage queueMessage = lockAndPop();
-            messageStatusMap.put(queueMessage.getUuid(), MessageStatus.POP);
-            messageMap.put(queueMessage.getUuid(), queueMessage);
-            return queueMessage;
+            final ImmutableList<MMapQueueMessageSegment> current = segments;
+            final int size = current.size();
+            for (int i = 0; i < size; i++) {
+                final MMapQueueMessageSegment segment = current.get(i);
+                if (segment.acquire() > 0) {
+                    try {
+                        QueueMessage queueMessage = segment.lockAndPop();
+                        if (queueMessage != null) {
+                            QueueMessageTransaction messageTransaction = messageTransaction(queueMessage.getUuid());
+                            messageTransaction.message = queueMessage;
+                            messageTransaction.status = MessageStatus.POP;
+                            messageTransaction.segment = segment;
+                            return queueMessage;
+                        }
+                    } finally {
+                        segment.release();
+                    }
+                }
+            }
+            return null;
         }
 
         @Override
         public QueueMessage delete(UUID uuid) throws IOException {
             assertStatus(TransactionStatus.BEGIN);
-            QueueMessage queueMessage = lock(uuid);
-            messageStatusMap.put(uuid, MessageStatus.DELETE);
-            messageMap.put(uuid, queueMessage);
-            return queueMessage;
+            final ImmutableList<MMapQueueMessageSegment> current = segments;
+            final int size = current.size();
+            for (int i = 0; i < size; i++) {
+                final MMapQueueMessageSegment segment = current.get(i);
+                if (segment.acquire() > 0) {
+                    try {
+                        QueueMessage queueMessage = segment.lock(uuid);
+                        if (queueMessage != null) {
+                            QueueMessageTransaction messageTransaction = messageTransaction(queueMessage.getUuid());
+                            messageTransaction.message = queueMessage;
+                            messageTransaction.status = MessageStatus.DELETE;
+                            messageTransaction.segment = segment;
+                            return queueMessage;
+                        }
+                    } finally {
+                        segment.release();
+                    }
+                }
+            }
+            return null;
         }
 
         @Override
         public void commit() throws IOException {
             updateStatus(TransactionStatus.BEGIN, TransactionStatus.COMMIT);
-            for (Map.Entry<UUID, MessageStatus> entry : messageStatusMap.entrySet()) {
+            for (Map.Entry<UUID, QueueMessageTransaction> entry : messageTransactionMap.entrySet()) {
                 UUID uuid = entry.getKey();
-                switch (entry.getValue()) {
+                QueueMessageTransaction messageTransaction = entry.getValue();
+                switch (messageTransaction.status) {
                     case PUSH:
-                        MMapQueueMessageSegment segment = messageSegmentMap.get(entry.getKey());
-                        int pos = segment.insert(entry.getKey());
-                        segment.writeMessage(messageMap.get(entry.getKey()), pos);
-                        break;
-                    case POP:
-                        unlockAndDelete(uuid);
+                        messageTransaction.segment.writeMessage(
+                            messageTransaction.message,
+                            messageTransaction.segmentPos
+                        );
                         break;
                     case DELETE:
-                        unlockAndDelete(uuid);
+                    case POP:
+                        messageTransaction.segment.markUnlockAndDelete(uuid);
                         break;
                 }
-                messageStatusMap.remove(entry.getKey());
-                messageMap.remove(entry.getKey());
             }
             transactionMap.remove(id);
         }
@@ -618,25 +663,20 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
         @Override
         public void rollback() throws IOException {
             updateStatus(TransactionStatus.BEGIN, TransactionStatus.ROLLBACK);
-            for (Map.Entry<UUID, MessageStatus> entry : messageStatusMap.entrySet()) {
-                switch (entry.getValue()) {
+            for (Map.Entry<UUID, QueueMessageTransaction> entry : messageTransactionMap.entrySet()) {
+                UUID uuid = entry.getKey();
+                QueueMessageTransaction messageTransaction = entry.getValue();
+                switch (messageTransaction.status) {
                     case PUSH:
-                        // ignore
-                        MMapQueueMessageSegment segment = messageSegmentMap.get(entry.getKey());
-                        segment.unlockAndDelete(entry.getKey());
+                        messageTransaction.segment.markUnlockAndDelete(messageTransaction.segmentPos);
                         break;
                     case POP:
-                        unlockAndRollback(entry.getKey());
-                        break;
                     case DELETE:
-                        unlockAndRollback(entry.getKey());
+                        messageTransaction.segment.markUnlockAndRollback(uuid);
                         break;
                 }
-                messageStatusMap.remove(entry.getKey());
-                messageMap.remove(entry.getKey());
             }
             transactionMap.remove(id);
-
         }
 
         private void updateStatus(TransactionStatus expected, TransactionStatus update) throws IOException {

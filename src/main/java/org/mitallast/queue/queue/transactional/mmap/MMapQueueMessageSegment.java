@@ -137,12 +137,41 @@ public class MMapQueueMessageSegment implements TransactionalQueueSegment {
     }
 
     @Override
+    public QueueMessage unlockAndDelete(int pos) throws IOException {
+        QueueMessageMeta meta = messageMetaSegment.unlockAndDelete(pos);
+        if (meta != null) {
+            return readMessage(meta);
+        }
+        return null;
+    }
+
+    @Override
     public QueueMessage unlockAndRollback(UUID uuid) throws IOException {
         QueueMessageMeta meta = messageMetaSegment.unlockAndQueue(uuid);
         if (meta != null) {
             return readMessage(meta);
         }
         return null;
+    }
+
+    @Override
+    public void markUnlockAndDelete(int pos) throws IOException {
+        messageMetaSegment.unlockAndDelete(pos);
+    }
+
+    @Override
+    public void markUnlockAndDelete(UUID uuid) throws IOException {
+        messageMetaSegment.unlockAndDelete(uuid);
+    }
+
+    @Override
+    public void markUnlockAndRollback(int pos) throws IOException {
+        messageMetaSegment.unlockAndQueue(pos);
+    }
+
+    @Override
+    public void markUnlockAndRollback(UUID uuid) throws IOException {
+        messageMetaSegment.unlockAndQueue(uuid);
     }
 
     @Override

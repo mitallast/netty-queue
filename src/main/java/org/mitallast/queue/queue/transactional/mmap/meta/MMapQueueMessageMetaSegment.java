@@ -138,6 +138,29 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     }
 
     @Override
+    public QueueMessageMeta unlockAndDelete(int pos) throws IOException {
+        boolean deleted = setStatusDeleted(pos);
+        QueueMessageMeta meta = readMeta(pos);
+        if (deleted) {
+            writeMetaRaw(meta, pos);
+        }
+        return meta;
+    }
+
+    @Override
+    public QueueMessageMeta unlockAndQueue(int pos) throws IOException {
+        if (pos >= 0) {
+            boolean queued = setStatusQueued(pos);
+            QueueMessageMeta meta = readMeta(pos);
+            if (queued) {
+                writeMetaRaw(meta, pos);
+            }
+            return meta;
+        }
+        return null;
+    }
+
+    @Override
     public QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException {
         final int pos = index(uuid);
         if (pos >= 0) {

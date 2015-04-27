@@ -12,7 +12,11 @@ public interface QueueMessageMetaSegment extends Closeable {
 
     QueueMessageMeta lock(UUID uuid) throws IOException;
 
+    QueueMessageMeta unlockAndDelete(int pos) throws IOException;
+
     QueueMessageMeta unlockAndDelete(UUID uuid) throws IOException;
+
+    QueueMessageMeta unlockAndQueue(int pos) throws IOException;
 
     QueueMessageMeta unlockAndQueue(UUID uuid) throws IOException;
 

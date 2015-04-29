@@ -3,8 +3,7 @@ package org.mitallast.queue.rest;
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.rest.action.RestIndexAction;
 import org.mitallast.queue.rest.action.queue.*;
-import org.mitallast.queue.rest.action.queue.transactional.RestTransactionCommitAction;
-import org.mitallast.queue.rest.action.queue.transactional.RestTransactionRollbackAction;
+import org.mitallast.queue.rest.action.queue.transactional.*;
 import org.mitallast.queue.rest.action.queues.RestCreateQueueAction;
 import org.mitallast.queue.rest.action.queues.RestDeleteQueueAction;
 import org.mitallast.queue.rest.action.queues.RestQueuesStatsAction;
@@ -24,6 +23,9 @@ public class RestModule extends AbstractModule {
         bind(RestGetAction.class).asEagerSingleton();
 
         bind(RestTransactionCommitAction.class).asEagerSingleton();
+        bind(RestTransactionDeleteAction.class).asEagerSingleton();
+        bind(RestTransactionPushAction.class).asEagerSingleton();
+        bind(RestTransactionPopAction.class).asEagerSingleton();
         bind(RestTransactionRollbackAction.class).asEagerSingleton();
 
         bind(RestQueueStatsAction.class).asEagerSingleton();

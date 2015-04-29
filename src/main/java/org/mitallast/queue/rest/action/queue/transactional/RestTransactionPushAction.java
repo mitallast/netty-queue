@@ -1,11 +1,12 @@
-package org.mitallast.queue.rest.action.queue;
+package org.mitallast.queue.rest.action.queue.transactional;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.action.queue.push.PushRequest;
-import org.mitallast.queue.action.queue.push.PushResponse;
+import org.mitallast.queue.action.queue.transactional.push.TransactionPushRequest;
+import org.mitallast.queue.action.queue.transactional.push.TransactionPushResponse;
 import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamParser;
@@ -21,20 +22,21 @@ import org.mitallast.queue.rest.response.UUIDRestResponse;
 
 import java.io.IOException;
 
-public class RestPushAction extends BaseRestHandler {
+public class RestTransactionPushAction extends BaseRestHandler {
 
     @Inject
-    public RestPushAction(Settings settings, Client client, RestController controller) {
+    public RestTransactionPushAction(Settings settings, Client client, RestController controller) {
         super(settings, client);
-        controller.registerHandler(HttpMethod.POST, "/{queue}/message", this);
-        controller.registerHandler(HttpMethod.PUT, "/{queue}/message", this);
+        controller.registerHandler(HttpMethod.POST, "/{queue}/{transaction}/message", this);
+        controller.registerHandler(HttpMethod.PUT, "/{queue}/{transaction}/message", this);
     }
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
 
-        final PushRequest pushRequest = new PushRequest();
+        final TransactionPushRequest pushRequest = new TransactionPushRequest();
         pushRequest.setQueue(request.param("queue").toString());
+        pushRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
 
         try (XStreamParser parser = createParser(request.content())) {
             QueueMessage message = new QueueMessage();
@@ -45,10 +47,10 @@ public class RestPushAction extends BaseRestHandler {
             return;
         }
 
-        client.queue().pushRequest(pushRequest, new Listener<PushResponse>() {
+        client.queue().transactional().pushRequest(pushRequest, new Listener<TransactionPushResponse>() {
 
             @Override
-            public void onResponse(PushResponse response) {
+            public void onResponse(TransactionPushResponse response) {
                 session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.getMessageUUID()));
             }
 

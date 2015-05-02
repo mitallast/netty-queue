@@ -9,7 +9,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
-import org.mitallast.queue.transport.transport.TransportController;
+import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
 

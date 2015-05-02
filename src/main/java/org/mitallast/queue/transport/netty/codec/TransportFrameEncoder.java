@@ -1,8 +1,9 @@
-package org.mitallast.queue.transport.transport;
+package org.mitallast.queue.transport.netty.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import org.mitallast.queue.transport.TransportFrame;
 
 public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> {
 

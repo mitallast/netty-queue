@@ -1,7 +1,8 @@
-package org.mitallast.queue.transport.transport;
+package org.mitallast.queue.transport;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
@@ -40,7 +41,7 @@ public class TransportController extends AbstractComponent {
                 action.execute(actionRequest, new Listener<ActionResponse>() {
                     @Override
                     public void onResponse(ActionResponse queueMessage) {
-                        ByteBuf buffer = channel.ctx().alloc().ioBuffer();
+                        ByteBuf buffer = Unpooled.buffer();
                         try (StreamOutput streamOutput = new ByteBufStreamOutput(buffer)) {
                             queueMessage.writeTo(streamOutput);
 

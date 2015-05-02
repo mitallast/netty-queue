@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.client;
+package org.mitallast.queue.transport.netty.client;
 
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.action.queue.delete.DeleteResponse;
@@ -16,6 +16,8 @@ import org.mitallast.queue.client.base.QueueClient;
 import org.mitallast.queue.client.base.QueueTransactionalClient;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+import org.mitallast.queue.transport.TransportClient;
+import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 

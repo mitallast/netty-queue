@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.transport;
+package org.mitallast.queue.transport;
 
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.Version;

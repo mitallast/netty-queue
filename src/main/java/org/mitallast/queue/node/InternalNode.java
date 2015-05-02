@@ -13,8 +13,8 @@ import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.rest.transport.HttpServer;
 import org.mitallast.queue.transport.TransportModule;
-import org.mitallast.queue.transport.client.TransportClient;
-import org.mitallast.queue.transport.transport.TransportServer;
+import org.mitallast.queue.transport.netty.NettyTransportService;
+import org.mitallast.queue.transport.netty.TransportServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +46,6 @@ public class InternalNode implements Node {
     }
 
     @Override
-    public Client transportClient() {
-        return injector.getInstance(TransportClient.class);
-    }
-
-    @Override
     public Client localClient() {
         return injector.getInstance(LocalClient.class);
     }
@@ -67,9 +62,9 @@ public class InternalNode implements Node {
         }
         logger.info("starting...");
         injector.getInstance(InternalTransactionalQueuesService.class).start();
-        injector.getInstance(HttpServer.class).start();
+        injector.getInstance(NettyTransportService.class).start();
         injector.getInstance(TransportServer.class).start();
-        injector.getInstance(TransportClient.class).start();
+        injector.getInstance(HttpServer.class).start();
         logger.info("started");
         return this;
     }
@@ -81,8 +76,8 @@ public class InternalNode implements Node {
         }
         logger.info("stopping...");
         injector.getInstance(HttpServer.class).stop();
-        injector.getInstance(TransportClient.class).stop();
         injector.getInstance(TransportServer.class).stop();
+        injector.getInstance(NettyTransportService.class).stop();
         injector.getInstance(InternalTransactionalQueuesService.class).stop();
         logger.info("stopped");
         return this;
@@ -99,6 +94,7 @@ public class InternalNode implements Node {
         logger.info("closing...");
         injector.getInstance(HttpServer.class).close();
         injector.getInstance(TransportServer.class).close();
+        injector.getInstance(NettyTransportService.class).close();
         injector.getInstance(InternalTransactionalQueuesService.class).close();
         logger.info("closed");
     }

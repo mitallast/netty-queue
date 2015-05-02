@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.client;
+package org.mitallast.queue.transport.netty.client;
 
 import org.mitallast.queue.action.queue.transactional.commit.TransactionCommitRequest;
 import org.mitallast.queue.action.queue.transactional.commit.TransactionCommitResponse;
@@ -13,6 +13,8 @@ import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollba
 import org.mitallast.queue.client.base.QueueTransactionalClient;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+import org.mitallast.queue.transport.TransportClient;
+import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 

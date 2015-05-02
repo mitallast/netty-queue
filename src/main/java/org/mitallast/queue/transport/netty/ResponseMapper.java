@@ -1,9 +1,9 @@
-package org.mitallast.queue.transport.client;
+package org.mitallast.queue.transport.netty;
 
 import org.mitallast.queue.common.concurrent.futures.Mapper;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.transport.TransportFrame;
+import org.mitallast.queue.transport.TransportFrame;
 
 import java.util.function.Supplier;
 

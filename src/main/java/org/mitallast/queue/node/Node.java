@@ -32,7 +32,5 @@ public interface Node {
 
     Injector injector();
 
-    Client transportClient();
-
     Client localClient();
 }

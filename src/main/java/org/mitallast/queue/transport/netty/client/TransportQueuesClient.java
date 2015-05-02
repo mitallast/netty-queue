@@ -1,4 +1,4 @@
-package org.mitallast.queue.transport.client;
+package org.mitallast.queue.transport.netty.client;
 
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
 import org.mitallast.queue.action.queues.create.CreateQueueResponse;
@@ -9,6 +9,8 @@ import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.base.QueuesClient;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+import org.mitallast.queue.transport.TransportClient;
+import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 

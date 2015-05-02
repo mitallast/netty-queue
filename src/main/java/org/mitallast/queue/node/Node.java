@@ -1,7 +1,7 @@
 package org.mitallast.queue.node;
 
 import com.google.inject.Injector;
-import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
 
 public interface Node {

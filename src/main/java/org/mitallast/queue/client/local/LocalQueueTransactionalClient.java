@@ -16,11 +16,8 @@ import org.mitallast.queue.action.queue.transactional.push.TransactionPushRespon
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackAction;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackRequest;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackResponse;
-import org.mitallast.queue.client.base.QueueTransactionalClient;
-import org.mitallast.queue.common.concurrent.Listener;
+import org.mitallast.queue.client.QueueTransactionalClient;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
-
-import java.io.IOException;
 
 public class LocalQueueTransactionalClient implements QueueTransactionalClient {
 
@@ -45,52 +42,27 @@ public class LocalQueueTransactionalClient implements QueueTransactionalClient {
     }
 
     @Override
-    public SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) throws IOException {
+    public SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) {
         return commitAction.execute(request);
     }
 
     @Override
-    public void commitRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
-        commitAction.execute(request, listener);
-    }
-
-    @Override
-    public SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) throws IOException {
+    public SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) {
         return deleteAction.execute(request);
     }
 
     @Override
-    public void deleteRequest(TransactionDeleteRequest request, Listener<TransactionDeleteResponse> listener) {
-        deleteAction.execute(request, listener);
-    }
-
-    @Override
-    public SmartFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) throws IOException {
+    public SmartFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) {
         return popAction.execute(request);
     }
 
     @Override
-    public void popRequest(TransactionPopRequest request, Listener<TransactionPopResponse> listener) {
-        popAction.execute(request, listener);
-    }
-
-    @Override
-    public SmartFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) throws IOException {
+    public SmartFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) {
         return pushAction.execute(request);
     }
 
     @Override
-    public void pushRequest(TransactionPushRequest request, Listener<TransactionPushResponse> listener) {
-        pushAction.execute(request, listener);
-    }
-
-    @Override
-    public SmartFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) throws IOException {
+    public SmartFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) {
         return rollbackAction.execute(request);
-    }
-
-    @Override
-    public void rollbackRequest(TransactionRollbackRequest request, Listener<TransactionRollbackResponse> listener) {
-        rollbackAction.execute(request, listener);
     }
 }

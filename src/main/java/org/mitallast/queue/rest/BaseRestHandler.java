@@ -1,7 +1,7 @@
 package org.mitallast.queue.rest;
 
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;

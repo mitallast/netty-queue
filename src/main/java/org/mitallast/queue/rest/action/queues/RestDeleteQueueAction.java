@@ -5,7 +5,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
 import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
-import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueMissingException;

@@ -6,13 +6,10 @@ import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
 import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
-import org.mitallast.queue.client.base.QueuesClient;
-import org.mitallast.queue.common.concurrent.Listener;
+import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.transport.TransportClient;
 import org.mitallast.queue.transport.netty.ResponseMapper;
-
-import java.io.IOException;
 
 public class TransportQueuesClient implements QueuesClient {
 
@@ -27,32 +24,17 @@ public class TransportQueuesClient implements QueuesClient {
     }
 
     @Override
-    public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) throws IOException {
+    public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
         return transportClient.send(request, QUEUES_STATS_RESPONSE_MAPPER);
     }
 
     @Override
-    public void queuesStatsRequest(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) {
-        transportClient.send(request, QUEUES_STATS_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) throws IOException {
+    public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
         return transportClient.send(request, CREATE_QUEUE_RESPONSE_MAPPER);
     }
 
     @Override
-    public void createQueue(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
-        transportClient.send(request, CREATE_QUEUE_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) throws IOException {
+    public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
         return transportClient.send(request, DELETE_QUEUE_RESPONSE_MAPPER);
-    }
-
-    @Override
-    public void deleteQueue(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) {
-        transportClient.send(request, DELETE_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 }

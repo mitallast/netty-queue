@@ -12,14 +12,11 @@ import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.action.queue.push.PushResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
-import org.mitallast.queue.client.base.QueueClient;
-import org.mitallast.queue.client.base.QueueTransactionalClient;
-import org.mitallast.queue.common.concurrent.Listener;
+import org.mitallast.queue.client.QueueClient;
+import org.mitallast.queue.client.QueueTransactionalClient;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.transport.TransportClient;
 import org.mitallast.queue.transport.netty.ResponseMapper;
-
-import java.io.IOException;
 
 public class TransportQueueClient implements QueueClient {
 
@@ -48,62 +45,32 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public SmartFuture<PushResponse> pushRequest(PushRequest request) throws IOException {
+    public SmartFuture<PushResponse> pushRequest(PushRequest request) {
         return transportClient.send(request, PUSH_RESPONSE_MAPPER);
     }
 
     @Override
-    public void pushRequest(PushRequest request, Listener<PushResponse> listener) {
-        transportClient.send(request, PUSH_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<PopResponse> popRequest(PopRequest request) throws IOException {
+    public SmartFuture<PopResponse> popRequest(PopRequest request) {
         return transportClient.send(request, POP_RESPONSE_MAPPER);
     }
 
     @Override
-    public void popRequest(PopRequest request, Listener<PopResponse> listener) {
-        transportClient.send(request, POP_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) throws IOException {
+    public SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
         return transportClient.send(request, QUEUE_STATS_RESPONSE_MAPPER);
     }
 
     @Override
-    public void queueStatsRequest(QueueStatsRequest request, Listener<QueueStatsResponse> listener) {
-        transportClient.send(request, QUEUE_STATS_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<DeleteResponse> deleteRequest(DeleteRequest request) throws IOException {
+    public SmartFuture<DeleteResponse> deleteRequest(DeleteRequest request) {
         return transportClient.send(request, DELETE_RESPONSE_MAPPER);
     }
 
     @Override
-    public void deleteRequest(DeleteRequest request, Listener<DeleteResponse> listener) {
-        transportClient.send(request, DELETE_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<GetResponse> getRequest(GetRequest request) throws IOException {
+    public SmartFuture<GetResponse> getRequest(GetRequest request) {
         return transportClient.send(request, GET_RESPONSE_MAPPER);
     }
 
     @Override
-    public void getRequest(GetRequest request, Listener<GetResponse> listener) {
-        transportClient.send(request, GET_RESPONSE_MAPPER).on(listener);
-    }
-
-    @Override
-    public SmartFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) throws IOException {
+    public SmartFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
         return transportClient.send(request, PEEK_QUEUE_RESPONSE_MAPPER);
-    }
-
-    @Override
-    public void peekQueueRequest(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
-        transportClient.send(request, PEEK_QUEUE_RESPONSE_MAPPER).on(listener);
     }
 }

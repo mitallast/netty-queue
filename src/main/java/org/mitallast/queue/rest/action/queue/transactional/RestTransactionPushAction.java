@@ -5,7 +5,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.transactional.push.TransactionPushRequest;
 import org.mitallast.queue.action.queue.transactional.push.TransactionPushResponse;
-import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;

@@ -1,9 +1,9 @@
 package org.mitallast.queue.client.local;
 
 import com.google.inject.Inject;
-import org.mitallast.queue.client.base.Client;
-import org.mitallast.queue.client.base.QueueClient;
-import org.mitallast.queue.client.base.QueuesClient;
+import org.mitallast.queue.client.Client;
+import org.mitallast.queue.client.QueueClient;
+import org.mitallast.queue.client.QueuesClient;
 
 public class LocalClient implements Client {
 

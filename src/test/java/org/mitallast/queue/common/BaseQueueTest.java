@@ -10,7 +10,7 @@ import org.mitallast.queue.action.queue.pop.PopResponse;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.action.queues.create.CreateQueueRequest;
-import org.mitallast.queue.client.base.Client;
+import org.mitallast.queue.client.Client;
 import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;

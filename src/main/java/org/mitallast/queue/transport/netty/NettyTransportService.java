@@ -8,7 +8,6 @@ import io.netty.util.AttributeKey;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
-import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.cluster.DiscoveryNode;
@@ -172,7 +171,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    public Client client(DiscoveryNode node) {
+    public TransportClient client(DiscoveryNode node) {
         NodeChannel nodeChannel = connectedNodes.get(node);
         if (nodeChannel == null) {
             throw new TransportException("Not connected to node: " + node);
@@ -180,7 +179,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         return nodeChannel;
     }
 
-    private class NodeChannel implements Closeable, TransportClient, Client {
+    private class NodeChannel implements TransportClient, Closeable {
         private final AtomicLong channelRequestCounter = new AtomicLong();
 
         private final Channel[] channels;

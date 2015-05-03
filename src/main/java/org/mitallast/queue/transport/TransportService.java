@@ -1,6 +1,5 @@
 package org.mitallast.queue.transport;
 
-import org.mitallast.queue.client.Client;
 import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
@@ -16,5 +15,5 @@ public interface TransportService {
 
     SmartFuture<TransportFrame> sendRequest(DiscoveryNode node, TransportFrame frame);
 
-    Client client(DiscoveryNode node);
+    TransportClient client(DiscoveryNode node);
 }

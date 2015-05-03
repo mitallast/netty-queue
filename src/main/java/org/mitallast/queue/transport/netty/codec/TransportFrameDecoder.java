@@ -1,6 +1,7 @@
 package org.mitallast.queue.transport.netty.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.mitallast.queue.Version;
@@ -29,7 +30,7 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
             final ByteBuf content;
             if (size <= 0) {
                 // ping request
-                content = null;
+                content = Unpooled.EMPTY_BUFFER;
                 buffer.skipBytes(TransportFrame.HEADER_SIZE);
             } else {
                 // standard request

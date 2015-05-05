@@ -1,27 +1,41 @@
 package org.mitallast.queue.transport.netty;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
+import org.mitallast.queue.Version;
+import org.mitallast.queue.cluster.DiscoveryNode;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.transport.TransportChannel;
-import org.mitallast.queue.transport.TransportController;
-import org.mitallast.queue.transport.TransportFrame;
-import org.mitallast.queue.transport.TransportModule;
+import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TransportServer extends NettyServer {
+public class NettyTransportServer extends NettyServer implements TransportServer {
 
+    private final DiscoveryNode discoveryNode;
     private final TransportController transportController;
 
     @Inject
-    public TransportServer(Settings settings, TransportController transportController) {
-        super(settings, TransportServer.class, TransportModule.class);
+    public NettyTransportServer(Settings settings, TransportController transportController) {
+        super(settings, NettyTransportServer.class, TransportModule.class);
         this.transportController = transportController;
+        this.discoveryNode = new DiscoveryNode(
+            UUIDs.generateRandom(),
+            host,
+            port,
+            ImmutableMap.of(),
+            Version.CURRENT
+        );
+    }
+
+    @Override
+    public DiscoveryNode localNode() {
+        return discoveryNode;
     }
 
     @Override

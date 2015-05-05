@@ -1,7 +1,6 @@
 package org.mitallast.queue.transport;
 
 import org.junit.Test;
-import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 
@@ -18,7 +17,7 @@ public class TransportBenchmark extends BaseQueueTest {
     @Test
     public void test() throws Exception {
         TransportService transportService = node().injector().getInstance(TransportService.class);
-        transportService.connectToNode(discoveryNode());
+        transportService.connectToNode(node().localNode());
 
         List<SmartFuture<TransportFrame>> futures = new ArrayList<>(max());
         List<TransportFrame> frames = new ArrayList<>(max());
@@ -28,7 +27,7 @@ public class TransportBenchmark extends BaseQueueTest {
 
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
-            futures.add(transportService.sendRequest(discoveryNode(), frames.get(i)));
+            futures.add(transportService.sendRequest(node().localNode(), frames.get(i)));
         }
         for (SmartFuture<TransportFrame> future : futures) {
             TransportFrame frame = future.get();
@@ -46,15 +45,13 @@ public class TransportBenchmark extends BaseQueueTest {
             frames.add(TransportFrame.of(i));
         }
 
-        DiscoveryNode discoveryNode = discoveryNode();
-
         TransportService transportService = node().injector().getInstance(TransportService.class);
-        transportService.connectToNode(discoveryNode);
+        transportService.connectToNode(node().localNode());
 
         long start = System.currentTimeMillis();
         executeConcurrent((t, c) -> {
             for (int i = t; i < total(); i += c) {
-                futures.add(transportService.sendRequest(discoveryNode, frames.get(i)));
+                futures.add(transportService.sendRequest(node().localNode(), frames.get(i)));
             }
             for (int i = t; i < max(); i += c) {
                 futures.get(i).get();

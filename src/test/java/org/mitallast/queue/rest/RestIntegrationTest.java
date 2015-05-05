@@ -23,7 +23,7 @@ public class RestIntegrationTest extends BaseQueueTest {
         client = 0;
         clients = new ArrayList<>();
         for (int i = 0; i <= concurrency(); i++) {
-            RestClient restClient = new RestClient(settings());
+            RestClient restClient = new RestClient(node().settings());
             restClient.start();
             clients.add(restClient);
         }

@@ -16,8 +16,8 @@ import org.mitallast.queue.common.settings.Settings;
 
 public abstract class NettyServer extends AbstractLifecycleComponent {
 
-    private final String host;
-    private final int port;
+    protected final String host;
+    protected final int port;
     private final int backlog;
     private final boolean keepAlive;
     private final boolean reuseAddress;

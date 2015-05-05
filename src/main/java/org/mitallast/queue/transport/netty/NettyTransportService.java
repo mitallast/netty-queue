@@ -8,6 +8,8 @@ import io.netty.util.AttributeKey;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.action.cluster.disconnect.ClusterDisconnectRequest;
+import org.mitallast.queue.action.cluster.disconnect.ClusterDisconnectResponse;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.cluster.DiscoveryNode;
@@ -27,8 +29,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -38,11 +39,13 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final static AttributeKey<ConcurrentMap<Long, SmartFuture<TransportFrame>>> responseMapAttr = AttributeKey.valueOf("responseMapAttr");
     private final ReentrantLock connectionLock;
     private final int channelCount;
+    private final TransportServer transportServer;
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings) {
+    public NettyTransportService(Settings settings, TransportServer transportServer) {
         super(settings, TransportService.class, TransportModule.class);
+        this.transportServer = transportServer;
         channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
@@ -79,6 +82,22 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
     @Override
     protected void doStop() throws QueueException {
+        final ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
+        ClusterDisconnectRequest disconnectRequest = new ClusterDisconnectRequest();
+        disconnectRequest.setDiscoveryNode(transportServer.localNode());
+        List<SmartFuture<ClusterDisconnectResponse>> futures = new ArrayList<>(connectedNodes.size());
+        for (DiscoveryNode discoveryNode : connectedNodes.keySet()) {
+            SmartFuture<ClusterDisconnectResponse> future = client(discoveryNode)
+                .send(disconnectRequest, new ResponseMapper<>(ClusterDisconnectResponse::new));
+            futures.add(future);
+        }
+        for (SmartFuture<ClusterDisconnectResponse> future : futures) {
+            try {
+                future.get(1000, TimeUnit.SECONDS);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                logger.error("error wait disconnect request");
+            }
+        }
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         super.doStop();
     }
@@ -96,6 +115,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (connectedNodes.get(node) != null) {
                 return;
             }
+            logger.info("connect to node {}", node);
             ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
             for (int i = 0; i < channelCount; i++) {
                 channelFutures[i] = connect(node.getHost(), node.getPort());
@@ -132,6 +152,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (nodeChannel == null) {
                 return;
             }
+            logger.info("disconnect from node {}", node);
             nodeChannel.close();
             ImmutableMap.Builder<DiscoveryNode, NodeChannel> builder = ImmutableMap.builder();
             connectedNodes.forEach((nodeItem, nodeChannelItem) -> {

@@ -5,6 +5,7 @@ import org.mitallast.queue.action.ActionModule;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.ClientModule;
 import org.mitallast.queue.client.local.LocalClient;
+import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.settings.Settings;
@@ -13,8 +14,9 @@ import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.rest.transport.HttpServer;
 import org.mitallast.queue.transport.TransportModule;
+import org.mitallast.queue.transport.TransportServer;
+import org.mitallast.queue.transport.netty.NettyTransportServer;
 import org.mitallast.queue.transport.netty.NettyTransportService;
-import org.mitallast.queue.transport.netty.TransportServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,11 @@ public class InternalNode implements Node {
     }
 
     @Override
+    public DiscoveryNode localNode() {
+        return injector.getInstance(TransportServer.class).localNode();
+    }
+
+    @Override
     public Settings settings() {
         return settings;
     }
@@ -63,7 +70,7 @@ public class InternalNode implements Node {
         logger.info("starting...");
         injector.getInstance(InternalTransactionalQueuesService.class).start();
         injector.getInstance(NettyTransportService.class).start();
-        injector.getInstance(TransportServer.class).start();
+        injector.getInstance(NettyTransportServer.class).start();
         injector.getInstance(HttpServer.class).start();
         logger.info("started");
         return this;
@@ -76,7 +83,7 @@ public class InternalNode implements Node {
         }
         logger.info("stopping...");
         injector.getInstance(HttpServer.class).stop();
-        injector.getInstance(TransportServer.class).stop();
+        injector.getInstance(NettyTransportServer.class).stop();
         injector.getInstance(NettyTransportService.class).stop();
         injector.getInstance(InternalTransactionalQueuesService.class).stop();
         logger.info("stopped");
@@ -93,7 +100,7 @@ public class InternalNode implements Node {
         }
         logger.info("closing...");
         injector.getInstance(HttpServer.class).close();
-        injector.getInstance(TransportServer.class).close();
+        injector.getInstance(NettyTransportServer.class).close();
         injector.getInstance(NettyTransportService.class).close();
         injector.getInstance(InternalTransactionalQueuesService.class).close();
         logger.info("closed");

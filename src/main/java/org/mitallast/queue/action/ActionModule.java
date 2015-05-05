@@ -1,6 +1,8 @@
 package org.mitallast.queue.action;
 
 import com.google.inject.AbstractModule;
+import org.mitallast.queue.action.cluster.connect.ClusterConnectAction;
+import org.mitallast.queue.action.cluster.disconnect.ClusterDisconnectAction;
 import org.mitallast.queue.action.queue.delete.DeleteAction;
 import org.mitallast.queue.action.queue.get.GetAction;
 import org.mitallast.queue.action.queue.peek.PeekQueueAction;
@@ -36,5 +38,8 @@ public class ActionModule extends AbstractModule {
         bind(CreateQueueAction.class).asEagerSingleton();
         bind(DeleteQueueAction.class).asEagerSingleton();
         bind(QueuesStatsAction.class).asEagerSingleton();
+
+        bind(ClusterConnectAction.class).asEagerSingleton();
+        bind(ClusterDisconnectAction.class).asEagerSingleton();
     }
 }

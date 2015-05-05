@@ -16,7 +16,9 @@ public enum ActionType {
 
     QUEUES_CREATE(0x2001),
     QUEUES_DELETE(0x2002),
-    QUEUES_STATS(0x2003);
+    QUEUES_STATS(0x2003),
+
+    CLUSTER_CONNECT(0x4001),;
 
     private final int id;
 

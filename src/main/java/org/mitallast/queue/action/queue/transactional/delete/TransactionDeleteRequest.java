@@ -1,15 +1,13 @@
 package org.mitallast.queue.action.queue.transactional.delete;
 
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.action.queue.delete.DeleteRequest;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 import java.util.UUID;
-
-import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class TransactionDeleteRequest extends DeleteRequest {
 
@@ -21,12 +19,12 @@ public class TransactionDeleteRequest extends DeleteRequest {
     }
 
     @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = super.validate();
+    public ValidationBuilder validate() {
+        ValidationBuilder builder = super.validate();
         if (transactionUUID == null) {
-            validationException = addValidationError("transactionUUID is missing", null);
+            builder = builder.missing("transactionUUID");
         }
-        return validationException;
+        return builder;
     }
 
     public UUID getTransactionUUID() {

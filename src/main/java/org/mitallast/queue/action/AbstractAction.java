@@ -6,6 +6,7 @@ import org.mitallast.queue.common.concurrent.futures.Futures;
 import org.mitallast.queue.common.concurrent.futures.ListenerSmartFuture;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.validation.ValidationException;
 import org.mitallast.queue.transport.TransportController;
 
 public abstract class AbstractAction<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
@@ -21,7 +22,16 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
         return listener;
     }
 
-    public abstract void execute(Request request, Listener<Response> listener);
+    public void execute(Request request, Listener<Response> listener) {
+        ValidationException validationException = request.validate().build();
+        if (validationException != null) {
+            listener.onFailure(validationException);
+        } else {
+            executeInternal(request, listener);
+        }
+    }
+
+    protected abstract void executeInternal(Request request, Listener<Response> listener);
 
     public abstract ActionType getActionId();
 

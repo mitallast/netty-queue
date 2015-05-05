@@ -13,7 +13,7 @@ public class ClusterConnectAction extends AbstractAction<ClusterConnectRequest, 
     }
 
     @Override
-    public void execute(ClusterConnectRequest request, Listener<ClusterConnectResponse> listener) {
+    protected void executeInternal(ClusterConnectRequest request, Listener<ClusterConnectResponse> listener) {
         ClusterConnectResponse response = new ClusterConnectResponse();
         response.setConnected(true);
         listener.onResponse(response);

@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.peek;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
@@ -25,12 +24,7 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
     }
 
     @Override
-    public void execute(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
-        ActionRequestValidationException validationException = request.validate();
-        if (validationException != null) {
-            listener.onFailure(validationException);
-            return;
-        }
+    protected void executeInternal(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
         if (!queuesService.hasQueue(request.getQueue())) {
             listener.onFailure(new QueueMissingException(request.getQueue()));
         }

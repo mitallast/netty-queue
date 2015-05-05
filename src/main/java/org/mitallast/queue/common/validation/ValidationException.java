@@ -1,15 +1,15 @@
-package org.mitallast.queue.action;
+package org.mitallast.queue.common.validation;
 
 import org.mitallast.queue.QueueException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ActionRequestValidationException extends QueueException {
+public class ValidationException extends QueueException implements ValidationBuilder {
 
     private final List<String> validationErrors = new ArrayList<>();
 
-    public ActionRequestValidationException() {
+    public ValidationException() {
         super();
     }
 
@@ -17,10 +17,15 @@ public class ActionRequestValidationException extends QueueException {
         validationErrors.add(error);
     }
 
-    public void addValidationErrors(Iterable<String> errors) {
-        for (String error : errors) {
-            validationErrors.add(error);
-        }
+    @Override
+    public ValidationBuilder missing(String property) {
+        addValidationError(property + " is missing");
+        return this;
+    }
+
+    @Override
+    public ValidationException build() {
+        return this;
     }
 
     @Override

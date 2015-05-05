@@ -1,15 +1,13 @@
 package org.mitallast.queue.action.cluster.connect;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
-
-import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class ClusterConnectRequest extends ActionRequest {
 
@@ -29,12 +27,12 @@ public class ClusterConnectRequest extends ActionRequest {
     }
 
     @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = null;
+    public ValidationBuilder validate() {
+        ValidationBuilder builder = ValidationBuilder.builder();
         if (discoveryNode == null) {
-            validationException = addValidationError("discoveryNode is missing", null);
+            builder = builder.missing("discoveryNode");
         }
-        return validationException;
+        return builder;
     }
 
     @Override

@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.push;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
@@ -25,12 +24,7 @@ public class PushAction extends AbstractAction<PushRequest, PushResponse> {
     }
 
     @Override
-    public void execute(PushRequest request, Listener<PushResponse> listener) {
-        ActionRequestValidationException validationException = request.validate();
-        if (validationException != null) {
-            listener.onFailure(validationException);
-            return;
-        }
+    protected void executeInternal(PushRequest request, Listener<PushResponse> listener) {
         TransactionalQueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));

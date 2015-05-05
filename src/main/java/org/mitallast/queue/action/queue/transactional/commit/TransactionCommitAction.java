@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.transactional.commit;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
@@ -25,12 +24,7 @@ public class TransactionCommitAction extends AbstractAction<TransactionCommitReq
     }
 
     @Override
-    public void execute(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
-        ActionRequestValidationException validationException = request.validate();
-        if (validationException != null) {
-            listener.onFailure(validationException);
-            return;
-        }
+    protected void executeInternal(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
         final TransactionalQueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));

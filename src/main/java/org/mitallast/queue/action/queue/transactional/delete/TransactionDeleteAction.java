@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.transactional.delete;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
@@ -26,12 +25,7 @@ public class TransactionDeleteAction extends AbstractAction<TransactionDeleteReq
     }
 
     @Override
-    public void execute(TransactionDeleteRequest request, Listener<TransactionDeleteResponse> listener) {
-        ActionRequestValidationException validationException = request.validate();
-        if (validationException != null) {
-            listener.onFailure(validationException);
-            return;
-        }
+    protected void executeInternal(TransactionDeleteRequest request, Listener<TransactionDeleteResponse> listener) {
         final TransactionalQueueService queueService = queuesService.queue(request.getQueue());
         if (queueService == null) {
             listener.onFailure(new QueueMissingException(request.getQueue()));

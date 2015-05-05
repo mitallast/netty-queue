@@ -1,16 +1,14 @@
 package org.mitallast.queue.action.queue.push;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.strings.Strings;
+import org.mitallast.queue.common.validation.ValidationBuilder;
 import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
-
-import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class PushRequest extends ActionRequest {
 
@@ -48,19 +46,19 @@ public class PushRequest extends ActionRequest {
     }
 
     @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = null;
+    public ValidationBuilder validate() {
+        ValidationBuilder builder = ValidationBuilder.builder();
         if (Strings.isEmpty(queue)) {
-            validationException = addValidationError("queue is missing", null);
+            builder = builder.missing("queue");
         }
         if (message == null) {
-            validationException = addValidationError("message is missing", validationException);
+            builder = builder.missing("message");
         } else if (message.getMessageType() == null) {
-            validationException = addValidationError("message type is missing", validationException);
+            builder = builder.missing("message type");
         } else if (message.getSource() == null) {
-            validationException = addValidationError("message source is missing", validationException);
+            builder = builder.missing("message source");
         }
-        return validationException;
+        return builder;
     }
 
     @Override

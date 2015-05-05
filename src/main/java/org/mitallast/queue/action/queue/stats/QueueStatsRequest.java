@@ -1,15 +1,13 @@
 package org.mitallast.queue.action.queue.stats;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.strings.Strings;
+import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
-
-import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class QueueStatsRequest extends ActionRequest {
     private String queue;
@@ -27,12 +25,12 @@ public class QueueStatsRequest extends ActionRequest {
     }
 
     @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = null;
+    public ValidationBuilder validate() {
+        ValidationBuilder builder = ValidationBuilder.builder();
         if (Strings.isEmpty(queue)) {
-            validationException = addValidationError("queue is missing", null);
+            builder = builder.missing("queue");
         }
-        return validationException;
+        return builder;
     }
 
     public String getQueue() {

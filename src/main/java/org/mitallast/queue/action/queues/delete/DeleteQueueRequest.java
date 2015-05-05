@@ -1,14 +1,13 @@
 package org.mitallast.queue.action.queues.delete;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.strings.Strings;
+import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
-
-import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class DeleteQueueRequest extends ActionRequest {
     private String queue;
@@ -39,15 +38,15 @@ public class DeleteQueueRequest extends ActionRequest {
     }
 
     @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = null;
-        if (queue == null) {
-            validationException = addValidationError("queue is missing", null);
+    public ValidationBuilder validate() {
+        ValidationBuilder builder = ValidationBuilder.builder();
+        if (Strings.isEmpty(queue)) {
+            builder = builder.missing("queue");
         }
-        if (reason == null) {
-            validationException = addValidationError("reason is missing", validationException);
+        if (Strings.isEmpty(reason)) {
+            builder = builder.missing("reason");
         }
-        return validationException;
+        return builder;
     }
 
     @Override

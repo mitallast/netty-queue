@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queues.create;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
@@ -22,12 +21,7 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
     }
 
     @Override
-    public void execute(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
-        ActionRequestValidationException validationException = request.validate();
-        if (validationException != null) {
-            listener.onFailure(validationException);
-            return;
-        }
+    protected void executeInternal(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
         try {
             queuesService.createQueue(request.getQueue(), request.getSettings());
             listener.onResponse(new CreateQueueResponse());

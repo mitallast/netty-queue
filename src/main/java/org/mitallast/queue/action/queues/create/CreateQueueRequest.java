@@ -1,16 +1,15 @@
 package org.mitallast.queue.action.queues.create;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionRequestValidationException;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.strings.Strings;
+import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
-
-import static org.mitallast.queue.action.ValidateActions.addValidationError;
 
 public class CreateQueueRequest extends ActionRequest {
     private String queue;
@@ -50,15 +49,15 @@ public class CreateQueueRequest extends ActionRequest {
     }
 
     @Override
-    public ActionRequestValidationException validate() {
-        ActionRequestValidationException validationException = null;
-        if (queue == null) {
-            validationException = addValidationError("queue is missing", null);
+    public ValidationBuilder validate() {
+        ValidationBuilder builder = ValidationBuilder.builder();
+        if (Strings.isEmpty(queue)) {
+            builder = builder.missing("queue");
         }
         if (settings == null) {
-            validationException = addValidationError("settings is missing", validationException);
+            builder = builder.missing("settings");
         }
-        return validationException;
+        return builder;
     }
 
     @Override

@@ -20,11 +20,7 @@ public class TransactionPopRequest extends PopRequest {
 
     @Override
     public ValidationBuilder validate() {
-        ValidationBuilder builder = super.validate();
-        if (transactionUUID == null) {
-            builder = builder.missing("transactionUUID");
-        }
-        return builder;
+        return super.validate().missing("transactionUUID", transactionUUID);
     }
 
     public UUID getTransactionUUID() {

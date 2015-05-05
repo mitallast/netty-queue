@@ -4,7 +4,6 @@ import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 import org.mitallast.queue.queue.QueueMessage;
 
@@ -47,18 +46,9 @@ public class PushRequest extends ActionRequest {
 
     @Override
     public ValidationBuilder validate() {
-        ValidationBuilder builder = ValidationBuilder.builder();
-        if (Strings.isEmpty(queue)) {
-            builder = builder.missing("queue");
-        }
-        if (message == null) {
-            builder = builder.missing("message");
-        } else if (message.getMessageType() == null) {
-            builder = builder.missing("message type");
-        } else if (message.getSource() == null) {
-            builder = builder.missing("message source");
-        }
-        return builder;
+        return ValidationBuilder.builder()
+            .missing("queue", queue)
+            .missing("message", message);
     }
 
     @Override

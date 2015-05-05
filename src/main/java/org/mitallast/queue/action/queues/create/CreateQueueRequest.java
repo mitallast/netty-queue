@@ -6,7 +6,6 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
@@ -50,14 +49,9 @@ public class CreateQueueRequest extends ActionRequest {
 
     @Override
     public ValidationBuilder validate() {
-        ValidationBuilder builder = ValidationBuilder.builder();
-        if (Strings.isEmpty(queue)) {
-            builder = builder.missing("queue");
-        }
-        if (settings == null) {
-            builder = builder.missing("settings");
-        }
-        return builder;
+        return ValidationBuilder.builder()
+            .missing("queue", queue)
+            .missing("settings", settings);
     }
 
     @Override

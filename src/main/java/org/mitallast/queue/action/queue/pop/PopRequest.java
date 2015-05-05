@@ -4,7 +4,6 @@ import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
@@ -28,11 +27,8 @@ public class PopRequest extends ActionRequest {
 
     @Override
     public ValidationBuilder validate() {
-        ValidationBuilder builder = ValidationBuilder.builder();
-        if (Strings.isEmpty(queue)) {
-            builder = builder.missing("queue");
-        }
-        return builder;
+        return ValidationBuilder.builder()
+            .missing("queue", queue);
     }
 
     @Override

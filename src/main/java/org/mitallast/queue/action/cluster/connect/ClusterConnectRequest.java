@@ -28,11 +28,7 @@ public class ClusterConnectRequest extends ActionRequest {
 
     @Override
     public ValidationBuilder validate() {
-        ValidationBuilder builder = ValidationBuilder.builder();
-        if (discoveryNode == null) {
-            builder = builder.missing("discoveryNode");
-        }
-        return builder;
+        return ValidationBuilder.builder().missing("discoveryNode", discoveryNode);
     }
 
     @Override

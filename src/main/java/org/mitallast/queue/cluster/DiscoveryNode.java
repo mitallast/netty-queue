@@ -1,13 +1,11 @@
 package org.mitallast.queue.cluster;
 
-import com.google.common.collect.ImmutableMap;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 
 public class DiscoveryNode implements Streamable {
@@ -15,17 +13,15 @@ public class DiscoveryNode implements Streamable {
     private UUID nodeId;
     private String host;
     private int port;
-    private ImmutableMap<String, String> attributes;
     private Version version = Version.CURRENT;
 
     public DiscoveryNode() {
     }
 
-    public DiscoveryNode(UUID nodeId, String host, int port, ImmutableMap<String, String> attributes, Version version) {
+    public DiscoveryNode(UUID nodeId, String host, int port, Version version) {
         this.nodeId = nodeId;
         this.host = host;
         this.port = port;
-        this.attributes = attributes;
         this.version = version;
     }
 
@@ -41,10 +37,6 @@ public class DiscoveryNode implements Streamable {
         return port;
     }
 
-    public ImmutableMap<String, String> getAttributes() {
-        return attributes;
-    }
-
     public Version getVersion() {
         return version;
     }
@@ -54,12 +46,6 @@ public class DiscoveryNode implements Streamable {
         nodeId = stream.readUUID();
         host = stream.readText();
         port = stream.readInt();
-        int size = stream.readInt();
-        ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
-        for (int i = 0; i < size; i++) {
-            builder.put(stream.readText(), stream.readText());
-        }
-        attributes = builder.build();
         version = Version.fromId(stream.readInt());
     }
 
@@ -68,11 +54,6 @@ public class DiscoveryNode implements Streamable {
         stream.writeUUID(nodeId);
         stream.writeText(host);
         stream.writeInt(port);
-        stream.writeInt(attributes.size());
-        for (Map.Entry<String, String> entry : attributes.entrySet()) {
-            stream.writeText(entry.getKey());
-            stream.writeText(entry.getValue());
-        }
         stream.writeInt(version.id);
     }
 
@@ -98,7 +79,6 @@ public class DiscoveryNode implements Streamable {
             "nodeId=" + nodeId +
             ", host='" + host + '\'' +
             ", port=" + port +
-            ", attributes=" + attributes +
             ", version=" + version +
             '}';
     }

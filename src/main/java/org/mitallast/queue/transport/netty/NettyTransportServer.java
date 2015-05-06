@@ -1,6 +1,5 @@
 package org.mitallast.queue.transport.netty;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
@@ -28,7 +27,6 @@ public class NettyTransportServer extends NettyServer implements TransportServer
             UUIDs.generateRandom(),
             host,
             port,
-            ImmutableMap.of(),
             Version.CURRENT
         );
     }

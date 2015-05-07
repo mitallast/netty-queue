@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.netty;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
@@ -29,7 +30,6 @@ import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -125,7 +125,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (connectedNodes.get(node) != null) {
                 return;
             }
-            logger.info("connect to node {}", node);
+            logger.debug("connect to node {}", node);
             ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
             for (int i = 0; i < channelCount; i++) {
                 channelFutures[i] = connect(node.getHost(), node.getPort());
@@ -147,6 +147,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 .put(node, nodeChannel)
                 .build();
             connected = true;
+            logger.info("connected to node {}", node);
         } finally {
             connectionLock.unlock();
             if (connected) {
@@ -186,8 +187,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    public Collection<DiscoveryNode> connectedNodes() {
-        return connectedNodes.keySet();
+    public ImmutableList<DiscoveryNode> connectedNodes() {
+        return ImmutableList.copyOf(connectedNodes.keySet());
     }
 
     @Override

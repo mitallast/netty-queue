@@ -1,10 +1,9 @@
 package org.mitallast.queue.transport;
 
+import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.event.EventListener;
-
-import java.util.Collection;
 
 public interface TransportService {
 
@@ -14,7 +13,7 @@ public interface TransportService {
 
     void disconnectFromNode(DiscoveryNode node);
 
-    Collection<DiscoveryNode> connectedNodes();
+    ImmutableList<DiscoveryNode> connectedNodes();
 
     SmartFuture<TransportFrame> sendRequest(DiscoveryNode node, TransportFrame frame);
 

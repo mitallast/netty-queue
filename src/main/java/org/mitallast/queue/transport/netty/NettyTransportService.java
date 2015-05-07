@@ -15,6 +15,8 @@ import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.concurrent.futures.Futures;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+import org.mitallast.queue.common.event.EventListener;
+import org.mitallast.queue.common.event.EventObserver;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.ByteBufStreamOutput;
@@ -40,6 +42,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock;
     private final int channelCount;
     private final TransportServer transportServer;
+    private final EventObserver<NodeConnectedEvent> nodeConnectedObserver = EventObserver.create();
+    private final EventObserver<NodeDisconnectedEvent> nodeDisconnectedObserver = EventObserver.create();
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
@@ -110,6 +114,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         if (node == null) {
             throw new TransportException("can't connect to a null node");
         }
+        boolean connected = false;
         connectionLock.lock();
         try {
             if (connectedNodes.get(node) != null) {
@@ -136,8 +141,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 .putAll(connectedNodes)
                 .put(node, nodeChannel)
                 .build();
+            connected = true;
         } finally {
             connectionLock.unlock();
+            if (connected) {
+                nodeConnectedObserver.triggerEvent(new NodeConnectedEvent(node));
+            }
         }
     }
 
@@ -146,6 +155,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         if (node == null) {
             throw new TransportException("can't disconnect to a null node");
         }
+        boolean disconnected = false;
         connectionLock.lock();
         try {
             NodeChannel nodeChannel = connectedNodes.get(node);
@@ -161,8 +171,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 }
             });
             connectedNodes = builder.build();
+            disconnected = true;
         } finally {
             connectionLock.unlock();
+            if (disconnected) {
+                nodeDisconnectedObserver.triggerEvent(new NodeDisconnectedEvent(node));
+            }
         }
     }
 
@@ -198,6 +212,26 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             throw new TransportException("Not connected to node: " + node);
         }
         return nodeChannel;
+    }
+
+    @Override
+    public void addNodeConnectedListener(EventListener<NodeConnectedEvent> listener) {
+        nodeConnectedObserver.addListener(listener);
+    }
+
+    @Override
+    public void removeNodeConnectedListener(EventListener<NodeConnectedEvent> listener) {
+        nodeConnectedObserver.removeListener(listener);
+    }
+
+    @Override
+    public void addNodeDisconnectedListener(EventListener<NodeDisconnectedEvent> listener) {
+        nodeDisconnectedObserver.addListener(listener);
+    }
+
+    @Override
+    public void removeNodeDisconnectedListener(EventListener<NodeDisconnectedEvent> listener) {
+        nodeDisconnectedObserver.removeListener(listener);
     }
 
     private class NodeChannel implements TransportClient, Closeable {

@@ -107,6 +107,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
+    public DiscoveryNode localNode() {
+        return transportServer.localNode();
+    }
+
+    @Override
     public void connectToNode(DiscoveryNode node) {
         if (!lifecycle.started()) {
             throw new IllegalStateException("can't add nodes to a stopped transport");

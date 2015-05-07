@@ -8,6 +8,8 @@ import java.util.Collection;
 
 public interface TransportService {
 
+    DiscoveryNode localNode();
+
     void connectToNode(DiscoveryNode node);
 
     void disconnectFromNode(DiscoveryNode node);

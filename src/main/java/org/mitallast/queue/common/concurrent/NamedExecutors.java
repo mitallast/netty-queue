@@ -62,14 +62,14 @@ public class NamedExecutors {
         private final AtomicInteger threadNumber = new AtomicInteger(1);
 
         private NamedThreadFactory(String group) {
-            this.group = new ThreadGroup(group + '[' + poolNumber.getAndIncrement() + ']');
+            this.group = new ThreadGroup(group + '.' + poolNumber.getAndIncrement());
         }
 
         public Thread newThread(Runnable r) {
             Thread t = new Thread(
                 group,
                 r,
-                group.getName() + '[' + threadNumber.getAndIncrement() + ']',
+                group.getName() + '.' + threadNumber.getAndIncrement(),
                 0
             );
             if (t.isDaemon())

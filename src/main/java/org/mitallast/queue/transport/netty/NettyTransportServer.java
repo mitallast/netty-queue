@@ -12,7 +12,6 @@ import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class NettyTransportServer extends NettyServer implements TransportServer {
 
@@ -38,7 +37,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     @Override
     protected ChannelInitializer<SocketChannel> channelInitializer() {
-        return new TransportServerInitializer(new TransportServerHandler(transportController));
+        return new TransportServerInitializer(new TransportServerHandler(logger, transportController));
     }
 
     protected int defaultPort() {
@@ -66,10 +65,11 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     @ChannelHandler.Sharable
     private static class TransportServerHandler extends SimpleChannelInboundHandler<TransportFrame> {
 
-        private final static Logger logger = LoggerFactory.getLogger(TransportServerHandler.class);
+        private final Logger logger;
         private final TransportController transportController;
 
-        public TransportServerHandler(TransportController transportController) {
+        public TransportServerHandler(Logger logger, TransportController transportController) {
+            this.logger = logger;
             this.transportController = transportController;
         }
 

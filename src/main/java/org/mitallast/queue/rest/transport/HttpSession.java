@@ -9,8 +9,6 @@ import io.netty.handler.codec.http.*;
 import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.rest.RestResponse;
 import org.mitallast.queue.rest.RestSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -20,7 +18,6 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class HttpSession implements RestSession {
 
-    private final static Logger logger = LoggerFactory.getLogger(HttpSession.class);
     private final ChannelHandlerContext ctx;
     private final FullHttpRequest httpRequest;
 
@@ -54,7 +51,6 @@ public class HttpSession implements RestSession {
 
     @Override
     public void sendResponse(Throwable response) {
-        logger.error("send error", response);
         ByteBuf buffer = Unpooled.buffer();
         try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
             try (PrintWriter printWriter = new PrintWriter(outputStream)) {

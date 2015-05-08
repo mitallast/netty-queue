@@ -8,12 +8,8 @@ import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.response.StatusRestResponse;
 import org.mitallast.queue.rest.response.StringRestResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class RestController extends AbstractComponent {
-
-    private final Logger logger = LoggerFactory.getLogger(RestController.class);
 
     private final PathTrie<RestHandler> getHandlers = new PathTrie<>();
     private final PathTrie<RestHandler> postHandlers = new PathTrie<>();

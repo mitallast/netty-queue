@@ -2,7 +2,7 @@ package org.mitallast.queue.common.component;
 
 import org.mitallast.queue.QueueException;
 
-public interface LifecycleComponent<T> {
+public interface LifecycleComponent {
 
     Lifecycle.State lifecycleState();
 

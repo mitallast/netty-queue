@@ -23,4 +23,9 @@ public class Version {
                 throw new IOException("Unexpected id[" + id + "]");
         }
     }
+
+    @Override
+    public String toString() {
+        return "Version{" + id + '}';
+    }
 }

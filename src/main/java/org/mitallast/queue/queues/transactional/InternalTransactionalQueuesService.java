@@ -32,7 +32,7 @@ public class InternalTransactionalQueuesService extends AbstractLifecycleCompone
 
     @Inject
     public InternalTransactionalQueuesService(Settings settings) {
-        super(settings);
+        super(settings, TransactionalQueuesService.class);
     }
 
     @Override

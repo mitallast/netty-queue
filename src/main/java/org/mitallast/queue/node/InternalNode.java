@@ -7,9 +7,12 @@ import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.ClientModule;
 import org.mitallast.queue.client.local.LocalClient;
 import org.mitallast.queue.cluster.DiscoveryNode;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ModulesBuilder;
+import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.queues.transactional.InternalTransactionalQueuesService;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
@@ -24,12 +27,12 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     private final Injector injector;
 
     public InternalNode(Settings settings) {
-        super(settings);
+        super(prepareSettings(settings));
 
         logger.info("initializing...");
 
         ModulesBuilder modules = new ModulesBuilder();
-        modules.add(new TransactionalQueuesModule(settings));
+        modules.add(new TransactionalQueuesModule(this.settings));
         modules.add(new ActionModule());
         modules.add(new ClientModule());
         modules.add(new RestModule());
@@ -38,6 +41,18 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         injector = modules.createInjector();
 
         logger.info("initialized");
+    }
+
+    private static Settings prepareSettings(Settings settings) {
+        String name = settings.get("node.name");
+        if (Strings.isEmpty(name)) {
+            name = UUIDs.generateRandom().toString().substring(0, 8);
+            settings = ImmutableSettings.builder()
+                .put(settings)
+                .put("node.name", name)
+                .build();
+        }
+        return settings;
     }
 
     @Override

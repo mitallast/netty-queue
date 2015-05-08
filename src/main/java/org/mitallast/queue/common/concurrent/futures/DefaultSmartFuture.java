@@ -2,8 +2,6 @@ package org.mitallast.queue.common.concurrent.futures;
 
 import com.google.common.base.Preconditions;
 import org.mitallast.queue.common.concurrent.Listener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -13,8 +11,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer implements SmartFuture<Type> {
-
-    private final static Logger logger = LoggerFactory.getLogger(DefaultSmartFuture.class);
 
     private final static AtomicReferenceFieldUpdater<DefaultSmartFuture, Node> headUpdater =
         AtomicReferenceFieldUpdater.newUpdater(DefaultSmartFuture.class, Node.class, "head");
@@ -174,14 +170,10 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
     }
 
     protected void invokeListener(Listener<Type> listener) {
-        try {
-            if (isError()) {
-                listener.onFailure(exception);
-            } else {
-                listener.onResponse(value);
-            }
-        } catch (Throwable e) {
-            logger.warn("An exception was thrown by {}.accept()", listener.getClass(), e);
+        if (isError()) {
+            listener.onFailure(exception);
+        } else {
+            listener.onResponse(value);
         }
     }
 

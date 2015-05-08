@@ -1,8 +1,6 @@
 package org.mitallast.queue.common.mmap;
 
 import org.mitallast.queue.common.concurrent.MapReentrantLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,8 +11,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class MemoryMappedPageCacheImpl implements MemoryMappedPageCache {
-
-    private final static Logger logger = LoggerFactory.getLogger(MemoryMappedPageCacheImpl.class);
 
     private final static Comparator<MemoryMappedPage> comparator =
         (o1, o2) -> (int) (o1.getTimestamp() - o2.getTimestamp());
@@ -97,7 +93,6 @@ public class MemoryMappedPageCacheImpl implements MemoryMappedPageCache {
     private void garbageCollect() throws IOException {
         if (pagesCount.get() > maxPages * 2 && gcLock.tryLock()) {
             try {
-                logger.info("gc pages: {} max {}", pagesCount.get(), maxPages);
                 garbage.clear();
                 garbage.addAll(pageMap.values());
                 garbage.forEach(MemoryMappedPage::lockTimestamp);
@@ -112,7 +107,6 @@ public class MemoryMappedPageCacheImpl implements MemoryMappedPageCache {
                         page.close();
                     }
                 }
-                logger.info("after gc pages: {}", pagesCount.get());
             } finally {
                 gcLock.unlock();
             }

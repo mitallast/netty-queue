@@ -118,4 +118,19 @@ public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOu
             writeUTF(entry.getValue());
         }
     }
+
+    @Override
+    public <T extends Streamable> void writeStreamable(T streamable) throws IOException {
+        streamable.writeTo(this);
+    }
+
+    @Override
+    public <T extends Streamable> void writeStreamableOrNull(T streamable) throws IOException {
+        if (streamable != null) {
+            writeBoolean(true);
+            streamable.writeTo(this);
+        } else {
+            writeBoolean(false);
+        }
+    }
 }

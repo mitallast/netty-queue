@@ -7,6 +7,7 @@ import java.io.Closeable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public interface StreamInput extends DataInput, Closeable {
 
@@ -66,4 +67,8 @@ public interface StreamInput extends DataInput, Closeable {
     ByteBuf readByteBufOrNull() throws IOException;
 
     Settings readSettings() throws IOException;
+
+    <T extends Streamable> T readStreamable(Supplier<T> factory) throws IOException;
+
+    <T extends Streamable> T readStreamableOrNull(Supplier<T> factory) throws IOException;
 }

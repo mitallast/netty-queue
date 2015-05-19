@@ -64,4 +64,8 @@ public interface StreamOutput extends DataOutput, Closeable {
     void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException;
 
     void writeSettings(Settings settings) throws IOException;
+
+    <T extends Streamable> void writeStreamable(T streamable) throws IOException;
+
+    <T extends Streamable> void writeStreamableOrNull(T streamable) throws IOException;
 }

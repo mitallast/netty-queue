@@ -4,7 +4,7 @@ import java.io.IOException;
 
 public interface Streamable {
 
-    public void readFrom(StreamInput stream) throws IOException;
+    void readFrom(StreamInput stream) throws IOException;
 
-    public void writeTo(StreamOutput stream) throws IOException;
+    void writeTo(StreamOutput stream) throws IOException;
 }

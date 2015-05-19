@@ -8,6 +8,7 @@ import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public class ByteBufStreamInput extends ByteBufInputStream implements StreamInput {
 
@@ -102,6 +103,24 @@ public class ByteBufStreamInput extends ByteBufInputStream implements StreamInpu
                 );
             }
             return builder.build();
+        }
+    }
+
+    @Override
+    public <T extends Streamable> T readStreamable(Supplier<T> factory) throws IOException {
+        T streamable = factory.get();
+        streamable.readFrom(this);
+        return streamable;
+    }
+
+    @Override
+    public <T extends Streamable> T readStreamableOrNull(Supplier<T> factory) throws IOException {
+        if (readBoolean()) {
+            T streamable = factory.get();
+            streamable.readFrom(this);
+            return streamable;
+        } else {
+            return null;
         }
     }
 }

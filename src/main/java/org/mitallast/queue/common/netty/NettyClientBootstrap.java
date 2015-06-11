@@ -8,11 +8,11 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.settings.Settings;
 
+import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
 
 public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
@@ -47,7 +47,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doStart() throws QueueException {
+    protected void doStart() throws IOException {
         bootstrap = new Bootstrap()
             .channel(NioSocketChannel.class)
             .group(new NioEventLoopGroup(threads, threadFactory("client")))
@@ -70,7 +70,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         if (bootstrap != null) {
             bootstrap.group().shutdownGracefully();
         }
@@ -78,7 +78,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doClose() throws QueueException {
+    protected void doClose() throws IOException {
 
     }
 }

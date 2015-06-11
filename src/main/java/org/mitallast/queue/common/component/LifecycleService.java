@@ -1,9 +1,9 @@
 package org.mitallast.queue.common.component;
 
 import com.google.inject.spi.ProvisionListener;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.settings.Settings;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +28,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     }
 
     @Override
-    protected void doStart() throws QueueException {
+    protected void doStart() throws IOException {
         final int size = lifecycleQueue.size();
         for (int i = 0; i < size; i++) {
             LifecycleComponent component = lifecycleQueue.get(i);
@@ -38,7 +38,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     }
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         final int size = lifecycleQueue.size();
         for (int i = size - 1; i >= 0; i--) {
             LifecycleComponent component = lifecycleQueue.get(i);
@@ -48,7 +48,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     }
 
     @Override
-    protected void doClose() throws QueueException {
+    protected void doClose() throws IOException {
         final int size = lifecycleQueue.size();
         for (int i = size - 1; i >= 0; i--) {
             LifecycleComponent component = lifecycleQueue.get(i);

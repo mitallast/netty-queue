@@ -1,7 +1,6 @@
 package org.mitallast.queue.node;
 
 import com.google.inject.Injector;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.action.ActionModule;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.ClientModule;
@@ -19,6 +18,8 @@ import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.transport.TransportModule;
 import org.mitallast.queue.transport.TransportServer;
+
+import java.io.IOException;
 
 public class InternalNode extends AbstractLifecycleComponent implements Node {
 
@@ -75,17 +76,17 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     }
 
     @Override
-    protected void doStart() throws QueueException {
+    protected void doStart() throws IOException {
         injector.getInstance(LifecycleService.class).start();
     }
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         injector.getInstance(LifecycleService.class).stop();
     }
 
     @Override
-    protected void doClose() throws QueueException {
+    protected void doClose() throws IOException {
         injector.getInstance(LifecycleService.class).close();
     }
 }

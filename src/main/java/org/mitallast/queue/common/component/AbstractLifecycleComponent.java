@@ -3,6 +3,8 @@ package org.mitallast.queue.common.component;
 import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.settings.Settings;
 
+import java.io.IOException;
+
 public abstract class AbstractLifecycleComponent extends AbstractComponent implements LifecycleComponent {
 
     protected final Lifecycle lifecycle = new Lifecycle();
@@ -45,11 +47,16 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
         if (!lifecycle.moveToStarted()) {
             logger.warn("Don't moved to started, " + lifecycleState());
         }
-        doStart();
+        try {
+            doStart();
+        } catch (IOException e) {
+            logger.info("error start", e);
+            throw new QueueException(e);
+        }
         logger.info("started");
     }
 
-    protected abstract void doStart() throws QueueException;
+    protected abstract void doStart() throws IOException;
 
     @Override
     public void stop() throws QueueException {
@@ -59,11 +66,16 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
             return;
         }
         lifecycle.moveToStopped();
-        doStop();
+        try {
+            doStop();
+        } catch (IOException e) {
+            logger.info("error stop", e);
+            throw new QueueException(e);
+        }
         logger.debug("stopped");
     }
 
-    protected abstract void doStop() throws QueueException;
+    protected abstract void doStop() throws IOException;
 
     @Override
     public void close() throws QueueException {
@@ -75,10 +87,15 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
             return;
         }
         lifecycle.moveToClosed();
-        doClose();
+        try {
+            doClose();
+        } catch (IOException e) {
+            logger.info("error close", e);
+            throw new QueueException(e);
+        }
         logger.info("closed");
     }
 
-    protected abstract void doClose() throws QueueException;
+    protected abstract void doClose() throws IOException;
 }
 

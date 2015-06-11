@@ -50,19 +50,14 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     }
 
     @Override
-    protected void doStart() throws QueueException {
+    protected void doStart() throws IOException {
         segments = ImmutableList.of();
-        try {
-            queueDir = new File(workDir, queue.getName());
-            if (!queueDir.exists() && !queueDir.mkdirs()) {
-                throw new IOException("Error create dir " + queueDir);
-            }
-            mmapFileFactory = new MemoryMappedFileFactory(settings, queueDir);
-
-            readState();
-        } catch (IOException e) {
-            throw new QueueException(e);
+        queueDir = new File(workDir, queue.getName());
+        if (!queueDir.exists() && !queueDir.mkdirs()) {
+            throw new IOException("Error create dir " + queueDir);
         }
+        mmapFileFactory = new MemoryMappedFileFactory(settings, queueDir);
+        readState();
     }
 
     private void readState() throws IOException {
@@ -165,20 +160,16 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
     }
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         for (MMapQueueMessageSegment segment : segments) {
-            try {
-                segment.close();
-            } catch (IOException e) {
-                throw new QueueException(e);
-            }
+            segment.close();
         }
         segments = null;
         mmapFileFactory = null;
     }
 
     @Override
-    protected void doClose() throws QueueException {
+    protected void doClose() throws IOException {
     }
 
     @Override

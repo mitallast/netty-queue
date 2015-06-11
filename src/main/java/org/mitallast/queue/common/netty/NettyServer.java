@@ -14,6 +14,8 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.settings.Settings;
 
+import java.io.IOException;
+
 public abstract class NettyServer extends AbstractLifecycleComponent {
 
     protected final String host;
@@ -56,7 +58,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doStart() throws QueueException {
+    protected void doStart() throws IOException {
         try {
             boss = group("boss");
             worker = group("worker");
@@ -88,6 +90,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
                 .sync()
                 .channel();
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new QueueException(e);
         }
     }
@@ -95,7 +98,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     protected abstract ChannelInitializer<SocketChannel> channelInitializer();
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         try {
             if (channel != null) {
                 channel.close().sync();
@@ -111,7 +114,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doClose() throws QueueException {
+    protected void doClose() throws IOException {
 
     }
 }

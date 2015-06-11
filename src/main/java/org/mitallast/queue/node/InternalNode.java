@@ -9,18 +9,16 @@ import org.mitallast.queue.client.local.LocalClient;
 import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
+import org.mitallast.queue.common.component.ComponentModule;
+import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.strings.Strings;
-import org.mitallast.queue.queues.transactional.InternalTransactionalQueuesService;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
-import org.mitallast.queue.rest.transport.HttpServer;
 import org.mitallast.queue.transport.TransportModule;
 import org.mitallast.queue.transport.TransportServer;
-import org.mitallast.queue.transport.netty.NettyTransportServer;
-import org.mitallast.queue.transport.netty.NettyTransportService;
 
 public class InternalNode extends AbstractLifecycleComponent implements Node {
 
@@ -32,7 +30,8 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         logger.info("initializing...");
 
         ModulesBuilder modules = new ModulesBuilder();
-        modules.add(new TransactionalQueuesModule(this.settings));
+        modules.add(new ComponentModule(this.settings));
+        modules.add(new TransactionalQueuesModule());
         modules.add(new ActionModule());
         modules.add(new ClientModule());
         modules.add(new RestModule());
@@ -77,25 +76,16 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
 
     @Override
     protected void doStart() throws QueueException {
-        injector.getInstance(InternalTransactionalQueuesService.class).start();
-        injector.getInstance(NettyTransportService.class).start();
-        injector.getInstance(NettyTransportServer.class).start();
-        injector.getInstance(HttpServer.class).start();
+        injector.getInstance(LifecycleService.class).start();
     }
 
     @Override
     protected void doStop() throws QueueException {
-        injector.getInstance(HttpServer.class).stop();
-        injector.getInstance(NettyTransportServer.class).stop();
-        injector.getInstance(NettyTransportService.class).stop();
-        injector.getInstance(InternalTransactionalQueuesService.class).stop();
+        injector.getInstance(LifecycleService.class).stop();
     }
 
     @Override
     protected void doClose() throws QueueException {
-        injector.getInstance(HttpServer.class).close();
-        injector.getInstance(NettyTransportServer.class).close();
-        injector.getInstance(NettyTransportService.class).close();
-        injector.getInstance(InternalTransactionalQueuesService.class).close();
+        injector.getInstance(LifecycleService.class).close();
     }
 }

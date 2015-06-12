@@ -5,6 +5,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NamedExecutors {
 
+    public static ScheduledExecutorService newScheduledSingleThreadPool(String name) {
+        return new ScheduledThreadPoolExecutor(
+            1,
+            new NamedThreadFactory(name)
+        );
+    }
+
+    public static ScheduledExecutorService newScheduledFixedThreadPool(String name, int nThreads) {
+        return new ScheduledThreadPoolExecutor(
+            nThreads,
+            new NamedThreadFactory(name)
+        );
+    }
+
     public static ExecutorService newSingleThreadPool(String name) {
         return new ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,

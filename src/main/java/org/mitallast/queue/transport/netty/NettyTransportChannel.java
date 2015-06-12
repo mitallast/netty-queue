@@ -15,7 +15,7 @@ public class NettyTransportChannel implements TransportChannel {
 
     @Override
     public void send(TransportFrame response) {
-        ctx.write(response, ctx.voidPromise());
+        ctx.writeAndFlush(response, ctx.voidPromise());
     }
 
     @Override

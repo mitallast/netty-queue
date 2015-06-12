@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.get;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
@@ -15,11 +14,12 @@ import java.io.IOException;
 
 public class GetAction extends AbstractAction<GetRequest, GetResponse> {
 
+    public final static String actionName = "internal:queue/get";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public GetAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, controller);
+        super(settings, actionName, controller);
         this.queuesService = queuesService;
     }
 
@@ -35,11 +35,6 @@ public class GetAction extends AbstractAction<GetRequest, GetResponse> {
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public ActionType getActionId() {
-        return ActionType.QUEUE_GET;
     }
 
     @Override

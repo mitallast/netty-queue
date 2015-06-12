@@ -3,11 +3,14 @@ package org.mitallast.queue.action.queue.transactional.rollback;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 import java.util.UUID;
 
 public class TransactionRollbackResponse extends ActionResponse {
+
+    public final static ResponseMapper<TransactionRollbackResponse> mapper = new ResponseMapper<>(TransactionRollbackResponse::new);
 
     private String queue;
     private UUID transactionUUID;

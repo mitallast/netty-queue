@@ -5,7 +5,6 @@ import org.mitallast.queue.action.ActionModule;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.ClientModule;
 import org.mitallast.queue.client.local.LocalClient;
-import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
@@ -16,6 +15,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
+import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportModule;
 import org.mitallast.queue.transport.TransportServer;
 

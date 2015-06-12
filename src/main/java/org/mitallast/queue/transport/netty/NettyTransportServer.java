@@ -4,7 +4,6 @@ import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.Version;
-import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
@@ -23,6 +22,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         super(settings, NettyTransportServer.class, TransportModule.class);
         this.transportController = transportController;
         this.discoveryNode = new DiscoveryNode(
+            this.settings.get("node.name"),
             UUIDs.generateRandom(),
             host,
             port,
@@ -76,7 +76,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) throws Exception {
             if (request.isPing()) {
-                ctx.write(TransportFrame.of(request), ctx.voidPromise());
+                ctx.writeAndFlush(TransportFrame.of(request), ctx.voidPromise());
                 return;
             }
             TransportChannel channel = new NettyTransportChannel(ctx);

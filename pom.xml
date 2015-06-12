@@ -198,9 +198,7 @@
                         <argument>-XX:InitiatingHeapOccupancyPercent=70</argument>
                         <argument>-XX:NewRatio=2</argument>
                         <argument>-XX:SurvivorRatio=8</argument>
-                        <argument>
-                            -XX:M/Users/mitallast/Sites/netty-queue/src/main/java/org/mitallast/queue/common/UUIDs.java:axTenuringThreshold=15
-                        </argument>
+                        <argument>-XX:MaxTenuringThreshold=15</argument>
                         <argument>-XX:G1ReservePercent=50</argument>
                         <argument>-XX:G1HeapRegionSize=32m</argument>
                         <argument>-XX:+UseCompressedOops</argument>

@@ -4,8 +4,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.action.queue.push.PushResponse;
-import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.BaseQueueTest;
+import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportServer;
 import org.mitallast.queue.transport.TransportService;
 

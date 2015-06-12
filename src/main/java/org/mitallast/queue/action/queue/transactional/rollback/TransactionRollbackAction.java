@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.transactional.rollback;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.transactional.QueueTransaction;
@@ -15,11 +14,12 @@ import java.io.IOException;
 
 public class TransactionRollbackAction extends AbstractAction<TransactionRollbackRequest, TransactionRollbackResponse> {
 
+    public final static String actionName = "internal:queue/transaction/rollback";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public TransactionRollbackAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, controller);
+        super(settings, actionName, controller);
         this.queuesService = queuesService;
     }
 
@@ -41,11 +41,6 @@ public class TransactionRollbackAction extends AbstractAction<TransactionRollbac
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public ActionType getActionId() {
-        return ActionType.TRANSACTION_ROLLBACK;
     }
 
     @Override

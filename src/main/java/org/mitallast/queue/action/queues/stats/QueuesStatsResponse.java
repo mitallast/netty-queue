@@ -4,10 +4,14 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queues.stats.QueuesStats;
+import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 
 public class QueuesStatsResponse extends ActionResponse {
+
+    public final static ResponseMapper<QueuesStatsResponse> mapper = new ResponseMapper<>(QueuesStatsResponse::new);
+
     private QueuesStats stats;
 
     public QueuesStatsResponse() {
@@ -23,20 +27,11 @@ public class QueuesStatsResponse extends ActionResponse {
 
     @Override
     public void readFrom(StreamInput stream) throws IOException {
-        if (stream.readBoolean()) {
-            stats = new QueuesStats();
-            stats.readFrom(stream);
-        }
+        stats = stream.readStreamableOrNull(QueuesStats::new);
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        if (stats == null) {
-            stream.writeBoolean(false);
-        } else {
-            stream.writeBoolean(true);
-            stats = new QueuesStats();
-            stats.writeTo(stream);
-        }
+        stream.writeStreamableOrNull(stats);
     }
 }

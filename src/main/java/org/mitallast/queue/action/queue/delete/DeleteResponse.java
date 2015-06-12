@@ -4,10 +4,14 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queue.QueueMessage;
+import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 
 public class DeleteResponse extends ActionResponse {
+
+    public final static ResponseMapper<DeleteResponse> mapper = new ResponseMapper<>(DeleteResponse::new);
+
     private QueueMessage message;
 
     public DeleteResponse() {
@@ -23,21 +27,11 @@ public class DeleteResponse extends ActionResponse {
 
     @Override
     public void readFrom(StreamInput stream) throws IOException {
-        if (stream.readBoolean()) {
-            message = new QueueMessage();
-            message.readFrom(stream);
-        } else {
-            message = null;
-        }
+        message = stream.readStreamableOrNull(QueueMessage::new);
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        if (message != null) {
-            stream.writeBoolean(true);
-            message.writeTo(stream);
-        } else {
-            stream.writeBoolean(false);
-        }
+        stream.writeStreamableOrNull(message);
     }
 }

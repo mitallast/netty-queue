@@ -1,7 +1,6 @@
 package org.mitallast.queue.action.queue.peek;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
@@ -18,11 +17,6 @@ public class PeekQueueRequest extends ActionRequest {
 
     public void setQueue(String queue) {
         this.queue = queue;
-    }
-
-    @Override
-    public ActionType actionType() {
-        return ActionType.QUEUE_PEEK;
     }
 
     @Override

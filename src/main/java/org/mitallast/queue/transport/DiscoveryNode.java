@@ -1,4 +1,4 @@
-package org.mitallast.queue.cluster;
+package org.mitallast.queue.transport;
 
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public class DiscoveryNode implements Streamable {
 
+    private String name;
     private UUID nodeId;
     private String host;
     private int port;
@@ -18,11 +19,16 @@ public class DiscoveryNode implements Streamable {
     public DiscoveryNode() {
     }
 
-    public DiscoveryNode(UUID nodeId, String host, int port, Version version) {
+    public DiscoveryNode(String name, UUID nodeId, String host, int port, Version version) {
+        this.name = name;
         this.nodeId = nodeId;
         this.host = host;
         this.port = port;
         this.version = version;
+    }
+
+    public String nodeName() {
+        return name;
     }
 
     public UUID getNodeId() {
@@ -43,6 +49,7 @@ public class DiscoveryNode implements Streamable {
 
     @Override
     public void readFrom(StreamInput stream) throws IOException {
+        name = stream.readText();
         nodeId = stream.readUUID();
         host = stream.readText();
         port = stream.readInt();
@@ -51,6 +58,7 @@ public class DiscoveryNode implements Streamable {
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeText(name);
         stream.writeUUID(nodeId);
         stream.writeText(host);
         stream.writeInt(port);
@@ -76,10 +84,9 @@ public class DiscoveryNode implements Streamable {
     @Override
     public String toString() {
         return "DiscoveryNode{" +
-            "nodeId=" + nodeId +
-            ", host='" + host + '\'' +
-            ", port=" + port +
-            ", version=" + version +
+            "name=" + name +
+            ", id=" + nodeId.toString().substring(0, 8) +
+            ", tcp://" + host + ':' + port +
             '}';
     }
 }

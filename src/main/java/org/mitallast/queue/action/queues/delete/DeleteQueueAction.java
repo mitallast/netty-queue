@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queues.delete;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueMissingException;
@@ -13,11 +12,12 @@ import java.io.IOException;
 
 public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, DeleteQueueResponse> {
 
+    public final static String actionName = "internal:queues/delete";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public DeleteQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, controller);
+        super(settings, actionName, controller);
         this.queuesService = queuesService;
     }
 
@@ -31,11 +31,6 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public ActionType getActionId() {
-        return ActionType.QUEUES_DELETE;
     }
 
     @Override

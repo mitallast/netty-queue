@@ -1,7 +1,6 @@
 package org.mitallast.queue.action.queue.transactional.rollback;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
@@ -13,11 +12,6 @@ public class TransactionRollbackRequest extends ActionRequest {
 
     private String queue;
     private UUID transactionUUID;
-
-    @Override
-    public ActionType actionType() {
-        return ActionType.TRANSACTION_ROLLBACK;
-    }
 
     @Override
     public ValidationBuilder validate() {

@@ -1,7 +1,6 @@
 package org.mitallast.queue.action.queue.push;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
@@ -40,11 +39,6 @@ public class PushRequest extends ActionRequest {
     }
 
     @Override
-    public ActionType actionType() {
-        return ActionType.QUEUE_PUSH;
-    }
-
-    @Override
     public ValidationBuilder validate() {
         return ValidationBuilder.builder()
             .missing("queue", queue)
@@ -54,20 +48,12 @@ public class PushRequest extends ActionRequest {
     @Override
     public void readFrom(StreamInput stream) throws IOException {
         queue = stream.readTextOrNull();
-        if (stream.readBoolean()) {
-            message = new QueueMessage();
-            message.readFrom(stream);
-        }
+        message = stream.readStreamableOrNull(QueueMessage::new);
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeTextOrNull(queue);
-        if (message != null) {
-            stream.writeBoolean(true);
-            message.writeTo(stream);
-        } else {
-            stream.writeBoolean(false);
-        }
+        stream.writeStreamableOrNull(message);
     }
 }

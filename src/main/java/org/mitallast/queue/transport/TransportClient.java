@@ -9,5 +9,5 @@ import org.mitallast.queue.transport.netty.ResponseMapper;
 public interface TransportClient extends Client {
 
     <Request extends ActionRequest, Response extends ActionResponse>
-    SmartFuture<Response> send(Request request, ResponseMapper<Response> mapper);
+    SmartFuture<Response> send(String actionName, Request request, ResponseMapper<Response> mapper);
 }

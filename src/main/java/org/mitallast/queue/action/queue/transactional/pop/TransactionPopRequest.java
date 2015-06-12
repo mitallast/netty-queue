@@ -1,6 +1,5 @@
 package org.mitallast.queue.action.queue.transactional.pop;
 
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.action.queue.pop.PopRequest;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
@@ -12,11 +11,6 @@ import java.util.UUID;
 public class TransactionPopRequest extends PopRequest {
 
     private UUID transactionUUID;
-
-    @Override
-    public ActionType actionType() {
-        return ActionType.TRANSACTION_POP;
-    }
 
     @Override
     public ValidationBuilder validate() {

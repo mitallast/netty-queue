@@ -6,14 +6,10 @@ import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.util.AttributeKey;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
-import org.mitallast.queue.action.cluster.disconnect.ClusterDisconnectRequest;
-import org.mitallast.queue.action.cluster.disconnect.ClusterDisconnectResponse;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
-import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.concurrent.futures.Futures;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.event.EventListener;
@@ -31,7 +27,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -85,23 +82,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         final ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
-        ClusterDisconnectRequest disconnectRequest = new ClusterDisconnectRequest();
-        disconnectRequest.setDiscoveryNode(transportServer.localNode());
-        List<SmartFuture<ClusterDisconnectResponse>> futures = new ArrayList<>(connectedNodes.size());
-        for (DiscoveryNode discoveryNode : connectedNodes.keySet()) {
-            SmartFuture<ClusterDisconnectResponse> future = client(discoveryNode)
-                .send(disconnectRequest, new ResponseMapper<>(ClusterDisconnectResponse::new));
-            futures.add(future);
-        }
-        for (SmartFuture<ClusterDisconnectResponse> future : futures) {
-            try {
-                future.get(1000, TimeUnit.SECONDS);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                logger.error("error wait disconnect request");
-            }
-        }
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         super.doStop();
     }
@@ -125,7 +107,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (connectedNodes.get(node) != null) {
                 return;
             }
-            logger.debug("connect to node {}", node);
+            logger.debug("connect to node {}", node.nodeName());
             ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
             for (int i = 0; i < channelCount; i++) {
                 channelFutures[i] = connect(node.getHost(), node.getPort());
@@ -147,7 +129,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 .put(node, nodeChannel)
                 .build();
             connected = true;
-            logger.info("connected to node {}", node);
+            logger.info("connected to node {}", node.nodeName());
         } finally {
             connectionLock.unlock();
             if (connected) {
@@ -259,6 +241,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             List<ChannelFuture> closeFutures = new ArrayList<>(channels.length);
             for (Channel channel : channels) {
                 if (channel.isOpen()) {
+                    channel.flush();
                     closeFutures.add(channel.close());
                 }
             }
@@ -273,12 +256,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
         @Override
         public <Request extends ActionRequest, Response extends ActionResponse>
-        SmartFuture<Response> send(Request request, ResponseMapper<Response> mapper) {
+        SmartFuture<Response> send(String actionName, Request request, ResponseMapper<Response> mapper) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             ByteBuf buffer = channel.alloc().ioBuffer();
             try (ByteBufStreamOutput streamOutput = new ByteBufStreamOutput(buffer)) {
-                streamOutput.writeInt(request.actionType().id());
+                streamOutput.writeText(actionName);
                 request.writeTo(streamOutput);
             } catch (IOException e) {
                 logger.error("error write", e);

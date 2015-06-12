@@ -1,7 +1,6 @@
 package org.mitallast.queue.action.queues.create;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -40,11 +39,6 @@ public class CreateQueueRequest extends ActionRequest {
 
     public void setSettings(Settings settings) {
         this.settings = settings;
-    }
-
-    @Override
-    public ActionType actionType() {
-        return ActionType.QUEUES_CREATE;
     }
 
     @Override

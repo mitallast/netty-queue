@@ -5,7 +5,5 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 
 public abstract class ActionRequest implements Streamable {
 
-    public abstract ActionType actionType();
-
     public abstract ValidationBuilder validate();
 }

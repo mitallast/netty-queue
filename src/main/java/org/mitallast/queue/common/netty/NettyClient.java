@@ -2,8 +2,9 @@ package org.mitallast.queue.common.netty;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.settings.Settings;
+
+import java.io.IOException;
 
 public abstract class NettyClient extends NettyClientBootstrap {
 
@@ -22,7 +23,7 @@ public abstract class NettyClient extends NettyClientBootstrap {
     }
 
     @Override
-    protected void doStart() throws QueueException {
+    protected void doStart() throws IOException {
         super.doStart();
         try {
             channel = connect(host, port).sync().channel();
@@ -36,7 +37,7 @@ public abstract class NettyClient extends NettyClientBootstrap {
     }
 
     @Override
-    protected void doStop() throws QueueException {
+    protected void doStop() throws IOException {
         channel.close().awaitUninterruptibly();
         super.doStop();
     }

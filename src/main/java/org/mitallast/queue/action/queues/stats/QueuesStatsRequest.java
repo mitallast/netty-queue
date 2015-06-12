@@ -1,7 +1,6 @@
 package org.mitallast.queue.action.queues.stats;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
@@ -9,10 +8,6 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 import java.io.IOException;
 
 public class QueuesStatsRequest extends ActionRequest {
-    @Override
-    public ActionType actionType() {
-        return ActionType.QUEUES_STATS;
-    }
 
     @Override
     public ValidationBuilder validate() {

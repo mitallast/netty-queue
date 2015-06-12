@@ -1,6 +1,5 @@
 package org.mitallast.queue.action.queue.transactional.push;
 
-import org.mitallast.queue.action.ActionType;
 import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
@@ -12,11 +11,6 @@ import java.util.UUID;
 public class TransactionPushRequest extends PushRequest {
 
     private UUID transactionUUID;
-
-    @Override
-    public ActionType actionType() {
-        return ActionType.TRANSACTION_PUSH;
-    }
 
     @Override
     public ValidationBuilder validate() {

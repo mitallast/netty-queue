@@ -1,7 +1,6 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableList;
-import org.mitallast.queue.cluster.DiscoveryNode;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.event.EventListener;
 
@@ -46,7 +45,7 @@ public interface TransportService {
             this.connectedNode = connectedNode;
         }
 
-        public DiscoveryNode getConnectedNode() {
+        public DiscoveryNode getDisconnectedNode() {
             return connectedNode;
         }
     }

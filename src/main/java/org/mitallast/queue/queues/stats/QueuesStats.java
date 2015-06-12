@@ -24,9 +24,7 @@ public class QueuesStats implements Streamable {
         int size = stream.readInt();
         queueStats = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            QueueStats queueStat = new QueueStats();
-            queueStat.readFrom(stream);
-            queueStats.add(queueStat);
+            queueStats.add(stream.readStreamable(QueueStats::new));
         }
     }
 
@@ -37,7 +35,7 @@ public class QueuesStats implements Streamable {
         } else {
             stream.writeInt(queueStats.size());
             for (QueueStats queueStat : queueStats) {
-                queueStat.writeTo(stream);
+                stream.writeStreamable(queueStat);
             }
         }
     }

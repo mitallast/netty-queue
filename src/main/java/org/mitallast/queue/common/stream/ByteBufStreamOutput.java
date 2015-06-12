@@ -2,11 +2,8 @@ package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
 
 public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOutput {
 
@@ -15,52 +12,6 @@ public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOu
     public ByteBufStreamOutput(ByteBuf buffer) {
         super(buffer);
         this.buffer = buffer;
-    }
-
-    @Override
-    public void writeText(String text) throws IOException {
-        writeUTF(text);
-    }
-
-    @Override
-    public void writeTextOrNull(String text) throws IOException {
-        if (text == null || text.isEmpty()) {
-            writeBoolean(false);
-        } else {
-            writeBoolean(true);
-            writeUTF(text);
-        }
-    }
-
-    @Override
-    public void writeUUID(UUID uuid) throws IOException {
-        writeLong(uuid.getMostSignificantBits());
-        writeLong(uuid.getLeastSignificantBits());
-    }
-
-    @Override
-    public void writeUUIDOrNull(UUID uuid) throws IOException {
-        if (uuid != null) {
-            writeLong(uuid.getMostSignificantBits());
-            writeLong(uuid.getLeastSignificantBits());
-        } else {
-            writeLong(0);
-            writeLong(0);
-        }
-    }
-
-    @Override
-    public <Type extends Enum<Type>> void writeEnum(Type type) throws IOException {
-        writeInt(type.ordinal());
-    }
-
-    @Override
-    public <Type extends Enum<Type>> void writeEnumOrNull(Type type) throws IOException {
-        if (type != null) {
-            writeInt(type.ordinal());
-        } else {
-            writeInt(-1);
-        }
     }
 
     @Override
@@ -106,31 +57,6 @@ public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOu
                 this.buffer.ensureWritable(length);
                 buffer.readBytes(this.buffer, length);
             }
-        }
-    }
-
-    @Override
-    public void writeSettings(Settings settings) throws IOException {
-        Map<String, String> asMap = settings.getAsMap();
-        buffer.writeInt(asMap.size());
-        for (Map.Entry<String, String> entry : asMap.entrySet()) {
-            writeUTF(entry.getKey());
-            writeUTF(entry.getValue());
-        }
-    }
-
-    @Override
-    public <T extends Streamable> void writeStreamable(T streamable) throws IOException {
-        streamable.writeTo(this);
-    }
-
-    @Override
-    public <T extends Streamable> void writeStreamableOrNull(T streamable) throws IOException {
-        if (streamable != null) {
-            writeBoolean(true);
-            streamable.writeTo(this);
-        } else {
-            writeBoolean(false);
         }
     }
 }

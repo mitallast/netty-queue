@@ -6,6 +6,8 @@ import org.mitallast.queue.common.settings.Settings;
 import java.io.Closeable;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface StreamOutput extends DataOutput, Closeable {
@@ -43,17 +45,45 @@ public interface StreamOutput extends DataOutput, Closeable {
     @Override
     void writeDouble(double v) throws IOException;
 
-    void writeText(String text) throws IOException;
+    default void writeText(String text) throws IOException {
+        writeUTF(text);
+    }
 
-    void writeTextOrNull(String text) throws IOException;
+    default void writeTextOrNull(String text) throws IOException {
+        if (text == null || text.isEmpty()) {
+            writeBoolean(false);
+        } else {
+            writeBoolean(true);
+            writeUTF(text);
+        }
+    }
 
-    void writeUUID(UUID uuid) throws IOException;
+    default void writeUUID(UUID uuid) throws IOException {
+        writeLong(uuid.getMostSignificantBits());
+        writeLong(uuid.getLeastSignificantBits());
+    }
 
-    void writeUUIDOrNull(UUID uuid) throws IOException;
+    default void writeUUIDOrNull(UUID uuid) throws IOException {
+        if (uuid != null) {
+            writeLong(uuid.getMostSignificantBits());
+            writeLong(uuid.getLeastSignificantBits());
+        } else {
+            writeLong(0);
+            writeLong(0);
+        }
+    }
 
-    <Type extends Enum<Type>> void writeEnum(Type type) throws IOException;
+    default <Type extends Enum<Type>> void writeEnum(Type type) throws IOException {
+        writeInt(type.ordinal());
+    }
 
-    <Type extends Enum<Type>> void writeEnumOrNull(Type type) throws IOException;
+    default <Type extends Enum<Type>> void writeEnumOrNull(Type type) throws IOException {
+        if (type != null) {
+            writeInt(type.ordinal());
+        } else {
+            writeInt(-1);
+        }
+    }
 
     void writeByteBuf(ByteBuf buffer) throws IOException;
 
@@ -63,9 +93,35 @@ public interface StreamOutput extends DataOutput, Closeable {
 
     void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException;
 
-    void writeSettings(Settings settings) throws IOException;
+    default void writeSettings(Settings settings) throws IOException {
+        Map<String, String> asMap = settings.getAsMap();
+        writeInt(asMap.size());
+        for (Map.Entry<String, String> entry : asMap.entrySet()) {
+            writeUTF(entry.getKey());
+            writeUTF(entry.getValue());
+        }
+    }
 
-    <T extends Streamable> void writeStreamable(T streamable) throws IOException;
+    default <T extends Streamable> void writeStreamable(T streamable) throws IOException {
+        streamable.writeTo(this);
+    }
 
-    <T extends Streamable> void writeStreamableOrNull(T streamable) throws IOException;
+    default <T extends Streamable> void writeStreamableOrNull(T streamable) throws IOException {
+        if (streamable != null) {
+            writeBoolean(true);
+            streamable.writeTo(this);
+        } else {
+            writeBoolean(false);
+        }
+    }
+
+    default <T extends Streamable> void writeStreamableList(List<T> streamable) throws IOException {
+        int size = streamable.size();
+        writeInt(size);
+        if (size > 0) {
+            for (T t : streamable) {
+                t.writeTo(this);
+            }
+        }
+    }
 }

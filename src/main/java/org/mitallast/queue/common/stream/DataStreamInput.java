@@ -3,6 +3,7 @@ package org.mitallast.queue.common.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
+import java.io.Closeable;
 import java.io.DataInput;
 import java.io.IOException;
 
@@ -113,5 +114,8 @@ public class DataStreamInput implements StreamInput {
 
     @Override
     public void close() throws IOException {
+        if (input instanceof Closeable) {
+            ((Closeable) input).close();
+        }
     }
 }

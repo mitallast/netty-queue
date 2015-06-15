@@ -10,9 +10,9 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.common.stream.ByteBufStreamOutput;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streams;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ public class TransportController extends AbstractComponent {
                     @Override
                     public void onResponse(ActionResponse actionResponse) {
                         ByteBuf buffer = Unpooled.buffer();
-                        try (StreamOutput streamOutput = new ByteBufStreamOutput(buffer)) {
+                        try (StreamOutput streamOutput = Streams.output(buffer)) {
                             actionResponse.writeTo(streamOutput);
 
                         } catch (Throwable e) {

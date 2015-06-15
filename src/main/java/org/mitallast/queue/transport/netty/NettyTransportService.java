@@ -16,7 +16,8 @@ import org.mitallast.queue.common.event.EventListener;
 import org.mitallast.queue.common.event.EventObserver;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.common.stream.ByteBufStreamOutput;
+import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streams;
 import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.client.TransportQueueClient;
 import org.mitallast.queue.transport.netty.client.TransportQueuesClient;
@@ -260,9 +261,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             ByteBuf buffer = channel.alloc().ioBuffer();
-            try (ByteBufStreamOutput streamOutput = new ByteBufStreamOutput(buffer)) {
-                streamOutput.writeText(actionName);
-                request.writeTo(streamOutput);
+            try (StreamOutput stream = Streams.output(buffer)) {
+                stream.writeText(actionName);
+                stream.writeStreamable(request);
             } catch (IOException e) {
                 logger.error("error write", e);
                 return Futures.future(e);

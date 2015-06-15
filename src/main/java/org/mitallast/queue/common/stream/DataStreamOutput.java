@@ -2,6 +2,7 @@ package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
 
+import java.io.Closeable;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -147,6 +148,11 @@ public class DataStreamOutput implements StreamOutput {
 
     @Override
     public void close() throws IOException {
-
+        if (output instanceof Closeable) {
+            ((Closeable) output).close();
+        }
+        if (outputStream != null) {
+            outputStream.close();
+        }
     }
 }

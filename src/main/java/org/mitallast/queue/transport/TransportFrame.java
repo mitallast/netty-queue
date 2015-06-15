@@ -2,10 +2,9 @@ package org.mitallast.queue.transport;
 
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.Version;
-import org.mitallast.queue.common.stream.ByteBufStreamInput;
-import org.mitallast.queue.common.stream.ByteBufStreamOutput;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streams;
 
 public class TransportFrame {
 
@@ -23,6 +22,50 @@ public class TransportFrame {
         this.request = request;
         this.size = size;
         this.content = content;
+    }
+
+    public Version getVersion() {
+        return version;
+    }
+
+    public void setVersion(Version version) {
+        this.version = version;
+    }
+
+    public long getRequest() {
+        return request;
+    }
+
+    public void setRequest(long request) {
+        this.request = request;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public ByteBuf getContent() {
+        return content;
+    }
+
+    public void setContent(ByteBuf content) {
+        this.content = content;
+    }
+
+    public StreamInput inputStream() {
+        return Streams.input(content, size);
+    }
+
+    public StreamOutput outputStream() {
+        return Streams.output(content);
+    }
+
+    public boolean isPing() {
+        return size <= 0;
     }
 
     public static TransportFrame of() {
@@ -59,49 +102,5 @@ public class TransportFrame {
 
     public static TransportFrame of(TransportFrame frame) {
         return of(frame.getVersion(), frame.getRequest(), frame.getSize(), frame.getContent());
-    }
-
-    public Version getVersion() {
-        return version;
-    }
-
-    public void setVersion(Version version) {
-        this.version = version;
-    }
-
-    public long getRequest() {
-        return request;
-    }
-
-    public void setRequest(long request) {
-        this.request = request;
-    }
-
-    public int getSize() {
-        return size;
-    }
-
-    public void setSize(int size) {
-        this.size = size;
-    }
-
-    public ByteBuf getContent() {
-        return content;
-    }
-
-    public void setContent(ByteBuf content) {
-        this.content = content;
-    }
-
-    public StreamInput inputStream() {
-        return new ByteBufStreamInput(content, size);
-    }
-
-    public StreamOutput outputStream() {
-        return new ByteBufStreamOutput(content);
-    }
-
-    public boolean isPing() {
-        return size <= 0;
     }
 }

@@ -114,6 +114,32 @@ public interface StreamInput extends DataInput, Closeable {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    default <T extends Streamable> Class<T> readClass() throws IOException {
+        String className = readText();
+        try {
+            return (Class<T>) getClass().getClassLoader().loadClass(className);
+        } catch (ClassNotFoundException e) {
+            throw new IOException(e);
+        }
+    }
+
+    default <T extends Streamable> T readStreamable(Class<T> streamableClass) throws IOException {
+        final T streamable;
+        try {
+            streamable = streamableClass.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new IOException(e);
+        }
+        streamable.readFrom(this);
+        return streamable;
+    }
+
+    default <T extends Streamable> T readStreamable() throws IOException {
+        Class<T> streamableClass = readClass();
+        return readStreamable(streamableClass);
+    }
+
     default <T extends Streamable> T readStreamable(Supplier<T> factory) throws IOException {
         T streamable = factory.get();
         streamable.readFrom(this);

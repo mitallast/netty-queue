@@ -257,12 +257,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
         @Override
         public <Request extends ActionRequest, Response extends ActionResponse>
-        SmartFuture<Response> send(String actionName, Request request, ResponseMapper<Response> mapper) {
+        SmartFuture<Response> send(Request request, ResponseMapper<Response> mapper) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             ByteBuf buffer = channel.alloc().ioBuffer();
             try (StreamOutput stream = Streams.output(buffer)) {
-                stream.writeText(actionName);
+                stream.writeClass(request.getClass());
                 stream.writeStreamable(request);
             } catch (IOException e) {
                 logger.error("error write", e);
@@ -296,6 +296,5 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         public QueueClient queue() {
             return queueClient;
         }
-
     }
 }

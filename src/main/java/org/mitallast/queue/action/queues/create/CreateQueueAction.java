@@ -11,12 +11,11 @@ import java.io.IOException;
 
 public class CreateQueueAction extends AbstractAction<CreateQueueRequest, CreateQueueResponse> {
 
-    public final static String actionName = "internal:queues/create";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public CreateQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -28,10 +27,5 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public CreateQueueRequest createRequest() {
-        return new CreateQueueRequest();
     }
 }

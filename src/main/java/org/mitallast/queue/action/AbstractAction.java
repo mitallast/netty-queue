@@ -9,11 +9,16 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.validation.ValidationException;
 import org.mitallast.queue.transport.TransportController;
 
+import java.lang.reflect.ParameterizedType;
+
 public abstract class AbstractAction<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
 
-    public AbstractAction(Settings settings, String actionName, TransportController controller) {
+    @SuppressWarnings("all")
+    public AbstractAction(Settings settings, TransportController controller) {
         super(settings);
-        controller.registerHandler(actionName, this);
+        Class<Request> requestClass = (Class<Request>) ((ParameterizedType) getClass().getGenericSuperclass())
+            .getActualTypeArguments()[0];
+        controller.registerHandler(requestClass, this);
     }
 
     public SmartFuture<Response> execute(Request request) {
@@ -32,6 +37,4 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
     }
 
     protected abstract void executeInternal(Request request, Listener<Response> listener);
-
-    public abstract Request createRequest();
 }

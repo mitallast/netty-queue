@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class GetAction extends AbstractAction<GetRequest, GetResponse> {
 
-    public final static String actionName = "internal:queue/get";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public GetAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -35,10 +34,5 @@ public class GetAction extends AbstractAction<GetRequest, GetResponse> {
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public GetRequest createRequest() {
-        return new GetRequest();
     }
 }

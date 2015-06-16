@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class TransactionCommitAction extends AbstractAction<TransactionCommitRequest, TransactionCommitResponse> {
 
-    public final static String actionName = "internal:queue/transaction/commit";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public TransactionCommitAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -41,10 +40,5 @@ public class TransactionCommitAction extends AbstractAction<TransactionCommitReq
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public TransactionCommitRequest createRequest() {
-        return new TransactionCommitRequest();
     }
 }

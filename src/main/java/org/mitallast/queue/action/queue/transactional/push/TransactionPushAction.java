@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class TransactionPushAction extends AbstractAction<TransactionPushRequest, TransactionPushResponse> {
 
-    public final static String actionName = "internal:queue/transaction/push";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public TransactionPushAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -44,10 +43,5 @@ public class TransactionPushAction extends AbstractAction<TransactionPushRequest
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public TransactionPushRequest createRequest() {
-        return new TransactionPushRequest();
     }
 }

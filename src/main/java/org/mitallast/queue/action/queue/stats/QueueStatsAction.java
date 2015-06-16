@@ -18,7 +18,7 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
 
     @Inject
     public QueueStatsAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -33,10 +33,5 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public QueueStatsRequest createRequest() {
-        return new QueueStatsRequest();
     }
 }

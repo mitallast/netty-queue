@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class PopAction extends AbstractAction<PopRequest, PopResponse> {
 
-    public final static String actionName = "internal:queue/pop";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public PopAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -35,10 +34,5 @@ public class PopAction extends AbstractAction<PopRequest, PopResponse> {
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public PopRequest createRequest() {
-        return new PopRequest();
     }
 }

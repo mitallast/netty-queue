@@ -12,12 +12,11 @@ import java.io.IOException;
 
 public class QueuesStatsAction extends AbstractAction<QueuesStatsRequest, QueuesStatsResponse> {
 
-    public final static String actionName = "internal:queues/stats";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public QueuesStatsAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -29,10 +28,5 @@ public class QueuesStatsAction extends AbstractAction<QueuesStatsRequest, Queues
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public QueuesStatsRequest createRequest() {
-        return new QueuesStatsRequest();
     }
 }

@@ -12,12 +12,11 @@ import java.io.IOException;
 
 public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, DeleteQueueResponse> {
 
-    public final static String actionName = "internal:queues/delete";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public DeleteQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -31,10 +30,5 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public DeleteQueueRequest createRequest() {
-        return new DeleteQueueRequest();
     }
 }

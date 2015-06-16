@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueResponse> {
 
-    public final static String actionName = "internal:queue/peek";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public PeekQueueAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -35,10 +34,5 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public PeekQueueRequest createRequest() {
-        return new PeekQueueRequest();
     }
 }

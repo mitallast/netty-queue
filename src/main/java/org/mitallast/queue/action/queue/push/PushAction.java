@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class PushAction extends AbstractAction<PushRequest, PushResponse> {
 
-    public final static String actionName = "internal:queue/push";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public PushAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -36,10 +35,5 @@ public class PushAction extends AbstractAction<PushRequest, PushResponse> {
         } catch (QueueMessageUuidDuplicateException | IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public PushRequest createRequest() {
-        return new PushRequest();
     }
 }

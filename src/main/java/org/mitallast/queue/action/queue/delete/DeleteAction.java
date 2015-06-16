@@ -15,12 +15,11 @@ import java.io.IOException;
 
 public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> {
 
-    public final static String actionName = "internal:queue/delete";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public DeleteAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -40,10 +39,5 @@ public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> 
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public DeleteRequest createRequest() {
-        return new DeleteRequest();
     }
 }

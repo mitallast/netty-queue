@@ -14,12 +14,11 @@ import java.io.IOException;
 
 public class TransactionRollbackAction extends AbstractAction<TransactionRollbackRequest, TransactionRollbackResponse> {
 
-    public final static String actionName = "internal:queue/transaction/rollback";
     private final TransactionalQueuesService queuesService;
 
     @Inject
     public TransactionRollbackAction(Settings settings, TransportController controller, TransactionalQueuesService queuesService) {
-        super(settings, actionName, controller);
+        super(settings, controller);
         this.queuesService = queuesService;
     }
 
@@ -41,10 +40,5 @@ public class TransactionRollbackAction extends AbstractAction<TransactionRollbac
         } catch (IOException e) {
             listener.onFailure(e);
         }
-    }
-
-    @Override
-    public TransactionRollbackRequest createRequest() {
-        return new TransactionRollbackRequest();
     }
 }

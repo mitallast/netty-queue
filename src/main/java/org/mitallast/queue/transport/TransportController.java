@@ -16,45 +16,42 @@ import org.mitallast.queue.common.stream.Streams;
 
 import java.io.IOException;
 
-public class TransportController extends AbstractComponent {
+public class TransportController<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
 
-    private volatile ImmutableMap<String, AbstractAction> actionMap = ImmutableMap.of();
+    private volatile ImmutableMap<Class<Request>, AbstractAction<Request, Response>> actionMap = ImmutableMap.of();
 
     @Inject
     public TransportController(Settings settings) {
         super(settings);
     }
 
-    public synchronized void registerHandler(String actionName, AbstractAction action) {
-        actionMap = ImmutableMap.<String, AbstractAction>builder()
+    public synchronized void registerHandler(Class<Request> requestClass, AbstractAction<Request, Response> action) {
+        actionMap = ImmutableMap.<Class<Request>, AbstractAction<Request, Response>>builder()
             .putAll(actionMap)
-            .put(actionName, action)
+            .put(requestClass, action)
             .build();
     }
 
-    @SuppressWarnings("unchecked")
-    public void dispatchRequest(TransportChannel channel, TransportFrame request) throws Exception {
-        try (StreamInput streamInput = request.inputStream()) {
-            String actionName = streamInput.readText();
-            AbstractAction<ActionRequest, ActionResponse> action = actionMap.get(actionName);
+    public void dispatchRequest(TransportChannel channel, TransportFrame requestFrame) throws Exception {
+        try (StreamInput streamInput = requestFrame.inputStream()) {
+            Class<Request> requestClass = streamInput.readClass();
+            Request actionRequest = streamInput.readStreamable(requestClass);
+            AbstractAction<Request, Response> action = actionMap.get(requestClass);
             if (action != null) {
-                ActionRequest actionRequest = action.createRequest();
-                actionRequest.readFrom(streamInput);
-                action.execute(actionRequest, new Listener<ActionResponse>() {
+                action.execute(actionRequest, new Listener<Response>() {
                     @Override
-                    public void onResponse(ActionResponse actionResponse) {
+                    public void onResponse(Response actionResponse) {
                         ByteBuf buffer = Unpooled.buffer();
                         try (StreamOutput streamOutput = Streams.output(buffer)) {
                             actionResponse.writeTo(streamOutput);
-
                         } catch (Throwable e) {
                             onFailure(e);
                             return;
                         }
 
                         TransportFrame response = TransportFrame.of(
-                            request.getVersion(),
-                            request.getRequest(),
+                            requestFrame.getVersion(),
+                            requestFrame.getRequest(),
                             buffer
                         );
                         channel.send(response);

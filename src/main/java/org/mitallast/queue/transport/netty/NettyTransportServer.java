@@ -8,6 +8,8 @@ import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.transport.*;
+import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import org.slf4j.Logger;
@@ -75,12 +77,13 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) throws Exception {
-            if (request.isPing()) {
-                ctx.writeAndFlush(TransportFrame.of(request), ctx.voidPromise());
-                return;
+            if (request instanceof StreamableTransportFrame) {
+                TransportChannel channel = new NettyTransportChannel(ctx);
+                transportController.dispatchRequest(channel, (StreamableTransportFrame) request);
+            } else {
+                // ping request
+                ctx.writeAndFlush(TransportFrame.of(request.request()), ctx.voidPromise());
             }
-            TransportChannel channel = new NettyTransportChannel(ctx);
-            transportController.dispatchRequest(channel, request);
         }
 
         @Override

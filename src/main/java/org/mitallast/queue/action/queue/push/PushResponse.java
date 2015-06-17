@@ -4,14 +4,11 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 import java.util.UUID;
 
 public class PushResponse extends ActionResponse implements Streamable {
-
-    public final static ResponseMapper<PushResponse> mapper = new ResponseMapper<>(PushResponse::new);
 
     private UUID messageUUID;
 

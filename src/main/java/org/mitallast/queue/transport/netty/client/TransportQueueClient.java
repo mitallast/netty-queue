@@ -38,31 +38,31 @@ public class TransportQueueClient implements QueueClient {
 
     @Override
     public SmartFuture<PushResponse> pushRequest(PushRequest request) {
-        return transportClient.send(request, PushResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<PopResponse> popRequest(PopRequest request) {
-        return transportClient.send(request, PopResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
-        return transportClient.send(request, QueueStatsResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<DeleteResponse> deleteRequest(DeleteRequest request) {
-        return transportClient.send(request, DeleteResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<GetResponse> getRequest(GetRequest request) {
-        return transportClient.send(request, GetResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
-        return transportClient.send(request, PeekQueueResponse.mapper);
+        return transportClient.send(request);
     }
 }

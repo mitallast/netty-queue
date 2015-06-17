@@ -3,6 +3,7 @@ package org.mitallast.queue.transport;
 import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.event.EventListener;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
 public interface TransportService {
 

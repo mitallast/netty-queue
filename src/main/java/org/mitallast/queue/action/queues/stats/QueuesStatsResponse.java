@@ -4,13 +4,10 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queues.stats.QueuesStats;
-import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 
 public class QueuesStatsResponse extends ActionResponse {
-
-    public final static ResponseMapper<QueuesStatsResponse> mapper = new ResponseMapper<>(QueuesStatsResponse::new);
 
     private QueuesStats stats;
 

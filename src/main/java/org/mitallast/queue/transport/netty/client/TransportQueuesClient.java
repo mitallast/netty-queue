@@ -20,16 +20,16 @@ public class TransportQueuesClient implements QueuesClient {
 
     @Override
     public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
-        return transportClient.send(request, QueuesStatsResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
-        return transportClient.send(request, CreateQueueResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
-        return transportClient.send(request, DeleteQueueResponse.mapper);
+        return transportClient.send(request);
     }
 }

@@ -4,14 +4,11 @@ import org.mitallast.queue.action.queue.delete.DeleteResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 import java.util.UUID;
 
 public class TransactionDeleteResponse extends DeleteResponse {
-
-    public final static ResponseMapper<TransactionDeleteResponse> mapper = new ResponseMapper<>(TransactionDeleteResponse::new);
 
     private UUID transactionUUID;
     private UUID messageUUID;

@@ -3,7 +3,7 @@ package org.mitallast.queue.transport.netty;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import org.mitallast.queue.transport.TransportChannel;
-import org.mitallast.queue.transport.TransportFrame;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
 public class NettyTransportChannel implements TransportChannel {
 

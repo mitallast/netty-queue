@@ -3,6 +3,7 @@ package org.mitallast.queue.transport;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
 import java.util.ArrayList;
 import java.util.List;

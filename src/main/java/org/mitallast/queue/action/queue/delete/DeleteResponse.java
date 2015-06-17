@@ -4,13 +4,10 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 
 public class DeleteResponse extends ActionResponse {
-
-    public final static ResponseMapper<DeleteResponse> mapper = new ResponseMapper<>(DeleteResponse::new);
 
     private QueueMessage message;
 

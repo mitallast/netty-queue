@@ -24,26 +24,26 @@ public class TransportQueueTransactionalClient implements QueueTransactionalClie
 
     @Override
     public SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) {
-        return transportClient.send(request, TransactionCommitResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) {
-        return transportClient.send(request, TransactionDeleteResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) {
-        return transportClient.send(request, TransactionPopResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) {
-        return transportClient.send(request, TransactionPushResponse.mapper);
+        return transportClient.send(request);
     }
 
     @Override
     public SmartFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) {
-        return transportClient.send(request, TransactionRollbackResponse.mapper);
+        return transportClient.send(request);
     }
 }

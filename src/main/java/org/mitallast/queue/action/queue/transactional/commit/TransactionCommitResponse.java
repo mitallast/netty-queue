@@ -3,14 +3,11 @@ package org.mitallast.queue.action.queue.transactional.commit;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.transport.netty.ResponseMapper;
 
 import java.io.IOException;
 import java.util.UUID;
 
 public class TransactionCommitResponse extends ActionResponse {
-
-    public final static ResponseMapper<TransactionCommitResponse> mapper = new ResponseMapper<>(TransactionCommitResponse::new);
 
     private String queue;
     private UUID transactionUUID;

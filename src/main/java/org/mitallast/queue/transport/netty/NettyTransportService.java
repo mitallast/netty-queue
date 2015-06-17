@@ -3,7 +3,6 @@ package org.mitallast.queue.transport.netty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.util.AttributeKey;
 import org.mitallast.queue.action.ActionRequest;
@@ -16,11 +15,11 @@ import org.mitallast.queue.common.event.EventListener;
 import org.mitallast.queue.common.event.EventObserver;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streams;
 import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.client.TransportQueueClient;
 import org.mitallast.queue.transport.netty.client.TransportQueuesClient;
+import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 
@@ -36,7 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class NettyTransportService extends NettyClientBootstrap implements TransportService {
 
     private final static AttributeKey<AtomicLong> flushCounterAttr = AttributeKey.valueOf("flushCounter");
-    private final static AttributeKey<ConcurrentMap<Long, SmartFuture<TransportFrame>>> responseMapAttr = AttributeKey.valueOf("responseMapAttr");
+    private final static AttributeKey<ConcurrentMap<Long, SmartFuture>> responseMapAttr = AttributeKey.valueOf("responseMapAttr");
     private final ReentrantLock connectionLock;
     private final int channelCount;
     private final TransportServer transportServer;
@@ -63,12 +62,17 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 pipeline.addLast(new TransportFrameEncoder());
                 pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>() {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, TransportFrame response) throws Exception {
-                        SmartFuture<TransportFrame> future = ctx.attr(responseMapAttr).get().remove(response.getRequest());
+                    @SuppressWarnings("unchecked")
+                    protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
+                        SmartFuture future = ctx.attr(responseMapAttr).get().remove(frame.request());
                         if (future == null) {
                             logger.warn("future not found");
                         } else {
-                            future.invoke(response);
+                            if (frame instanceof StreamableTransportFrame) {
+                                future.invoke(((StreamableTransportFrame) frame).message());
+                            } else {
+                                future.invoke(frame);
+                            }
                         }
                     }
 
@@ -84,7 +88,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
     @Override
     protected void doStop() throws IOException {
-        final ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
+        ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         super.doStop();
     }
@@ -180,9 +184,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         if (nodeChannel == null) {
             throw new TransportException("Not connected to node: " + node);
         }
-        Channel channel = nodeChannel.channel((int) frame.getRequest());
-        final SmartFuture<TransportFrame> future = Futures.future();
-        channel.attr(responseMapAttr).get().put(frame.getRequest(), future);
+        Channel channel = nodeChannel.channel((int) frame.request());
+        SmartFuture<TransportFrame> future = Futures.future();
+        channel.attr(responseMapAttr).get().put(frame.request(), future);
         AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
         channelFlushCounter.incrementAndGet();
         channel.write(frame, channel.voidPromise());
@@ -225,10 +229,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
     private class NodeChannel implements TransportClient, Closeable {
         private final AtomicLong channelRequestCounter = new AtomicLong();
-
         private final Channel[] channels;
         private final TransportQueuesClient queuesClient;
-
         private final TransportQueueClient queueClient;
 
         private NodeChannel(Channel[] channels) {
@@ -257,21 +259,14 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
         @Override
         public <Request extends ActionRequest, Response extends ActionResponse>
-        SmartFuture<Response> send(Request request, ResponseMapper<Response> mapper) {
+        SmartFuture<Response> send(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
-            ByteBuf buffer = channel.alloc().ioBuffer();
-            try (StreamOutput stream = Streams.output(buffer)) {
-                stream.writeClass(request.getClass());
-                stream.writeStreamable(request);
-            } catch (IOException e) {
-                logger.error("error write", e);
-                return Futures.future(e);
-            }
+            StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request);
 
-            TransportFrame frame = TransportFrame.of(requestId, buffer);
-            final SmartFuture<TransportFrame> future = Futures.future();
-            channel.attr(responseMapAttr).get().put(frame.getRequest(), future);
+            SmartFuture<Response> future = Futures.future();
+            channel.attr(responseMapAttr).get().put(requestId, future);
+
             AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
             channelFlushCounter.incrementAndGet();
             channel.write(frame, channel.voidPromise());
@@ -280,7 +275,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     channel.flush();
                 }
             });
-            return future.map(mapper);
+            return future;
         }
 
         private Channel channel(int request) {

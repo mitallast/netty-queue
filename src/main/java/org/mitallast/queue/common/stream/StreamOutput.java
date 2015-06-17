@@ -102,7 +102,6 @@ public interface StreamOutput extends DataOutput, Closeable {
         }
     }
 
-    @SuppressWarnings("unchecked")
     default <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
         writeText(streamableClass.getName());
     }

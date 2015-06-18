@@ -12,6 +12,7 @@ import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.stream.StreamModule;
 import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.rest.RestModule;
@@ -32,6 +33,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
 
         ModulesBuilder modules = new ModulesBuilder();
         modules.add(new ComponentModule(this.settings));
+        modules.add(new StreamModule());
         modules.add(new TransactionalQueuesModule());
         modules.add(new ActionModule());
         modules.add(new ClientModule());
@@ -41,18 +43,6 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         injector = modules.createInjector();
 
         logger.info("initialized");
-    }
-
-    private static Settings prepareSettings(Settings settings) {
-        String name = settings.get("node.name");
-        if (Strings.isEmpty(name)) {
-            name = UUIDs.generateRandom().toString().substring(0, 8);
-            settings = ImmutableSettings.builder()
-                .put(settings)
-                .put("node.name", name)
-                .build();
-        }
-        return settings;
     }
 
     @Override
@@ -88,5 +78,17 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     @Override
     protected void doClose() throws IOException {
         injector.getInstance(LifecycleService.class).close();
+    }
+
+    private static Settings prepareSettings(Settings settings) {
+        String name = settings.get("node.name");
+        if (Strings.isEmpty(name)) {
+            name = UUIDs.generateRandom().toString().substring(0, 8);
+            settings = ImmutableSettings.builder()
+                .put(settings)
+                .put("node.name", name)
+                .build();
+        }
+        return settings;
     }
 }

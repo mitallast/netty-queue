@@ -7,6 +7,7 @@ import org.mitallast.queue.Version;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
@@ -18,11 +19,17 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     private final DiscoveryNode discoveryNode;
     private final TransportController transportController;
+    private final StreamService streamService;
 
     @Inject
-    public NettyTransportServer(Settings settings, TransportController transportController) {
+    public NettyTransportServer(
+        Settings settings,
+        TransportController transportController,
+        StreamService streamService
+    ) {
         super(settings, NettyTransportServer.class, TransportModule.class);
         this.transportController = transportController;
+        this.streamService = streamService;
         this.discoveryNode = new DiscoveryNode(
             this.settings.get("node.name"),
             UUIDs.generateRandom(),
@@ -46,7 +53,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         return 10080;
     }
 
-    private static class TransportServerInitializer extends ChannelInitializer<SocketChannel> {
+    private class TransportServerInitializer extends ChannelInitializer<SocketChannel> {
 
         private final TransportServerHandler transportServerHandler;
 
@@ -58,14 +65,14 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {
             ChannelPipeline pipeline = ch.pipeline();
-            pipeline.addLast(new TransportFrameDecoder());
-            pipeline.addLast(new TransportFrameEncoder());
+            pipeline.addLast(new TransportFrameDecoder(streamService));
+            pipeline.addLast(new TransportFrameEncoder(streamService));
             pipeline.addLast(transportServerHandler);
         }
     }
 
     @ChannelHandler.Sharable
-    private static class TransportServerHandler extends SimpleChannelInboundHandler<TransportFrame> {
+    private class TransportServerHandler extends SimpleChannelInboundHandler<TransportFrame> {
 
         private final Logger logger;
         private final TransportController transportController;

@@ -36,5 +36,7 @@ public class ActionModule extends AbstractModule {
         bind(CreateQueueAction.class).asEagerSingleton();
         bind(DeleteQueueAction.class).asEagerSingleton();
         bind(QueuesStatsAction.class).asEagerSingleton();
+
+        bind(ActionStreamInitializer.class).asEagerSingleton();
     }
 }

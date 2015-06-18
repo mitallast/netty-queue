@@ -15,6 +15,7 @@ import org.mitallast.queue.common.event.EventListener;
 import org.mitallast.queue.common.event.EventObserver;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.client.TransportQueueClient;
 import org.mitallast.queue.transport.netty.client.TransportQueuesClient;
@@ -39,14 +40,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock;
     private final int channelCount;
     private final TransportServer transportServer;
+    private final StreamService streamService;
     private final EventObserver<NodeConnectedEvent> nodeConnectedObserver = EventObserver.create();
     private final EventObserver<NodeDisconnectedEvent> nodeDisconnectedObserver = EventObserver.create();
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings, TransportServer transportServer) {
+    public NettyTransportService(Settings settings, TransportServer transportServer, StreamService streamService) {
         super(settings, TransportService.class, TransportModule.class);
         this.transportServer = transportServer;
+        this.streamService = streamService;
         channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
@@ -58,8 +61,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new TransportFrameDecoder());
-                pipeline.addLast(new TransportFrameEncoder());
+                pipeline.addLast(new TransportFrameDecoder(streamService));
+                pipeline.addLast(new TransportFrameEncoder(streamService));
                 pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>() {
                     @Override
                     @SuppressWarnings("unchecked")

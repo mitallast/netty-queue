@@ -6,9 +6,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.settings.ImmutableSettings;
+import org.mitallast.queue.common.stream.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,8 +16,10 @@ public class TransportFrameCodec extends BaseTest {
 
     @Test
     public void testPing() throws Exception {
-        TransportFrameEncoder encoder = new TransportFrameEncoder();
-        TransportFrameDecoder decoder = new TransportFrameDecoder();
+        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        streamService.registerClass(TestStreamable.class, 123);
+        TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
+        TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
         ByteBuf buffer = Unpooled.buffer();
         encoder.encode(null, TransportFrame.of(Version.CURRENT, 123), buffer);
@@ -34,8 +35,10 @@ public class TransportFrameCodec extends BaseTest {
 
     @Test
     public void testStreamable() throws Exception {
-        TransportFrameEncoder encoder = new TransportFrameEncoder();
-        TransportFrameDecoder decoder = new TransportFrameDecoder();
+        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        streamService.registerClass(TestStreamable.class, 123);
+        TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
+        TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
         ByteBuf buffer = Unpooled.buffer();
         encoder.encode(null, StreamableTransportFrame.of(Version.CURRENT, 123, new TestStreamable(123123)), buffer);

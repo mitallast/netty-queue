@@ -93,6 +93,8 @@ public interface StreamOutput extends DataOutput, Closeable {
 
     void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException;
 
+    <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException;
+
     default void writeSettings(Settings settings) throws IOException {
         Map<String, String> asMap = settings.getAsMap();
         writeInt(asMap.size());
@@ -100,10 +102,6 @@ public interface StreamOutput extends DataOutput, Closeable {
             writeUTF(entry.getKey());
             writeUTF(entry.getValue());
         }
-    }
-
-    default <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
-        writeText(streamableClass.getName());
     }
 
     default <T extends Streamable> void writeStreamable(T streamable) throws IOException {

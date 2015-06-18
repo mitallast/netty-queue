@@ -5,8 +5,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.Streams;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,6 +14,12 @@ import java.util.List;
 public class TransportFrameDecoder extends ByteToMessageDecoder {
 
     private final static int HEADER_SIZE = 2 + 4 + 8 + 4;
+
+    private final StreamService streamService;
+
+    public TransportFrameDecoder(StreamService streamService) {
+        this.streamService = streamService;
+    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
@@ -41,7 +47,7 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
                 }
                 buffer.readerIndex(buffer.readerIndex() + HEADER_SIZE);
                 final Streamable message;
-                try (StreamInput input = Streams.input(buffer)) {
+                try (StreamInput input = streamService.input(buffer)) {
                     message = input.readStreamable();
                 }
                 out.add(StreamableTransportFrame.of(version, request, message));

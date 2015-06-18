@@ -98,6 +98,8 @@ public interface StreamInput extends DataInput, Closeable {
 
     ByteBuf readByteBufOrNull() throws IOException;
 
+    <T extends Streamable> Class<T> readClass() throws IOException;
+
     default Settings readSettings() throws IOException {
         int size = readInt();
         if (size == 0) {
@@ -111,16 +113,6 @@ public interface StreamInput extends DataInput, Closeable {
                 );
             }
             return builder.build();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    default <T extends Streamable> Class<T> readClass() throws IOException {
-        String className = readText();
-        try {
-            return (Class<T>) getClass().getClassLoader().loadClass(className);
-        } catch (ClassNotFoundException e) {
-            throw new IOException(e);
         }
     }
 

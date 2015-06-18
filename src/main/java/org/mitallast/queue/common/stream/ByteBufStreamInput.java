@@ -8,14 +8,16 @@ import java.io.IOException;
 
 public class ByteBufStreamInput extends ByteBufInputStream implements StreamInput {
 
+    private final StreamableClassRegistry classRegistry;
     private final ByteBuf buffer;
 
-    public ByteBufStreamInput(ByteBuf buffer) {
-        this(buffer, buffer.readableBytes());
+    public ByteBufStreamInput(StreamableClassRegistry classRegistry, ByteBuf buffer) {
+        this(classRegistry, buffer, buffer.readableBytes());
     }
 
-    public ByteBufStreamInput(ByteBuf buffer, int length) {
+    public ByteBufStreamInput(StreamableClassRegistry classRegistry, ByteBuf buffer, int length) {
         super(buffer, length);
+        this.classRegistry = classRegistry;
         this.buffer = buffer;
     }
 
@@ -35,5 +37,10 @@ public class ByteBufStreamInput extends ByteBufInputStream implements StreamInpu
             return null;
         }
         return buffer.readSlice(size).retain();
+    }
+
+    @Override
+    public <T extends Streamable> Class<T> readClass() throws IOException {
+        return classRegistry.readClass(this);
     }
 }

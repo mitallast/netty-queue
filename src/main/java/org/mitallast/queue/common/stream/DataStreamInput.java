@@ -9,9 +9,11 @@ import java.io.IOException;
 
 public class DataStreamInput implements StreamInput {
 
+    private final StreamableClassRegistry classRegistry;
     private final DataInput input;
 
-    public DataStreamInput(DataInput input) {
+    public DataStreamInput(StreamableClassRegistry classRegistry, DataInput input) {
+        this.classRegistry = classRegistry;
         this.input = input;
     }
 
@@ -110,6 +112,11 @@ public class DataStreamInput implements StreamInput {
         byte[] bytes = new byte[size];
         input.readFully(bytes);
         return Unpooled.wrappedBuffer(bytes);
+    }
+
+    @Override
+    public <T extends Streamable> Class<T> readClass() throws IOException {
+        return classRegistry.readClass(this);
     }
 
     @Override

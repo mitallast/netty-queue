@@ -7,11 +7,29 @@ import java.io.IOException;
 
 public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOutput {
 
+    private final StreamableClassRegistry classRegistry;
     private final ByteBuf buffer;
 
-    public ByteBufStreamOutput(ByteBuf buffer) {
+    public ByteBufStreamOutput(StreamableClassRegistry classRegistry, ByteBuf buffer) {
         super(buffer);
+        this.classRegistry = classRegistry;
         this.buffer = buffer;
+    }
+
+    @Override
+    public void writeBytes(String string) throws IOException {
+        if (buffer.hasArray()) {
+            int length = string.length();
+            buffer.ensureWritable(length);
+            byte[] array = buffer.array();
+            int offset = buffer.arrayOffset() + buffer.writerIndex();
+            for (int i = 0; i < length; i++) {
+                array[offset + i] = (byte) string.charAt(i);
+            }
+            buffer.writerIndex(buffer.writerIndex() + length);
+        } else {
+            super.writeBytes(string);
+        }
     }
 
     @Override
@@ -58,5 +76,10 @@ public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOu
                 buffer.readBytes(this.buffer, length);
             }
         }
+    }
+
+    @Override
+    public <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
+        classRegistry.writeClass(this, streamableClass);
     }
 }

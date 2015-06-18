@@ -9,10 +9,12 @@ import java.io.OutputStream;
 
 public class DataStreamOutput implements StreamOutput {
 
+    private final StreamableClassRegistry classRegistry;
     private final DataOutput output;
     private OutputStream outputStream;
 
-    public DataStreamOutput(DataOutput output) {
+    public DataStreamOutput(StreamableClassRegistry classRegistry, DataOutput output) {
+        this.classRegistry = classRegistry;
         this.output = output;
     }
 
@@ -129,6 +131,11 @@ public class DataStreamOutput implements StreamOutput {
                 buffer.readBytes(outputStream, length);
             }
         }
+    }
+
+    @Override
+    public <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
+        classRegistry.writeClass(this, streamableClass);
     }
 
     @Override

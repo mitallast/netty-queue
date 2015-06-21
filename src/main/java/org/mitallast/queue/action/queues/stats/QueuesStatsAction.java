@@ -24,7 +24,9 @@ public class QueuesStatsAction extends AbstractAction<QueuesStatsRequest, Queues
     protected void executeInternal(QueuesStatsRequest request, Listener<QueuesStatsResponse> listener) {
         try {
             QueuesStats stats = queuesService.stats();
-            listener.onResponse(new QueuesStatsResponse(stats));
+            listener.onResponse(QueuesStatsResponse.builder()
+                .setStats(stats)
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

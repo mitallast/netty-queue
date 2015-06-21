@@ -26,9 +26,10 @@ public class RestDeleteQueueAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        DeleteQueueRequest deleteQueueRequest = new DeleteQueueRequest();
-        deleteQueueRequest.setQueue(request.param("queue").toString());
-        deleteQueueRequest.setReason(request.param("reason").toString());
+        DeleteQueueRequest deleteQueueRequest = DeleteQueueRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .setReason(request.param("reason").toString())
+            .build();
 
         client.queues().deleteQueue(deleteQueueRequest, new Listener<DeleteQueueResponse>() {
             @Override
@@ -36,10 +37,10 @@ public class RestDeleteQueueAction extends BaseRestHandler {
                 if (response.isDeleted()) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));
                 } else {
-                    if (response.getError() instanceof QueueMissingException) {
+                    if (response.error() instanceof QueueMissingException) {
                         session.sendResponse(new StringRestResponse(
                             HttpResponseStatus.NOT_FOUND,
-                            response.getError().getMessage()));
+                            response.error().getMessage()));
                     }
                 }
             }

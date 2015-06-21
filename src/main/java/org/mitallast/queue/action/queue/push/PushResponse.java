@@ -1,39 +1,60 @@
 package org.mitallast.queue.action.queue.push;
 
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 import java.util.UUID;
 
-public class PushResponse extends ActionResponse implements Streamable {
+public class PushResponse implements ActionResponse<PushResponse.Builder, PushResponse> {
+    private final UUID messageUUID;
 
-    private UUID messageUUID;
-
-    public PushResponse() {
-    }
-
-    public PushResponse(UUID messageUUID) {
+    private PushResponse(UUID messageUUID) {
         this.messageUUID = messageUUID;
     }
 
-    public UUID getMessageUUID() {
+    public UUID messageUUID() {
         return messageUUID;
     }
 
-    public void setMessageUUID(UUID messageUUID) {
-        this.messageUUID = messageUUID;
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        messageUUID = stream.readUUID();
+    public static Builder builder() {
+        return new Builder();
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeUUID(messageUUID);
+    public static class Builder implements EntryBuilder<Builder, PushResponse> {
+        private UUID messageUUID;
+
+        @Override
+        public Builder from(PushResponse entry) {
+            messageUUID = entry.messageUUID;
+            return this;
+        }
+
+        public Builder setMessageUUID(UUID messageUUID) {
+            this.messageUUID = messageUUID;
+            return this;
+        }
+
+        @Override
+        public PushResponse build() {
+            return new PushResponse(messageUUID);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            messageUUID = stream.readUUID();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeUUID(messageUUID);
+        }
     }
 }

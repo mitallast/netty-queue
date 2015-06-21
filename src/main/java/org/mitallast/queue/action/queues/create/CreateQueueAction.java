@@ -22,8 +22,8 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
     @Override
     protected void executeInternal(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
         try {
-            queuesService.createQueue(request.getQueue(), request.getSettings());
-            listener.onResponse(new CreateQueueResponse());
+            queuesService.createQueue(request.queue(), request.settings());
+            listener.onResponse(CreateQueueResponse.builder().build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

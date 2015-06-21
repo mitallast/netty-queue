@@ -1,9 +1,10 @@
 package org.mitallast.queue.action;
 
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.builder.Entry;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 
-public abstract class ActionRequest implements Streamable {
+public interface ActionRequest<B extends EntryBuilder<B, E>, E extends ActionRequest<B, E>> extends Entry<B, E> {
 
-    public abstract ValidationBuilder validate();
+    ValidationBuilder validate();
 }

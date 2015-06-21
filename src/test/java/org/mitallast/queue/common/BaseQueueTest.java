@@ -35,21 +35,25 @@ public abstract class BaseQueueTest extends BaseIntegrationTest {
 
     public void createQueue() throws Exception {
         localClient().queues()
-            .createQueue(new CreateQueueRequest(queueName(), ImmutableSettings.EMPTY))
+            .createQueue(CreateQueueRequest.builder()
+                .setQueue(queueName())
+                .setSettings(ImmutableSettings.EMPTY)
+                .build())
             .get();
         assertQueueEmpty();
     }
 
     public PopResponse pop() throws Exception {
-        PopRequest request = new PopRequest();
-        request.setQueue(queueName);
+        PopRequest request = PopRequest.builder()
+            .setQueue(queueName)
+            .build();
         return localClient().queue().popRequest(request).get();
     }
 
     public void assertQueueEmpty() throws Exception {
         QueueStatsResponse response = localClient().queue()
-            .queueStatsRequest(new QueueStatsRequest(queueName()))
+            .queueStatsRequest(QueueStatsRequest.builder().setQueue(queueName()).build())
             .get();
-        assert response.getStats().getSize() == 0 : response.getStats();
+        assert response.stats().getSize() == 0 : response.stats();
     }
 }

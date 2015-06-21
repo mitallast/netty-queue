@@ -1,19 +1,17 @@
 package org.mitallast.queue.action.queue.stats;
 
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class QueueStatsRequest extends ActionRequest {
-    private String queue;
+public class QueueStatsRequest implements ActionRequest<QueueStatsRequest.Builder, QueueStatsRequest> {
+    private final String queue;
 
-    public QueueStatsRequest() {
-    }
-
-    public QueueStatsRequest(String queue) {
+    private QueueStatsRequest(String queue) {
         this.queue = queue;
     }
 
@@ -23,21 +21,46 @@ public class QueueStatsRequest extends ActionRequest {
             .missing("queue", queue);
     }
 
-    public String getQueue() {
+    public String queue() {
         return queue;
     }
 
-    public void setQueue(String queue) {
-        this.queue = queue;
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeTextOrNull(queue);
+    public static Builder builder() {
+        return new Builder();
     }
 
-    @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        queue = stream.readTextOrNull();
+    public static class Builder implements EntryBuilder<Builder, QueueStatsRequest> {
+        private String queue;
+
+        @Override
+        public Builder from(QueueStatsRequest entry) {
+            queue = entry.queue;
+            return this;
+        }
+
+        public Builder setQueue(String queue) {
+            this.queue = queue;
+            return this;
+        }
+
+        @Override
+        public QueueStatsRequest build() {
+            return new QueueStatsRequest(queue);
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeText(queue);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            queue = stream.readText();
+        }
     }
 }

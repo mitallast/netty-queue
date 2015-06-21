@@ -24,13 +24,15 @@ public class GetAction extends AbstractAction<GetRequest, GetResponse> {
 
     @Override
     protected void executeInternal(GetRequest request, Listener<GetResponse> listener) {
-        if (!queuesService.hasQueue(request.getQueue())) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+        if (!queuesService.hasQueue(request.queue())) {
+            listener.onFailure(new QueueMissingException(request.queue()));
         }
-        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.queue());
         try {
-            QueueMessage message = queueService.get(request.getUuid());
-            listener.onResponse(new GetResponse(message));
+            QueueMessage message = queueService.get(request.uuid());
+            listener.onResponse(GetResponse.builder()
+                .setMessage(message)
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

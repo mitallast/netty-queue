@@ -1,13 +1,17 @@
 package org.mitallast.queue.action.queues.stats;
 
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class QueuesStatsRequest extends ActionRequest {
+public class QueuesStatsRequest implements ActionRequest<QueuesStatsRequest.Builder, QueuesStatsRequest> {
+
+    private QueuesStatsRequest() {
+    }
 
     @Override
     public ValidationBuilder validate() {
@@ -15,10 +19,32 @@ public class QueuesStatsRequest extends ActionRequest {
     }
 
     @Override
-    public void readFrom(StreamInput stream) throws IOException {
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder implements EntryBuilder<Builder, QueuesStatsRequest> {
+
+        @Override
+        public Builder from(QueuesStatsRequest entry) {
+            return this;
+        }
+
+        @Override
+        public QueuesStatsRequest build() {
+            return new QueuesStatsRequest();
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+        }
     }
 }

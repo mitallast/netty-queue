@@ -34,24 +34,24 @@ public class RestTransactionPushAction extends BaseRestHandler {
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
 
-        final TransactionPushRequest pushRequest = new TransactionPushRequest();
-        pushRequest.setQueue(request.param("queue").toString());
-        pushRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
+        TransactionPushRequest.Builder builder = TransactionPushRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .setTransactionUUID(UUIDs.fromString(request.param("transaction")));
 
         try (XStreamParser parser = createParser(request.content())) {
             QueueMessage message = new QueueMessage();
             QueueMessageParser.parse(message, parser);
-            pushRequest.setMessage(message);
+            builder.setMessage(message);
         } catch (IOException e) {
             session.sendResponse(e);
             return;
         }
 
-        client.queue().transactional().pushRequest(pushRequest, new Listener<TransactionPushResponse>() {
+        client.queue().transactional().pushRequest(builder.build(), new Listener<TransactionPushResponse>() {
 
             @Override
             public void onResponse(TransactionPushResponse response) {
-                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.getMessageUUID()));
+                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.messageUUID()));
             }
 
             @Override

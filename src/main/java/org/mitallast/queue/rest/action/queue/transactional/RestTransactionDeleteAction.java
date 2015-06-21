@@ -26,16 +26,16 @@ public class RestTransactionDeleteAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        TransactionDeleteRequest deleteRequest = new TransactionDeleteRequest();
-        deleteRequest.setQueue(request.param("queue").toString());
-        deleteRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
+        TransactionDeleteRequest.Builder builder = TransactionDeleteRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .setTransactionUUID(UUIDs.fromString(request.param("transaction")));
 
         CharSequence uuid = request.param("uuid");
         if (uuid != null) {
-            deleteRequest.setMessageUUID(UUIDs.fromString(uuid));
+            builder.setMessageUUID(UUIDs.fromString(uuid));
         }
 
-        client.queue().transactional().deleteRequest(deleteRequest, new Listener<TransactionDeleteResponse>() {
+        client.queue().transactional().deleteRequest(builder.build(), new Listener<TransactionDeleteResponse>() {
             @Override
             public void onResponse(TransactionDeleteResponse deleteResponse) {
                 session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));

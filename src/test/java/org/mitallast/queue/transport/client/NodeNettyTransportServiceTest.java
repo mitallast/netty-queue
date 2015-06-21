@@ -21,9 +21,12 @@ public class NodeNettyTransportServiceTest extends BaseQueueTest {
         transportService.connectToNode(discoveryNode);
 
         PushResponse pushResponse = transportService.client(discoveryNode).queue()
-            .pushRequest(new PushRequest(queueName(), createMessage()))
+            .pushRequest(PushRequest.builder()
+                .setQueue(queueName())
+                .setMessage(createMessage())
+                .build())
             .get();
 
-        Assert.assertNotNull(pushResponse.getMessageUUID());
+        Assert.assertNotNull(pushResponse.messageUUID());
     }
 }

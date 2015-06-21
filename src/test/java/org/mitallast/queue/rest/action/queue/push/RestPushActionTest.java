@@ -78,8 +78,8 @@ public class RestPushActionTest extends BaseTest {
 
         verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
 
-        String queue = captor.getValue().getQueue();
-        QueueMessage queueMessage = captor.getValue().getMessage();
+        String queue = captor.getValue().queue();
+        QueueMessage queueMessage = captor.getValue().message();
         assert "testQueue".equals(queue);
         assert "Hello world".equals(queueMessage.getMessage());
         assert uuid.equals(queueMessage.getUuid());
@@ -112,8 +112,8 @@ public class RestPushActionTest extends BaseTest {
 
         verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
 
-        String queue = captor.getValue().getQueue();
-        QueueMessage queueMessage = captor.getValue().getMessage();
+        String queue = captor.getValue().queue();
+        QueueMessage queueMessage = captor.getValue().message();
         assert "testQueue".equals(queue);
         Assert.assertEquals("{\"title\":\"Hello title\",\"description\":\"Hello description\"}", queueMessage.getMessage());
         assert uuid.equals(queueMessage.getUuid());
@@ -146,8 +146,8 @@ public class RestPushActionTest extends BaseTest {
 
         verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
 
-        String queue = captor.getValue().getQueue();
-        QueueMessage queueMessage = captor.getValue().getMessage();
+        String queue = captor.getValue().queue();
+        QueueMessage queueMessage = captor.getValue().message();
         assert "testQueue".equals(queue);
         assert "[\"Hello title\",\"Hello description\"]".equals(queueMessage.getMessage());
         assert uuid.equals(queueMessage.getUuid());

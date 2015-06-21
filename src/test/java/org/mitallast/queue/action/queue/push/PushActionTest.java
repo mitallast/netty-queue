@@ -33,9 +33,12 @@ public class PushActionTest extends BaseQueueTest {
     private void send(int max) throws Exception {
         for (int i = 0; i < max; i++) {
             QueueMessage message = createMessage();
-            PushRequest request = new PushRequest(queueName(), message);
+            PushRequest request = PushRequest.builder()
+                .setQueue(queueName())
+                .setMessage(message)
+                .build();
             PushResponse response = localClient().queue().pushRequest(request).get();
-            assert response.getMessageUUID().equals(message.getUuid());
+            assert response.messageUUID().equals(message.getUuid());
         }
     }
 }

@@ -11,6 +11,8 @@ import org.mitallast.queue.action.queue.pop.PopRequest;
 import org.mitallast.queue.action.queue.pop.PopResponse;
 import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.action.queue.push.PushResponse;
+import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
+import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.action.queue.transactional.commit.TransactionCommitRequest;
 import org.mitallast.queue.action.queue.transactional.commit.TransactionCommitResponse;
 import org.mitallast.queue.action.queue.transactional.delete.TransactionDeleteRequest;
@@ -21,6 +23,10 @@ import org.mitallast.queue.action.queue.transactional.push.TransactionPushReques
 import org.mitallast.queue.action.queue.transactional.push.TransactionPushResponse;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackRequest;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackResponse;
+import org.mitallast.queue.action.queues.create.CreateQueueRequest;
+import org.mitallast.queue.action.queues.create.CreateQueueResponse;
+import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
+import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.common.stream.StreamService;
@@ -28,38 +34,54 @@ import org.mitallast.queue.common.stream.StreamService;
 public class ActionStreamInitializer {
     @Inject
     public ActionStreamInitializer(StreamService streamService) {
-        int id = 10000;
-        streamService.registerClass(DeleteRequest.class, ++id);
-        streamService.registerClass(DeleteResponse.class, ++id);
+        int id = 1000;
 
-        streamService.registerClass(GetRequest.class, ++id);
-        streamService.registerClass(GetResponse.class, ++id);
+        // queue
 
-        streamService.registerClass(PeekQueueResponse.class, ++id);
-        streamService.registerClass(PeekQueueRequest.class, ++id);
+        streamService.registerClass(DeleteRequest.Builder.class, ++id);
+        streamService.registerClass(DeleteResponse.Builder.class, ++id);
 
-        streamService.registerClass(PopRequest.class, ++id);
-        streamService.registerClass(PopResponse.class, ++id);
+        streamService.registerClass(GetRequest.Builder.class, ++id);
+        streamService.registerClass(GetResponse.Builder.class, ++id);
 
-        streamService.registerClass(PushRequest.class, ++id);
-        streamService.registerClass(PushResponse.class, ++id);
+        streamService.registerClass(PeekQueueResponse.Builder.class, ++id);
+        streamService.registerClass(PeekQueueRequest.Builder.class, ++id);
 
-        streamService.registerClass(QueuesStatsRequest.class, ++id);
-        streamService.registerClass(QueuesStatsResponse.class, ++id);
+        streamService.registerClass(PopRequest.Builder.class, ++id);
+        streamService.registerClass(PopResponse.Builder.class, ++id);
 
-        streamService.registerClass(TransactionCommitRequest.class, ++id);
-        streamService.registerClass(TransactionCommitResponse.class, ++id);
+        streamService.registerClass(PushRequest.Builder.class, ++id);
+        streamService.registerClass(PushResponse.Builder.class, ++id);
 
-        streamService.registerClass(TransactionDeleteRequest.class, ++id);
-        streamService.registerClass(TransactionDeleteResponse.class, ++id);
+        streamService.registerClass(QueueStatsRequest.Builder.class, ++id);
+        streamService.registerClass(QueueStatsResponse.Builder.class, ++id);
 
-        streamService.registerClass(TransactionPopRequest.class, ++id);
-        streamService.registerClass(TransactionPopResponse.class, ++id);
+        // transactional
 
-        streamService.registerClass(TransactionPushRequest.class, ++id);
-        streamService.registerClass(TransactionPushResponse.class, ++id);
+        streamService.registerClass(TransactionCommitRequest.Builder.class, ++id);
+        streamService.registerClass(TransactionCommitResponse.Builder.class, ++id);
 
-        streamService.registerClass(TransactionRollbackRequest.class, ++id);
-        streamService.registerClass(TransactionRollbackResponse.class, ++id);
+        streamService.registerClass(TransactionDeleteRequest.Builder.class, ++id);
+        streamService.registerClass(TransactionDeleteResponse.Builder.class, ++id);
+
+        streamService.registerClass(TransactionPopRequest.Builder.class, ++id);
+        streamService.registerClass(TransactionPopResponse.Builder.class, ++id);
+
+        streamService.registerClass(TransactionPushRequest.Builder.class, ++id);
+        streamService.registerClass(TransactionPushResponse.Builder.class, ++id);
+
+        streamService.registerClass(TransactionRollbackRequest.Builder.class, ++id);
+        streamService.registerClass(TransactionRollbackResponse.Builder.class, ++id);
+
+        // queues
+
+        streamService.registerClass(CreateQueueRequest.Builder.class, ++id);
+        streamService.registerClass(CreateQueueResponse.Builder.class, ++id);
+
+        streamService.registerClass(DeleteQueueRequest.Builder.class, ++id);
+        streamService.registerClass(DeleteQueueResponse.Builder.class, ++id);
+
+        streamService.registerClass(QueuesStatsRequest.Builder.class, ++id);
+        streamService.registerClass(QueuesStatsResponse.Builder.class, ++id);
     }
 }

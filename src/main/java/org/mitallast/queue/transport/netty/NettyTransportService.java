@@ -9,6 +9,7 @@ import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.concurrent.futures.Futures;
 import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.event.EventListener;
@@ -72,7 +73,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                             logger.warn("future not found");
                         } else {
                             if (frame instanceof StreamableTransportFrame) {
-                                future.invoke(((StreamableTransportFrame) frame).message());
+                                EntryBuilder<? extends EntryBuilder, ActionResponse> builder = ((StreamableTransportFrame) frame).message();
+                                future.invoke(builder.build());
                             } else {
                                 future.invoke(frame);
                             }
@@ -265,7 +267,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         SmartFuture<Response> send(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
-            StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request);
+            StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
 
             SmartFuture<Response> future = Futures.future();
             channel.attr(responseMapAttr).get().put(requestId, future);

@@ -24,13 +24,15 @@ public class PopAction extends AbstractAction<PopRequest, PopResponse> {
 
     @Override
     protected void executeInternal(PopRequest request, Listener<PopResponse> listener) {
-        if (!queuesService.hasQueue(request.getQueue())) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+        if (!queuesService.hasQueue(request.queue())) {
+            listener.onFailure(new QueueMissingException(request.queue()));
         }
-        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.queue());
         try {
             QueueMessage message = queueService.lockAndPop();
-            listener.onResponse(new PopResponse(message));
+            listener.onResponse(PopResponse.builder()
+                .setMessage(message)
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

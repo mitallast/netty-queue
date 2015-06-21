@@ -1,6 +1,7 @@
 package org.mitallast.queue.action.queue.transactional.commit;
 
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
@@ -8,43 +9,75 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionCommitRequest extends ActionRequest {
+public class TransactionCommitRequest implements ActionRequest<TransactionCommitRequest.Builder, TransactionCommitRequest> {
+    private final UUID transactionUUID;
+    private final String queue;
 
-    private String queue;
-    private UUID transactionUUID;
+    private TransactionCommitRequest(UUID transactionUUID, String queue) {
+        this.transactionUUID = transactionUUID;
+        this.queue = queue;
+    }
+
+    public String queue() {
+        return queue;
+    }
+
+    public UUID transactionUUID() {
+        return transactionUUID;
+    }
 
     @Override
     public ValidationBuilder validate() {
         return ValidationBuilder.builder()
-            .missing("queue", queue)
-            .missing("transactionUUID", transactionUUID);
-    }
-
-    public String getQueue() {
-        return queue;
-    }
-
-    public void setQueue(String queue) {
-        this.queue = queue;
-    }
-
-    public UUID getTransactionUUID() {
-        return transactionUUID;
-    }
-
-    public void setTransactionUUID(UUID transactionUUID) {
-        this.transactionUUID = transactionUUID;
+            .missing("transactionUUID", transactionUUID)
+            .missing("queue", queue);
     }
 
     @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        queue = stream.readText();
-        transactionUUID = stream.readUUID();
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeText(queue);
-        stream.writeUUID(transactionUUID);
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder implements EntryBuilder<Builder, TransactionCommitRequest> {
+        private UUID transactionUUID;
+        private String queue;
+
+        @Override
+        public Builder from(TransactionCommitRequest entry) {
+            transactionUUID = entry.transactionUUID;
+            queue = entry.queue;
+            return this;
+        }
+
+        public Builder setTransactionUUID(UUID transactionUUID) {
+            this.transactionUUID = transactionUUID;
+            return this;
+        }
+
+        public Builder setQueue(String queue) {
+            this.queue = queue;
+            return this;
+        }
+
+        @Override
+        public TransactionCommitRequest build() {
+            return new TransactionCommitRequest(transactionUUID, queue);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            transactionUUID = stream.readUUID();
+            queue = stream.readText();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeUUID(transactionUUID);
+            stream.writeText(queue);
+        }
     }
 }

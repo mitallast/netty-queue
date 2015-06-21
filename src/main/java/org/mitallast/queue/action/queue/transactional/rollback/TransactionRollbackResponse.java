@@ -1,50 +1,75 @@
 package org.mitallast.queue.action.queue.transactional.rollback;
 
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionRollbackResponse extends ActionResponse {
-
-    private String queue;
+public class TransactionRollbackResponse implements ActionResponse<TransactionRollbackResponse.Builder, TransactionRollbackResponse> {
     private UUID transactionUUID;
+    private String queue;
 
-    public TransactionRollbackResponse() {
-    }
-
-    public TransactionRollbackResponse(String queue, UUID transactionUUID) {
-        this.queue = queue;
+    private TransactionRollbackResponse(UUID transactionUUID, String queue) {
         this.transactionUUID = transactionUUID;
-    }
-
-    public String getQueue() {
-        return queue;
-    }
-
-    public void setQueue(String queue) {
         this.queue = queue;
     }
 
-    public UUID getTransactionUUID() {
+    public UUID transactionUUID() {
         return transactionUUID;
     }
 
-    public void setTransactionUUID(UUID transactionUUID) {
-        this.transactionUUID = transactionUUID;
+    public String queue() {
+        return queue;
     }
 
     @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        queue = stream.readText();
-        transactionUUID = stream.readUUID();
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeText(queue);
-        stream.writeUUID(transactionUUID);
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder implements EntryBuilder<Builder, TransactionRollbackResponse> {
+        private UUID transactionUUID;
+        private String queue;
+
+        @Override
+        public Builder from(TransactionRollbackResponse entry) {
+            transactionUUID = entry.transactionUUID;
+            queue = entry.queue;
+            return this;
+        }
+
+        public Builder setTransactionUUID(UUID transactionUUID) {
+            this.transactionUUID = transactionUUID;
+            return this;
+        }
+
+        public Builder setQueue(String queue) {
+            this.queue = queue;
+            return this;
+        }
+
+        @Override
+        public TransactionRollbackResponse build() {
+            return new TransactionRollbackResponse(transactionUUID, queue);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            transactionUUID = stream.readUUID();
+            queue = stream.readText();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeUUID(transactionUUID);
+            stream.writeText(queue);
+        }
     }
 }

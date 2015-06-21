@@ -23,10 +23,10 @@ public class DeleteQueueAction extends AbstractAction<DeleteQueueRequest, Delete
     @Override
     protected void executeInternal(DeleteQueueRequest request, Listener<DeleteQueueResponse> listener) {
         try {
-            queuesService.deleteQueue(request.getQueue(), request.getReason());
-            listener.onResponse(new DeleteQueueResponse(true));
+            queuesService.deleteQueue(request.queue(), request.reason());
+            listener.onResponse(DeleteQueueResponse.builder().setDeleted(true).build());
         } catch (QueueMissingException e) {
-            listener.onResponse(new DeleteQueueResponse(false, e));
+            listener.onResponse(DeleteQueueResponse.builder().setDeleted(false).setError(e).build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

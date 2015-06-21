@@ -25,14 +25,15 @@ public class RestTransactionRollbackAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, RestSession session) {
-        TransactionRollbackRequest rollbackRequest = new TransactionRollbackRequest();
-        rollbackRequest.setQueue(request.param("queue").toString());
-        rollbackRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
+        TransactionRollbackRequest rollbackRequest = TransactionRollbackRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .setTransactionUUID(UUIDs.fromString(request.param("transaction")))
+            .build();
 
         client.queue().transactional().rollbackRequest(rollbackRequest, new Listener<TransactionRollbackResponse>() {
             @Override
             public void onResponse(TransactionRollbackResponse result) {
-                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.ACCEPTED, result.getTransactionUUID()));
+                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.ACCEPTED, result.transactionUUID()));
             }
 
             @Override

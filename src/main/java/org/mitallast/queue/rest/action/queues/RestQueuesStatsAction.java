@@ -30,7 +30,7 @@ public class RestQueuesStatsAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        client.queues().queuesStatsRequest(new QueuesStatsRequest(), new Listener<QueuesStatsResponse>() {
+        client.queues().queuesStatsRequest(QueuesStatsRequest.builder().build(), new Listener<QueuesStatsResponse>() {
             @Override
             public void onResponse(QueuesStatsResponse response) {
                 ByteBuf buffer = Unpooled.buffer();

@@ -24,22 +24,22 @@ public class TransactionPushAction extends AbstractAction<TransactionPushRequest
 
     @Override
     protected void executeInternal(TransactionPushRequest request, Listener<TransactionPushResponse> listener) {
-        final TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        final TransactionalQueueService queueService = queuesService.queue(request.queue());
         if (queueService == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
-        QueueTransaction transaction = queueService.transaction(request.getTransactionUUID());
+        QueueTransaction transaction = queueService.transaction(request.transactionUUID());
         if (transaction == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
         try {
-            transaction.push(request.getMessage());
-            listener.onResponse(new TransactionPushResponse(
-                request.getTransactionUUID(),
-                request.getMessage().getUuid()
-            ));
+            transaction.push(request.message());
+            listener.onResponse(TransactionPushResponse.builder()
+                .setTransactionUUID(request.transactionUUID())
+                .setMessageUUID(request.message().getUuid())
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

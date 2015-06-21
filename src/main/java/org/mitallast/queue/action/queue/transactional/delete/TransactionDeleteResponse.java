@@ -1,6 +1,7 @@
 package org.mitallast.queue.action.queue.transactional.delete;
 
-import org.mitallast.queue.action.queue.delete.DeleteResponse;
+import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queue.QueueMessage;
@@ -8,47 +9,79 @@ import org.mitallast.queue.queue.QueueMessage;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionDeleteResponse extends DeleteResponse {
+public class TransactionDeleteResponse implements ActionResponse<TransactionDeleteResponse.Builder, TransactionDeleteResponse> {
+    private final UUID transactionUUID;
+    private final UUID messageUUID;
+    private final QueueMessage deleted;
 
-    private UUID transactionUUID;
-    private UUID messageUUID;
-
-    public TransactionDeleteResponse() {
-    }
-
-    public TransactionDeleteResponse(UUID transactionUUID, UUID messageUUID, QueueMessage deleted) {
-        super(deleted);
+    private TransactionDeleteResponse(UUID transactionUUID, UUID messageUUID, QueueMessage deleted) {
         this.transactionUUID = transactionUUID;
         this.messageUUID = messageUUID;
+        this.deleted = deleted;
     }
 
-    public UUID getTransactionUUID() {
+    public UUID transactionUUID() {
         return transactionUUID;
     }
 
-    public void setTransactionUUID(UUID transactionUUID) {
-        this.transactionUUID = transactionUUID;
-    }
-
-    public UUID getMessageUUID() {
+    public UUID messageUUID() {
         return messageUUID;
     }
 
-    public void setMessageUUID(UUID messageUUID) {
-        this.messageUUID = messageUUID;
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        super.readFrom(stream);
-        transactionUUID = stream.readUUID();
-        messageUUID = stream.readUUID();
+    public static Builder builder() {
+        return new Builder();
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        super.writeTo(stream);
-        stream.writeUUID(transactionUUID);
-        stream.writeUUID(messageUUID);
+    public static class Builder implements EntryBuilder<Builder, TransactionDeleteResponse> {
+        private UUID transactionUUID;
+        private UUID messageUUID;
+        private QueueMessage deleted;
+
+        @Override
+        public Builder from(TransactionDeleteResponse entry) {
+            transactionUUID = entry.transactionUUID;
+            messageUUID = entry.messageUUID;
+            deleted = entry.deleted;
+            return this;
+        }
+
+        public Builder setTransactionUUID(UUID transactionUUID) {
+            this.transactionUUID = transactionUUID;
+            return this;
+        }
+
+        public Builder setMessageUUID(UUID messageUUID) {
+            this.messageUUID = messageUUID;
+            return this;
+        }
+
+        public Builder setDeleted(QueueMessage deleted) {
+            this.deleted = deleted;
+            return this;
+        }
+
+        @Override
+        public TransactionDeleteResponse build() {
+            return new TransactionDeleteResponse(transactionUUID, messageUUID, deleted);
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeUUID(transactionUUID);
+            stream.writeUUID(messageUUID);
+            stream.writeStreamable(deleted);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            transactionUUID = stream.readUUID();
+            messageUUID = stream.readUUID();
+            deleted = stream.readStreamable(QueueMessage::new);
+        }
     }
 }

@@ -32,18 +32,19 @@ public class RestTransactionPopAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        TransactionPopRequest popRequest = new TransactionPopRequest();
-        popRequest.setQueue(request.param("queue").toString());
-        popRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
+        TransactionPopRequest popRequest = TransactionPopRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .setTransactionUUID(UUIDs.fromString(request.param("transaction")))
+            .build();
 
         client.queue().transactional().popRequest(popRequest, new Listener<TransactionPopResponse>() {
             @Override
             public void onResponse(TransactionPopResponse popResponse) {
-                if (popResponse.getMessage() == null) {
+                if (popResponse.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
-                QueueMessage queueMessage = popResponse.getMessage();
+                QueueMessage queueMessage = popResponse.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {

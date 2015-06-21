@@ -32,24 +32,23 @@ public class RestPushAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
-
-        final PushRequest pushRequest = new PushRequest();
-        pushRequest.setQueue(request.param("queue").toString());
+        PushRequest.Builder builder = PushRequest.builder()
+            .setQueue(request.param("queue").toString());
 
         try (XStreamParser parser = createParser(request.content())) {
             QueueMessage message = new QueueMessage();
             QueueMessageParser.parse(message, parser);
-            pushRequest.setMessage(message);
+            builder.setMessage(message);
         } catch (IOException e) {
             session.sendResponse(e);
             return;
         }
 
-        client.queue().pushRequest(pushRequest, new Listener<PushResponse>() {
+        client.queue().pushRequest(builder.build(), new Listener<PushResponse>() {
 
             @Override
             public void onResponse(PushResponse response) {
-                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.getMessageUUID()));
+                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.messageUUID()));
             }
 
             @Override

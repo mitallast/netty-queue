@@ -13,7 +13,7 @@ import org.mitallast.queue.rest.RestSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import static io.netty.handler.codec.http.HttpHeaders.Values.KEEP_ALIVE;
+import static io.netty.handler.codec.http.HttpHeaderValues.KEEP_ALIVE;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 public class HttpSession implements RestSession {

@@ -25,19 +25,22 @@ public class TransactionPopAction extends AbstractAction<TransactionPopRequest, 
 
     @Override
     protected void executeInternal(TransactionPopRequest request, Listener<TransactionPopResponse> listener) {
-        final TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        final TransactionalQueueService queueService = queuesService.queue(request.queue());
         if (queueService == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
-        QueueTransaction transaction = queueService.transaction(request.getTransactionUUID());
+        QueueTransaction transaction = queueService.transaction(request.transactionUUID());
         if (transaction == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
         try {
             QueueMessage message = transaction.pop();
-            listener.onResponse(new TransactionPopResponse(request.getTransactionUUID(), message));
+            listener.onResponse(TransactionPopResponse.builder()
+                .setTransactionUUID(request.transactionUUID())
+                .setMessage(message)
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

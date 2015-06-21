@@ -25,23 +25,23 @@ public class TransactionDeleteAction extends AbstractAction<TransactionDeleteReq
 
     @Override
     protected void executeInternal(TransactionDeleteRequest request, Listener<TransactionDeleteResponse> listener) {
-        final TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        final TransactionalQueueService queueService = queuesService.queue(request.queue());
         if (queueService == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
-        QueueTransaction transaction = queueService.transaction(request.getTransactionUUID());
+        QueueTransaction transaction = queueService.transaction(request.transactionUUID());
         if (transaction == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
         try {
-            QueueMessage deleted = transaction.delete(request.getMessageUUID());
-            listener.onResponse(new TransactionDeleteResponse(
-                request.getTransactionUUID(),
-                request.getMessageUUID(),
-                deleted
-            ));
+            QueueMessage deleted = transaction.delete(request.messageUUID());
+            listener.onResponse(TransactionDeleteResponse.builder().
+                setTransactionUUID(request.transactionUUID())
+                .setMessageUUID(request.messageUUID())
+                .setDeleted(deleted)
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

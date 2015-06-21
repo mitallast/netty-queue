@@ -5,6 +5,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
@@ -29,7 +30,9 @@ public class TransportController<Request extends ActionRequest, Response extends
     }
 
     public void dispatchRequest(TransportChannel channel, StreamableTransportFrame requestFrame) throws Exception {
-        Request actionRequest = requestFrame.message();
+        EntryBuilder<? extends EntryBuilder, Request> builder = requestFrame.message();
+        Request actionRequest = builder.build();
+
         AbstractAction<Request, Response> action = actionMap.get(actionRequest.getClass());
         if (action != null) {
             action.execute(actionRequest, new Listener<Response>() {
@@ -38,7 +41,7 @@ public class TransportController<Request extends ActionRequest, Response extends
                     StreamableTransportFrame response = StreamableTransportFrame.of(
                         requestFrame.version(),
                         requestFrame.request(),
-                        actionResponse
+                        actionResponse.toBuilder()
                     );
                     channel.send(response);
                 }

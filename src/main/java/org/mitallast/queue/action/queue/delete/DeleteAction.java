@@ -25,16 +25,16 @@ public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> 
 
     @Override
     protected void executeInternal(DeleteRequest request, Listener<DeleteResponse> listener) {
-        if (!queuesService.hasQueue(request.getQueue())) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+        if (!queuesService.hasQueue(request.queue())) {
+            listener.onFailure(new QueueMissingException(request.queue()));
         }
-        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.queue());
         try {
-            QueueMessage message = queueService.unlockAndDelete(request.getMessageUUID());
+            QueueMessage message = queueService.unlockAndDelete(request.messageUUID());
             if (message != null) {
-                listener.onResponse(new DeleteResponse(message));
+                listener.onResponse(DeleteResponse.builder().setMessage(message).build());
             } else {
-                listener.onFailure(new QueueMessageNotFoundException(request.getMessageUUID()));
+                listener.onFailure(new QueueMessageNotFoundException(request.messageUUID()));
             }
         } catch (IOException e) {
             listener.onFailure(e);

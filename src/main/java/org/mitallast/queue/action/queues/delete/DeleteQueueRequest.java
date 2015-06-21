@@ -1,33 +1,28 @@
 package org.mitallast.queue.action.queues.delete;
 
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class DeleteQueueRequest extends ActionRequest {
-    private String queue;
-    private String reason;
+public class DeleteQueueRequest implements ActionRequest<DeleteQueueRequest.Builder, DeleteQueueRequest> {
+    private final String queue;
+    private final String reason;
 
-    public DeleteQueueRequest() {
+    private DeleteQueueRequest(String queue, String reason) {
+        this.queue = queue;
+        this.reason = reason;
     }
 
-    public String getQueue() {
+    public String queue() {
         return queue;
     }
 
-    public void setQueue(String queue) {
-        this.queue = queue;
-    }
-
-    public String getReason() {
+    public String reason() {
         return reason;
-    }
-
-    public void setReason(String reason) {
-        this.reason = reason;
     }
 
     @Override
@@ -38,14 +33,50 @@ public class DeleteQueueRequest extends ActionRequest {
     }
 
     @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        queue = stream.readTextOrNull();
-        reason = stream.readTextOrNull();
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeTextOrNull(queue);
-        stream.writeTextOrNull(reason);
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder implements EntryBuilder<Builder, DeleteQueueRequest> {
+        private String queue;
+        private String reason;
+
+        @Override
+        public Builder from(DeleteQueueRequest entry) {
+            queue = entry.queue;
+            reason = entry.reason;
+            return this;
+        }
+
+        public Builder setQueue(String queue) {
+            this.queue = queue;
+            return this;
+        }
+
+        public Builder setReason(String reason) {
+            this.reason = reason;
+            return this;
+        }
+
+        @Override
+        public DeleteQueueRequest build() {
+            return new DeleteQueueRequest(queue, reason);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            queue = stream.readText();
+            reason = stream.readText();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeText(queue);
+            stream.writeText(reason);
+        }
     }
 }

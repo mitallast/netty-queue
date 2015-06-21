@@ -30,12 +30,13 @@ public class RestQueueStatsAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        QueueStatsRequest queueStatsRequest = new QueueStatsRequest();
-        queueStatsRequest.setQueue(request.param("queue").toString());
+        QueueStatsRequest queueStatsRequest = QueueStatsRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .build();
         client.queue().queueStatsRequest(queueStatsRequest, new Listener<QueueStatsResponse>() {
             @Override
             public void onResponse(QueueStatsResponse queueStatsResponse) {
-                QueueStats queueStats = queueStatsResponse.getStats();
+                QueueStats queueStats = queueStatsResponse.stats();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {

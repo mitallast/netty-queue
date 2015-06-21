@@ -31,17 +31,17 @@ public class RestPopAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        PopRequest popRequest = new PopRequest();
-        popRequest.setQueue(request.param("queue").toString());
-
+        PopRequest popRequest = PopRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .build();
         client.queue().popRequest(popRequest, new Listener<PopResponse>() {
             @Override
             public void onResponse(PopResponse popResponse) {
-                if (popResponse.getMessage() == null) {
+                if (popResponse.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
-                QueueMessage queueMessage = popResponse.getMessage();
+                QueueMessage queueMessage = popResponse.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {

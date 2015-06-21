@@ -24,13 +24,15 @@ public class PeekQueueAction extends AbstractAction<PeekQueueRequest, PeekQueueR
 
     @Override
     protected void executeInternal(PeekQueueRequest request, Listener<PeekQueueResponse> listener) {
-        if (!queuesService.hasQueue(request.getQueue())) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+        if (!queuesService.hasQueue(request.queue())) {
+            listener.onFailure(new QueueMissingException(request.queue()));
         }
-        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.queue());
         try {
             QueueMessage message = queueService.peek();
-            listener.onResponse(new PeekQueueResponse(message));
+            listener.onResponse(PeekQueueResponse.builder()
+                .setMessage(message)
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

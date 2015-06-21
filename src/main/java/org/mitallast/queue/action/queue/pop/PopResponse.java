@@ -1,38 +1,61 @@
 package org.mitallast.queue.action.queue.pop;
 
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
 
-public class PopResponse extends ActionResponse {
+public class PopResponse implements ActionResponse<PopResponse.Builder, PopResponse> {
 
-    private QueueMessage message;
+    private final QueueMessage message;
 
-    public PopResponse() {
-    }
-
-    public PopResponse(QueueMessage message) {
+    private PopResponse(QueueMessage message) {
         this.message = message;
     }
 
-    public QueueMessage getMessage() {
+    public QueueMessage message() {
         return message;
     }
 
-    public void setMessage(QueueMessage message) {
-        this.message = message;
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        message = stream.readStreamableOrNull(QueueMessage::new);
+    public static Builder builder() {
+        return new Builder();
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamableOrNull(message);
+    public static class Builder implements EntryBuilder<Builder, PopResponse> {
+        private QueueMessage message;
+
+        @Override
+        public Builder from(PopResponse entry) {
+            message = entry.message;
+            return this;
+        }
+
+        public Builder setMessage(QueueMessage message) {
+            this.message = message;
+            return this;
+        }
+
+        @Override
+        public PopResponse build() {
+            return new PopResponse(message);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            message = stream.readStreamableOrNull(QueueMessage::new);
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeStreamableOrNull(message);
+        }
     }
 }

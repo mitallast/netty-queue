@@ -26,14 +26,15 @@ public class RestTransactionCommitAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, RestSession session) {
-        TransactionCommitRequest commitRequest = new TransactionCommitRequest();
-        commitRequest.setQueue(request.param("queue").toString());
-        commitRequest.setTransactionUUID(UUIDs.fromString(request.param("transaction")));
+        TransactionCommitRequest commitRequest = TransactionCommitRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .setTransactionUUID(UUIDs.fromString(request.param("transaction")))
+            .build();
 
         client.queue().transactional().commitRequest(commitRequest, new Listener<TransactionCommitResponse>() {
             @Override
             public void onResponse(TransactionCommitResponse result) {
-                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.ACCEPTED, result.getTransactionUUID()));
+                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.ACCEPTED, result.transactionUUID()));
             }
 
             @Override

@@ -24,19 +24,22 @@ public class TransactionRollbackAction extends AbstractAction<TransactionRollbac
 
     @Override
     protected void executeInternal(TransactionRollbackRequest request, Listener<TransactionRollbackResponse> listener) {
-        final TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        final TransactionalQueueService queueService = queuesService.queue(request.queue());
         if (queueService == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
-        QueueTransaction transaction = queueService.transaction(request.getTransactionUUID());
+        QueueTransaction transaction = queueService.transaction(request.transactionUUID());
         if (transaction == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
         try {
             transaction.rollback();
-            listener.onResponse(new TransactionRollbackResponse(request.getQueue(), request.getTransactionUUID()));
+            listener.onResponse(TransactionRollbackResponse.builder()
+                .setTransactionUUID(request.transactionUUID())
+                .setQueue(request.queue())
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

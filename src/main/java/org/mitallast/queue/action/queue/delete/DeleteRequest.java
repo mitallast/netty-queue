@@ -1,6 +1,7 @@
 package org.mitallast.queue.action.queue.delete;
 
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
@@ -8,25 +9,22 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 import java.io.IOException;
 import java.util.UUID;
 
-public class DeleteRequest extends ActionRequest {
+public class DeleteRequest implements ActionRequest<DeleteRequest.Builder, DeleteRequest> {
 
-    private String queue;
-    private UUID messageUUID;
+    private final String queue;
+    private final UUID messageUUID;
 
-    public String getQueue() {
+    private DeleteRequest(String queue, UUID messageUUID) {
+        this.queue = queue;
+        this.messageUUID = messageUUID;
+    }
+
+    public String queue() {
         return queue;
     }
 
-    public void setQueue(String queue) {
-        this.queue = queue;
-    }
-
-    public UUID getMessageUUID() {
+    public UUID messageUUID() {
         return messageUUID;
-    }
-
-    public void setMessageUUID(UUID messageUUID) {
-        this.messageUUID = messageUUID;
     }
 
     @Override
@@ -37,14 +35,50 @@ public class DeleteRequest extends ActionRequest {
     }
 
     @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        queue = stream.readTextOrNull();
-        messageUUID = stream.readUUIDOrNull();
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeTextOrNull(queue);
-        stream.writeUUIDOrNull(messageUUID);
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder implements EntryBuilder<Builder, DeleteRequest> {
+        private String queue;
+        private UUID messageUUID;
+
+        @Override
+        public Builder from(DeleteRequest entry) {
+            queue = entry.queue;
+            messageUUID = entry.messageUUID;
+            return this;
+        }
+
+        public Builder setQueue(String queue) {
+            this.queue = queue;
+            return this;
+        }
+
+        public Builder setMessageUUID(UUID messageUUID) {
+            this.messageUUID = messageUUID;
+            return this;
+        }
+
+        @Override
+        public DeleteRequest build() {
+            return new DeleteRequest(queue, messageUUID);
+        }
+
+        @Override
+        public void readFrom(StreamInput stream) throws IOException {
+            queue = stream.readTextOrNull();
+            messageUUID = stream.readUUIDOrNull();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeTextOrNull(queue);
+            stream.writeUUIDOrNull(messageUUID);
+        }
     }
 }

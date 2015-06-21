@@ -31,17 +31,18 @@ public class RestPeekQueueAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        PeekQueueRequest peekQueueRequest = new PeekQueueRequest();
-        peekQueueRequest.setQueue(request.param("queue").toString());
+        PeekQueueRequest peekQueueRequest = PeekQueueRequest.builder()
+            .setQueue(request.param("queue").toString())
+            .build();
 
         client.queue().peekQueueRequest(peekQueueRequest, new Listener<PeekQueueResponse>() {
             @Override
             public void onResponse(PeekQueueResponse peekQueueResponse) {
-                if (peekQueueResponse.getMessage() == null) {
+                if (peekQueueResponse.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
-                QueueMessage queueMessage = peekQueueResponse.getMessage();
+                QueueMessage queueMessage = peekQueueResponse.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {

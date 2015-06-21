@@ -1,6 +1,7 @@
 package org.mitallast.queue.action;
 
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.builder.Entry;
+import org.mitallast.queue.common.builder.EntryBuilder;
 
-abstract public class ActionResponse implements Streamable {
+public interface ActionResponse<B extends EntryBuilder<B, E>, E extends ActionResponse<B, E>> extends Entry<B, E> {
 }

@@ -12,8 +12,6 @@ import org.mitallast.queue.transport.TransportController;
 import java.io.IOException;
 
 public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueStatsResponse> {
-
-    public final static String actionName = "internal:queue/stats";
     private TransactionalQueuesService queuesService;
 
     @Inject
@@ -24,12 +22,14 @@ public class QueueStatsAction extends AbstractAction<QueueStatsRequest, QueueSta
 
     @Override
     protected void executeInternal(QueueStatsRequest request, Listener<QueueStatsResponse> listener) {
-        if (!queuesService.hasQueue(request.getQueue())) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+        if (!queuesService.hasQueue(request.queue())) {
+            listener.onFailure(new QueueMissingException(request.queue()));
         }
-        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.queue());
         try {
-            listener.onResponse(new QueueStatsResponse(queueService.stats()));
+            listener.onResponse(QueueStatsResponse.builder()
+                .setStats(queueService.stats())
+                .build());
         } catch (IOException e) {
             listener.onFailure(e);
         }

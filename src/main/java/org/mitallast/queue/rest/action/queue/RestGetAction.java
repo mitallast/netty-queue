@@ -32,21 +32,21 @@ public class RestGetAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        GetRequest getRequest = new GetRequest();
-        getRequest.setQueue(request.param("queue").toString());
+        GetRequest.Builder builder = GetRequest.builder();
+        builder.setQueue(request.param("queue").toString());
         CharSequence uuid = request.param("uuid");
         if (uuid != null) {
-            getRequest.setUuid(UUIDs.fromString(uuid));
+            builder.setUuid(UUIDs.fromString(uuid));
         }
 
-        client.queue().getRequest(getRequest, new Listener<GetResponse>() {
+        client.queue().getRequest(builder.build(), new Listener<GetResponse>() {
             @Override
             public void onResponse(GetResponse getResponse) {
-                if (getResponse.getMessage() == null) {
+                if (getResponse.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NOT_FOUND));
                     return;
                 }
-                QueueMessage queueMessage = getResponse.getMessage();
+                QueueMessage queueMessage = getResponse.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {

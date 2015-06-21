@@ -24,14 +24,16 @@ public class PushAction extends AbstractAction<PushRequest, PushResponse> {
 
     @Override
     protected void executeInternal(PushRequest request, Listener<PushResponse> listener) {
-        TransactionalQueueService queueService = queuesService.queue(request.getQueue());
+        TransactionalQueueService queueService = queuesService.queue(request.queue());
         if (queueService == null) {
-            listener.onFailure(new QueueMissingException(request.getQueue()));
+            listener.onFailure(new QueueMissingException(request.queue()));
             return;
         }
         try {
-            queueService.push(request.getMessage());
-            listener.onResponse(new PushResponse(request.getMessage().getUuid()));
+            queueService.push(request.message());
+            listener.onResponse(PushResponse.builder()
+                .setMessageUUID(request.message().getUuid())
+                .build());
         } catch (QueueMessageUuidDuplicateException | IOException e) {
             listener.onFailure(e);
         }

@@ -26,14 +26,15 @@ public class RestDeleteAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(final RestRequest request, final RestSession session) {
-        DeleteRequest deleteRequest = new DeleteRequest();
-        deleteRequest.setQueue(request.param("queue").toString());
+        DeleteRequest.Builder builder = DeleteRequest.builder();
+        builder.setQueue(request.param("queue").toString());
+
         CharSequence uuid = request.param("uuid");
         if (uuid != null) {
-            deleteRequest.setMessageUUID(UUIDs.fromString(uuid));
+            builder.setMessageUUID(UUIDs.fromString(uuid));
         }
 
-        client.queue().deleteRequest(deleteRequest, new Listener<DeleteResponse>() {
+        client.queue().deleteRequest(builder.build(), new Listener<DeleteResponse>() {
             @Override
             public void onResponse(DeleteResponse deleteResponse) {
                 session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));

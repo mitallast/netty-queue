@@ -83,7 +83,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
             if (request instanceof StreamableTransportFrame) {
                 TransportChannel channel = new NettyTransportChannel(ctx);
                 transportController.dispatchRequest(channel, (StreamableTransportFrame) request);

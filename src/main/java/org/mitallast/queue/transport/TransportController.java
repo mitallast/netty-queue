@@ -11,6 +11,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 public class TransportController<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
 
@@ -28,27 +29,32 @@ public class TransportController<Request extends ActionRequest, Response extends
             .build();
     }
 
-    public void dispatchRequest(TransportChannel channel, StreamableTransportFrame requestFrame) throws Exception {
+    public void dispatchRequest(TransportChannel channel, StreamableTransportFrame requestFrame) {
         EntryBuilder<? extends EntryBuilder, Request> builder = requestFrame.message();
         Request actionRequest = builder.build();
+        dispatchRequest(actionRequest).whenComplete((actionResponse, error) -> {
+            if (error == null) {
+                StreamableTransportFrame response = StreamableTransportFrame.of(
+                    requestFrame.version(),
+                    requestFrame.request(),
+                    actionResponse.toBuilder()
+                );
+                channel.send(response);
+            } else {
+                logger.error("error", error);
+                channel.close();
+            }
+        });
+    }
 
-        AbstractAction<Request, Response> action = actionMap.get(actionRequest.getClass());
+    public CompletableFuture<Response> dispatchRequest(Request request) {
+        AbstractAction<Request, Response> action = actionMap.get(request.getClass());
         if (action != null) {
-            action.execute(actionRequest).whenComplete((actionResponse, error) -> {
-                if (error == null) {
-                    StreamableTransportFrame response = StreamableTransportFrame.of(
-                        requestFrame.version(),
-                        requestFrame.request(),
-                        actionResponse.toBuilder()
-                    );
-                    channel.send(response);
-                } else {
-                    logger.error("error", error);
-                    channel.close();
-                }
-            });
+            return action.execute(request);
         } else {
-            throw new IOException("Action not found");
+            CompletableFuture<Response> future = new CompletableFuture<>();
+            future.completeExceptionally(new IOException("Action not found"));
+            return future;
         }
     }
 }

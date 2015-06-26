@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.netty.codec;
 
+import com.google.common.base.Preconditions;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.stream.Streamable;
 
@@ -8,6 +9,7 @@ public class StreamableTransportFrame extends TransportFrame {
 
     protected StreamableTransportFrame(Version version, long request, Streamable message) {
         super(version, request);
+        Preconditions.checkNotNull(message);
         this.message = message;
     }
 

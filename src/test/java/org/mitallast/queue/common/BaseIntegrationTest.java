@@ -39,7 +39,7 @@ public class BaseIntegrationTest extends BaseTest {
             .forEach(InternalNode::close);
     }
 
-    private Settings settings() throws Exception {
+    protected Settings settings() throws Exception {
         nodeCounter++;
         return ImmutableSettings.builder()
             .put("node.name", "node" + nodeCounter)

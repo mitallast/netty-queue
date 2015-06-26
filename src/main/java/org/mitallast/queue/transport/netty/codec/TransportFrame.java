@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport.netty.codec;
 
+import com.google.common.base.Preconditions;
 import org.mitallast.queue.Version;
 
 public class TransportFrame {
@@ -7,6 +8,7 @@ public class TransportFrame {
     private final long request;
 
     protected TransportFrame(Version version, long request) {
+        Preconditions.checkNotNull(version);
         this.version = version;
         this.request = request;
     }

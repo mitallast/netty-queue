@@ -10,8 +10,6 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.common.builder.EntryBuilder;
-import org.mitallast.queue.common.event.EventListener;
-import org.mitallast.queue.common.event.EventObserver;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
@@ -30,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -40,19 +39,22 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock;
     private final int channelCount;
     private final TransportServer transportServer;
+    private final TransportController transportController;
     private final StreamService streamService;
-    private final EventObserver<NodeConnectedEvent> nodeConnectedObserver = EventObserver.create();
-    private final EventObserver<NodeDisconnectedEvent> nodeDisconnectedObserver = EventObserver.create();
+    private final List<TransportListener> listeners = new CopyOnWriteArrayList<>();
+    private final LocalNodeChannel localNodeChannel;
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings, TransportServer transportServer, StreamService streamService) {
+    public NettyTransportService(Settings settings, TransportServer transportServer, TransportController transportController, StreamService streamService) {
         super(settings, TransportService.class, TransportModule.class);
         this.transportServer = transportServer;
+        this.transportController = transportController;
         this.streamService = streamService;
         channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
+        localNodeChannel = new LocalNodeChannel();
     }
 
     @Override
@@ -105,10 +107,13 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     @Override
     public void connectToNode(DiscoveryNode node) {
         if (!lifecycle.started()) {
-            throw new IllegalStateException("can't add nodes to a stopped transport");
+            throw new IllegalStateException("can't add nodes to stopped transport");
         }
         if (node == null) {
-            throw new TransportException("can't connect to a null node");
+            throw new TransportException("can't connect to null node");
+        }
+        if (node.equals(localNode())) {
+            throw new TransportException("can't connect to local node");
         }
         boolean connected = false;
         connectionLock.lock();
@@ -142,7 +147,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         } finally {
             connectionLock.unlock();
             if (connected) {
-                nodeConnectedObserver.triggerEvent(new NodeConnectedEvent(node));
+                listeners.forEach(listener -> listener.connected(node));
             }
         }
     }
@@ -150,7 +155,10 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     @Override
     public void disconnectFromNode(DiscoveryNode node) {
         if (node == null) {
-            throw new TransportException("can't disconnect to a null node");
+            throw new TransportException("can't disconnect from null node");
+        }
+        if (node.equals(localNode())) {
+            throw new TransportException("can't disconnect from local node");
         }
         boolean disconnected = false;
         connectionLock.lock();
@@ -172,7 +180,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         } finally {
             connectionLock.unlock();
             if (disconnected) {
-                nodeDisconnectedObserver.triggerEvent(new NodeDisconnectedEvent(node));
+                listeners.forEach(listener -> listener.disconnected(node));
             }
         }
     }
@@ -183,52 +191,74 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    public CompletableFuture<TransportFrame> sendRequest(DiscoveryNode node, TransportFrame frame) {
-        NodeChannel nodeChannel = connectedNodes.get(node);
-        if (nodeChannel == null) {
-            throw new TransportException("Not connected to node: " + node);
-        }
-        Channel channel = nodeChannel.channel((int) frame.request());
-        CompletableFuture<TransportFrame> future = new CompletableFuture<>();
-        channel.attr(responseMapAttr).get().put(frame.request(), future);
-        AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
-        channelFlushCounter.incrementAndGet();
-        channel.write(frame, channel.voidPromise());
-        channel.pipeline().lastContext().executor().execute(() -> {
-            if (channelFlushCounter.decrementAndGet() == 0) {
-                channel.flush();
-            }
-        });
-        return future;
-    }
-
-    @Override
     public TransportClient client(DiscoveryNode node) {
-        NodeChannel nodeChannel = connectedNodes.get(node);
-        if (nodeChannel == null) {
-            throw new TransportException("Not connected to node: " + node);
+        if (node.equals(localNode())) {
+            return localNodeChannel;
+        } else {
+            NodeChannel nodeChannel = connectedNodes.get(node);
+            if (nodeChannel == null) {
+                throw new TransportException("Not connected to node: " + node);
+            }
+            return nodeChannel;
         }
-        return nodeChannel;
     }
 
     @Override
-    public void addNodeConnectedListener(EventListener<NodeConnectedEvent> listener) {
-        nodeConnectedObserver.addListener(listener);
+    public void addListener(TransportListener listener) {
+        listeners.add(listener);
     }
 
     @Override
-    public void removeNodeConnectedListener(EventListener<NodeConnectedEvent> listener) {
-        nodeConnectedObserver.removeListener(listener);
+    public void removeListener(TransportListener listener) {
+        listeners.remove(listener);
     }
 
-    @Override
-    public void addNodeDisconnectedListener(EventListener<NodeDisconnectedEvent> listener) {
-        nodeDisconnectedObserver.addListener(listener);
-    }
+    private class LocalNodeChannel implements TransportClient {
 
-    @Override
-    public void removeNodeDisconnectedListener(EventListener<NodeDisconnectedEvent> listener) {
-        nodeDisconnectedObserver.removeListener(listener);
+        private final TransportQueueClient queueClient;
+        private final TransportQueuesClient queuesClient;
+
+        private LocalNodeChannel() {
+            this.queueClient = new TransportQueueClient(this);
+            this.queuesClient = new TransportQueuesClient(this);
+        }
+
+        @Override
+        public CompletableFuture<TransportFrame> send(TransportFrame frame) {
+            CompletableFuture<TransportFrame> future = new CompletableFuture<>();
+            if (frame instanceof StreamableTransportFrame) {
+                transportController.dispatchRequest(new TransportChannel() {
+                    @Override
+                    public void send(TransportFrame response) {
+                        future.complete(response);
+                    }
+
+                    @Override
+                    public void close() {
+                        future.completeExceptionally(new IOException("closed"));
+                    }
+                }, (StreamableTransportFrame) frame);
+            } else {
+                future.complete(TransportFrame.of(frame.request()));
+            }
+            return future;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
+            return transportController.dispatchRequest(request);
+        }
+
+        @Override
+        public QueueClient queue() {
+            return queueClient;
+        }
+
+        @Override
+        public QueuesClient queues() {
+            return queuesClient;
+        }
     }
 
     private class NodeChannel implements TransportClient, Closeable {
@@ -262,6 +292,24 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
+        public CompletableFuture<TransportFrame> send(TransportFrame frame) {
+            Channel channel = channel((int) frame.request());
+            CompletableFuture<TransportFrame> future = new CompletableFuture<>();
+            channel.attr(responseMapAttr).get().put(frame.request(), future);
+            AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
+            channelFlushCounter.incrementAndGet();
+            channel.write(frame, channel.voidPromise());
+            channel.pipeline().lastContext().executor().execute(() -> {
+                if (channelFlushCounter.decrementAndGet() == 0) {
+                    if (channel.isOpen()) {
+                        channel.flush();
+                    }
+                }
+            });
+            return future;
+        }
+
+        @Override
         public <Request extends ActionRequest, Response extends ActionResponse>
         CompletableFuture<Response> send(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
@@ -276,7 +324,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             channel.write(frame, channel.voidPromise());
             channel.pipeline().lastContext().executor().execute(() -> {
                 if (channelFlushCounter.decrementAndGet() == 0) {
-                    channel.flush();
+                    if (channel.isOpen()) {
+                        channel.flush();
+                    }
                 }
             });
             return future;

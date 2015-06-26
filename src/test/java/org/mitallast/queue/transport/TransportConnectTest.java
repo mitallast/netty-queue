@@ -10,5 +10,10 @@ public class TransportConnectTest extends BaseIntegrationTest {
     public void test() throws Exception {
         InternalNode node1 = createNode();
         InternalNode node2 = createNode();
+
+        node1.injector().getInstance(TransportService.class).connectToNode(node2.localNode());
+        node2.injector().getInstance(TransportService.class).connectToNode(node1.localNode());
+
+        Thread.sleep(Long.MAX_VALUE);
     }
 }

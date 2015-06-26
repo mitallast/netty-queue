@@ -1,10 +1,6 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableList;
-import org.mitallast.queue.common.event.EventListener;
-import org.mitallast.queue.transport.netty.codec.TransportFrame;
-
-import java.util.concurrent.CompletableFuture;
 
 public interface TransportService {
 
@@ -16,39 +12,9 @@ public interface TransportService {
 
     ImmutableList<DiscoveryNode> connectedNodes();
 
-    CompletableFuture<TransportFrame> sendRequest(DiscoveryNode node, TransportFrame frame);
-
     TransportClient client(DiscoveryNode node);
 
-    void addNodeConnectedListener(EventListener<NodeConnectedEvent> listener);
+    void addListener(TransportListener listener);
 
-    void removeNodeConnectedListener(EventListener<NodeConnectedEvent> listener);
-
-    void addNodeDisconnectedListener(EventListener<NodeDisconnectedEvent> listener);
-
-    void removeNodeDisconnectedListener(EventListener<NodeDisconnectedEvent> listener);
-
-    public class NodeConnectedEvent {
-        private final DiscoveryNode connectedNode;
-
-        public NodeConnectedEvent(DiscoveryNode connectedNode) {
-            this.connectedNode = connectedNode;
-        }
-
-        public DiscoveryNode getConnectedNode() {
-            return connectedNode;
-        }
-    }
-
-    public class NodeDisconnectedEvent {
-        private final DiscoveryNode connectedNode;
-
-        public NodeDisconnectedEvent(DiscoveryNode connectedNode) {
-            this.connectedNode = connectedNode;
-        }
-
-        public DiscoveryNode getDisconnectedNode() {
-            return connectedNode;
-        }
-    }
+    void removeListener(TransportListener listener);
 }

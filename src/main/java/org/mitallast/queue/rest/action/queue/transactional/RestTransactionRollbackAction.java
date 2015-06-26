@@ -4,10 +4,8 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackRequest;
-import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
@@ -30,15 +28,11 @@ public class RestTransactionRollbackAction extends BaseRestHandler {
             .setTransactionUUID(UUIDs.fromString(request.param("transaction")))
             .build();
 
-        client.queue().transactional().rollbackRequest(rollbackRequest, new Listener<TransactionRollbackResponse>() {
-            @Override
-            public void onResponse(TransactionRollbackResponse result) {
-                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.ACCEPTED, result.transactionUUID()));
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+        client.queue().transactional().rollbackRequest(rollbackRequest).whenComplete((response, error) -> {
+            if (error == null) {
+                session.sendResponse(new UUIDRestResponse(HttpResponseStatus.ACCEPTED, response.transactionUUID()));
+            } else {
+                session.sendResponse(error);
             }
         });
     }

@@ -4,20 +4,16 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.transactional.push.TransactionPushRequest;
-import org.mitallast.queue.action.queue.transactional.push.TransactionPushResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamParser;
 import org.mitallast.queue.queue.QueueMessage;
-import org.mitallast.queue.queue.QueueMessageUuidDuplicateException;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.action.support.QueueMessageParser;
-import org.mitallast.queue.rest.response.StringRestResponse;
 import org.mitallast.queue.rest.response.UUIDRestResponse;
 
 import java.io.IOException;
@@ -47,20 +43,11 @@ public class RestTransactionPushAction extends BaseRestHandler {
             return;
         }
 
-        client.queue().transactional().pushRequest(builder.build(), new Listener<TransactionPushResponse>() {
-
-            @Override
-            public void onResponse(TransactionPushResponse response) {
+        client.queue().transactional().pushRequest(builder.build()).whenComplete((response, error) -> {
+            if (error == null) {
                 session.sendResponse(new UUIDRestResponse(HttpResponseStatus.CREATED, response.messageUUID()));
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                if (e instanceof QueueMessageUuidDuplicateException) {
-                    session.sendResponse(new StringRestResponse(HttpResponseStatus.CONFLICT, "Message already exists"));
-                } else {
-                    session.sendResponse(e);
-                }
+            } else {
+                session.sendResponse(error);
             }
         });
     }

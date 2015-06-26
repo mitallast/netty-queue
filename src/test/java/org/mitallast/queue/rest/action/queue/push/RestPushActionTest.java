@@ -9,7 +9,6 @@ import org.mitallast.queue.action.queue.push.PushRequest;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -26,8 +25,9 @@ import org.mockito.MockitoAnnotations;
 import java.io.IOException;
 import java.util.UUID;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class RestPushActionTest extends BaseTest {
     @Mock
@@ -76,7 +76,7 @@ public class RestPushActionTest extends BaseTest {
 
         restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
+        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture());
 
         String queue = captor.getValue().queue();
         QueueMessage queueMessage = captor.getValue().message();
@@ -110,7 +110,7 @@ public class RestPushActionTest extends BaseTest {
 
         restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
+        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture());
 
         String queue = captor.getValue().queue();
         QueueMessage queueMessage = captor.getValue().message();
@@ -144,7 +144,7 @@ public class RestPushActionTest extends BaseTest {
 
         restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture(), any(Listener.class));
+        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture());
 
         String queue = captor.getValue().queue();
         QueueMessage queueMessage = captor.getValue().message();

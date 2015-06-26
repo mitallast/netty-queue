@@ -17,7 +17,8 @@ import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollba
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackRequest;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackResponse;
 import org.mitallast.queue.client.QueueTransactionalClient;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+
+import java.util.concurrent.CompletableFuture;
 
 public class LocalQueueTransactionalClient implements QueueTransactionalClient {
 
@@ -42,27 +43,27 @@ public class LocalQueueTransactionalClient implements QueueTransactionalClient {
     }
 
     @Override
-    public SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) {
+    public CompletableFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) {
         return commitAction.execute(request);
     }
 
     @Override
-    public SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) {
+    public CompletableFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) {
         return deleteAction.execute(request);
     }
 
     @Override
-    public SmartFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) {
+    public CompletableFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) {
         return popAction.execute(request);
     }
 
     @Override
-    public SmartFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) {
+    public CompletableFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) {
         return pushAction.execute(request);
     }
 
     @Override
-    public SmartFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) {
+    public CompletableFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) {
         return rollbackAction.execute(request);
     }
 }

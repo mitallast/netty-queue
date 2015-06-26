@@ -2,12 +2,12 @@ package org.mitallast.queue.action.queues.create;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
 import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 public class CreateQueueAction extends AbstractAction<CreateQueueRequest, CreateQueueResponse> {
 
@@ -20,12 +20,12 @@ public class CreateQueueAction extends AbstractAction<CreateQueueRequest, Create
     }
 
     @Override
-    protected void executeInternal(CreateQueueRequest request, Listener<CreateQueueResponse> listener) {
+    protected void executeInternal(CreateQueueRequest request, CompletableFuture<CreateQueueResponse> listener) {
         try {
             queuesService.createQueue(request.queue(), request.settings());
-            listener.onResponse(CreateQueueResponse.builder().build());
+            listener.complete(CreateQueueResponse.builder().build());
         } catch (IOException e) {
-            listener.onFailure(e);
+            listener.completeExceptionally(e);
         }
     }
 }

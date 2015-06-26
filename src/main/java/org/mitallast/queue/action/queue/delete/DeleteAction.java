@@ -2,7 +2,6 @@ package org.mitallast.queue.action.queue.delete;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queue.QueueMessage;
 import org.mitallast.queue.queue.transactional.TransactionalQueueService;
@@ -12,6 +11,7 @@ import org.mitallast.queue.queues.transactional.TransactionalQueuesService;
 import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> {
 
@@ -24,20 +24,21 @@ public class DeleteAction extends AbstractAction<DeleteRequest, DeleteResponse> 
     }
 
     @Override
-    protected void executeInternal(DeleteRequest request, Listener<DeleteResponse> listener) {
+    protected void executeInternal(DeleteRequest request, CompletableFuture<DeleteResponse> listener) {
         if (!queuesService.hasQueue(request.queue())) {
-            listener.onFailure(new QueueMissingException(request.queue()));
+            listener.completeExceptionally(new QueueMissingException(request.queue()));
+            return;
         }
         TransactionalQueueService queueService = queuesService.queue(request.queue());
         try {
             QueueMessage message = queueService.unlockAndDelete(request.messageUUID());
             if (message != null) {
-                listener.onResponse(DeleteResponse.builder().setMessage(message).build());
+                listener.complete(DeleteResponse.builder().setMessage(message).build());
             } else {
-                listener.onFailure(new QueueMessageNotFoundException(request.messageUUID()));
+                listener.completeExceptionally(new QueueMessageNotFoundException(request.messageUUID()));
             }
         } catch (IOException e) {
-            listener.onFailure(e);
+            listener.completeExceptionally(e);
         }
     }
 }

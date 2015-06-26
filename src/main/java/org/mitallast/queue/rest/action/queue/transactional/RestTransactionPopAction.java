@@ -6,10 +6,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.transactional.pop.TransactionPopRequest;
-import org.mitallast.queue.action.queue.transactional.pop.TransactionPopResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -37,14 +35,13 @@ public class RestTransactionPopAction extends BaseRestHandler {
             .setTransactionUUID(UUIDs.fromString(request.param("transaction")))
             .build();
 
-        client.queue().transactional().popRequest(popRequest, new Listener<TransactionPopResponse>() {
-            @Override
-            public void onResponse(TransactionPopResponse popResponse) {
-                if (popResponse.message() == null) {
+        client.queue().transactional().popRequest(popRequest).whenComplete((response, error) -> {
+            if (error == null) {
+                if (response.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
-                QueueMessage queueMessage = popResponse.message();
+                QueueMessage queueMessage = response.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {
@@ -54,11 +51,8 @@ public class RestTransactionPopAction extends BaseRestHandler {
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+            } else {
+                session.sendResponse(error);
             }
         });
     }

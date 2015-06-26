@@ -6,9 +6,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.peek.PeekQueueRequest;
-import org.mitallast.queue.action.queue.peek.PeekQueueResponse;
 import org.mitallast.queue.client.Client;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -35,14 +33,13 @@ public class RestPeekQueueAction extends BaseRestHandler {
             .setQueue(request.param("queue").toString())
             .build();
 
-        client.queue().peekQueueRequest(peekQueueRequest, new Listener<PeekQueueResponse>() {
-            @Override
-            public void onResponse(PeekQueueResponse peekQueueResponse) {
-                if (peekQueueResponse.message() == null) {
+        client.queue().peekQueueRequest(peekQueueRequest).whenComplete((response, error) -> {
+            if (error == null) {
+                if (response.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NO_CONTENT));
                     return;
                 }
-                QueueMessage queueMessage = peekQueueResponse.message();
+                QueueMessage queueMessage = response.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {
@@ -52,11 +49,8 @@ public class RestPeekQueueAction extends BaseRestHandler {
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+            } else {
+                session.sendResponse(error);
             }
         });
     }

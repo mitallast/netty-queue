@@ -10,4 +10,6 @@ public interface TransportChannel {
     ByteBuf ioBuffer();
 
     ByteBuf heapBuffer();
+
+    void close();
 }

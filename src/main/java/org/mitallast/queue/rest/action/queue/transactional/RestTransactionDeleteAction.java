@@ -4,10 +4,8 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.transactional.delete.TransactionDeleteRequest;
-import org.mitallast.queue.action.queue.transactional.delete.TransactionDeleteResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
@@ -35,15 +33,11 @@ public class RestTransactionDeleteAction extends BaseRestHandler {
             builder.setMessageUUID(UUIDs.fromString(uuid));
         }
 
-        client.queue().transactional().deleteRequest(builder.build(), new Listener<TransactionDeleteResponse>() {
-            @Override
-            public void onResponse(TransactionDeleteResponse deleteResponse) {
+        client.queue().transactional().deleteRequest(builder.build()).whenComplete((response, error) -> {
+            if (error == null) {
                 session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+            } else {
+                session.sendResponse(error);
             }
         });
     }

@@ -10,38 +10,18 @@ import org.mitallast.queue.action.queue.transactional.push.TransactionPushReques
 import org.mitallast.queue.action.queue.transactional.push.TransactionPushResponse;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackRequest;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackResponse;
-import org.mitallast.queue.common.concurrent.Listener;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+
+import java.util.concurrent.CompletableFuture;
 
 public interface QueueTransactionalClient {
 
-    SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request);
+    CompletableFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request);
 
-    default void commitRequest(TransactionCommitRequest request, Listener<TransactionCommitResponse> listener) {
-        commitRequest(request).on(listener);
-    }
+    CompletableFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request);
 
-    SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request);
+    CompletableFuture<TransactionPopResponse> popRequest(TransactionPopRequest request);
 
-    default void deleteRequest(TransactionDeleteRequest request, Listener<TransactionDeleteResponse> listener) {
-        deleteRequest(request).on(listener);
-    }
+    CompletableFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request);
 
-    SmartFuture<TransactionPopResponse> popRequest(TransactionPopRequest request);
-
-    default void popRequest(TransactionPopRequest request, Listener<TransactionPopResponse> listener) {
-        popRequest(request).on(listener);
-    }
-
-    SmartFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request);
-
-    default void pushRequest(TransactionPushRequest request, Listener<TransactionPushResponse> listener) {
-        pushRequest(request).on(listener);
-    }
-
-    SmartFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request);
-
-    default void rollbackRequest(TransactionRollbackRequest request, Listener<TransactionRollbackResponse> listener) {
-        rollbackRequest(request).on(listener);
-    }
+    CompletableFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request);
 }

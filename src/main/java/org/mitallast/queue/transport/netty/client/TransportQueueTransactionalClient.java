@@ -11,8 +11,9 @@ import org.mitallast.queue.action.queue.transactional.push.TransactionPushRespon
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackRequest;
 import org.mitallast.queue.action.queue.transactional.rollback.TransactionRollbackResponse;
 import org.mitallast.queue.client.QueueTransactionalClient;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.transport.TransportClient;
+
+import java.util.concurrent.CompletableFuture;
 
 public class TransportQueueTransactionalClient implements QueueTransactionalClient {
 
@@ -23,27 +24,27 @@ public class TransportQueueTransactionalClient implements QueueTransactionalClie
     }
 
     @Override
-    public SmartFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) {
+    public CompletableFuture<TransactionCommitResponse> commitRequest(TransactionCommitRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) {
+    public CompletableFuture<TransactionDeleteResponse> deleteRequest(TransactionDeleteRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) {
+    public CompletableFuture<TransactionPopResponse> popRequest(TransactionPopRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) {
+    public CompletableFuture<TransactionPushResponse> pushRequest(TransactionPushRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) {
+    public CompletableFuture<TransactionRollbackResponse> rollbackRequest(TransactionRollbackRequest request) {
         return transportClient.send(request);
     }
 }

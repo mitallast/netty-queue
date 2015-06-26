@@ -7,8 +7,9 @@ import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.QueuesClient;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.transport.TransportClient;
+
+import java.util.concurrent.CompletableFuture;
 
 public class TransportQueuesClient implements QueuesClient {
 
@@ -19,17 +20,17 @@ public class TransportQueuesClient implements QueuesClient {
     }
 
     @Override
-    public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
+    public CompletableFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
+    public CompletableFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
+    public CompletableFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
         return transportClient.send(request);
     }
 }

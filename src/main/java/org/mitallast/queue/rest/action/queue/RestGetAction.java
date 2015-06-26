@@ -6,10 +6,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.get.GetRequest;
-import org.mitallast.queue.action.queue.get.GetResponse;
 import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.UUIDs;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queue.QueueMessage;
@@ -39,28 +37,24 @@ public class RestGetAction extends BaseRestHandler {
             builder.setUuid(UUIDs.fromString(uuid));
         }
 
-        client.queue().getRequest(builder.build(), new Listener<GetResponse>() {
-            @Override
-            public void onResponse(GetResponse getResponse) {
-                if (getResponse.message() == null) {
+        client.queue().getRequest(builder.build()).whenComplete((response, error) -> {
+            if (error == null) {
+                if (response.message() == null) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.NOT_FOUND));
                     return;
                 }
-                QueueMessage queueMessage = getResponse.message();
+                QueueMessage queueMessage = response.message();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
-                    try (XStreamBuilder builder = createBuilder(request, buffer)) {
-                        queueMessage.toXStream(builder);
+                    try (XStreamBuilder stream = createBuilder(request, buffer)) {
+                        queueMessage.toXStream(stream);
                     }
                     session.sendResponse(new ByteBufRestResponse(HttpResponseStatus.OK, buffer));
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+            } else {
+                session.sendResponse(error);
             }
         });
     }

@@ -2,11 +2,11 @@ package org.mitallast.queue.transport;
 
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class TransportBenchmark extends BaseQueueTest {
 
@@ -20,7 +20,7 @@ public class TransportBenchmark extends BaseQueueTest {
         TransportService transportService = node().injector().getInstance(TransportService.class);
         transportService.connectToNode(node().localNode());
 
-        List<SmartFuture<TransportFrame>> futures = new ArrayList<>(max());
+        List<CompletableFuture<TransportFrame>> futures = new ArrayList<>(max());
         List<TransportFrame> frames = new ArrayList<>(max());
         for (long i = 0; i < max(); i++) {
             frames.add(TransportFrame.of(i));
@@ -30,7 +30,7 @@ public class TransportBenchmark extends BaseQueueTest {
         for (int i = 0; i < max(); i++) {
             futures.add(transportService.sendRequest(node().localNode(), frames.get(i)));
         }
-        for (SmartFuture<TransportFrame> future : futures) {
+        for (CompletableFuture<TransportFrame> future : futures) {
             TransportFrame frame = future.get();
         }
 
@@ -40,7 +40,7 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Test
     public void testConcurrent() throws Exception {
-        List<SmartFuture<TransportFrame>> futures = new ArrayList<>(total());
+        List<CompletableFuture<TransportFrame>> futures = new ArrayList<>(total());
         List<TransportFrame> frames = new ArrayList<>(total());
         for (int i = 0; i < total(); i++) {
             frames.add(TransportFrame.of(i));

@@ -6,9 +6,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
-import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.Client;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.queues.stats.QueueStats;
@@ -33,10 +31,9 @@ public class RestQueueStatsAction extends BaseRestHandler {
         QueueStatsRequest queueStatsRequest = QueueStatsRequest.builder()
             .setQueue(request.param("queue").toString())
             .build();
-        client.queue().queueStatsRequest(queueStatsRequest, new Listener<QueueStatsResponse>() {
-            @Override
-            public void onResponse(QueueStatsResponse queueStatsResponse) {
-                QueueStats queueStats = queueStatsResponse.stats();
+        client.queue().queueStatsRequest(queueStatsRequest).whenComplete((response, error) -> {
+            if (error == null) {
+                QueueStats queueStats = response.stats();
                 ByteBuf buffer = Unpooled.buffer();
                 try {
                     try (XStreamBuilder builder = createBuilder(request, buffer)) {
@@ -49,11 +46,8 @@ public class RestQueueStatsAction extends BaseRestHandler {
                 } catch (IOException e) {
                     session.sendResponse(e);
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+            } else {
+                session.sendResponse(error);
             }
         });
     }

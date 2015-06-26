@@ -27,4 +27,9 @@ public class NettyTransportChannel implements TransportChannel {
     public ByteBuf heapBuffer() {
         return ctx.alloc().heapBuffer();
     }
+
+    @Override
+    public void close() {
+        ctx.close();
+    }
 }

@@ -4,9 +4,7 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
-import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.client.Client;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.rest.BaseRestHandler;
@@ -31,9 +29,8 @@ public class RestDeleteQueueAction extends BaseRestHandler {
             .setReason(request.param("reason").toString())
             .build();
 
-        client.queues().deleteQueue(deleteQueueRequest, new Listener<DeleteQueueResponse>() {
-            @Override
-            public void onResponse(DeleteQueueResponse response) {
+        client.queues().deleteQueue(deleteQueueRequest).whenComplete((response, error) -> {
+            if (error == null) {
                 if (response.isDeleted()) {
                     session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));
                 } else {
@@ -43,11 +40,8 @@ public class RestDeleteQueueAction extends BaseRestHandler {
                             response.error().getMessage()));
                     }
                 }
-            }
-
-            @Override
-            public void onFailure(Throwable e) {
-                session.sendResponse(e);
+            } else {
+                session.sendResponse(error);
             }
         });
     }

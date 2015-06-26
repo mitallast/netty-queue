@@ -14,8 +14,9 @@ import org.mitallast.queue.action.queue.stats.QueueStatsRequest;
 import org.mitallast.queue.action.queue.stats.QueueStatsResponse;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueueTransactionalClient;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.transport.TransportClient;
+
+import java.util.concurrent.CompletableFuture;
 
 public class TransportQueueClient implements QueueClient {
 
@@ -37,32 +38,32 @@ public class TransportQueueClient implements QueueClient {
     }
 
     @Override
-    public SmartFuture<PushResponse> pushRequest(PushRequest request) {
+    public CompletableFuture<PushResponse> pushRequest(PushRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<PopResponse> popRequest(PopRequest request) {
+    public CompletableFuture<PopResponse> popRequest(PopRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
+    public CompletableFuture<QueueStatsResponse> queueStatsRequest(QueueStatsRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<DeleteResponse> deleteRequest(DeleteRequest request) {
+    public CompletableFuture<DeleteResponse> deleteRequest(DeleteRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<GetResponse> getRequest(GetRequest request) {
+    public CompletableFuture<GetResponse> getRequest(GetRequest request) {
         return transportClient.send(request);
     }
 
     @Override
-    public SmartFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
+    public CompletableFuture<PeekQueueResponse> peekQueueRequest(PeekQueueRequest request) {
         return transportClient.send(request);
     }
 }

@@ -11,7 +11,8 @@ import org.mitallast.queue.action.queues.stats.QueuesStatsAction;
 import org.mitallast.queue.action.queues.stats.QueuesStatsRequest;
 import org.mitallast.queue.action.queues.stats.QueuesStatsResponse;
 import org.mitallast.queue.client.QueuesClient;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
+
+import java.util.concurrent.CompletableFuture;
 
 public class LocalQueuesClient implements QueuesClient {
 
@@ -27,17 +28,17 @@ public class LocalQueuesClient implements QueuesClient {
     }
 
     @Override
-    public SmartFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
+    public CompletableFuture<QueuesStatsResponse> queuesStatsRequest(QueuesStatsRequest request) {
         return queuesStatsAction.execute(request);
     }
 
     @Override
-    public SmartFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
+    public CompletableFuture<CreateQueueResponse> createQueue(CreateQueueRequest request) {
         return createQueueAction.execute(request);
     }
 
     @Override
-    public SmartFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
+    public CompletableFuture<DeleteQueueResponse> deleteQueue(DeleteQueueRequest request) {
         return deleteQueueAction.execute(request);
     }
 }

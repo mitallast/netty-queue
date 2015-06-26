@@ -7,18 +7,16 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.AttributeKey;
-import org.mitallast.queue.common.concurrent.futures.Futures;
-import org.mitallast.queue.common.concurrent.futures.SmartFuture;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.settings.Settings;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class RestClient extends NettyClient {
 
-    private final static AttributeKey<ConcurrentLinkedDeque<SmartFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
+    private final static AttributeKey<ConcurrentLinkedDeque<CompletableFuture<FullHttpResponse>>> attr = AttributeKey.valueOf("queue");
     private final AtomicLong flushCount = new AtomicLong();
 
     public RestClient(Settings settings) {
@@ -30,8 +28,8 @@ public class RestClient extends NettyClient {
         channel.attr(attr).set(new ConcurrentLinkedDeque<>());
     }
 
-    public Future<FullHttpResponse> send(HttpRequest request) {
-        final SmartFuture<FullHttpResponse> future = Futures.future();
+    public CompletableFuture<FullHttpResponse> send(HttpRequest request) {
+        final CompletableFuture<FullHttpResponse> future = new CompletableFuture<>();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().push(future);
 
@@ -61,7 +59,7 @@ public class RestClient extends NettyClient {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse response) throws Exception {
                         response.content().retain();
-                        ctx.channel().attr(attr).get().poll().invoke(response);
+                        ctx.channel().attr(attr).get().poll().complete(response);
                     }
                 });
             }

@@ -7,7 +7,6 @@ import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.concurrent.Listener;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
 
@@ -35,20 +34,17 @@ public class TransportController<Request extends ActionRequest, Response extends
 
         AbstractAction<Request, Response> action = actionMap.get(actionRequest.getClass());
         if (action != null) {
-            action.execute(actionRequest, new Listener<Response>() {
-                @Override
-                public void onResponse(Response actionResponse) {
+            action.execute(actionRequest).whenComplete((actionResponse, error) -> {
+                if (error == null) {
                     StreamableTransportFrame response = StreamableTransportFrame.of(
                         requestFrame.version(),
                         requestFrame.request(),
                         actionResponse.toBuilder()
                     );
                     channel.send(response);
-                }
-
-                @Override
-                public void onFailure(Throwable e) {
-                    logger.error("error", e);
+                } else {
+                    logger.error("error", error);
+                    channel.close();
                 }
             });
         } else {

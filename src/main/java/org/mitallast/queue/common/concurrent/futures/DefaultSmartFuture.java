@@ -1,6 +1,5 @@
 package org.mitallast.queue.common.concurrent.futures;
 
-import com.google.common.base.Preconditions;
 import org.mitallast.queue.common.concurrent.Listener;
 
 import java.util.concurrent.CancellationException;
@@ -97,7 +96,6 @@ public class DefaultSmartFuture<Type> extends AbstractQueuedSynchronizer impleme
 
     @Override
     public void invoke(Type result) {
-        Preconditions.checkNotNull(result);
         if (complete(result, null, COMPLETED)) {
             invokeListeners();
         }

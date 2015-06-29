@@ -12,6 +12,7 @@ import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.concurrent.Futures;
+import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
@@ -27,10 +28,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -45,6 +44,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final StreamService streamService;
     private final List<TransportListener> listeners = new CopyOnWriteArrayList<>();
     private final LocalNodeChannel localNodeChannel;
+    private final ExecutorService executorService;
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
@@ -57,6 +57,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
         localNodeChannel = new LocalNodeChannel();
+        executorService = NamedExecutors.newSingleThreadPool("reconnect");
     }
 
     @Override
@@ -96,9 +97,23 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
     @Override
     protected void doStop() throws IOException {
+        List<Runnable> tasks = executorService.shutdownNow();
+        logger.warn("not executed tasks {}", tasks);
         ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         super.doStop();
+    }
+
+    @Override
+    protected void doClose() throws IOException {
+        super.doClose();
+        executorService.shutdown();
+        try {
+            executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("interrupted", e);
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
@@ -119,9 +134,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             return localNodeChannel;
         }
 
-        Channel channel = connect(address).awaitUninterruptibly()
-            .channel();
-        return new NodeChannel(new Channel[]{channel});
+        return new NodeChannel(address);
     }
 
     @Override
@@ -142,20 +155,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (connectedNodes.get(node) != null) {
                 return;
             }
-            logger.debug("connect to node {}", node.name());
-            ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
-            for (int i = 0; i < channelCount; i++) {
-                channelFutures[i] = connect(node.address());
-            }
-
-            Channel[] channels = new Channel[channelCount];
-            for (int i = 0; i < channelCount; i++) {
-                channels[i] = channelFutures[i]
-                    .awaitUninterruptibly()
-                    .channel();
-            }
-
-            NodeChannel nodeChannel = new NodeChannel(channels);
+            NodeChannel nodeChannel = new NodeChannel(node.address());
+            nodeChannel.open();
             connectedNodes = ImmutableMap.<DiscoveryNode, NodeChannel>builder()
                 .putAll(connectedNodes)
                 .put(node, nodeChannel)
@@ -280,24 +281,58 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     private class NodeChannel implements TransportClient, Closeable {
+        private final HostAndPort address;
         private final AtomicLong channelRequestCounter = new AtomicLong();
-        private final Channel[] channels;
+        private final AtomicBoolean reconnectScheduled = new AtomicBoolean();
+        private final AtomicBoolean closed = new AtomicBoolean(false);
         private final TransportQueuesClient queuesClient;
         private final TransportQueueClient queueClient;
+        private final Channel[] channels;
 
-        private NodeChannel(Channel[] channels) {
-            this.channels = channels;
+        private NodeChannel(HostAndPort address) {
+            this.address = address;
             this.queueClient = new TransportQueueClient(this);
             this.queuesClient = new TransportQueuesClient(this);
+            this.channels = new Channel[channelCount];
+        }
 
+        public synchronized void open() {
+            logger.debug("connect to {}", address);
+            ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
+            for (int i = 0; i < channelCount; i++) {
+                channelFutures[i] = connect(address);
+            }
+            logger.debug("await channel open {}", address);
+            for (int i = 0; i < channelCount; i++) {
+                channels[i] = channelFutures[i]
+                    .awaitUninterruptibly()
+                    .channel();
+            }
+            logger.debug("init channels", address);
             for (Channel channel : channels) {
                 channel.attr(flushCounterAttr).set(new AtomicLong());
                 channel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
             }
         }
 
+        public synchronized void reconnect() {
+            if (closed.get()) {
+                return;
+            }
+            logger.warn("reconnect to {}", address);
+            for (int i = 0; i < channels.length; i++) {
+                if (!channels[i].isOpen()) {
+                    channels[i] = connect(address)
+                        .awaitUninterruptibly()
+                        .channel();
+                }
+            }
+            reconnectScheduled.set(false);
+        }
+
         @Override
         public synchronized void close() {
+            closed.set(true);
             List<ChannelFuture> closeFutures = new ArrayList<>(channels.length);
             for (Channel channel : channels) {
                 if (channel.isOpen()) {
@@ -317,6 +352,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         @Override
         public CompletableFuture<TransportFrame> send(TransportFrame frame) {
             Channel channel = channel((int) frame.request());
+            if (channel == null) {
+                return Futures.future(new IOException("channel is closed"));
+            }
             CompletableFuture<TransportFrame> future = Futures.future();
             channel.attr(responseMapAttr).get().put(frame.request(), future);
             AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
@@ -337,6 +375,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         CompletableFuture<Response> send(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
+            if (channel == null) {
+                return Futures.future(new IOException("channel is closed"));
+            }
             CompletableFuture<Response> future = Futures.future();
             StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
             channel.attr(responseMapAttr).get().put(requestId, future);
@@ -354,7 +395,20 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         private Channel channel(int request) {
-            return channels[Math.abs(request % channels.length)];
+            int index = Math.abs(request % channels.length);
+            int loopIndex = index;
+            do {
+                index--;
+                if (index < 0) {
+                    index += channels.length;
+                }
+                if (channels[index].isOpen()) {
+                    return channels[index];
+                } else if (reconnectScheduled.compareAndSet(false, true)) {
+                    executorService.execute(this::reconnect);
+                }
+            } while (index != loopIndex);
+            return null;
         }
 
         @Override

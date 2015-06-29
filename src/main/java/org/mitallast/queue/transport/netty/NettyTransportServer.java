@@ -38,6 +38,11 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     }
 
     @Override
+    public HostAndPort localAddress() {
+        return discoveryNode.address();
+    }
+
+    @Override
     public DiscoveryNode localNode() {
         return discoveryNode;
     }

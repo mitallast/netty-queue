@@ -11,8 +11,8 @@ public class TransportConnectTest extends BaseIntegrationTest {
         InternalNode node1 = createNode();
         InternalNode node2 = createNode();
 
-        node1.injector().getInstance(TransportService.class).connectToNode(node2.localNode());
-        node2.injector().getInstance(TransportService.class).connectToNode(node1.localNode());
+        node1.injector().getInstance(TransportService.class).connectToNode(node2.localNode().address());
+        node2.injector().getInstance(TransportService.class).connectToNode(node1.localNode().address());
 
         Thread.sleep(Long.MAX_VALUE);
     }

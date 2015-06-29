@@ -1,6 +1,5 @@
 package org.mitallast.queue.transport.netty;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
@@ -34,7 +33,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class NettyTransportService extends NettyClientBootstrap implements TransportService {
-
     private final static AttributeKey<AtomicLong> flushCounterAttr = AttributeKey.valueOf("flushCounter");
     private final static AttributeKey<ConcurrentMap<Long, CompletableFuture>> responseMapAttr = AttributeKey.valueOf("responseMapAttr");
     private final ReentrantLock connectionLock;
@@ -45,7 +43,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final List<TransportListener> listeners = new CopyOnWriteArrayList<>();
     private final LocalNodeChannel localNodeChannel;
     private final ExecutorService executorService;
-    private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
+    private volatile ImmutableMap<HostAndPort, NodeChannel> connectedNodes;
 
     @Inject
     public NettyTransportService(Settings settings, TransportServer transportServer, TransportController transportController, StreamService streamService) {
@@ -99,7 +97,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     protected void doStop() throws IOException {
         List<Runnable> tasks = executorService.shutdownNow();
         logger.warn("not executed tasks {}", tasks);
-        ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
+        ImmutableMap<HostAndPort, NodeChannel> connectedNodes = this.connectedNodes;
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         super.doStop();
     }
@@ -117,80 +115,69 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
+    public HostAndPort localAddress() {
+        return transportServer.localAddress();
+    }
+
+    @Override
     public DiscoveryNode localNode() {
         return transportServer.localNode();
     }
 
     @Override
-    public TransportClient connectToNode(HostAndPort address) {
+    public void connectToNode(HostAndPort address) {
         if (!lifecycle.started()) {
             throw new IllegalStateException("can't add nodes to stopped transport");
         }
         if (address == null) {
             throw new TransportException("can't connect to null address");
         }
-        if (localNode().address().equals(address)) {
-            logger.debug("connect to local node");
-            return localNodeChannel;
-        }
-
-        return new NodeChannel(address);
-    }
-
-    @Override
-    public void connectToNode(DiscoveryNode node) {
-        if (!lifecycle.started()) {
-            throw new IllegalStateException("can't add nodes to stopped transport");
-        }
-        if (node == null) {
-            throw new TransportException("can't connect to null node");
-        }
-        if (node.equals(localNode())) {
+        if (address.equals(localAddress())) {
             logger.debug("connect to local node");
             return;
         }
         boolean connected = false;
         connectionLock.lock();
         try {
-            if (connectedNodes.get(node) != null) {
+            if (connectedNodes.get(address) != null) {
                 return;
             }
-            NodeChannel nodeChannel = new NodeChannel(node.address());
+            NodeChannel nodeChannel = new NodeChannel(address);
             nodeChannel.open();
-            connectedNodes = ImmutableMap.<DiscoveryNode, NodeChannel>builder()
+            connectedNodes = ImmutableMap.<HostAndPort, NodeChannel>builder()
                 .putAll(connectedNodes)
-                .put(node, nodeChannel)
+                .put(address, nodeChannel)
                 .build();
             connected = true;
-            logger.info("connected to node {}", node.name());
+            logger.info("connected to node {}", address);
         } finally {
             connectionLock.unlock();
             if (connected) {
-                listeners.forEach(listener -> listener.connected(node));
+                listeners.forEach(listener -> listener.connected(address));
             }
         }
     }
 
     @Override
-    public void disconnectFromNode(DiscoveryNode node) {
-        if (node == null) {
+    public void disconnectFromNode(HostAndPort address) {
+        if (address == null) {
             throw new TransportException("can't disconnect from null node");
         }
-        if (node.equals(localNode())) {
+        if (address.equals(localAddress())) {
             throw new TransportException("can't disconnect from local node");
         }
         boolean disconnected = false;
         connectionLock.lock();
         try {
-            NodeChannel nodeChannel = connectedNodes.get(node);
+            NodeChannel nodeChannel = connectedNodes.get(address);
             if (nodeChannel == null) {
                 return;
             }
-            logger.info("disconnect from node {}", node);
+            logger.info("disconnect from node {}", address);
             nodeChannel.close();
-            ImmutableMap.Builder<DiscoveryNode, NodeChannel> builder = ImmutableMap.builder();
+            ImmutableMap.Builder<HostAndPort, NodeChannel> builder = ImmutableMap.builder();
             connectedNodes.forEach((nodeItem, nodeChannelItem) -> {
-                if (!nodeItem.equals(node)) {
+                if (!nodeItem.equals(address)) {
                     builder.put(nodeItem, nodeChannelItem);
                 }
             });
@@ -199,24 +186,19 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         } finally {
             connectionLock.unlock();
             if (disconnected) {
-                listeners.forEach(listener -> listener.disconnected(node));
+                listeners.forEach(listener -> listener.disconnected(address));
             }
         }
     }
 
     @Override
-    public ImmutableList<DiscoveryNode> connectedNodes() {
-        return ImmutableList.copyOf(connectedNodes.keySet());
-    }
-
-    @Override
-    public TransportClient client(DiscoveryNode node) {
-        if (node.equals(localNode())) {
+    public TransportClient client(HostAndPort address) {
+        if (address.equals(localAddress())) {
             return localNodeChannel;
         } else {
-            NodeChannel nodeChannel = connectedNodes.get(node);
+            NodeChannel nodeChannel = connectedNodes.get(address);
             if (nodeChannel == null) {
-                throw new TransportException("Not connected to node: " + node);
+                throw new TransportException("Not connected to node: " + address);
             }
             return nodeChannel;
         }

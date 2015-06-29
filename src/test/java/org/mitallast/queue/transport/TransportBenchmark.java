@@ -35,15 +35,11 @@ public class TransportBenchmark extends BaseQueueTest {
         super.setUp();
 
         TransportService transportService = node().injector().getInstance(TransportService.class);
-        DiscoveryNode localNode = transportService.localNode();
+        HostAndPort address = transportService.localAddress();
         // hack for not equals local node
-        DiscoveryNode connectNode = new DiscoveryNode(
-            "test",
-            HostAndPort.fromParts("localhost", localNode.address().getPort()),
-            localNode.version()
-        );
-        transportService.connectToNode(connectNode);
-        client = transportService.client(connectNode);
+        HostAndPort localhost = HostAndPort.fromParts("localhost", address.getPort());
+        transportService.connectToNode(localhost);
+        client = transportService.client(localhost);
     }
 
     @Test

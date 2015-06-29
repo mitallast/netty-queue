@@ -18,9 +18,9 @@ public class NodeNettyTransportServiceTest extends BaseQueueTest {
         DiscoveryNode discoveryNode = node().injector().getInstance(TransportServer.class).localNode();
 
         TransportService transportService = node().injector().getInstance(TransportService.class);
-        transportService.connectToNode(discoveryNode);
+        transportService.connectToNode(discoveryNode.address());
 
-        PushResponse pushResponse = transportService.client(discoveryNode).queue()
+        PushResponse pushResponse = transportService.client(discoveryNode.address()).queue()
             .pushRequest(PushRequest.builder()
                 .setQueue(queueName())
                 .setMessage(createMessage())

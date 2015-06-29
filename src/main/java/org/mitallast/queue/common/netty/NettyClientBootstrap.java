@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.netty;
 
+import com.google.common.net.HostAndPort;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -64,6 +65,10 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     protected abstract ChannelInitializer channelInitializer();
+
+    public final ChannelFuture connect(HostAndPort address) {
+        return bootstrap.connect(address.getHostText(), address.getPort());
+    }
 
     public final ChannelFuture connect(String host, int port) {
         return bootstrap.connect(host, port);

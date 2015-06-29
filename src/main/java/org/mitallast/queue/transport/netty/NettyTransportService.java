@@ -2,6 +2,7 @@ package org.mitallast.queue.transport.netty;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.util.AttributeKey;
@@ -105,6 +106,24 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
+    public TransportClient connectToNode(HostAndPort address) {
+        if (!lifecycle.started()) {
+            throw new IllegalStateException("can't add nodes to stopped transport");
+        }
+        if (address == null) {
+            throw new TransportException("can't connect to null address");
+        }
+        if (localNode().address().equals(address)) {
+            logger.debug("connect to local node");
+            return localNodeChannel;
+        }
+
+        Channel channel = connect(address).awaitUninterruptibly()
+            .channel();
+        return new NodeChannel(new Channel[]{channel});
+    }
+
+    @Override
     public void connectToNode(DiscoveryNode node) {
         if (!lifecycle.started()) {
             throw new IllegalStateException("can't add nodes to stopped transport");
@@ -113,7 +132,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             throw new TransportException("can't connect to null node");
         }
         if (node.equals(localNode())) {
-            throw new TransportException("can't connect to local node");
+            logger.debug("connect to local node");
+            return;
         }
         boolean connected = false;
         connectionLock.lock();
@@ -121,10 +141,10 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (connectedNodes.get(node) != null) {
                 return;
             }
-            logger.debug("connect to node {}", node.nodeName());
+            logger.debug("connect to node {}", node.name());
             ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
             for (int i = 0; i < channelCount; i++) {
-                channelFutures[i] = connect(node.getHost(), node.getPort());
+                channelFutures[i] = connect(node.address());
             }
 
             Channel[] channels = new Channel[channelCount];
@@ -132,9 +152,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 channels[i] = channelFutures[i]
                     .awaitUninterruptibly()
                     .channel();
-
-                channels[i].attr(flushCounterAttr).set(new AtomicLong());
-                channels[i].attr(responseMapAttr).set(new ConcurrentHashMap<>());
             }
 
             NodeChannel nodeChannel = new NodeChannel(channels);
@@ -143,7 +160,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 .put(node, nodeChannel)
                 .build();
             connected = true;
-            logger.info("connected to node {}", node.nodeName());
+            logger.info("connected to node {}", node.name());
         } finally {
             connectionLock.unlock();
             if (connected) {
@@ -271,6 +288,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             this.channels = channels;
             this.queueClient = new TransportQueueClient(this);
             this.queuesClient = new TransportQueuesClient(this);
+
+            for (Channel channel : channels) {
+                channel.attr(flushCounterAttr).set(new AtomicLong());
+                channel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
+            }
         }
 
         @Override

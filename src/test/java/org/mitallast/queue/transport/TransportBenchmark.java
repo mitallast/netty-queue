@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport;
 
+import com.google.common.net.HostAndPort;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
@@ -38,10 +39,8 @@ public class TransportBenchmark extends BaseQueueTest {
         // hack for not equals local node
         DiscoveryNode connectNode = new DiscoveryNode(
             "test",
-            randomUUID(),
-            localNode.getHost(),
-            localNode.getPort(),
-            localNode.getVersion()
+            HostAndPort.fromParts("localhost", localNode.address().getPort()),
+            localNode.version()
         );
         transportService.connectToNode(connectNode);
         client = transportService.client(connectNode);

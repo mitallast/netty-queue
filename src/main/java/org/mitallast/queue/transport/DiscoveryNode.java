@@ -1,68 +1,38 @@
 package org.mitallast.queue.transport;
 
+import com.google.common.net.HostAndPort;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
-import java.util.UUID;
 
 public class DiscoveryNode implements Streamable {
 
     private String name;
-    private UUID nodeId;
-    private String host;
-    private int port;
+    private HostAndPort address;
     private Version version = Version.CURRENT;
 
     public DiscoveryNode() {
     }
 
-    public DiscoveryNode(String name, UUID nodeId, String host, int port, Version version) {
+    public DiscoveryNode(String name, HostAndPort address, Version version) {
         this.name = name;
-        this.nodeId = nodeId;
-        this.host = host;
-        this.port = port;
+        this.address = address;
         this.version = version;
     }
 
-    public String nodeName() {
+    public String name() {
         return name;
     }
 
-    public UUID getNodeId() {
-        return nodeId;
+    public HostAndPort address() {
+        return address;
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public Version getVersion() {
+    public Version version() {
         return version;
-    }
-
-    @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        name = stream.readText();
-        nodeId = stream.readUUID();
-        host = stream.readText();
-        port = stream.readInt();
-        version = Version.fromId(stream.readInt());
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeText(name);
-        stream.writeUUID(nodeId);
-        stream.writeText(host);
-        stream.writeInt(port);
-        stream.writeInt(version.id);
     }
 
     @Override
@@ -72,21 +42,36 @@ public class DiscoveryNode implements Streamable {
 
         DiscoveryNode that = (DiscoveryNode) o;
 
-        return nodeId.equals(that.nodeId);
-
+        return address.equals(that.address) && version.equals(that.version);
     }
 
     @Override
     public int hashCode() {
-        return nodeId.hashCode();
+        int result = address.hashCode();
+        result = 31 * result + version.hashCode();
+        return result;
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        name = stream.readText();
+        address = HostAndPort.fromParts(stream.readText(), stream.readInt());
+        version = Version.fromId(stream.readInt());
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeText(name);
+        stream.writeText(address.getHostText());
+        stream.writeInt(address.getPort());
+        stream.writeInt(version.id);
     }
 
     @Override
     public String toString() {
         return "DiscoveryNode{" +
             "name=" + name +
-            ", id=" + nodeId.toString().substring(0, 8) +
-            ", tcp://" + host + ':' + port +
+            " , address=" + address +
             '}';
     }
 }

@@ -1,10 +1,10 @@
 package org.mitallast.queue.transport.netty;
 
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.Version;
-import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
@@ -32,9 +32,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         this.streamService = streamService;
         this.discoveryNode = new DiscoveryNode(
             this.settings.get("node.name"),
-            UUIDs.generateRandom(),
-            host,
-            port,
+            HostAndPort.fromParts(host, port),
             Version.CURRENT
         );
     }

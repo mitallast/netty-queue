@@ -1,10 +1,13 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.HostAndPort;
 
 public interface TransportService {
 
     DiscoveryNode localNode();
+
+    TransportClient connectToNode(HostAndPort address);
 
     void connectToNode(DiscoveryNode node);
 

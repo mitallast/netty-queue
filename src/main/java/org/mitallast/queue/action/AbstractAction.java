@@ -1,6 +1,7 @@
 package org.mitallast.queue.action;
 
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.validation.ValidationException;
 import org.mitallast.queue.transport.TransportController;
@@ -19,7 +20,7 @@ public abstract class AbstractAction<Request extends ActionRequest, Response ext
     }
 
     public CompletableFuture<Response> execute(Request request) {
-        CompletableFuture<Response> future = new CompletableFuture<>();
+        CompletableFuture<Response> future = Futures.future();
         execute(request, future);
         return future;
     }

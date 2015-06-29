@@ -7,6 +7,7 @@ import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
 
@@ -52,9 +53,7 @@ public class TransportController<Request extends ActionRequest, Response extends
         if (action != null) {
             return action.execute(request);
         } else {
-            CompletableFuture<Response> future = new CompletableFuture<>();
-            future.completeExceptionally(new IOException("Action not found"));
-            return future;
+            return Futures.future(new IOException("Action not found"));
         }
     }
 }

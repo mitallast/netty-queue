@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.AttributeKey;
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -29,7 +30,7 @@ public class RestClient extends NettyClient {
     }
 
     public CompletableFuture<FullHttpResponse> send(HttpRequest request) {
-        final CompletableFuture<FullHttpResponse> future = new CompletableFuture<>();
+        final CompletableFuture<FullHttpResponse> future = Futures.future();
         final Channel localChannel = channel;
         localChannel.attr(attr).get().push(future);
 

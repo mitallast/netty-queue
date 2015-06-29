@@ -11,6 +11,7 @@ import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.common.builder.EntryBuilder;
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
@@ -242,7 +243,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
         @Override
         public CompletableFuture<TransportFrame> send(TransportFrame frame) {
-            CompletableFuture<TransportFrame> future = new CompletableFuture<>();
+            CompletableFuture<TransportFrame> future = Futures.future();
             if (frame instanceof StreamableTransportFrame) {
                 transportController.dispatchRequest(new TransportChannel() {
                     @Override
@@ -316,7 +317,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         @Override
         public CompletableFuture<TransportFrame> send(TransportFrame frame) {
             Channel channel = channel((int) frame.request());
-            CompletableFuture<TransportFrame> future = new CompletableFuture<>();
+            CompletableFuture<TransportFrame> future = Futures.future();
             channel.attr(responseMapAttr).get().put(frame.request(), future);
             AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
             channelFlushCounter.incrementAndGet();
@@ -336,11 +337,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         CompletableFuture<Response> send(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
+            CompletableFuture<Response> future = Futures.future();
             StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
-
-            CompletableFuture<Response> future = new CompletableFuture<>();
             channel.attr(responseMapAttr).get().put(requestId, future);
-
             AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
             channelFlushCounter.incrementAndGet();
             channel.write(frame, channel.voidPromise());

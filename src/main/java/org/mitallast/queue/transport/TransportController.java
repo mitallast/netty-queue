@@ -53,7 +53,7 @@ public class TransportController<Request extends ActionRequest, Response extends
         if (action != null) {
             return action.execute(request);
         } else {
-            return Futures.future(new IOException("Action not found"));
+            return Futures.completeExceptionally(new IOException("Action not found"));
         }
     }
 }

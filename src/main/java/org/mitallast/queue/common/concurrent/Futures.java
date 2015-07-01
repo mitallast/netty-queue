@@ -7,11 +7,11 @@ public class Futures {
         return new CompletableFuture<>();
     }
 
-    public static <T> CompletableFuture<T> future(T value) {
+    public static <T> CompletableFuture<T> complete(T value) {
         return CompletableFuture.completedFuture(value);
     }
 
-    public static <T> CompletableFuture<T> future(Throwable exception) {
+    public static <T> CompletableFuture<T> completeExceptionally(Throwable exception) {
         CompletableFuture<T> future = future();
         future.completeExceptionally(exception);
         return future;

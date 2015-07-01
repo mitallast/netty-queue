@@ -143,11 +143,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 return;
             }
             NodeChannel nodeChannel = new NodeChannel(address);
-            nodeChannel.open();
             connectedNodes = ImmutableMap.<HostAndPort, NodeChannel>builder()
                 .putAll(connectedNodes)
                 .put(address, nodeChannel)
                 .build();
+            nodeChannel.open();
             connected = true;
             logger.info("connected to node {}", address);
         } finally {
@@ -286,14 +286,18 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
             logger.debug("await channel open {}", address);
             for (int i = 0; i < channelCount; i++) {
-                channels[i] = channelFutures[i]
-                    .awaitUninterruptibly()
-                    .channel();
-            }
-            logger.debug("init channels", address);
-            for (Channel channel : channels) {
-                channel.attr(flushCounterAttr).set(new AtomicLong());
-                channel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
+                try {
+                    channels[i] = channelFutures[i]
+                        .awaitUninterruptibly()
+                        .channel();
+                    channels[i].attr(responseMapAttr).set(new ConcurrentHashMap<>());
+                    channels[i].attr(flushCounterAttr).set(new AtomicLong());
+                } catch (Throwable e) {
+                    logger.error("error connect to {}", address, e);
+                    if (reconnectScheduled.compareAndSet(false, true)) {
+                        executorService.execute(this::reconnect);
+                    }
+                }
             }
         }
 
@@ -303,10 +307,17 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
             logger.warn("reconnect to {}", address);
             for (int i = 0; i < channels.length; i++) {
-                if (!channels[i].isOpen()) {
-                    channels[i] = connect(address)
-                        .awaitUninterruptibly()
-                        .channel();
+                if (channels[i] == null || !channels[i].isOpen()) {
+                    try {
+                        Channel newChannel = connect(address)
+                            .awaitUninterruptibly()
+                            .channel();
+                        newChannel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
+                        newChannel.attr(flushCounterAttr).set(new AtomicLong());
+                        channels[i] = newChannel;
+                    } catch (Throwable e) {
+                        logger.error("error reconnect to {}", address, e);
+                    }
                 }
             }
             reconnectScheduled.set(false);
@@ -317,7 +328,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             closed.set(true);
             List<ChannelFuture> closeFutures = new ArrayList<>(channels.length);
             for (Channel channel : channels) {
-                if (channel.isOpen()) {
+                if (channel != null && channel.isOpen()) {
                     channel.flush();
                     closeFutures.add(channel.close());
                 }
@@ -335,7 +346,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         public CompletableFuture<TransportFrame> send(TransportFrame frame) {
             Channel channel = channel((int) frame.request());
             if (channel == null) {
-                return Futures.future(new IOException("channel is closed"));
+                return Futures.completeExceptionally(new IOException("channel is closed"));
             }
             CompletableFuture<TransportFrame> future = Futures.future();
             channel.attr(responseMapAttr).get().put(frame.request(), future);
@@ -358,7 +369,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             if (channel == null) {
-                return Futures.future(new IOException("channel is closed"));
+                return Futures.completeExceptionally(new IOException("channel is closed"));
             }
             CompletableFuture<Response> future = Futures.future();
             StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
@@ -384,7 +395,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 if (index < 0) {
                     index += channels.length;
                 }
-                if (channels[index].isOpen()) {
+                if (channels[index] != null && channels[index].isOpen()) {
                     return channels[index];
                 } else if (reconnectScheduled.compareAndSet(false, true)) {
                     executorService.execute(this::reconnect);

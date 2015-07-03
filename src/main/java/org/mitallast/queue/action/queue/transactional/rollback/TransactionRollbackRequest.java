@@ -9,7 +9,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionRollbackRequest implements ActionRequest<TransactionRollbackRequest.Builder, TransactionRollbackRequest> {
+public class TransactionRollbackRequest implements ActionRequest<TransactionRollbackRequest> {
     private final UUID transactionUUID;
     private final String queue;
 
@@ -42,12 +42,11 @@ public class TransactionRollbackRequest implements ActionRequest<TransactionRoll
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, TransactionRollbackRequest> {
+    public static class Builder implements EntryBuilder<TransactionRollbackRequest> {
         private UUID transactionUUID;
         private String queue;
 
-        @Override
-        public Builder from(TransactionRollbackRequest entry) {
+        private Builder from(TransactionRollbackRequest entry) {
             transactionUUID = entry.transactionUUID;
             queue = entry.queue;
             return this;

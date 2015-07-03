@@ -8,7 +8,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionRollbackResponse implements ActionResponse<TransactionRollbackResponse.Builder, TransactionRollbackResponse> {
+public class TransactionRollbackResponse implements ActionResponse<TransactionRollbackResponse> {
     private UUID transactionUUID;
     private String queue;
 
@@ -34,12 +34,11 @@ public class TransactionRollbackResponse implements ActionResponse<TransactionRo
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, TransactionRollbackResponse> {
+    public static class Builder implements EntryBuilder<TransactionRollbackResponse> {
         private UUID transactionUUID;
         private String queue;
 
-        @Override
-        public Builder from(TransactionRollbackResponse entry) {
+        private Builder from(TransactionRollbackResponse entry) {
             transactionUUID = entry.transactionUUID;
             queue = entry.queue;
             return this;

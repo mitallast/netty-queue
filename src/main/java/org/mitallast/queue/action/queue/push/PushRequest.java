@@ -9,7 +9,7 @@ import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
 
-public class PushRequest implements ActionRequest<PushRequest.Builder, PushRequest> {
+public class PushRequest implements ActionRequest<PushRequest> {
     private final String queue;
     private final QueueMessage message;
 
@@ -42,12 +42,11 @@ public class PushRequest implements ActionRequest<PushRequest.Builder, PushReque
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, PushRequest> {
+    public static class Builder implements EntryBuilder<PushRequest> {
         private String queue;
         private QueueMessage message;
 
-        @Override
-        public Builder from(PushRequest entry) {
+        private Builder from(PushRequest entry) {
             queue = entry.queue;
             message = entry.message;
             return this;

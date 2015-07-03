@@ -8,7 +8,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class DeleteQueueRequest implements ActionRequest<DeleteQueueRequest.Builder, DeleteQueueRequest> {
+public class DeleteQueueRequest implements ActionRequest<DeleteQueueRequest> {
     private final String queue;
     private final String reason;
 
@@ -41,12 +41,11 @@ public class DeleteQueueRequest implements ActionRequest<DeleteQueueRequest.Buil
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, DeleteQueueRequest> {
+    public static class Builder implements EntryBuilder<DeleteQueueRequest> {
         private String queue;
         private String reason;
 
-        @Override
-        public Builder from(DeleteQueueRequest entry) {
+        private Builder from(DeleteQueueRequest entry) {
             queue = entry.queue;
             reason = entry.reason;
             return this;

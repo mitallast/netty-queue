@@ -10,7 +10,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class CreateQueueRequest implements ActionRequest<CreateQueueRequest.Builder, CreateQueueRequest> {
+public class CreateQueueRequest implements ActionRequest<CreateQueueRequest> {
     private final String queue;
     private final Settings settings;
 
@@ -43,12 +43,11 @@ public class CreateQueueRequest implements ActionRequest<CreateQueueRequest.Buil
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, CreateQueueRequest> {
+    public static class Builder implements EntryBuilder<CreateQueueRequest> {
         private String queue;
         private Settings settings = ImmutableSettings.EMPTY;
 
-        @Override
-        public Builder from(CreateQueueRequest entry) {
+        private Builder from(CreateQueueRequest entry) {
             queue = entry.queue;
             settings = entry.settings;
             return this;

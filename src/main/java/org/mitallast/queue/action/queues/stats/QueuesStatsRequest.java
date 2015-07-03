@@ -8,7 +8,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class QueuesStatsRequest implements ActionRequest<QueuesStatsRequest.Builder, QueuesStatsRequest> {
+public class QueuesStatsRequest implements ActionRequest<QueuesStatsRequest> {
 
     private QueuesStatsRequest() {
     }
@@ -27,10 +27,9 @@ public class QueuesStatsRequest implements ActionRequest<QueuesStatsRequest.Buil
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, QueuesStatsRequest> {
+    public static class Builder implements EntryBuilder<QueuesStatsRequest> {
 
-        @Override
-        public Builder from(QueuesStatsRequest entry) {
+        private Builder from(QueuesStatsRequest entry) {
             return this;
         }
 

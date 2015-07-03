@@ -8,7 +8,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import java.io.IOException;
 import java.util.UUID;
 
-public class PushResponse implements ActionResponse<PushResponse.Builder, PushResponse> {
+public class PushResponse implements ActionResponse<PushResponse> {
     private final UUID messageUUID;
 
     private PushResponse(UUID messageUUID) {
@@ -28,11 +28,10 @@ public class PushResponse implements ActionResponse<PushResponse.Builder, PushRe
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, PushResponse> {
+    public static class Builder implements EntryBuilder<PushResponse> {
         private UUID messageUUID;
 
-        @Override
-        public Builder from(PushResponse entry) {
+        private Builder from(PushResponse entry) {
             messageUUID = entry.messageUUID;
             return this;
         }

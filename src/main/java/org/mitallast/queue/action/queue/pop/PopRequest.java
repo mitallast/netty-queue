@@ -8,7 +8,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class PopRequest implements ActionRequest<PopRequest.Builder, PopRequest> {
+public class PopRequest implements ActionRequest<PopRequest> {
     private final String queue;
 
     private PopRequest(String queue) {
@@ -34,11 +34,10 @@ public class PopRequest implements ActionRequest<PopRequest.Builder, PopRequest>
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, PopRequest> {
+    public static class Builder implements EntryBuilder<PopRequest> {
         private String queue;
 
-        @Override
-        public Builder from(PopRequest entry) {
+        private Builder from(PopRequest entry) {
             queue = entry.queue();
             return this;
         }

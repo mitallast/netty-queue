@@ -8,7 +8,7 @@ import org.mitallast.queue.queues.stats.QueuesStats;
 
 import java.io.IOException;
 
-public class QueuesStatsResponse implements ActionResponse<QueuesStatsResponse.Builder, QueuesStatsResponse> {
+public class QueuesStatsResponse implements ActionResponse<QueuesStatsResponse> {
 
     private final QueuesStats stats;
 
@@ -29,11 +29,10 @@ public class QueuesStatsResponse implements ActionResponse<QueuesStatsResponse.B
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, QueuesStatsResponse> {
+    public static class Builder implements EntryBuilder<QueuesStatsResponse> {
         private QueuesStats stats;
 
-        @Override
-        public Builder from(QueuesStatsResponse entry) {
+        private Builder from(QueuesStatsResponse entry) {
             stats = entry.stats;
             return this;
         }

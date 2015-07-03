@@ -8,7 +8,7 @@ import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
 
-public class GetResponse implements ActionResponse<GetResponse.Builder, GetResponse> {
+public class GetResponse implements ActionResponse<GetResponse> {
 
     private final QueueMessage message;
 
@@ -29,11 +29,10 @@ public class GetResponse implements ActionResponse<GetResponse.Builder, GetRespo
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, GetResponse> {
+    public static class Builder implements EntryBuilder<GetResponse> {
         private QueueMessage message;
 
-        @Override
-        public Builder from(GetResponse entry) {
+        private Builder from(GetResponse entry) {
             message = entry.message;
             return this;
         }

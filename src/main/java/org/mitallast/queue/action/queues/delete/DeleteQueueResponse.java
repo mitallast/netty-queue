@@ -7,7 +7,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 
 import java.io.IOException;
 
-public class DeleteQueueResponse implements ActionResponse<DeleteQueueResponse.Builder, DeleteQueueResponse> {
+public class DeleteQueueResponse implements ActionResponse<DeleteQueueResponse> {
     private final boolean deleted;
     private final Throwable error;
 
@@ -33,12 +33,11 @@ public class DeleteQueueResponse implements ActionResponse<DeleteQueueResponse.B
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, DeleteQueueResponse> {
+    public static class Builder implements EntryBuilder<DeleteQueueResponse> {
         private boolean deleted;
         private Throwable error;
 
-        @Override
-        public Builder from(DeleteQueueResponse entry) {
+        private Builder from(DeleteQueueResponse entry) {
             deleted = entry.deleted;
             error = entry.error;
             return this;

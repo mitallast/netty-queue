@@ -75,7 +75,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                             logger.warn("future not found");
                         } else {
                             if (frame instanceof StreamableTransportFrame) {
-                                EntryBuilder<? extends EntryBuilder, ActionResponse> builder = ((StreamableTransportFrame) frame).message();
+                                EntryBuilder<ActionResponse> builder = ((StreamableTransportFrame) frame).message();
                                 future.complete(builder.build());
                             } else {
                                 future.complete(frame);

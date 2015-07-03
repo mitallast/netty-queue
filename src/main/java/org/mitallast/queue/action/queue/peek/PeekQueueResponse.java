@@ -8,7 +8,7 @@ import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
 
-public class PeekQueueResponse implements ActionResponse<PeekQueueResponse.Builder, PeekQueueResponse> {
+public class PeekQueueResponse implements ActionResponse<PeekQueueResponse> {
 
     private final QueueMessage message;
 
@@ -29,11 +29,10 @@ public class PeekQueueResponse implements ActionResponse<PeekQueueResponse.Build
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, PeekQueueResponse> {
+    public static class Builder implements EntryBuilder<PeekQueueResponse> {
         private QueueMessage message;
 
-        @Override
-        public Builder from(PeekQueueResponse entry) {
+        private Builder from(PeekQueueResponse entry) {
             message = entry.message;
             return this;
         }

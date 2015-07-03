@@ -31,7 +31,7 @@ public class TransportController<Request extends ActionRequest, Response extends
     }
 
     public void dispatchRequest(TransportChannel channel, StreamableTransportFrame requestFrame) {
-        EntryBuilder<? extends EntryBuilder, Request> builder = requestFrame.message();
+        EntryBuilder<Request> builder = requestFrame.message();
         Request actionRequest = builder.build();
         dispatchRequest(actionRequest).whenComplete((actionResponse, error) -> {
             if (error == null) {

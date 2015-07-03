@@ -9,7 +9,7 @@ import org.mitallast.queue.queue.QueueMessage;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionPopResponse implements ActionResponse<TransactionPopResponse.Builder, TransactionPopResponse> {
+public class TransactionPopResponse implements ActionResponse<TransactionPopResponse> {
     private final UUID transactionUUID;
     private final QueueMessage message;
 
@@ -35,12 +35,11 @@ public class TransactionPopResponse implements ActionResponse<TransactionPopResp
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, TransactionPopResponse> {
+    public static class Builder implements EntryBuilder<TransactionPopResponse> {
         private UUID transactionUUID;
         private QueueMessage message;
 
-        @Override
-        public Builder from(TransactionPopResponse entry) {
+        private Builder from(TransactionPopResponse entry) {
             transactionUUID = entry.transactionUUID;
             message = entry.message;
             return this;

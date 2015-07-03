@@ -10,7 +10,7 @@ import org.mitallast.queue.queue.QueueMessage;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionPushRequest implements ActionRequest<TransactionPushRequest.Builder, TransactionPushRequest> {
+public class TransactionPushRequest implements ActionRequest<TransactionPushRequest> {
     private final UUID transactionUUID;
     private final String queue;
     private final QueueMessage message;
@@ -47,13 +47,12 @@ public class TransactionPushRequest implements ActionRequest<TransactionPushRequ
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, TransactionPushRequest> {
+    public static class Builder implements EntryBuilder<TransactionPushRequest> {
         private UUID transactionUUID;
         private String queue;
         private QueueMessage message;
 
-        @Override
-        public Builder from(TransactionPushRequest entry) {
+        private Builder from(TransactionPushRequest entry) {
             transactionUUID = entry.transactionUUID;
             queue = entry.queue;
             message = entry.message;

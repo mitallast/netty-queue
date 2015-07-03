@@ -8,7 +8,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 
 import java.io.IOException;
 
-public class PeekQueueRequest implements ActionRequest<PeekQueueRequest.Builder, PeekQueueRequest> {
+public class PeekQueueRequest implements ActionRequest<PeekQueueRequest> {
 
     private final String queue;
 
@@ -35,11 +35,10 @@ public class PeekQueueRequest implements ActionRequest<PeekQueueRequest.Builder,
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, PeekQueueRequest> {
+    public static class Builder implements EntryBuilder<PeekQueueRequest> {
         private String queue;
 
-        @Override
-        public Builder from(PeekQueueRequest entry) {
+        private Builder from(PeekQueueRequest entry) {
             queue = entry.queue;
             return this;
         }

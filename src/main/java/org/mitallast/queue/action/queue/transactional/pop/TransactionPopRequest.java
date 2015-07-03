@@ -9,7 +9,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 import java.io.IOException;
 import java.util.UUID;
 
-public class TransactionPopRequest implements ActionRequest<TransactionPopRequest.Builder, TransactionPopRequest> {
+public class TransactionPopRequest implements ActionRequest<TransactionPopRequest> {
     private final UUID transactionUUID;
     private final String queue;
 
@@ -42,12 +42,11 @@ public class TransactionPopRequest implements ActionRequest<TransactionPopReques
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, TransactionPopRequest> {
+    public static class Builder implements EntryBuilder<TransactionPopRequest> {
         private UUID transactionUUID;
         private String queue;
 
-        @Override
-        public Builder from(TransactionPopRequest entry) {
+        private Builder from(TransactionPopRequest entry) {
             transactionUUID = entry.transactionUUID;
             queue = entry.queue;
             return this;

@@ -8,7 +8,7 @@ import org.mitallast.queue.queue.QueueMessage;
 
 import java.io.IOException;
 
-public class DeleteResponse implements ActionResponse<DeleteResponse.Builder, DeleteResponse> {
+public class DeleteResponse implements ActionResponse<DeleteResponse> {
 
     private final QueueMessage message;
 
@@ -29,11 +29,10 @@ public class DeleteResponse implements ActionResponse<DeleteResponse.Builder, De
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, DeleteResponse> {
+    public static class Builder implements EntryBuilder<DeleteResponse> {
         private QueueMessage message;
 
-        @Override
-        public Builder from(DeleteResponse entry) {
+        private Builder from(DeleteResponse entry) {
             message = entry.message;
             return this;
         }

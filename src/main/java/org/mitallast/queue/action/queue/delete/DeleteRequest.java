@@ -9,7 +9,7 @@ import org.mitallast.queue.common.validation.ValidationBuilder;
 import java.io.IOException;
 import java.util.UUID;
 
-public class DeleteRequest implements ActionRequest<DeleteRequest.Builder, DeleteRequest> {
+public class DeleteRequest implements ActionRequest<DeleteRequest> {
 
     private final String queue;
     private final UUID messageUUID;
@@ -43,12 +43,11 @@ public class DeleteRequest implements ActionRequest<DeleteRequest.Builder, Delet
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, DeleteRequest> {
+    public static class Builder implements EntryBuilder<DeleteRequest> {
         private String queue;
         private UUID messageUUID;
 
-        @Override
-        public Builder from(DeleteRequest entry) {
+        private Builder from(DeleteRequest entry) {
             queue = entry.queue;
             messageUUID = entry.messageUUID;
             return this;

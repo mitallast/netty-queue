@@ -7,7 +7,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 
 import java.io.IOException;
 
-public class CreateQueueResponse implements ActionResponse<CreateQueueResponse.Builder, CreateQueueResponse> {
+public class CreateQueueResponse implements ActionResponse<CreateQueueResponse> {
 
     private CreateQueueResponse() {
     }
@@ -21,10 +21,9 @@ public class CreateQueueResponse implements ActionResponse<CreateQueueResponse.B
         return new Builder();
     }
 
-    public static class Builder implements EntryBuilder<Builder, CreateQueueResponse> {
+    public static class Builder implements EntryBuilder<CreateQueueResponse> {
 
-        @Override
-        public Builder from(CreateQueueResponse entry) {
+        private Builder from(CreateQueueResponse entry) {
             return this;
         }
 

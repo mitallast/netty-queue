@@ -17,7 +17,7 @@ public class TransportFrameCodec extends BaseTest {
     @Test
     public void testPing() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, 123);
+        streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
@@ -36,7 +36,7 @@ public class TransportFrameCodec extends BaseTest {
     @Test
     public void testStreamable() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, 123);
+        streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 

@@ -40,7 +40,9 @@ public class ByteBufStreamInput extends ByteBufInputStream implements StreamInpu
     }
 
     @Override
-    public <T extends Streamable> Class<T> readClass() throws IOException {
-        return classRegistry.readClass(this);
+    public <T extends Streamable> T readStreamable() throws IOException {
+        T instance = classRegistry.readNewInstance(this);
+        instance.readFrom(this);
+        return instance;
     }
 }

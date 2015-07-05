@@ -3,10 +3,11 @@ package org.mitallast.queue.common.stream;
 import io.netty.buffer.ByteBuf;
 
 import java.io.*;
+import java.util.function.Supplier;
 
 public interface StreamService {
 
-    void registerClass(Class<? extends Streamable> streamableClass, int id);
+    <T extends Streamable> void registerClass(Class<T> streamableClass, Supplier<T> supplier, int id);
 
     StreamInput input(ByteBuf buffer);
 

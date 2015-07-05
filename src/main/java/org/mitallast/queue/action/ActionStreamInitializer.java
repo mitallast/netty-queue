@@ -38,50 +38,50 @@ public class ActionStreamInitializer {
 
         // queue
 
-        streamService.registerClass(DeleteRequest.Builder.class, ++id);
-        streamService.registerClass(DeleteResponse.Builder.class, ++id);
+        streamService.registerClass(DeleteRequest.Builder.class, DeleteRequest.Builder::new, ++id);
+        streamService.registerClass(DeleteResponse.Builder.class, DeleteResponse.Builder::new, ++id);
 
-        streamService.registerClass(GetRequest.Builder.class, ++id);
-        streamService.registerClass(GetResponse.Builder.class, ++id);
+        streamService.registerClass(GetRequest.Builder.class, GetRequest.Builder::new, ++id);
+        streamService.registerClass(GetResponse.Builder.class, GetResponse.Builder::new, ++id);
 
-        streamService.registerClass(PeekQueueResponse.Builder.class, ++id);
-        streamService.registerClass(PeekQueueRequest.Builder.class, ++id);
+        streamService.registerClass(PeekQueueResponse.Builder.class, PeekQueueResponse.Builder::new, ++id);
+        streamService.registerClass(PeekQueueRequest.Builder.class, PeekQueueRequest.Builder::new, ++id);
 
-        streamService.registerClass(PopRequest.Builder.class, ++id);
-        streamService.registerClass(PopResponse.Builder.class, ++id);
+        streamService.registerClass(PopRequest.Builder.class, PopRequest.Builder::new, ++id);
+        streamService.registerClass(PopResponse.Builder.class, PopResponse.Builder::new, ++id);
 
-        streamService.registerClass(PushRequest.Builder.class, ++id);
-        streamService.registerClass(PushResponse.Builder.class, ++id);
+        streamService.registerClass(PushRequest.Builder.class, PushRequest.Builder::new, ++id);
+        streamService.registerClass(PushResponse.Builder.class, PushResponse.Builder::new, ++id);
 
-        streamService.registerClass(QueueStatsRequest.Builder.class, ++id);
-        streamService.registerClass(QueueStatsResponse.Builder.class, ++id);
+        streamService.registerClass(QueueStatsRequest.Builder.class, QueueStatsRequest.Builder::new, ++id);
+        streamService.registerClass(QueueStatsResponse.Builder.class, QueueStatsResponse.Builder::new, ++id);
 
         // transactional
 
-        streamService.registerClass(TransactionCommitRequest.Builder.class, ++id);
-        streamService.registerClass(TransactionCommitResponse.Builder.class, ++id);
+        streamService.registerClass(TransactionCommitRequest.Builder.class, TransactionCommitRequest.Builder::new, ++id);
+        streamService.registerClass(TransactionCommitResponse.Builder.class, TransactionCommitResponse.Builder::new, ++id);
 
-        streamService.registerClass(TransactionDeleteRequest.Builder.class, ++id);
-        streamService.registerClass(TransactionDeleteResponse.Builder.class, ++id);
+        streamService.registerClass(TransactionDeleteRequest.Builder.class, TransactionDeleteRequest.Builder::new, ++id);
+        streamService.registerClass(TransactionDeleteResponse.Builder.class, TransactionDeleteResponse.Builder::new, ++id);
 
-        streamService.registerClass(TransactionPopRequest.Builder.class, ++id);
-        streamService.registerClass(TransactionPopResponse.Builder.class, ++id);
+        streamService.registerClass(TransactionPopRequest.Builder.class, TransactionPopRequest.Builder::new, ++id);
+        streamService.registerClass(TransactionPopResponse.Builder.class, TransactionPopResponse.Builder::new, ++id);
 
-        streamService.registerClass(TransactionPushRequest.Builder.class, ++id);
-        streamService.registerClass(TransactionPushResponse.Builder.class, ++id);
+        streamService.registerClass(TransactionPushRequest.Builder.class, TransactionPushRequest.Builder::new, ++id);
+        streamService.registerClass(TransactionPushResponse.Builder.class, TransactionPushResponse.Builder::new, ++id);
 
-        streamService.registerClass(TransactionRollbackRequest.Builder.class, ++id);
-        streamService.registerClass(TransactionRollbackResponse.Builder.class, ++id);
+        streamService.registerClass(TransactionRollbackRequest.Builder.class, TransactionRollbackRequest.Builder::new, ++id);
+        streamService.registerClass(TransactionRollbackResponse.Builder.class, TransactionRollbackResponse.Builder::new, ++id);
 
         // queues
 
-        streamService.registerClass(CreateQueueRequest.Builder.class, ++id);
-        streamService.registerClass(CreateQueueResponse.Builder.class, ++id);
+        streamService.registerClass(CreateQueueRequest.Builder.class, CreateQueueRequest.Builder::new, ++id);
+        streamService.registerClass(CreateQueueResponse.Builder.class, CreateQueueResponse.Builder::new, ++id);
 
-        streamService.registerClass(DeleteQueueRequest.Builder.class, ++id);
-        streamService.registerClass(DeleteQueueResponse.Builder.class, ++id);
+        streamService.registerClass(DeleteQueueRequest.Builder.class, DeleteQueueRequest.Builder::new, ++id);
+        streamService.registerClass(DeleteQueueResponse.Builder.class, DeleteQueueResponse.Builder::new, ++id);
 
-        streamService.registerClass(QueuesStatsRequest.Builder.class, ++id);
-        streamService.registerClass(QueuesStatsResponse.Builder.class, ++id);
+        streamService.registerClass(QueuesStatsRequest.Builder.class, QueuesStatsRequest.Builder::new, ++id);
+        streamService.registerClass(QueuesStatsResponse.Builder.class, QueuesStatsResponse.Builder::new, ++id);
     }
 }

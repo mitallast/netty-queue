@@ -98,8 +98,6 @@ public interface StreamInput extends DataInput, Closeable {
 
     ByteBuf readByteBufOrNull() throws IOException;
 
-    <T extends Streamable> Class<T> readClass() throws IOException;
-
     default Settings readSettings() throws IOException {
         int size = readInt();
         if (size == 0) {
@@ -116,21 +114,7 @@ public interface StreamInput extends DataInput, Closeable {
         }
     }
 
-    default <T extends Streamable> T readStreamable(Class<T> streamableClass) throws IOException {
-        final T streamable;
-        try {
-            streamable = streamableClass.newInstance();
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new IOException(e);
-        }
-        streamable.readFrom(this);
-        return streamable;
-    }
-
-    default <T extends Streamable> T readStreamable() throws IOException {
-        Class<T> streamableClass = readClass();
-        return readStreamable(streamableClass);
-    }
+    <T extends Streamable> T readStreamable() throws IOException;
 
     default <T extends Streamable> T readStreamable(Supplier<T> factory) throws IOException {
         T streamable = factory.get();

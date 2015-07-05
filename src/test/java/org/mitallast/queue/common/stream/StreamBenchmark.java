@@ -21,7 +21,7 @@ public class StreamBenchmark extends BaseBenchmark {
     @Before
     public void setUp() throws Exception {
         streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, 1);
+        streamService.registerClass(TestStreamable.class, TestStreamable::new, 1);
         buffer = Unpooled.buffer();
         output = streamService.output(buffer);
         output.writeClass(TestStreamable.class);
@@ -56,14 +56,6 @@ public class StreamBenchmark extends BaseBenchmark {
         for (int i = 0; i < loop; i++) {
             buffer.writerIndex(0);
             output.writeClass(TestStreamable.class);
-        }
-    }
-
-    @Test
-    public void testReadClass() throws Exception {
-        for (int i = 0; i < loop; i++) {
-            buffer.resetReaderIndex();
-            Class<Streamable> streamableClass = input.readClass();
         }
     }
 

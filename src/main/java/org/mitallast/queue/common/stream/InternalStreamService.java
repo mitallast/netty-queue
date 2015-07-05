@@ -10,10 +10,10 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 
 import java.io.*;
+import java.util.function.Supplier;
 
 public class InternalStreamService extends AbstractComponent implements StreamableClassRegistry, StreamService {
-
-    private final TIntObjectMap<Class<? extends Streamable>> idToClassMap = new TIntObjectHashMap<>(100, 0.5f, -1);
+    private final TIntObjectMap<Supplier<? extends Streamable>> idToSupplierMap = new TIntObjectHashMap<>(100, 0.5f, -1);
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);
 
     @Inject
@@ -22,12 +22,13 @@ public class InternalStreamService extends AbstractComponent implements Streamab
     }
 
     @Override
-    public synchronized void registerClass(Class<? extends Streamable> streamableClass, int id) {
-        Class<? extends Streamable> current = idToClassMap.putIfAbsent(id, streamableClass);
+    public synchronized <T extends Streamable> void registerClass(Class<T> streamableClass, Supplier<T> supplier, int id) {
+        Supplier<? extends Streamable> current = idToSupplierMap.putIfAbsent(id, supplier);
         if (current != null) {
             throw new IllegalArgumentException("Class id already registered, class: " + streamableClass + " id: " + id);
         }
         classToIdMap.put(streamableClass, id);
+        idToSupplierMap.put(id, supplier);
     }
 
     @Override
@@ -41,13 +42,9 @@ public class InternalStreamService extends AbstractComponent implements Streamab
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Streamable> Class<T> readClass(StreamInput stream) throws IOException {
+    public <T extends Streamable> T readNewInstance(StreamInput stream) throws IOException {
         int id = stream.readInt();
-        Class streamableClass = idToClassMap.get(id);
-        if (streamableClass == null) {
-            throw new IOException("Class id not registered: " + id);
-        }
-        return streamableClass;
+        return (T) idToSupplierMap.get(id).get();
     }
 
     @Override

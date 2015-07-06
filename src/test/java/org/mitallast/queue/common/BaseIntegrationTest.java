@@ -17,7 +17,11 @@ public class BaseIntegrationTest extends BaseTest {
     private List<InternalNode> nodes = new ArrayList<>();
 
     protected InternalNode createNode() throws Exception {
-        InternalNode node = new InternalNode(settings());
+        return createNode(settings());
+    }
+
+    protected InternalNode createNode(Settings settings) throws Exception {
+        InternalNode node = new InternalNode(settings);
         node.start();
         nodes.add(node);
         return node;

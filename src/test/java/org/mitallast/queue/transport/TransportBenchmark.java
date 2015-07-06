@@ -26,6 +26,7 @@ public class TransportBenchmark extends BaseQueueTest {
         return ImmutableSettings.builder()
             .put(super.settings())
             .put("rest.enabled", false)
+            .put("raft.enabled", false)
             .build();
     }
 

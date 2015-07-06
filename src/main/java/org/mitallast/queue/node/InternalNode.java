@@ -12,6 +12,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamModule;
 import org.mitallast.queue.common.strings.Strings;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
+import org.mitallast.queue.raft.RaftModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportModule;
@@ -33,8 +34,13 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         modules.add(new StreamModule());
         modules.add(new TransactionalQueuesModule());
         modules.add(new ActionModule());
-        modules.add(new RestModule());
         modules.add(new TransportModule());
+        if (settings.getAsBoolean("rest.enabled", true)) {
+            modules.add(new RestModule());
+        }
+        if (settings.getAsBoolean("raft.enabled", true)) {
+            modules.add(new RaftModule());
+        }
 
         injector = modules.createInjector();
 

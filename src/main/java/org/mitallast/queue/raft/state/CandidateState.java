@@ -1,0 +1,197 @@
+package org.mitallast.queue.raft.state;
+
+import org.mitallast.queue.common.concurrent.Futures;
+import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.raft.Raft;
+import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.raft.action.append.AppendRequest;
+import org.mitallast.queue.raft.action.append.AppendResponse;
+import org.mitallast.queue.raft.action.vote.VoteRequest;
+import org.mitallast.queue.raft.action.vote.VoteResponse;
+import org.mitallast.queue.raft.cluster.Cluster;
+import org.mitallast.queue.raft.cluster.Member;
+import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.util.ExecutionContext;
+import org.mitallast.queue.raft.util.Quorum;
+
+import java.io.IOException;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
+class CandidateState extends ActiveState {
+    private final Random random = new Random();
+    private volatile Quorum quorum;
+    private volatile ScheduledFuture<?> currentTimer;
+
+    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, Cluster cluster) {
+        super(settings, context, executionContext, cluster);
+    }
+
+    @Override
+    public Raft.State type() {
+        return Raft.State.CANDIDATE;
+    }
+
+    public synchronized void open() {
+        startElection();
+    }
+
+    private void startElection() {
+        executionContext.checkThread();
+        logger.info("starting election");
+        try {
+            sendVoteRequests();
+        } catch (IOException e) {
+            logger.info("error send vote requests", e);
+        }
+    }
+
+    private void sendVoteRequests() throws IOException {
+        executionContext.checkThread();
+        // Cancel the current timer task and purge the election timer of cancelled tasks.
+        if (currentTimer != null) {
+            currentTimer.cancel(false);
+        }
+
+        // When the election timer is reset, increment the current term and
+        // restart the election.
+        context.setTerm(context.getTerm() + 1);
+
+        long delay = context.getElectionTimeout() + (random.nextInt((int) context.getElectionTimeout()) % context.getElectionTimeout());
+        currentTimer = executionContext.schedule(() -> {
+            // When the election times out, clear the previous majority vote
+            // check and restart the election.
+            logger.info("election timed out");
+            if (quorum != null) {
+                quorum.cancel();
+                quorum = null;
+            }
+            try {
+                sendVoteRequests();
+            } catch (IOException e) {
+                logger.info("error send vote requests", e);
+            }
+            logger.info("restarted election");
+        }, delay, TimeUnit.MILLISECONDS);
+
+        final AtomicBoolean complete = new AtomicBoolean();
+        final Set<Member> votingMembers = cluster.members().stream()
+            .filter(m -> m.type() == Member.Type.ACTIVE)
+            .collect(Collectors.toSet());
+
+        // Send vote requests to all nodes. The vote request that is sent
+        // to this node will be automatically successful.
+        // First check if the quorum is null. If the quorum isn't null then that
+        // indicates that another vote is already going on.
+        final Quorum quorum = new Quorum((int) Math.floor(votingMembers.size() / 2.0) + 1, (elected) -> {
+            complete.set(true);
+            if (elected) {
+                transition(Raft.State.LEADER);
+            }
+        });
+
+        // First, load the last log entry to get its term. We load the entry
+        // by its index since the index is required by the protocol.
+        long lastIndex = context.getLog().lastIndex();
+        LogEntry lastEntry = lastIndex != 0 ? context.getLog().getEntry(lastIndex) : null;
+
+        // Once we got the last log term, iterate through each current member
+        // of the cluster and vote each member for a vote.
+        logger.info("requesting votes from {}", votingMembers);
+        final long lastTerm = lastEntry != null ? lastEntry.term() : 0;
+        for (Member member : votingMembers) {
+            logger.info("requesting vote from {} for term {}", member, context.getTerm());
+            VoteRequest request = VoteRequest.builder()
+                .setTerm(context.getTerm())
+                .setCandidate(cluster.member().node())
+                .setLogIndex(lastIndex)
+                .setLogTerm(lastTerm)
+                .build();
+            member.<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
+                if (!complete.get()) {
+                    if (error != null) {
+                        logger.warn(error.getMessage());
+                        quorum.fail();
+                    } else if (response.term() > context.getTerm()) {
+                        logger.info("received greater term from {}", member);
+                        context.setTerm(response.term());
+                        complete.set(true);
+                        transition(Raft.State.FOLLOWER);
+                    } else if (!response.voted()) {
+                        logger.info("received rejected vote from {}", member);
+                        quorum.fail();
+                    } else if (response.term() != context.getTerm()) {
+                        logger.info("received successful vote for a different term from {}", member);
+                        quorum.fail();
+                    } else {
+                        logger.info("received successful vote from {}", member);
+                        quorum.succeed();
+                    }
+                }
+            }, executionContext.executor());
+        }
+    }
+
+    @Override
+    public CompletableFuture<AppendResponse> append(AppendRequest request) {
+        executionContext.checkThread();
+
+        // If the request indicates a term that is greater than the current term then
+        // assign that term and leader to the current context and step down as a candidate.
+        if (request.term() >= context.getTerm()) {
+            context.setTerm(request.term());
+            transition(Raft.State.FOLLOWER);
+        }
+        return super.append(request);
+    }
+
+    @Override
+    public CompletableFuture<VoteResponse> vote(VoteRequest request) {
+        executionContext.checkThread();
+
+        // If the request indicates a term that is greater than the current term then
+        // assign that term and leader to the current context and step down as a candidate.
+        if (request.term() > context.getTerm()) {
+            context.setTerm(request.term());
+            transition(Raft.State.FOLLOWER);
+            return super.vote(request);
+        }
+
+        // If the vote request is not for this candidate then reject the vote.
+        if (request.candidate().equals(cluster.member().node())) {
+            return Futures.complete(VoteResponse.builder()
+                .setStatus(ResponseStatus.OK)
+                .setTerm(context.getTerm())
+                .setVoted(true)
+                .build());
+        } else {
+            return Futures.complete(VoteResponse.builder()
+                .setStatus(ResponseStatus.OK)
+                .setTerm(context.getTerm())
+                .setVoted(false)
+                .build());
+        }
+    }
+
+    private void cancelElection() {
+        executionContext.checkThread();
+        if (currentTimer != null) {
+            logger.info("cancelling election");
+            currentTimer.cancel(false);
+        }
+        if (quorum != null) {
+            quorum.cancel();
+            quorum = null;
+        }
+    }
+
+    public synchronized void close() {
+        executionContext.checkThread();
+        cancelElection();
+    }
+}

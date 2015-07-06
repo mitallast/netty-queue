@@ -15,6 +15,7 @@ public class ResourceRegistry extends AbstractComponent {
     private final Map<Class<? extends Resource>, Class<? extends StateMachine>> resources = new HashMap<>();
 
     @Inject
+    @SuppressWarnings("unchecked")
     public ResourceRegistry(Settings settings) throws IOException {
         super(settings);
         ClassPath classPath = ClassPath.from(getClass().getClassLoader());
@@ -22,7 +23,6 @@ public class ResourceRegistry extends AbstractComponent {
         for (ClassPath.ClassInfo classInfo : classesInfo) {
             Class<?> resourceClass = classInfo.load();
             if (Resource.class.isAssignableFrom(resourceClass)) {
-                //noinspection unchecked
                 register((Class<? extends Resource>) resourceClass);
             }
         }

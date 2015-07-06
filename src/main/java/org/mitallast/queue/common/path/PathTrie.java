@@ -47,7 +47,7 @@ public class PathTrie<TrieType> {
     }
 
     public void prettyPrint() {
-        root.prettyPrint(0);
+        root.prettyPrint(0, "", true);
     }
 
     private static class TrieNode<NodeType> {
@@ -69,15 +69,11 @@ public class PathTrie<TrieType> {
             this.key = key;
             this.keyHash = hash(key);
             if (isNamedWildcard(key)) {
-                updateKeyWithNamedWildcard(key);
+                int len = key.length();
+                namedWildcard = key.subSequence(1, len - 1).toString();
             } else {
                 namedWildcard = null;
             }
-        }
-
-        public void updateKeyWithNamedWildcard(CharSequence key) {
-            int len = key.length();
-            namedWildcard = key.subSequence(1, len - 1).toString();
         }
 
         private boolean isNamedWildcard(CharSequence key) {
@@ -268,18 +264,41 @@ public class PathTrie<TrieType> {
             }
         }
 
-        private void prettyPrint(int level) {
-            for (int i = 0; i < level; i++) {
-                System.out.print("  ");
+        private void prettyPrint(int level, String prefix, boolean last) {
+            System.out.print(prefix);
+            if (level > 0) {
+                if (last) {
+                    System.out.print("└── ");
+                } else {
+                    System.out.print("├── ");
+                }
             }
-            System.out.println(" |-[" + key + "(" + value + ")]");
+            System.out.println(key + " [" + value + "]");
+            TrieNode lastNode = null;
+            for (TrieNode<NodeType> node : children) {
+                if (node != null) {
+                    lastNode = node;
+                }
+            }
+            for (TrieNode<NodeType> node : childrenNamedWildcard) {
+                if (node != null) {
+                    lastNode = node;
+                }
+            }
+            String childPrefix = prefix;
+            if (level > 0) {
+                childPrefix = prefix + (last ? "    " : "├── ");
+            }
             for (TrieNode<NodeType> child : children) {
                 if (child != null) {
-                    child.prettyPrint(level + 1);
+                    child.prettyPrint(level + 1, childPrefix, lastNode == child);
                 }
             }
             for (TrieNode<NodeType> child : childrenNamedWildcard) {
-                child.prettyPrint(level + 1);
+                child.prettyPrint(level + 1, childPrefix, lastNode == child);
+            }
+            if (level == 0) {
+                System.out.println();
             }
         }
     }

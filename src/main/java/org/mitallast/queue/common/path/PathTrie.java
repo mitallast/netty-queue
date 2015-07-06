@@ -1,6 +1,6 @@
 package org.mitallast.queue.common.path;
 
-import gnu.trove.impl.HashFunctions;
+import org.mitallast.queue.common.collection.HashFunctions;
 import org.mitallast.queue.common.strings.CharSequenceReference;
 import org.mitallast.queue.common.strings.QueryStringDecoder;
 
@@ -64,7 +64,7 @@ public class PathTrie<TrieType> {
         public TrieNode(CharSequence key, NodeType value, char separator) {
             this.separator = separator;
             this.value = value;
-            this.children = new TrieNode[HashFunctions.fastCeil(42 / loadFactor)];
+            this.children = new TrieNode[HashFunctions.nextPrime(42, loadFactor)];
             this.childrenNamedWildcard = empty;
             this.key = key;
             this.keyHash = hash(key);
@@ -156,7 +156,7 @@ public class PathTrie<TrieType> {
             } while (index != loopIndex);
 
             // if full, rehash it
-            this.children = new TrieNode[HashFunctions.fastCeil(size * 2 / loadFactor)];
+            this.children = new TrieNode[HashFunctions.nextPrime(size * 2, loadFactor)];
             for (TrieNode<NodeType> child : children) {
                 int i = insertKey(child.key);
                 this.children[i] = child;

@@ -13,7 +13,10 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-import static org.mitallast.queue.queue.QueueMessageStatus.*;
+import static org.mitallast.queue.queue.QueueMessageStatus.DELETED;
+import static org.mitallast.queue.queue.QueueMessageStatus.INIT;
+import static org.mitallast.queue.queue.QueueMessageStatus.LOCKED;
+import static org.mitallast.queue.queue.QueueMessageStatus.QUEUED;
 
 public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
 
@@ -51,10 +54,6 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
         uuidMap = new AtomicReferenceArray<>(size);
         statusMap = new AtomicReferenceArray<>(size);
         init();
-    }
-
-    private static long getMetaOffset(int pos) {
-        return MESSAGE_META_OFFSET + MESSAGE_META_SIZE * pos;
     }
 
     public MemoryMappedFile getMappedFile() {
@@ -333,6 +332,7 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
             case LOCKED:
                 // do not write lock status
                 buffer.writeInt(QUEUED.ordinal());
+                break;
             case INIT:
             case QUEUED:
             case DELETED:
@@ -408,5 +408,9 @@ public class MMapQueueMessageMetaSegment implements QueueMessageMetaSegment {
     @Override
     public void delete() throws IOException {
         mappedFile.delete();
+    }
+
+    private static long getMetaOffset(int pos) {
+        return MESSAGE_META_OFFSET + MESSAGE_META_SIZE * pos;
     }
 }

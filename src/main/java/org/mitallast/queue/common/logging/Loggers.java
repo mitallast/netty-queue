@@ -7,10 +7,8 @@ import org.slf4j.Marker;
 
 public class Loggers {
 
-    public static final String SPACE = " ";
-
     public static Logger getLogger(Class className, Settings settings) {
-        return getLogger(className, settings, null);
+        return getLogger(className, settings, new String[]{});
     }
 
     public static Logger getLogger(Class className, Settings settings, String... prefixes) {

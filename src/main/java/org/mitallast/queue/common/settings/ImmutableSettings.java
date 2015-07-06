@@ -18,6 +18,7 @@ import static org.mitallast.queue.common.unit.ByteSizeValue.parseBytesSizeValue;
 import static org.mitallast.queue.common.unit.SizeValue.parseSizeValue;
 import static org.mitallast.queue.common.unit.TimeValue.parseTimeValue;
 
+@SuppressWarnings("unused")
 public class ImmutableSettings implements Settings {
     public static final Settings EMPTY = new Builder().build();
 
@@ -27,17 +28,6 @@ public class ImmutableSettings implements Settings {
     ImmutableSettings(Map<String, String> settings, ClassLoader classLoader) {
         this.settings = Collections.unmodifiableMap(settings);
         this.classLoader = classLoader;
-    }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Returns a builder to be used in order to build settings.
-     */
-    public static Builder settingsBuilder() {
-        return new Builder();
     }
 
     @Override
@@ -465,14 +455,9 @@ public class ImmutableSettings implements Settings {
 
         ImmutableSettings that = (ImmutableSettings) o;
 
-        if (classLoader != null ? !classLoader.equals(that.classLoader) : that.classLoader != null) {
-            return false;
-        }
-        if (settings != null ? !settings.equals(that.settings) : that.settings != null) {
-            return false;
-        }
+        return !(classLoader != null ? !classLoader.equals(that.classLoader) : that.classLoader != null)
+            && !(settings != null ? !settings.equals(that.settings) : that.settings != null);
 
-        return true;
     }
 
     @Override
@@ -482,21 +467,21 @@ public class ImmutableSettings implements Settings {
         return result;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     /**
      * A builder allowing to put different settings and then {@link #build()} an immutable
-     * settings implementation. Use {@link ImmutableSettings#settingsBuilder()} in order to
+     * settings implementation. Use {@link ImmutableSettings#builder()} in order to
      * construct it.
      */
     public static class Builder implements Settings.Builder {
 
-        public static final Settings EMPTY_SETTINGS = new Builder().build();
-
         private final Map<String, String> map = new LinkedHashMap<>();
-
         private ClassLoader classLoader;
 
         private Builder() {
-
         }
 
         public Map<String, String> internalMap() {
@@ -526,14 +511,16 @@ public class ImmutableSettings implements Settings {
          * Puts tuples of key value pairs of settings. Simplified version instead of repeating calling
          * put for each one.
          */
+        @SuppressWarnings("unchecked")
         public Builder put(Object... settings) {
             if (settings.length == 1) {
                 // support cases where the actual type gets lost down the road...
-                if (settings[0] instanceof Map) {
+                Object setting = settings[0];
+                if (setting instanceof Map) {
                     //noinspection unchecked
-                    return put((Map) settings[0]);
-                } else if (settings[0] instanceof Settings) {
-                    return put((Settings) settings[0]);
+                    return put((Map<String, String>) setting);
+                } else if (setting instanceof Settings) {
+                    return put((Settings) setting);
                 }
             }
             if ((settings.length % 2) != 0) {
@@ -841,10 +828,7 @@ public class ImmutableSettings implements Settings {
                 @Override
                 public boolean shouldIgnoreMissing(String placeholderName) {
                     // if its an explicit env var, we are ok with not having a value for it and treat it as optional
-                    if (placeholderName.startsWith("env.")) {
-                        return true;
-                    }
-                    return false;
+                    return placeholderName.startsWith("env.");
                 }
             };
             for (Map.Entry<String, String> entry : map.entrySet()) {

@@ -70,7 +70,8 @@ public class QueryStringDecoder {
                                 + " of: " + s);
                     }
                     c = (char) (c * 16 + c2);
-                    // Fall through.
+                    buf[pos++] = c;
+                    break;
                 default:
                     buf[pos++] = c;
                     break;

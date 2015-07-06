@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 
 public abstract class AbstractAction<Request extends ActionRequest, Response extends ActionResponse> extends AbstractComponent {
 
-    @SuppressWarnings("all")
+    @SuppressWarnings("unchecked")
     public AbstractAction(Settings settings, TransportController controller) {
         super(settings);
         Class<Request> requestClass = (Class<Request>) ((ParameterizedType) getClass().getGenericSuperclass())

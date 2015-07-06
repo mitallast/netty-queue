@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.state;
 
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.action.append.AppendRequest;
@@ -37,49 +38,49 @@ class StartState extends AbstractState {
     @Override
     public CompletableFuture<JoinResponse> join(JoinRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<LeaveResponse> leave(LeaveRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<RegisterResponse> register(RegisterRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<KeepAliveResponse> keepAlive(KeepAliveRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<AppendResponse> append(AppendRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<VoteResponse> vote(VoteRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<CommandResponse> command(CommandRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
     public CompletableFuture<QueryResponse> query(QueryRequest request) {
         executionContext.checkThread();
-        return exceptionalFuture(new IllegalStateException("inactive state"));
+        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
     }
 
     @Override
@@ -90,11 +91,5 @@ class StartState extends AbstractState {
     @Override
     public void close() {
         executionContext.checkThread();
-    }
-
-    public static <T> CompletableFuture<T> exceptionalFuture(Throwable t) {
-        CompletableFuture<T> future = new CompletableFuture<>();
-        future.completeExceptionally(t);
-        return future;
     }
 }

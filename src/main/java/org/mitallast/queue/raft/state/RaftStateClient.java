@@ -2,6 +2,7 @@ package org.mitallast.queue.raft.state;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.unit.TimeValue;
@@ -128,7 +129,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
 
     @SuppressWarnings("unchecked")
     public <R extends Streamable> CompletableFuture<R> submit(Command<R> command) {
-        CompletableFuture<R> future = new CompletableFuture<>();
+        CompletableFuture<R> future = Futures.future();
         executionContext.execute(() -> {
             if (session == 0)
                 future.completeExceptionally(new IllegalStateException("session not open"));
@@ -186,7 +187,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
      */
     @SuppressWarnings("unchecked")
     public <R extends Streamable> CompletableFuture<R> submit(Query<R> query) {
-        CompletableFuture<R> future = new CompletableFuture<>();
+        CompletableFuture<R> future = Futures.future();
         executionContext.execute(() -> {
             if (leader == null)
                 future.completeExceptionally(new IllegalStateException("unknown leader"));
@@ -233,7 +234,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
 
     private CompletableFuture<Void> register() {
         executionContext.checkThread();
-        return register(100, new CompletableFuture<>());
+        return register(100, Futures.future());
     }
 
     private CompletableFuture<Void> register(long interval, CompletableFuture<Void> future) {
@@ -251,7 +252,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
 
     protected CompletableFuture<Void> register(List<Member> members) {
         executionContext.checkThread();
-        return register(members, new CompletableFuture<>()).thenCompose(response -> {
+        return register(members, Futures.future()).thenCompose(response -> {
             setTerm(response.term());
             setLeader(response.leader());
             setSession(response.session());
@@ -316,7 +317,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
      */
     protected CompletableFuture<Void> keepAlive(List<Member> members) {
         executionContext.checkThread();
-        return keepAlive(members, new CompletableFuture<>()).thenCompose(response -> {
+        return keepAlive(members, Futures.future()).thenCompose(response -> {
             setTerm(response.term());
             setLeader(response.leader());
             setVersion(response.version());

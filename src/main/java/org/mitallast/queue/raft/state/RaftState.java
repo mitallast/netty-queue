@@ -255,7 +255,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         // If the session has not yet been opened or if the client provided a version greater than the last applied index
         // then wait until the up-to-date index is applied to the state machine.
         if (sessionId > lastApplied || version > lastApplied) {
-            CompletableFuture<Streamable> future = new CompletableFuture<>();
+            CompletableFuture<Streamable> future = Futures.future();
             List<Runnable> queries = this.queries.computeIfAbsent(Math.max(sessionId, version), id -> new ArrayList<>());
             queries.add(() -> {
                 CompletableFuture<Streamable> applyFuture = CompletableFuture.supplyAsync(() ->

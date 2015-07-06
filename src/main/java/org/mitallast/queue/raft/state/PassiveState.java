@@ -194,7 +194,7 @@ public class PassiveState extends AbstractState {
 
             // Rather than composing all futures into a single future, use a counter to count completions in order to preserve memory.
             AtomicLong counter = new AtomicLong();
-            CompletableFuture<Void> future = new CompletableFuture<>();
+            CompletableFuture<Void> future = Futures.future();
 
             for (long i = lastApplied + 1; i <= effectiveIndex; i++) {
                 LogEntry entry = context.getLog().getEntry(i);

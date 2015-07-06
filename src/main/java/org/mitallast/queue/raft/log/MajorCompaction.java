@@ -29,7 +29,7 @@ public class MajorCompaction extends Compaction {
 
     @Override
     CompletableFuture<Void> run(SegmentManager segments) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<Void> future = Futures.future();
         executionContext.execute(() -> {
             logger.info("Compacting the log");
             setRunning(true);
@@ -64,7 +64,7 @@ public class MajorCompaction extends Compaction {
     }
 
     private CompletableFuture<Void> compactSegment(Segment segment, SegmentManager manager) {
-        return shouldCompactSegment(segment, new CompletableFuture<>()).thenCompose(compact -> {
+        return shouldCompactSegment(segment, Futures.future()).thenCompose(compact -> {
             if (compact) {
                 logger.info("compacting {}", segment);
                 Segment compactSegment;
@@ -81,7 +81,7 @@ public class MajorCompaction extends Compaction {
                 } catch (IOException e) {
                     return Futures.completeExceptionally(e);
                 }
-                return compactSegment(segment, segment.firstIndex(), compactSegment, new CompletableFuture<>())
+                return compactSegment(segment, segment.firstIndex(), compactSegment, Futures.future())
                     .thenAcceptAsync((replacedSegment) -> {
                         try {
                             manager.replace(replacedSegment);

@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.log;
 
+import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.log.entry.LogEntry;
@@ -27,7 +28,7 @@ public class MinorCompaction extends Compaction {
 
     @Override
     CompletableFuture<Void> run(SegmentManager segments) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<Void> future = Futures.future();
         executionContext.execute(() -> {
             logger.info("Compacting the log");
             setRunning(true);
@@ -81,7 +82,7 @@ public class MinorCompaction extends Compaction {
      */
     private CompletableFuture<Void> compactLevels(Iterator<List<Segment>> iterator, SegmentManager manager, CompletableFuture<Void> future) {
         if (iterator.hasNext()) {
-            compactLevel(iterator.next(), manager, new CompletableFuture<>()).whenCompleteAsync((result, error) -> {
+            compactLevel(iterator.next(), manager, Futures.future()).whenCompleteAsync((result, error) -> {
                 if (error == null) {
                     compactLevels(iterator, manager, future);
                 } else {
@@ -128,7 +129,7 @@ public class MinorCompaction extends Compaction {
         List<Segment> compactSegments = new ArrayList<>();
         compactSegments.add(compactSegment);
 
-        compactSegments(segment, segment.firstIndex(), compactSegment, levelSegments, compactSegments, manager, new CompletableFuture<>())
+        compactSegments(segment, segment.firstIndex(), compactSegment, levelSegments, compactSegments, manager, Futures.future())
             .whenCompleteAsync((result, error) -> {
                 if (error == null) {
                     try {

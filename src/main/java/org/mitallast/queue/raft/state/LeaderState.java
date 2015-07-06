@@ -83,7 +83,7 @@ class LeaderState extends ActiveState {
             .build();
         index = context.getLog().appendEntry(entry);
 
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<Void> future = Futures.future();
         replicator.commit(index).whenComplete((resultIndex, error) -> {
             if (error == null) {
                 try {
@@ -209,7 +209,7 @@ class LeaderState extends ActiveState {
         logger.debug("appended entry to log at index {}", index);
 
 
-        CompletableFuture<CommandResponse> future = new CompletableFuture<>();
+        CompletableFuture<CommandResponse> future = Futures.future();
         replicator.commit(index).whenComplete((commitIndex, commitError) -> {
 
             if (commitError == null) {
@@ -293,7 +293,7 @@ class LeaderState extends ActiveState {
      */
     private CompletableFuture<QueryResponse> submitQuerySerializable(QueryEntry entry) {
         executionContext.checkThread();
-        return applyQuery(entry, new CompletableFuture<>());
+        return applyQuery(entry, Futures.future());
     }
 
     /**
@@ -314,7 +314,7 @@ class LeaderState extends ActiveState {
      */
     private CompletableFuture<QueryResponse> submitQueryLinearizableStrict(QueryEntry entry) {
         executionContext.checkThread();
-        CompletableFuture<QueryResponse> future = new CompletableFuture<>();
+        CompletableFuture<QueryResponse> future = Futures.future();
         replicator.commit().whenComplete((commitIndex, commitError) -> {
             if (commitError == null) {
                 applyQuery(entry, future);
@@ -377,7 +377,7 @@ class LeaderState extends ActiveState {
             return Futures.completeExceptionally(e);
         }
 
-        CompletableFuture<RegisterResponse> future = new CompletableFuture<>();
+        CompletableFuture<RegisterResponse> future = Futures.future();
         replicator.commit(index).whenComplete((commitIndex, commitError) -> {
             if (commitError == null) {
                 try {
@@ -443,7 +443,7 @@ class LeaderState extends ActiveState {
             return Futures.completeExceptionally(e);
         }
 
-        CompletableFuture<KeepAliveResponse> future = new CompletableFuture<>();
+        CompletableFuture<KeepAliveResponse> future = Futures.future();
         replicator.commit(index).whenComplete((commitIndex, commitError) -> {
             if (commitError == null) {
                 try {
@@ -508,7 +508,7 @@ class LeaderState extends ActiveState {
             return Futures.completeExceptionally(e);
         }
 
-        CompletableFuture<JoinResponse> future = new CompletableFuture<>();
+        CompletableFuture<JoinResponse> future = Futures.future();
         replicator.commit(index).whenComplete((commitIndex, commitError) -> {
             if (commitError == null) {
                 try {
@@ -565,7 +565,7 @@ class LeaderState extends ActiveState {
             return Futures.completeExceptionally(e);
         }
 
-        CompletableFuture<LeaveResponse> future = new CompletableFuture<>();
+        CompletableFuture<LeaveResponse> future = Futures.future();
         replicator.commit(index).whenComplete((commitIndex, commitError) -> {
             if (commitError == null) {
                 try {
@@ -643,7 +643,7 @@ class LeaderState extends ActiveState {
                 return Futures.complete(null);
 
             if (commitFuture == null) {
-                commitFuture = new CompletableFuture<>();
+                commitFuture = Futures.future();
                 commitTime = System.currentTimeMillis();
                 replicas.forEach((replica) -> {
                     try {
@@ -654,7 +654,7 @@ class LeaderState extends ActiveState {
                 });
                 return commitFuture;
             } else if (nextCommitFuture == null) {
-                nextCommitFuture = new CompletableFuture<>();
+                nextCommitFuture = Futures.future();
                 return nextCommitFuture;
             } else {
                 return nextCommitFuture;
@@ -685,7 +685,7 @@ class LeaderState extends ActiveState {
                         logger.error("error commit", e);
                     }
                 });
-                return new CompletableFuture<>();
+                return Futures.future();
             });
         }
 

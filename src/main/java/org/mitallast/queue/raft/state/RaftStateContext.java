@@ -198,14 +198,14 @@ public class RaftStateContext extends RaftStateClient {
     @Override
     protected CompletableFuture<Void> register(List<Member> members) {
         executionContext.checkThread();
-        return register(members, new CompletableFuture<>())
+        return register(members, Futures.future())
             .thenAcceptAsync(response -> setSession(response.session()), executionContext.executor());
     }
 
     @Override
     protected CompletableFuture<Void> keepAlive(List<Member> members) {
         executionContext.checkThread();
-        return keepAlive(members, new CompletableFuture<>())
+        return keepAlive(members, Futures.future())
             .thenAcceptAsync(response -> setVersion(response.version()), executionContext.executor());
     }
 
@@ -238,14 +238,14 @@ public class RaftStateContext extends RaftStateClient {
 
     private CompletableFuture<Void> join() {
         executionContext.checkThread();
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        CompletableFuture<Void> future = Futures.future();
         executionContext.execute(() -> join(100, future));
         return future;
     }
 
     private CompletableFuture<Void> join(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        join(new ArrayList<>(cluster.members()), new CompletableFuture<>()).whenComplete((result, error) -> {
+        join(new ArrayList<>(cluster.members()), Futures.future()).whenComplete((result, error) -> {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(null);
@@ -291,7 +291,7 @@ public class RaftStateContext extends RaftStateClient {
         executionContext.checkThread();
         return leave(cluster.members().stream()
             .filter(m -> m.type() == Member.Type.ACTIVE)
-            .collect(Collectors.toList()), new CompletableFuture<>());
+            .collect(Collectors.toList()), Futures.future());
     }
 
     private CompletableFuture<Void> leave(List<Member> members, CompletableFuture<Void> future) {

@@ -194,7 +194,7 @@ abstract class ActiveState extends PassiveState {
             return queryForward(request);
         }
 
-        CompletableFuture<QueryResponse> future = new CompletableFuture<>();
+        CompletableFuture<QueryResponse> future = Futures.future();
         QueryEntry entry = QueryEntry.builder()
             .setIndex(context.getCommitIndex())
             .setTerm(context.getTerm())
@@ -233,7 +233,7 @@ abstract class ActiveState extends PassiveState {
             return queryForward(request);
         }
 
-        CompletableFuture<QueryResponse> future = new CompletableFuture<>();
+        CompletableFuture<QueryResponse> future = Futures.future();
         QueryEntry entry = QueryEntry.builder()
             .setIndex(context.getCommitIndex())
             .setTerm(context.getTerm())

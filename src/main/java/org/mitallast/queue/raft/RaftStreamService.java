@@ -75,14 +75,12 @@ public class RaftStreamService {
 
     private void registerCommandEntry(StreamService streamService) {
         int index = 4000;
-        streamService.registerClass(AddListener.Builder.class, AddListener.Builder::new, ++index);
         streamService.registerClass(CreatePath.Builder.class, CreatePath.Builder::new, ++index);
         streamService.registerClass(CreateResource.Builder.class, CreateResource.Builder::new, ++index);
         streamService.registerClass(DeletePath.Builder.class, DeletePath.Builder::new, ++index);
         streamService.registerClass(DeleteResource.Builder.class, DeleteResource.Builder::new, ++index);
         streamService.registerClass(PathChildren.Builder.class, PathChildren.Builder::new, ++index);
         streamService.registerClass(PathExists.Builder.class, PathExists.Builder::new, ++index);
-        streamService.registerClass(RemoveListener.Builder.class, RemoveListener.Builder::new, ++index);
         streamService.registerClass(ResourceExists.Builder.class, ResourceExists.Builder::new, ++index);
     }
 

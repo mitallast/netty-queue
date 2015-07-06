@@ -10,7 +10,6 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.*;
 import org.mitallast.queue.raft.log.Compaction;
 import org.mitallast.queue.raft.resource.AbstractResource;
-import org.mitallast.queue.raft.resource.Mode;
 import org.mitallast.queue.raft.resource.Stateful;
 import org.mitallast.queue.raft.resource.result.BooleanResult;
 import org.mitallast.queue.raft.resource.result.IntegerResult;
@@ -18,11 +17,8 @@ import org.mitallast.queue.raft.resource.result.VoidResult;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 @Stateful(AsyncMap.StateMachine.class)
 @SuppressWarnings("unused")
@@ -95,34 +91,6 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
     }
 
     @SuppressWarnings("unchecked")
-    public CompletableFuture<V> put(K key, V value, Mode mode) {
-        return submit(Put.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setMode(mode)
-            .build());
-    }
-
-    @SuppressWarnings("unchecked")
-    public CompletableFuture<V> put(K key, V value, long ttl) {
-        return submit(Put.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setTtl(ttl)
-            .build());
-    }
-
-    @SuppressWarnings("unchecked")
-    public CompletableFuture<V> put(K key, V value, long ttl, Mode mode) {
-        return submit(Put.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setTtl(ttl)
-            .setMode(mode)
-            .build());
-    }
-
-    @SuppressWarnings("unchecked")
     public CompletableFuture<V> remove(K key) {
         return submit(Remove.<K, V>builder()
             .setKey(key)
@@ -157,40 +125,6 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
         return submit(PutIfAbsent.<K, V>builder()
             .setKey(key)
             .setValue(value)
-            .build());
-    }
-
-    public CompletableFuture<V> putIfAbsent(K key, V value, long ttl) {
-        return submit(PutIfAbsent.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setTtl(ttl)
-            .build());
-    }
-
-    public CompletableFuture<V> putIfAbsent(K key, V value, long ttl, Mode mode) {
-        return submit(PutIfAbsent.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setTtl(ttl)
-            .setMode(mode)
-            .build());
-    }
-
-    public CompletableFuture<V> putIfAbsent(K key, V value, long ttl, TimeUnit unit) {
-        return submit(PutIfAbsent.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setTtl(ttl)
-            .build());
-    }
-
-    public CompletableFuture<V> putIfAbsent(K key, V value, long ttl, TimeUnit unit, Mode mode) {
-        return submit(PutIfAbsent.<K, V>builder()
-            .setKey(key)
-            .setValue(value)
-            .setTtl(ttl)
-            .setMode(mode)
             .build());
     }
 
@@ -365,65 +299,6 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
         }
     }
 
-    public static abstract class TtlCommand<K extends Streamable, V extends Streamable> extends KeyValueCommand<K, V> {
-        protected final Mode mode;
-        protected final long ttl;
-
-        public TtlCommand(K key, V value, Mode mode, long ttl) {
-            super(key, value);
-            this.mode = mode;
-            this.ttl = ttl;
-        }
-
-        public Mode mode() {
-            return mode;
-        }
-
-        public long ttl() {
-            return ttl;
-        }
-
-        public static abstract class Builder<B extends Builder<B, E, K, V>, E extends TtlCommand<K, V>, K extends Streamable, V extends Streamable>
-            extends KeyValueCommand.Builder<B, E, K, V> {
-
-            protected Mode mode = Mode.PERSISTENT;
-            protected long ttl;
-
-            @Override
-            public B from(E entry) {
-                mode = entry.mode;
-                ttl = entry.ttl;
-                return super.from(entry);
-            }
-
-            @SuppressWarnings("unchecked")
-            public B setMode(Mode mode) {
-                this.mode = mode;
-                return (B) this;
-            }
-
-            @SuppressWarnings("unchecked")
-            public B setTtl(long ttl) {
-                this.ttl = ttl;
-                return (B) this;
-            }
-
-            @Override
-            public void readFrom(StreamInput stream) throws IOException {
-                super.readFrom(stream);
-                mode = stream.readEnum(Mode.class);
-                ttl = stream.readLong();
-            }
-
-            @Override
-            public void writeTo(StreamOutput stream) throws IOException {
-                super.writeTo(stream);
-                stream.writeEnum(mode);
-                stream.writeLong(ttl);
-            }
-        }
-    }
-
     public static class ContainsKey<K extends Streamable> extends KeyQuery<K, BooleanResult> implements Entry<ContainsKey<K>> {
         public ContainsKey(ConsistencyLevel consistency, K key) {
             super(consistency, key);
@@ -447,9 +322,9 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
         }
     }
 
-    public static class Put<K extends Streamable, V extends Streamable> extends TtlCommand<K, V> implements Entry<Put<K, V>> {
-        public Put(K key, V value, Mode mode, long ttl) {
-            super(key, value, mode, ttl);
+    public static class Put<K extends Streamable, V extends Streamable> extends KeyValueCommand<K, V> implements Entry<Put<K, V>> {
+        public Put(K key, V value) {
+            super(key, value);
         }
 
         @Override
@@ -462,19 +337,19 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
         }
 
         public static class Builder<K extends Streamable, V extends Streamable>
-            extends TtlCommand.Builder<Builder<K, V>, Put<K, V>, K, V> {
+            extends KeyValueCommand.Builder<Builder<K, V>, Put<K, V>, K, V> {
 
             @Override
             public Put<K, V> build() {
-                return new Put<>(key, value, mode, ttl);
+                return new Put<>(key, value);
             }
         }
     }
 
-    public static class PutIfAbsent<K extends Streamable, V extends Streamable> extends TtlCommand<K, V> implements Entry<PutIfAbsent<K, V>> {
+    public static class PutIfAbsent<K extends Streamable, V extends Streamable> extends KeyValueCommand<K, V> implements Entry<PutIfAbsent<K, V>> {
 
-        public PutIfAbsent(K key, V value, Mode mode, long ttl) {
-            super(key, value, mode, ttl);
+        public PutIfAbsent(K key, V value) {
+            super(key, value);
         }
 
         @Override
@@ -486,11 +361,11 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
             return new Builder<>();
         }
 
-        public static class Builder<K extends Streamable, V extends Streamable> extends TtlCommand.Builder<Builder<K, V>, PutIfAbsent<K, V>, K, V> {
+        public static class Builder<K extends Streamable, V extends Streamable> extends KeyValueCommand.Builder<Builder<K, V>, PutIfAbsent<K, V>, K, V> {
 
             @Override
             public PutIfAbsent<K, V> build() {
-                return new PutIfAbsent<>(key, value, mode, ttl);
+                return new PutIfAbsent<>(key, value);
             }
         }
     }
@@ -675,87 +550,40 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
     }
 
     public static class StateMachine<K extends Streamable, V extends Streamable> extends org.mitallast.queue.raft.StateMachine {
-        private final Map<K, Commit<? extends TtlCommand<K, V>>> map = new HashMap<>();
-        private final Set<Long> sessions = new HashSet<>();
-        private long time;
+        private final Map<K, Commit<? extends KeyValueCommand<K, V>>> map = new HashMap<>();
 
         public StateMachine(Settings settings) {
             super(settings);
         }
 
-        private void updateTime(Commit<?> commit) {
-            time = Math.max(time, commit.timestamp());
-        }
-
-        @Override
-        public void sessionRegister(Session session) {
-            sessions.add(session.id());
-        }
-
-        @Override
-        public void sessionExpire(Session session) {
-            sessions.remove(session.id());
-        }
-
-        @Override
-        public void sessionClose(Session session) {
-            sessions.remove(session.id());
-        }
-
-        private boolean isActive(Commit<? extends TtlCommand> commit) {
-            if (commit == null) {
-                return false;
-            } else if (commit.operation().mode() == Mode.EPHEMERAL && !sessions.contains(commit.session().id())) {
-                return false;
-            } else if (commit.operation().ttl() != 0 && commit.operation().ttl() < time - commit.timestamp()) {
-                return false;
-            }
-            return true;
-        }
-
         @Apply(ContainsKey.class)
         public BooleanResult containsKey(Commit<ContainsKey<K>> commit) {
-            updateTime(commit);
-            Commit<? extends TtlCommand> command = map.get(commit.operation().key());
-            if (!isActive(command)) {
-                map.remove(commit.operation().key());
-                return new BooleanResult(false);
-            }
-            return new BooleanResult(true);
+            Commit<? extends KeyValueCommand> command = map.get(commit.operation().key());
+            return new BooleanResult(command != null);
         }
 
         @Apply(Get.class)
         public V get(Commit<Get<K, V>> commit) {
-            updateTime(commit);
-            Commit<? extends TtlCommand<K, V>> command = map.get(commit.operation().key());
+            Commit<? extends KeyValueCommand<K, V>> command = map.get(commit.operation().key());
             if (command != null) {
-                if (!isActive(command)) {
-                    map.remove(commit.operation().key());
-                } else {
-                    return command.operation().value();
-                }
+                return command.operation().value();
             }
             return null;
         }
 
         @Apply(GetOrDefault.class)
         public V getOrDefault(Commit<GetOrDefault<K, V>> commit) {
-            updateTime(commit);
-            Commit<? extends TtlCommand<K, V>> command = map.get(commit.operation().key());
+            Commit<? extends KeyValueCommand<K, V>> command = map.get(commit.operation().key());
             if (command == null) {
                 return commit.operation().defaultValue();
-            } else if (!isActive(command)) {
-                map.remove(commit.operation().key());
             } else {
                 return command.operation().value();
             }
-            return commit.operation().defaultValue();
         }
 
         @Apply(Put.class)
         public V put(Commit<Put<K, V>> commit) {
-            updateTime(commit);
-            Commit<? extends TtlCommand<K, V>> put = map.put(commit.operation().key(), commit);
+            Commit<? extends KeyValueCommand<K, V>> put = map.put(commit.operation().key(), commit);
             if (put != null) {
                 return put.operation().value;
             } else {
@@ -765,8 +593,7 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
 
         @Apply(PutIfAbsent.class)
         public V putIfAbsent(Commit<PutIfAbsent<K, V>> commit) {
-            updateTime(commit);
-            Commit<? extends TtlCommand<K, V>> put = map.putIfAbsent(commit.operation().key(), commit);
+            Commit<? extends KeyValueCommand<K, V>> put = map.putIfAbsent(commit.operation().key(), commit);
             if (put != null) {
                 return put.operation().value;
             } else {
@@ -775,22 +602,21 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
         }
 
         @Filter({Put.class, PutIfAbsent.class})
-        public boolean filterPut(Commit<? extends TtlCommand<K, V>> commit) {
-            Commit<? extends TtlCommand<K, V>> command = map.get(commit.operation().key());
-            return command != null && command.index() == commit.index() && isActive(command);
+        public boolean filterPut(Commit<? extends KeyValueCommand<K, V>> commit) {
+            Commit<? extends KeyValueCommand<K, V>> command = map.get(commit.operation().key());
+            return command != null && command.index() == commit.index();
         }
 
         @Apply(Remove.class)
         public V remove(Commit<Remove<K, V>> commit) {
-            updateTime(commit);
             if (commit.operation().value() != null) {
-                Commit<? extends TtlCommand<K, V>> command = map.get(commit.operation().key());
-                if (!isActive(command)) {
+                Commit<? extends KeyValueCommand<K, V>> command = map.get(commit.operation().key());
+                if (command == null) {
                     map.remove(commit.operation().key());
                 } else {
                     Object value = command.operation().value();
                     if ((value == null && commit.operation().value() == null) || (value != null && commit.operation().value() != null && value.equals(commit.operation().value()))) {
-                        Commit<? extends TtlCommand<K, V>> remove = map.remove(commit.operation().key());
+                        Commit<? extends KeyValueCommand<K, V>> remove = map.remove(commit.operation().key());
                         if (remove != null) {
                             return remove.operation().value;
                         } else {
@@ -801,8 +627,8 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
                 }
                 return null;
             } else {
-                Commit<? extends TtlCommand<K, V>> command = map.remove(commit.operation().key());
-                return isActive(command) ? command.operation().value() : null;
+                Commit<? extends KeyValueCommand<K, V>> command = map.remove(commit.operation().key());
+                return command != null ? command.operation().value() : null;
             }
         }
 
@@ -813,19 +639,16 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
 
         @Apply(Size.class)
         public IntegerResult size(Commit<Size> commit) {
-            updateTime(commit);
             return new IntegerResult(map.size());
         }
 
         @Apply(IsEmpty.class)
         public BooleanResult isEmpty(Commit<IsEmpty> commit) {
-            updateTime(commit);
             return new BooleanResult(map.isEmpty());
         }
 
         @Apply(Clear.class)
         public VoidResult clear(Commit<Clear> commit) {
-            updateTime(commit);
             map.clear();
             return new VoidResult();
         }

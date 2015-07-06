@@ -172,16 +172,8 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         logger.info("new session {}", index);
         RaftSession session = new RaftSession(index, timestamp);
         sessions.put(index, session);
-
-        // We need to ensure that the command is applied to the state machine before queries are run.
-        // Set last applied only after the operation has been submitted to the state machine executor.
-        CompletableFuture<Long> future = CompletableFuture.supplyAsync(() -> {
-            stateMachine.sessionRegister(session);
-            return session.id();
-        }, executionContext.executor());
-
         setLastApplied(index);
-        return future;
+        return Futures.complete(session.id());
     }
 
     private CompletableFuture<Void> keepAlive(long index, long timestamp, long sessionId) {
@@ -196,7 +188,6 @@ public class RaftState extends AbstractComponent implements EntryFilter {
             future = Futures.completeExceptionally(new UnknownSessionException("unknown session: " + sessionId));
         } else if (!session.update(index, timestamp)) {
             sessions.remove(sessionId);
-            executionContext.execute(() -> stateMachine.sessionExpire(session));
             future = Futures.completeExceptionally(new UnknownSessionException("session expired: " + sessionId));
         } else {
             future = Futures.complete(null);
@@ -226,7 +217,6 @@ public class RaftState extends AbstractComponent implements EntryFilter {
             future = Futures.completeExceptionally(new UnknownSessionException("unknown session " + sessionId));
         } else if (!session.update(index, timestamp)) {
             sessions.remove(sessionId);
-            executionContext.execute(() -> stateMachine.sessionExpire(session));
             future = Futures.completeExceptionally(new UnknownSessionException("unknown session " + sessionId));
         } else if (session.responses.containsKey(request)) {
             future = Futures.complete(session.responses.get(request));
@@ -275,7 +265,6 @@ public class RaftState extends AbstractComponent implements EntryFilter {
             if (session == null) {
                 return Futures.completeExceptionally(new UnknownSessionException("unknown session: " + sessionId));
             } else if (!session.expire(timestamp)) {
-                executionContext.execute(() -> stateMachine.sessionExpire(session));
                 return Futures.completeExceptionally(new UnknownSessionException("unknown session: " + sessionId));
             } else {
                 return CompletableFuture.supplyAsync(() -> stateMachine.apply(new Commit(index, session, timestamp, query)), executionContext.executor());

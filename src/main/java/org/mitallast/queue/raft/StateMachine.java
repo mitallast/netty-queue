@@ -158,13 +158,4 @@ public abstract class StateMachine extends AbstractLifecycleComponent {
             throw new ApplicationException("failed to invoke operation", e);
         }
     }
-
-    public void sessionRegister(Session session) {
-    }
-
-    public void sessionExpire(Session session) {
-    }
-
-    public void sessionClose(Session session) {
-    }
 }

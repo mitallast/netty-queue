@@ -4,7 +4,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.*;
+import org.mitallast.queue.raft.Apply;
+import org.mitallast.queue.raft.Commit;
+import org.mitallast.queue.raft.Filter;
+import org.mitallast.queue.raft.StateMachine;
 import org.mitallast.queue.raft.log.Compaction;
 import org.mitallast.queue.raft.resource.ResourceCommand;
 import org.mitallast.queue.raft.resource.ResourceOperation;
@@ -59,11 +62,9 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
 
-        StringBuilder currentPath = new StringBuilder();
         boolean created = false;
         for (String name : path.split(PATH_SEPARATOR)) {
             if (!name.isEmpty()) {
-                currentPath.append("/").append(name);
                 NodeHolder child = node.children.get(name);
                 if (child == null) {
                     child = new NodeHolder(name, commit.index());
@@ -230,91 +231,9 @@ public class ResourceStateMachine extends StateMachine {
         return commit.index() >= compaction.index();
     }
 
-    @Apply(AddListener.class)
-    protected BooleanResult addListener(Commit<AddListener> commit) {
-        String path = commit.operation().path();
-
-        init(commit);
-
-        NodeHolder node = this.node;
-        for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.isEmpty()) {
-                node = node.children.get(name);
-                if (node == null) {
-                    throw new ResourceManagerException("unknown path: " + path);
-                }
-            }
-        }
-
-        if (node.listeners.containsKey(commit.session().id())) {
-            node.listeners.put(commit.session().id(), node.listeners.get(commit.session().id()) + 1);
-        } else {
-            node.listeners.put(commit.session().id(), 1);
-        }
-        return new BooleanResult(true);
-    }
-
-    @Apply(RemoveListener.class)
-    protected Streamable removeListener(Commit<RemoveListener> commit) {
-        String path = commit.operation().path();
-
-        init(commit);
-
-        NodeHolder node = this.node;
-        for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.isEmpty()) {
-                node = node.children.get(name);
-                if (node == null) {
-                    throw new ResourceManagerException("unknown path: " + path);
-                }
-            }
-        }
-
-        if (node.listeners.containsKey(commit.session().id())) {
-            int count = node.listeners.get(commit.session().id());
-            if (count == 1) {
-                node.listeners.remove(commit.session().id());
-            } else {
-                node.listeners.put(commit.session().id(), count - 1);
-            }
-        }
-        return new BooleanResult(true);
-    }
-
-    private void removeSession(NodeHolder node, long session) {
-        node.listeners.remove(session);
-        for (NodeHolder child : node.children.values()) {
-            removeSession(child, session);
-        }
-    }
-
-    @Override
-    public void sessionRegister(Session session) {
-        for (StateMachine stateMachine : resources.values()) {
-            stateMachine.sessionRegister(session);
-        }
-    }
-
-    @Override
-    public void sessionClose(Session session) {
-        removeSession(node, session.id());
-        for (StateMachine stateMachine : resources.values()) {
-            stateMachine.sessionClose(session);
-        }
-    }
-
-    @Override
-    public void sessionExpire(Session session) {
-        removeSession(node, session.id());
-        for (StateMachine stateMachine : resources.values()) {
-            stateMachine.sessionExpire(session);
-        }
-    }
-
     private static class NodeHolder {
         private final String name;
         private final long version;
-        private final Map<Long, Integer> listeners = new HashMap<>();
         private final Map<String, NodeHolder> children = new LinkedHashMap<>();
         private long resource;
 

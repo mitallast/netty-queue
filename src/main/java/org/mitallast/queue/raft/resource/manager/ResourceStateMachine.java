@@ -30,7 +30,7 @@ public class ResourceStateMachine extends StateMachine {
 
     private void init(Commit commit) {
         if (node == null) {
-            node = new NodeHolder(PATH_SEPARATOR, PATH_SEPARATOR, commit.index(), commit.timestamp());
+            node = new NodeHolder(PATH_SEPARATOR, commit.index());
         }
     }
 
@@ -62,11 +62,11 @@ public class ResourceStateMachine extends StateMachine {
         StringBuilder currentPath = new StringBuilder();
         boolean created = false;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 currentPath.append("/").append(name);
                 NodeHolder child = node.children.get(name);
                 if (child == null) {
-                    child = new NodeHolder(name, currentPath.toString(), commit.index(), commit.timestamp());
+                    child = new NodeHolder(name, commit.index());
                     node.children.put(child.name, child);
                     created = true;
                 }
@@ -85,7 +85,7 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 NodeHolder child = node.children.get(name);
                 if (child == null) {
                     return false;
@@ -105,7 +105,7 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 node = node.children.get(name);
                 if (node == null) {
                     return new BooleanResult(false);
@@ -125,7 +125,7 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 node = node.children.get(name);
                 if (node == null) {
                     return new StringListResult();
@@ -145,7 +145,7 @@ public class ResourceStateMachine extends StateMachine {
         NodeHolder parent = null;
         NodeHolder node = this.node;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 parent = node;
                 node = node.children.get(name);
                 if (node == null) {
@@ -174,13 +174,11 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
 
-        StringBuilder currentPath = new StringBuilder();
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
-                currentPath.append("/").append(name);
+            if (!name.isEmpty()) {
                 NodeHolder child = node.children.get(name);
                 if (child == null) {
-                    child = new NodeHolder(name, currentPath.toString(), commit.index(), commit.timestamp());
+                    child = new NodeHolder(name, commit.index());
                     node.children.put(child.name, child);
                 }
                 node = child;
@@ -240,7 +238,7 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 node = node.children.get(name);
                 if (node == null) {
                     throw new ResourceManagerException("unknown path: " + path);
@@ -264,7 +262,7 @@ public class ResourceStateMachine extends StateMachine {
 
         NodeHolder node = this.node;
         for (String name : path.split(PATH_SEPARATOR)) {
-            if (!name.equals("")) {
+            if (!name.isEmpty()) {
                 node = node.children.get(name);
                 if (node == null) {
                     throw new ResourceManagerException("unknown path: " + path);
@@ -315,18 +313,14 @@ public class ResourceStateMachine extends StateMachine {
 
     private static class NodeHolder {
         private final String name;
-        private final String path;
         private final long version;
-        private final long timestamp;
         private final Map<Long, Integer> listeners = new HashMap<>();
         private final Map<String, NodeHolder> children = new LinkedHashMap<>();
         private long resource;
 
-        public NodeHolder(String name, String path, long version, long timestamp) {
+        public NodeHolder(String name, long version) {
             this.name = name;
-            this.path = path;
             this.version = version;
-            this.timestamp = timestamp;
         }
     }
 

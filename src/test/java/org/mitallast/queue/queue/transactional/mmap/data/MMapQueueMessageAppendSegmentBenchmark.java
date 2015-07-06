@@ -5,13 +5,13 @@ import io.netty.buffer.Unpooled;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.BaseBenchmark;
+import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MMapQueueMessageAppendSegmentBenchmark extends BaseBenchmark {
+public class MMapQueueMessageAppendSegmentBenchmark extends BaseTest {
     private MemoryMappedFile mmapFile;
     private QueueMessageAppendSegment segment;
     private List<ByteBuf> bufferList;
@@ -40,13 +40,17 @@ public class MMapQueueMessageAppendSegmentBenchmark extends BaseBenchmark {
 
     @Test
     public void testWrite() throws Exception {
+        long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
             segment.append(bufferList.get(i));
         }
+        long end = System.currentTimeMillis();
+        printQps("append", max(), start, end);
     }
 
     @Test
     public void testReadWrite() throws Exception {
+        long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
             offsets[i] = segment.append(bufferList.get(i));
         }
@@ -55,5 +59,7 @@ public class MMapQueueMessageAppendSegmentBenchmark extends BaseBenchmark {
             buffer.clear();
             segment.read(buffer, offsets[i], length);
         }
+        long end = System.currentTimeMillis();
+        printQps("read/append", max(), start, end);
     }
 }

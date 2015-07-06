@@ -3,12 +3,12 @@ package org.mitallast.queue.common.path;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.BaseBenchmark;
+import org.mitallast.queue.common.BaseTest;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class PathTrieBenchmark extends BaseBenchmark {
+public class PathTrieBenchmark extends BaseTest {
     private PathTrie<String> pathTrie;
     private Map<String, CharSequence> params;
 
@@ -26,8 +26,8 @@ public class PathTrieBenchmark extends BaseBenchmark {
 
     @Test
     public void testRetrieve() throws Exception {
+        long start = System.currentTimeMillis();
         for (int i = 0; i < 100000; i++) {
-//        while (true) {
             Assert.assertEquals("1", pathTrie.retrieve("/", params));
             Assert.assertEquals("2", pathTrie.retrieve("/_stats", params));
             Assert.assertEquals("3", pathTrie.retrieve("/queue", params));
@@ -35,5 +35,7 @@ public class PathTrieBenchmark extends BaseBenchmark {
             Assert.assertEquals("5", pathTrie.retrieve("/queue/message", params));
             Assert.assertEquals("6", pathTrie.retrieve("/queue/message/uuid", params));
         }
+        long end = System.currentTimeMillis();
+        printQps("retrieve", 100000, start, end);
     }
 }

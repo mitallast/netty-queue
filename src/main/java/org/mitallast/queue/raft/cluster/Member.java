@@ -25,10 +25,6 @@ public abstract class Member {
 
     public abstract <T extends ActionRequest, R extends RaftResponse> CompletableFuture<R> send(T message);
 
-    public abstract <T, U> CompletableFuture<U> send(Class<? super T> type, T message);
-
-    public abstract <T, U> CompletableFuture<U> send(String topic, T message);
-
     public enum Type {
         PASSIVE, ACTIVE
     }

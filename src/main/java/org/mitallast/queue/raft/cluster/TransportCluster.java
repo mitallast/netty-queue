@@ -105,16 +105,6 @@ public class TransportCluster extends AbstractCluster implements TransportListen
         }
 
         @Override
-        public <T, U> CompletableFuture<U> send(Class<? super T> type, T message) {
-            throw new RuntimeException("Not implemented");
-        }
-
-        @Override
-        public <T, U> CompletableFuture<U> send(String topic, T message) {
-            throw new RuntimeException("Not implemented");
-        }
-
-        @Override
         public String toString() {
             return "TransportMember{node=" + node() + "}";
         }

@@ -8,17 +8,20 @@ import org.mitallast.queue.common.unit.ByteSizeUnit;
 
 public class SegmentIndexBenchmark extends BaseTest {
 
-    private final static int max = 1000000;
-
     private SegmentIndex emptySegmentIndex;
     private SegmentIndex fullSegmentIndex;
 
+    @Override
+    protected int max() {
+        return 10000000;
+    }
+
     @Before
     public void setUp() throws Exception {
-        emptySegmentIndex = new SegmentIndex(testFolder.newFile(), (int) ByteSizeUnit.MB.toBytes(1));
-        fullSegmentIndex = new SegmentIndex(testFolder.newFile(), (int) ByteSizeUnit.MB.toBytes(1));
+        emptySegmentIndex = new SegmentIndex(testFolder.newFile(), (int) ByteSizeUnit.MB.toBytes(10));
+        fullSegmentIndex = new SegmentIndex(testFolder.newFile(), (int) ByteSizeUnit.MB.toBytes(10));
 
-        for (int i = 0; i < max; i++) {
+        for (int i = 0; i < max(); i++) {
             fullSegmentIndex.index(i, i * 100l, 100);
         }
     }
@@ -37,29 +40,41 @@ public class SegmentIndexBenchmark extends BaseTest {
 
     @Test
     public void benchIndex() throws Exception {
-        for (int i = 0; i < max; i++) {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < max(); i++) {
             emptySegmentIndex.index(i, i * 100, 100);
         }
+        long end = System.currentTimeMillis();
+        printQps("index", max(), start, end);
     }
 
     @Test
     public void benchContains() throws Exception {
-        for (int i = 0; i < max; i++) {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < max(); i++) {
             fullSegmentIndex.contains(i);
         }
+        long end = System.currentTimeMillis();
+        printQps("contains", max(), start, end);
     }
 
     @Test
     public void benchPosition() throws Exception {
-        for (int i = 0; i < max; i++) {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < max(); i++) {
             fullSegmentIndex.position(i);
         }
+        long end = System.currentTimeMillis();
+        printQps("position", max(), start, end);
     }
 
     @Test
     public void benchLength() throws Exception {
-        for (int i = 0; i < max; i++) {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < max(); i++) {
             fullSegmentIndex.length(i);
         }
+        long end = System.currentTimeMillis();
+        printQps("length", max(), start, end);
     }
 }

@@ -13,7 +13,5 @@ public class TransportConnectTest extends BaseIntegrationTest {
 
         node1.injector().getInstance(TransportService.class).connectToNode(node2.localNode().address());
         node2.injector().getInstance(TransportService.class).connectToNode(node1.localNode().address());
-
-        Thread.sleep(Long.MAX_VALUE);
     }
 }

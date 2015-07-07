@@ -6,8 +6,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.action.queue.push.PushRequest;
-import org.mitallast.queue.client.Client;
-import org.mitallast.queue.client.QueueClient;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
@@ -17,6 +15,8 @@ import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.action.queue.RestPushAction;
+import org.mitallast.queue.transport.TransportClient;
+import org.mitallast.queue.transport.TransportService;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -24,10 +24,9 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class RestPushActionTest extends BaseTest {
     @Mock
@@ -39,22 +38,25 @@ public class RestPushActionTest extends BaseTest {
     @Mock
     private RestSession restSession;
     @Mock
-    private QueueClient queueClient;
+    private TransportService transportService;
     @Mock
-    private Client client;
+    private TransportClient transportClient;
 
     @Captor
     private ArgumentCaptor<PushRequest> captor;
+    @Captor
+    private ArgumentCaptor<Throwable> errorCaptor;
 
     private RestPushAction restPushAction;
+
+    @Mock
+    private CompletableFuture response;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        when(client.queue()).thenReturn(queueClient);
-        assert client != null;
-        assert client.queue() != null;
-        restPushAction = new RestPushAction(settings, client, restController);
+        when(transportService.client()).thenReturn(transportClient);
+        restPushAction = new RestPushAction(settings, restController, transportService);
     }
 
     @Test
@@ -73,10 +75,12 @@ public class RestPushActionTest extends BaseTest {
 
         when(restRequest.param("queue")).thenReturn("testQueue");
         when(restRequest.content()).thenReturn(buffer);
+        when(transportClient.send(any(PushRequest.class))).thenReturn(response);
 
         restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture());
+        verify(restSession, never()).sendResponse(errorCaptor.capture());
+        verify(transportClient, atLeastOnce()).send(captor.capture());
 
         String queue = captor.getValue().queue();
         QueueMessage queueMessage = captor.getValue().message();
@@ -107,10 +111,12 @@ public class RestPushActionTest extends BaseTest {
 
         when(restRequest.param("queue")).thenReturn("testQueue");
         when(restRequest.content()).thenReturn(buffer);
+        when(transportClient.send(any(PushRequest.class))).thenReturn(response);
 
         restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture());
+        verify(restSession, never()).sendResponse(errorCaptor.capture());
+        verify(transportClient, atLeastOnce()).send(captor.capture());
 
         String queue = captor.getValue().queue();
         QueueMessage queueMessage = captor.getValue().message();
@@ -141,10 +147,12 @@ public class RestPushActionTest extends BaseTest {
 
         when(restRequest.param("queue")).thenReturn("testQueue");
         when(restRequest.content()).thenReturn(buffer);
+        when(transportClient.send(any(PushRequest.class))).thenReturn(response);
 
         restPushAction.handleRequest(restRequest, restSession);
 
-        verify(client.queue(), atLeastOnce()).pushRequest(captor.capture());
+        verify(restSession, never()).sendResponse(errorCaptor.capture());
+        verify(transportClient, atLeastOnce()).send(captor.capture());
 
         String queue = captor.getValue().queue();
         QueueMessage queueMessage = captor.getValue().message();

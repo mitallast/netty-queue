@@ -12,6 +12,11 @@ public interface TransportService {
 
     void disconnectFromNode(HostAndPort address);
 
+    /**
+     * @return local client
+     */
+    TransportClient client();
+
     TransportClient client(HostAndPort address);
 
     void addListener(TransportListener listener);

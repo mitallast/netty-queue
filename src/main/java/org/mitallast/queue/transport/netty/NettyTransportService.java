@@ -7,8 +7,6 @@ import io.netty.channel.*;
 import io.netty.util.AttributeKey;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
-import org.mitallast.queue.client.QueueClient;
-import org.mitallast.queue.client.QueuesClient;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
@@ -16,8 +14,6 @@ import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.client.TransportQueueClient;
-import org.mitallast.queue.transport.netty.client.TransportQueuesClient;
 import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
@@ -192,6 +188,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
+    public TransportClient client() {
+        return localNodeChannel;
+    }
+
+    @Override
     public TransportClient client(HostAndPort address) {
         if (address.equals(localAddress())) {
             return localNodeChannel;
@@ -215,14 +216,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     private class LocalNodeChannel implements TransportClient {
-
-        private final TransportQueueClient queueClient;
-        private final TransportQueuesClient queuesClient;
-
-        private LocalNodeChannel() {
-            this.queueClient = new TransportQueueClient(this);
-            this.queuesClient = new TransportQueuesClient(this);
-        }
 
         @Override
         public CompletableFuture<TransportFrame> send(TransportFrame frame) {
@@ -250,16 +243,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
             return transportController.dispatchRequest(request);
         }
-
-        @Override
-        public QueueClient queue() {
-            return queueClient;
-        }
-
-        @Override
-        public QueuesClient queues() {
-            return queuesClient;
-        }
     }
 
     private class NodeChannel implements TransportClient, Closeable {
@@ -267,14 +250,10 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         private final AtomicLong channelRequestCounter = new AtomicLong();
         private final AtomicBoolean reconnectScheduled = new AtomicBoolean();
         private final AtomicBoolean closed = new AtomicBoolean(false);
-        private final TransportQueuesClient queuesClient;
-        private final TransportQueueClient queueClient;
         private final Channel[] channels;
 
         private NodeChannel(HostAndPort address) {
             this.address = address;
-            this.queueClient = new TransportQueueClient(this);
-            this.queuesClient = new TransportQueuesClient(this);
             this.channels = new Channel[channelCount];
         }
 
@@ -402,16 +381,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 }
             } while (index != loopIndex);
             return null;
-        }
-
-        @Override
-        public QueuesClient queues() {
-            return queuesClient;
-        }
-
-        @Override
-        public QueueClient queue() {
-            return queueClient;
         }
     }
 }

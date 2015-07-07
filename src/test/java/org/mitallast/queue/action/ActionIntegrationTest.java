@@ -14,8 +14,8 @@ public class ActionIntegrationTest extends BaseQueueTest {
 
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
-            localClient().queue()
-                .pushRequest(PushRequest.builder()
+            localClient().send(
+                PushRequest.builder()
                     .setQueue(queueName())
                     .setMessage(new QueueMessage("foo"))
                     .build())

@@ -37,7 +37,7 @@ public class PushActionTest extends BaseQueueTest {
                 .setQueue(queueName())
                 .setMessage(message)
                 .build();
-            PushResponse response = localClient().queue().pushRequest(request).get();
+            PushResponse response = localClient().<PushRequest, PushResponse>send(request).get();
             assert response.messageUUID().equals(message.getUuid());
         }
     }

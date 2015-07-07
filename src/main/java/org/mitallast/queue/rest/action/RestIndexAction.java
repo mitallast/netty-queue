@@ -5,7 +5,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.client.Client;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.rest.BaseRestHandler;
@@ -19,8 +18,8 @@ import java.io.IOException;
 public class RestIndexAction extends BaseRestHandler {
 
     @Inject
-    public RestIndexAction(Settings settings, Client client, RestController controller) {
-        super(settings, client);
+    public RestIndexAction(Settings settings, RestController controller) {
+        super(settings);
         controller.registerHandler(HttpMethod.GET, "/", this);
         controller.registerHandler(HttpMethod.HEAD, "/", this);
     }

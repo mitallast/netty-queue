@@ -2,9 +2,6 @@ package org.mitallast.queue.node;
 
 import com.google.inject.Injector;
 import org.mitallast.queue.action.ActionModule;
-import org.mitallast.queue.client.Client;
-import org.mitallast.queue.client.ClientModule;
-import org.mitallast.queue.client.local.LocalClient;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
@@ -36,18 +33,12 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         modules.add(new StreamModule());
         modules.add(new TransactionalQueuesModule());
         modules.add(new ActionModule());
-        modules.add(new ClientModule());
         modules.add(new RestModule());
         modules.add(new TransportModule());
 
         injector = modules.createInjector();
 
         logger.info("initialized");
-    }
-
-    @Override
-    public Client localClient() {
-        return injector.getInstance(LocalClient.class);
     }
 
     @Override

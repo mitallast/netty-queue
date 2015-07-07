@@ -18,11 +18,15 @@ public class MemoryMappedFileBuffer implements Closeable {
     private volatile boolean closed = false;
 
     public MemoryMappedFileBuffer(File file, long size) throws IOException {
+        this(file, 0, size);
+    }
+
+    public MemoryMappedFileBuffer(File file, long offset, long size) throws IOException {
         this.file = file;
         this.randomAccessFile = new RandomAccessFile(file, "rw");
         FileChannel channel = randomAccessFile.getChannel();
 
-        mappedByteBuffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, size);
+        mappedByteBuffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, size);
         mappedByteBuffer.load();
         mappedByteBuffer.order(java.nio.ByteOrder.LITTLE_ENDIAN);
 

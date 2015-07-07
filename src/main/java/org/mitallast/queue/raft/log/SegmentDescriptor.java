@@ -7,6 +7,8 @@ import org.mitallast.queue.common.stream.Streamable;
 import java.io.IOException;
 
 public class SegmentDescriptor {
+    public final static long SIZE = Long.BYTES * 6;
+
     private final long id;
     private final long index;
     private final long version;
@@ -45,6 +47,18 @@ public class SegmentDescriptor {
 
     public long maxEntries() {
         return maxEntries;
+    }
+
+    @Override
+    public String toString() {
+        return "SegmentDescriptor{" +
+            "id=" + id +
+            ", index=" + index +
+            ", version=" + version +
+            ", maxEntrySize=" + maxEntrySize +
+            ", maxSegmentSize=" + maxSegmentSize +
+            ", maxEntries=" + maxEntries +
+            '}';
     }
 
     public Builder toBuilder() {
@@ -88,10 +102,6 @@ public class SegmentDescriptor {
         public Builder setVersion(long version) {
             this.version = version;
             return this;
-        }
-
-        public Builder nextVersion() {
-            return null;
         }
 
         public Builder setMaxEntrySize(long maxEntrySize) {

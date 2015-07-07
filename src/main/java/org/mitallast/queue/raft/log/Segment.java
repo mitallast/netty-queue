@@ -8,17 +8,12 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
 public class Segment implements Closeable {
-
-    private final static Logger logger = LoggerFactory.getLogger(Segment.class);
-
     private final File file;
     private final SegmentDescriptor descriptor;
     private final MemoryMappedFileBuffer fileBuffer;
@@ -31,8 +26,10 @@ public class Segment implements Closeable {
 
     public Segment(StreamService streamService, File file, SegmentIndex offsetIndex, ExecutionContext executionContext) throws IOException {
         this.file = file;
-        this.descriptor = streamService.input(file).readStreamable(SegmentDescriptor.Builder::new).build();
-        this.fileBuffer = new MemoryMappedFileBuffer(file, descriptor.maxSegmentSize());
+        try (StreamInput input = streamService.input(file)) {
+            this.descriptor = input.readStreamable(SegmentDescriptor.Builder::new).build();
+        }
+        this.fileBuffer = new MemoryMappedFileBuffer(file, SegmentDescriptor.SIZE, descriptor.maxSegmentSize());
         this.buffer = fileBuffer.buffer();
         this.offsetIndex = offsetIndex;
         this.executionContext = executionContext;
@@ -40,6 +37,10 @@ public class Segment implements Closeable {
         this.streamOutput = streamService.output(buffer);
 
         buffer.writerIndex((int) offsetIndex.nextPosition());
+    }
+
+    public File file() {
+        return file;
     }
 
     public SegmentDescriptor descriptor() {
@@ -52,20 +53,21 @@ public class Segment implements Closeable {
 
     public boolean isFull() throws IOException {
         return size() >= descriptor.maxSegmentSize()
-            || offsetIndex.size() >= descriptor.maxEntries()
-            || length() == Integer.MAX_VALUE;
+            || offsetIndex.size() >= descriptor.maxEntries();
     }
 
+    /**
+     * @return size in bytes
+     */
     public long size() {
-        try {
-            return offsetIndex.nextPosition();
-        } catch (IOException e) {
-            return 0;
-        }
+        return buffer.writerIndex();
     }
 
+    /**
+     * @return log entries count
+     */
     public int length() {
-        return offsetIndex.lastOffset() + skip + 1;
+        return offsetIndex.size();
     }
 
     public long firstIndex() {
@@ -114,7 +116,7 @@ public class Segment implements Closeable {
         streamOutput.writeStreamable(entryBuilder);
         // flush();
 
-        int end = buffer.writerIndex();
+        int end = buffer.writerIndex() + 1;
         offsetIndex.index(offset, start, end - start);
 
         // Reset skip to zero since we wrote a new entry.
@@ -131,7 +133,6 @@ public class Segment implements Closeable {
 
         // Get the start position of the offset from the offset index.
         long position = offsetIndex.position(offset);
-        logger.debug("read entry {} at {}", index, position);
 
         // If the position is -1 then that indicates no start position was found. The offset may have been removed from
         // the index via deduplication or compaction.

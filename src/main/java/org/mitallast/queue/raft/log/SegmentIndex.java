@@ -9,12 +9,18 @@ import java.nio.MappedByteBuffer;
 import java.util.BitSet;
 
 /**
- * int offset
- * long position
- * int length
+ * Entry structure:
+ * <pre>
+ *  {
+ *      int offset
+ *      int length
+ *      long position
+ *  }
+ * </pre
+ *
+ * If segment is not full, last entry with offset==-1 marks as end
  */
 public class SegmentIndex implements Closeable {
-
     private static final long MAX_POSITION = (long) Math.pow(2, 32) - 1;
 
     private static final long OFFSET_SIZE = 4;
@@ -26,32 +32,46 @@ public class SegmentIndex implements Closeable {
     private final File file;
     private final MemoryMappedFileBuffer fileBuffer;
     private final MappedByteBuffer mappedByteBuffer;
-    private final int maxSize;
     private final BitSet bits;
+    private final int maxSize;
+    private final int bitsSize;
 
     private int size = 0;
     private int firstOffset = -1;
     private int lastOffset = -1;
 
-    public SegmentIndex(File file, int maxSize) throws IOException {
+    public SegmentIndex(File file, int maxEntries) throws IOException {
+        boolean needInit = file.length() > 0;
+
         this.file = file;
-        size = (int) (file.length() / ENTRY_SIZE);
-        fileBuffer = new MemoryMappedFileBuffer(file, maxSize * ENTRY_SIZE);
-        mappedByteBuffer = fileBuffer.mappedByteBuffer();
-        this.maxSize = (int) toPow2(maxSize / ENTRY_SIZE);
-        bits = new BitSet(this.maxSize);
-        init();
+        this.maxSize = (int) (maxEntries * ENTRY_SIZE);
+        this.fileBuffer = new MemoryMappedFileBuffer(file, maxSize);
+        this.mappedByteBuffer = fileBuffer.mappedByteBuffer();
+        this.bitsSize = (int) toPow2(maxEntries);
+        this.bits = new BitSet(this.bitsSize);
+
+        if (needInit) {
+            init();
+        }
     }
 
     private void init() throws IOException {
-        for (int i = 0; i < size; i++) {
-            int offset = mappedByteBuffer.getInt((int) (i * ENTRY_SIZE));
+        for (int i = 0; i < maxSize; i += ENTRY_SIZE) {
+            int offset = mappedByteBuffer.getInt(i);
+            if (offset == -1) {
+                break;
+            }
             if (firstOffset == -1) {
                 firstOffset = offset;
             }
             lastOffset = offset;
-            bits.set(offset % maxSize);
+            bits.set(offset % bitsSize);
+            size++;
         }
+    }
+
+    public File file() {
+        return file;
     }
 
     public int firstOffset() {
@@ -98,10 +118,13 @@ public class SegmentIndex implements Closeable {
         // seek to end of file
         long pos = size * ENTRY_SIZE;
         mappedByteBuffer.putInt((int) pos, offset);
-        mappedByteBuffer.putLong((int) (pos + OFFSET_SIZE), position);
-        mappedByteBuffer.putInt((int) (pos + OFFSET_SIZE + POSITION_SIZE), length);
+        mappedByteBuffer.putInt((int) (pos + OFFSET_SIZE), length);
+        mappedByteBuffer.putLong((int) (pos + OFFSET_SIZE + LENGTH_SIZE), position);
+        if (pos + ENTRY_SIZE < maxSize) {
+            mappedByteBuffer.putInt((int) (pos + ENTRY_SIZE), -1);
+        }
 
-        bits.set(offset % maxSize);
+        bits.set(offset % bitsSize);
 
         if (firstOffset == -1) {
             firstOffset = offset;
@@ -116,7 +139,7 @@ public class SegmentIndex implements Closeable {
     }
 
     public long position(int offset) throws IOException {
-        if (!bits.get(offset % this.maxSize)) {
+        if (!bits.get(offset % this.bitsSize)) {
             return -1;
         }
 
@@ -127,11 +150,11 @@ public class SegmentIndex implements Closeable {
         if (mappedByteBuffer.getInt((int) index) != offset) {
             throw new IOException("invalid offset");
         }
-        return mappedByteBuffer.getLong((int) (index + OFFSET_SIZE));
+        return mappedByteBuffer.getLong((int) (index + OFFSET_SIZE + LENGTH_SIZE));
     }
 
     public int length(int offset) throws IOException {
-        if (!bits.get(offset % this.maxSize)) {
+        if (!bits.get(offset % this.bitsSize)) {
             return -1;
         }
 
@@ -142,7 +165,7 @@ public class SegmentIndex implements Closeable {
         if (mappedByteBuffer.getInt((int) index) != offset) {
             throw new IOException("invalid offset");
         }
-        return mappedByteBuffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE));
+        return mappedByteBuffer.getInt((int) (index + OFFSET_SIZE));
     }
 
     public long search(int offset) throws IOException {
@@ -174,18 +197,6 @@ public class SegmentIndex implements Closeable {
             return hi * ENTRY_SIZE;
         }
         return -1;
-    }
-
-    public int offsetAt(long internalOffset) throws IOException {
-        return mappedByteBuffer.getInt((int) internalOffset);
-    }
-
-    public long positionAt(long internalOffset) throws IOException {
-        return mappedByteBuffer.getLong((int) (internalOffset + OFFSET_SIZE));
-    }
-
-    public int lengthAt(long internalOffset) throws IOException {
-        return mappedByteBuffer.getInt((int) (internalOffset + OFFSET_SIZE + POSITION_SIZE));
     }
 
     public void truncate(int offset) throws IOException {

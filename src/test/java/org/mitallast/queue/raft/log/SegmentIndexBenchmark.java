@@ -4,7 +4,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.unit.ByteSizeUnit;
 
 public class SegmentIndexBenchmark extends BaseTest {
 
@@ -18,8 +17,8 @@ public class SegmentIndexBenchmark extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        emptySegmentIndex = new SegmentIndex(testFolder.newFile(), (int) ByteSizeUnit.MB.toBytes(10));
-        fullSegmentIndex = new SegmentIndex(testFolder.newFile(), (int) ByteSizeUnit.MB.toBytes(10));
+        emptySegmentIndex = new SegmentIndex(testFolder.newFile(), max());
+        fullSegmentIndex = new SegmentIndex(testFolder.newFile(), max());
 
         for (int i = 0; i < max(); i++) {
             fullSegmentIndex.index(i, i * 100l, 100);

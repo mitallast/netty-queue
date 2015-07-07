@@ -7,12 +7,16 @@ import org.mitallast.queue.common.BaseTest;
 
 public class SegmentIndexTest extends BaseTest {
 
-    private final int max = 1048576;
     private SegmentIndex segmentIndex;
+
+    @Override
+    protected int max() {
+        return 10000;
+    }
 
     @Before
     public void setUp() throws Exception {
-        segmentIndex = new SegmentIndex(testFolder.newFile(), max);
+        segmentIndex = new SegmentIndex(testFolder.newFile(), max());
     }
 
     @Test
@@ -23,36 +27,90 @@ public class SegmentIndexTest extends BaseTest {
     }
 
     @Test
-    public void testIndex() throws Exception {
+    public void testContains() throws Exception {
+        LogEntry[] entries = generate();
+        for (LogEntry entry : entries) {
+            segmentIndex.index(entry.offset, entry.position, entry.length);
+        }
+        for (LogEntry entry : entries) {
+            Assert.assertTrue(segmentIndex.contains(entry.offset));
+        }
+    }
+
+    @Test
+    public void testSearch() throws Exception {
+        LogEntry[] entries = generate();
+        for (LogEntry entry : entries) {
+            segmentIndex.index(entry.offset, entry.position, entry.length);
+        }
+        for (LogEntry entry : entries) {
+            Assert.assertEquals(entry.offset * SegmentIndex.ENTRY_SIZE, segmentIndex.search(entry.offset));
+        }
+    }
+
+    @Test
+    public void testPosition() throws Exception {
+        LogEntry[] entries = generate();
+        for (LogEntry entry : entries) {
+            segmentIndex.index(entry.offset, entry.position, entry.length);
+        }
+        for (LogEntry entry : entries) {
+            Assert.assertEquals(entry.position, segmentIndex.position(entry.offset));
+        }
+    }
+
+    @Test
+    public void testLength() throws Exception {
+        LogEntry[] entries = generate();
+        for (LogEntry entry : entries) {
+            segmentIndex.index(entry.offset, entry.position, entry.length);
+        }
+        for (LogEntry entry : entries) {
+            Assert.assertEquals(entry.length, segmentIndex.length(entry.offset));
+        }
+    }
+
+    @Test
+    public void testReopen() throws Exception {
+        LogEntry[] entries = generate(max() / 2);
+
+        for (LogEntry entry : entries) {
+            segmentIndex.index(entry.offset, entry.position, entry.length);
+        }
+
+        segmentIndex.flush();
+
+        try (SegmentIndex reopenSegmentIndex = new SegmentIndex(segmentIndex.file(), max())) {
+            Assert.assertEquals(segmentIndex.size(), reopenSegmentIndex.size());
+            Assert.assertEquals(segmentIndex.firstOffset(), reopenSegmentIndex.firstOffset());
+            Assert.assertEquals(segmentIndex.lastOffset(), reopenSegmentIndex.lastOffset());
+            Assert.assertEquals(segmentIndex.lastPosition(), reopenSegmentIndex.lastPosition());
+            Assert.assertEquals(segmentIndex.lastLength(), reopenSegmentIndex.lastLength());
+            Assert.assertEquals(segmentIndex.nextPosition(), reopenSegmentIndex.nextPosition());
+
+            for (LogEntry entry : entries) {
+                Assert.assertEquals(entry.offset * SegmentIndex.ENTRY_SIZE, segmentIndex.search(entry.offset));
+                Assert.assertTrue(reopenSegmentIndex.contains(entry.offset));
+                Assert.assertEquals(entry.position, segmentIndex.position(entry.offset));
+                Assert.assertEquals(entry.length, segmentIndex.length(entry.offset));
+            }
+        }
+    }
+
+    private LogEntry[] generate() {
+        return generate(max());
+    }
+
+    private LogEntry[] generate(int max) {
         LogEntry[] entries = new LogEntry[max];
         long position = 0;
         for (int i = 0; i < max; i++) {
             int length = random.nextInt(1000) + 1;
             entries[i] = new LogEntry(i, position, length);
             position += length;
+            assert position > 0;
         }
-
-        for (LogEntry entry : entries) {
-            segmentIndex.index(entry.offset, entry.position, entry.length);
-        }
-
-        for (LogEntry entry : entries) {
-            Assert.assertEquals("offset: " + entry.offset, entry.offset, segmentIndex.offsetAt(entry.offset * SegmentIndex.ENTRY_SIZE));
-            Assert.assertEquals("offset: " + entry.offset, entry.position, segmentIndex.positionAt(entry.offset * SegmentIndex.ENTRY_SIZE));
-            Assert.assertEquals("offset: " + entry.offset, entry.length, segmentIndex.lengthAt(entry.offset * SegmentIndex.ENTRY_SIZE));
-        }
-
-        for (LogEntry entry : entries) {
-            Assert.assertEquals("offset: " + entry.offset, entry.offset * SegmentIndex.ENTRY_SIZE, segmentIndex.search(entry.offset));
-        }
-
-        for (LogEntry entry : entries) {
-            Assert.assertEquals("offset: " + entry.offset, entry.position, segmentIndex.position(entry.offset));
-        }
-
-        for (LogEntry entry : entries) {
-            Assert.assertEquals("offset: " + entry.offset, entry.length, segmentIndex.length(entry.offset));
-        }
+        return entries;
     }
 
     private static class LogEntry {

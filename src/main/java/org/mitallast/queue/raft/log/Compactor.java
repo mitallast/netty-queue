@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.unit.TimeValue;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
@@ -13,19 +14,16 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class Compactor extends AbstractLifecycleComponent {
-    private static final long DEFAULT_COMPACTION_INTERVAL = TimeUnit.HOURS.toMillis(1);
-    private static final long COMPACT_INTERVAL = TimeUnit.MINUTES.toMillis(1);
-
     private final Log log;
     private final EntryFilter filter;
     private final ExecutionContext context;
-    private long compactionInterval = DEFAULT_COMPACTION_INTERVAL;
-    private long commit;
-    private long compact;
-    private Compaction compaction;
-    private long lastCompaction;
-    private CompletableFuture<Void> compactFuture;
-    private ScheduledFuture<?> scheduledFuture;
+    private final long compactionInterval;
+    private volatile long commit;
+    private volatile long compact;
+    private volatile Compaction compaction;
+    private volatile long lastCompaction;
+    private volatile CompletableFuture<Void> compactFuture;
+    private volatile ScheduledFuture<?> scheduledFuture;
 
     @Inject
     public Compactor(Settings settings, Log log, EntryFilter filter, ExecutionContext context) {
@@ -33,21 +31,7 @@ public class Compactor extends AbstractLifecycleComponent {
         this.log = log;
         this.filter = filter;
         this.context = context;
-    }
-
-    public long getCompactionInterval() {
-        return compactionInterval;
-    }
-
-    public void setCompactionInterval(long compactionInterval) {
-        if (compactionInterval < 1)
-            throw new IllegalArgumentException("compaction interval must be positive");
-        this.compactionInterval = compactionInterval;
-    }
-
-    public Compactor withCompactionInterval(long compactionInterval) {
-        setCompactionInterval(compactionInterval);
-        return this;
+        this.compactionInterval = componentSettings.getAsTime("interval", TimeValue.timeValueHours(1)).millis();
     }
 
     public void setCommitIndex(long index) {
@@ -90,7 +74,7 @@ public class Compactor extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() throws IOException {
-        scheduledFuture = context.scheduleAtFixedRate(this::compact, COMPACT_INTERVAL, COMPACT_INTERVAL, TimeUnit.MILLISECONDS);
+        scheduledFuture = context.scheduleAtFixedRate(this::compact, compactionInterval, compactionInterval, TimeUnit.MILLISECONDS);
     }
 
     @Override

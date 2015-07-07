@@ -152,6 +152,7 @@ public class RaftStateContext extends RaftStateClient {
         if (commitIndex < this.commitIndex)
             throw new IllegalArgumentException("cannot decrease commit index");
         this.commitIndex = commitIndex;
+        compactor.setCommitIndex(commitIndex);
         return this;
     }
 

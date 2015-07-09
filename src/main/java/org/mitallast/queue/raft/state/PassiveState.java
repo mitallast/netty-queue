@@ -2,7 +2,6 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.RaftError;
 import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.append.AppendRequest;
@@ -37,11 +36,11 @@ public class PassiveState extends AbstractState {
     }
 
     @Override
-    public Raft.State type() {
-        return Raft.State.PASSIVE;
+    public RaftStateType type() {
+        return RaftStateType.PASSIVE;
     }
 
-    protected void transition(Raft.State state) {
+    protected void transition(RaftStateType state) {
         executionContext.checkThread();
         // Do not allow the PASSIVE state to transition.
     }
@@ -58,7 +57,7 @@ public class PassiveState extends AbstractState {
         // If a transition is required then transition back to the follower state.
         // If the node is already a follower then the transition will be ignored.
         if (transition) {
-            transition(Raft.State.FOLLOWER);
+            transition(RaftStateType.FOLLOWER);
             transition = false;
         }
         return future;

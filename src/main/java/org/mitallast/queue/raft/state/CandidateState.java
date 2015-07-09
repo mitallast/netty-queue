@@ -2,7 +2,6 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
@@ -33,8 +32,8 @@ class CandidateState extends ActiveState {
     }
 
     @Override
-    public Raft.State type() {
-        return Raft.State.CANDIDATE;
+    public RaftStateType type() {
+        return RaftStateType.CANDIDATE;
     }
 
     public synchronized void open() {
@@ -91,7 +90,7 @@ class CandidateState extends ActiveState {
         final Quorum quorum = new Quorum((int) Math.floor(votingMembers.size() / 2.0) + 1, (elected) -> {
             complete.set(true);
             if (elected) {
-                transition(Raft.State.LEADER);
+                transition(RaftStateType.LEADER);
             }
         });
 
@@ -121,7 +120,7 @@ class CandidateState extends ActiveState {
                         logger.info("received greater term from {}", member);
                         context.setTerm(response.term());
                         complete.set(true);
-                        transition(Raft.State.FOLLOWER);
+                        transition(RaftStateType.FOLLOWER);
                     } else if (!response.voted()) {
                         logger.info("received rejected vote from {}", member);
                         quorum.fail();
@@ -145,7 +144,7 @@ class CandidateState extends ActiveState {
         // assign that term and leader to the current context and step down as a candidate.
         if (request.term() >= context.getTerm()) {
             context.setTerm(request.term());
-            transition(Raft.State.FOLLOWER);
+            transition(RaftStateType.FOLLOWER);
         }
         return super.append(request);
     }
@@ -158,7 +157,7 @@ class CandidateState extends ActiveState {
         // assign that term and leader to the current context and step down as a candidate.
         if (request.term() > context.getTerm()) {
             context.setTerm(request.term());
-            transition(Raft.State.FOLLOWER);
+            transition(RaftStateType.FOLLOWER);
             return super.vote(request);
         }
 

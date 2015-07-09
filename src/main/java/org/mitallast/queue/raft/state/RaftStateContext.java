@@ -5,8 +5,8 @@ import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.unit.TimeValue;
 import org.mitallast.queue.raft.NoLeaderException;
+import org.mitallast.queue.raft.Protocol;
 import org.mitallast.queue.raft.Query;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
@@ -28,7 +28,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class RaftStateContext extends RaftStateClient {
+public class RaftStateContext extends RaftStateClient implements Protocol {
     private final RaftState stateMachine;
     private final Log log;
     private final Compactor compactor;
@@ -101,11 +101,6 @@ public class RaftStateContext extends RaftStateClient {
         return this;
     }
 
-    public long getTerm() {
-        executionContext.checkThread();
-        return term;
-    }
-
     RaftStateContext setTerm(long term) {
         executionContext.checkThread();
         if (term > this.term) {
@@ -174,7 +169,7 @@ public class RaftStateContext extends RaftStateClient {
         return state;
     }
 
-    public Raft.State getState() {
+    public RaftStateType getState() {
         return state.type();
     }
 
@@ -210,7 +205,7 @@ public class RaftStateContext extends RaftStateClient {
             .thenAcceptAsync(response -> setVersion(response.version()), executionContext.executor());
     }
 
-    synchronized CompletableFuture<Raft.State> transition(Class<? extends AbstractState> state) {
+    synchronized CompletableFuture<RaftStateType> transition(Class<? extends AbstractState> state) {
         executionContext.checkThread();
         if (this.state != null && state == this.state.getClass()) {
             return Futures.complete(this.state.type());
@@ -331,6 +326,7 @@ public class RaftStateContext extends RaftStateClient {
         }
     }
 
+    @Override
     public void delete() {
         executionContext.checkThread();
         if (log != null) {

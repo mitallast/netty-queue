@@ -8,6 +8,7 @@ import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.structures.AsyncBoolean;
 import org.mitallast.queue.raft.state.RaftStateContext;
+import org.mitallast.queue.raft.state.RaftStateType;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -47,7 +48,7 @@ public class RaftBenchmark extends BaseIntegrationTest {
         do {
             Thread.sleep(TimeUnit.SECONDS.toMillis(5));
             for (InternalNode node : nodes) {
-                if (node.injector().getInstance(RaftStateContext.class).getState() == Raft.State.LEADER) {
+                if (node.injector().getInstance(RaftStateContext.class).getState() == RaftStateType.LEADER) {
                     leader = node;
                     resourceService = leader.injector().getInstance(ResourceService.class);
                     asyncBoolean = resourceService.create("boolean", AsyncBoolean.class).get();

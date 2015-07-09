@@ -2,7 +2,6 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.command.CommandRequest;
@@ -36,7 +35,7 @@ public abstract class AbstractState extends AbstractComponent {
         this.cluster = cluster;
     }
 
-    public abstract Raft.State type();
+    public abstract RaftStateType type();
 
     public abstract CompletableFuture<JoinResponse> join(JoinRequest request);
 

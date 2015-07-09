@@ -41,8 +41,8 @@ class LeaderState extends ActiveState {
     }
 
     @Override
-    public Raft.State type() {
-        return Raft.State.LEADER;
+    public RaftStateType type() {
+        return RaftStateType.LEADER;
     }
 
     public synchronized void open() {
@@ -93,7 +93,7 @@ class LeaderState extends ActiveState {
                     future.completeExceptionally(e);
                 }
             } else {
-                transition(Raft.State.FOLLOWER);
+                transition(RaftStateType.FOLLOWER);
             }
         });
         return future;
@@ -155,7 +155,7 @@ class LeaderState extends ActiveState {
         executionContext.checkThread();
         if (request.term() > context.getTerm()) {
             logger.info("received greater term");
-            transition(Raft.State.FOLLOWER);
+            transition(RaftStateType.FOLLOWER);
             return super.vote(request);
         } else {
             return Futures.complete(VoteResponse.builder()
@@ -179,7 +179,7 @@ class LeaderState extends ActiveState {
                 .setLogIndex(context.getLog().lastIndex())
                 .build());
         } else {
-            transition(Raft.State.FOLLOWER);
+            transition(RaftStateType.FOLLOWER);
             return super.append(request);
         }
     }
@@ -901,7 +901,7 @@ class LeaderState extends ActiveState {
                                     }
                                 }
                             } else if (response.term() > context.getTerm()) {
-                                transition(Raft.State.FOLLOWER);
+                                transition(RaftStateType.FOLLOWER);
                             } else {
                                 resetMatchIndex(response);
                                 resetNextIndex();
@@ -917,7 +917,7 @@ class LeaderState extends ActiveState {
                             }
                         } else if (response.term() > context.getTerm()) {
                             logger.info("received higher term from {}", this.member);
-                            transition(Raft.State.FOLLOWER);
+                            transition(RaftStateType.FOLLOWER);
                         } else {
                             logger.warn("{}", response.error() != null ? response.error() : "");
                         }

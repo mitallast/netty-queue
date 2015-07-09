@@ -46,10 +46,6 @@ public class RaftModule extends AbstractModule {
         bind(Cluster.class).to(TransportCluster.class);
         bind(Members.class).to(TransportCluster.class);
 
-        // raft
-        bind(Raft.class).asEagerSingleton();
-        bind(RaftClient.class).asEagerSingleton();
-
         // resource
         bind(ResourceRegistry.class).asEagerSingleton();
 
@@ -58,7 +54,7 @@ public class RaftModule extends AbstractModule {
         bind(StateMachine.class).to(ResourceStateMachine.class);
         bind(EntryFilter.class).to(RaftState.class);
 
-        bind(Protocol.class).to(Raft.class);
+        bind(Protocol.class).to(RaftStateContext.class);
         bind(ResourceService.class).asEagerSingleton();
 
         // action

@@ -2,7 +2,6 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.command.CommandRequest;
@@ -31,8 +30,8 @@ class StartState extends AbstractState {
     }
 
     @Override
-    public Raft.State type() {
-        return Raft.State.START;
+    public RaftStateType type() {
+        return RaftStateType.START;
     }
 
     @Override

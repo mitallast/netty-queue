@@ -12,6 +12,7 @@ import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.structures.AsyncBoolean;
 import org.mitallast.queue.raft.resource.structures.AsyncMap;
 import org.mitallast.queue.raft.state.RaftStateContext;
+import org.mitallast.queue.raft.state.RaftStateType;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.StringValue;
 
@@ -64,12 +65,12 @@ public class IntegrationTest extends BaseIntegrationTest {
 
         final InternalNode leader;
 
-        if (node1.injector().getInstance(RaftStateContext.class).getState().equals(Raft.State.LEADER)) {
-            Assert.assertEquals(Raft.State.FOLLOWER, node2.injector().getInstance(RaftStateContext.class).getState());
+        if (node1.injector().getInstance(RaftStateContext.class).getState().equals(RaftStateType.LEADER)) {
+            Assert.assertEquals(RaftStateType.FOLLOWER, node2.injector().getInstance(RaftStateContext.class).getState());
             leader = node1;
         } else {
-            Assert.assertEquals(Raft.State.FOLLOWER, node1.injector().getInstance(RaftStateContext.class).getState());
-            Assert.assertEquals(Raft.State.LEADER, node2.injector().getInstance(RaftStateContext.class).getState());
+            Assert.assertEquals(RaftStateType.FOLLOWER, node1.injector().getInstance(RaftStateContext.class).getState());
+            Assert.assertEquals(RaftStateType.LEADER, node2.injector().getInstance(RaftStateContext.class).getState());
             leader = node2;
         }
 

@@ -1,7 +1,6 @@
 package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
@@ -29,8 +28,8 @@ class FollowerState extends ActiveState {
     }
 
     @Override
-    public Raft.State type() {
-        return Raft.State.FOLLOWER;
+    public RaftStateType type() {
+        return RaftStateType.FOLLOWER;
     }
 
     public synchronized void open() {
@@ -64,7 +63,7 @@ class FollowerState extends ActiveState {
             heartbeatTimer = null;
             if (context.getLastVotedFor() == null) {
                 logger.warn("heartbeat timed out in {} milliseconds", delay);
-                transition(Raft.State.CANDIDATE);
+                transition(RaftStateType.CANDIDATE);
             } else {
                 // If the node voted for a candidate then reset the election timer.
                 resetHeartbeatTimeout();

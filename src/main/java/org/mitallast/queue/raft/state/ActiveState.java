@@ -4,7 +4,6 @@ import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.ConsistencyLevel;
-import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.RaftError;
 import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.query.QueryRequest;
@@ -28,7 +27,7 @@ abstract class ActiveState extends PassiveState {
     }
 
     @Override
-    protected void transition(Raft.State state) {
+    protected void transition(RaftStateType state) {
         executionContext.checkThread();
         switch (state) {
             case START:

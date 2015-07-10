@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class IntegrationTest extends BaseIntegrationTest {
 
     @Test
+    @SuppressWarnings("unchecked")
     public void test() throws Exception {
         int port1 = random.nextInt(10000) + 20000;
         int port2 = random.nextInt(10000) + 20000;

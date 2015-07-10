@@ -14,6 +14,7 @@ import org.mitallast.queue.raft.cluster.Members;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.Compactor;
 import org.mitallast.queue.raft.log.Log;
+import org.mitallast.queue.raft.log.SegmentFileService;
 import org.mitallast.queue.raft.log.SegmentManager;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
@@ -32,6 +33,7 @@ public class RaftModule extends AbstractModule {
         bind(RaftStreamService.class).asEagerSingleton();
 
         // log
+        bind(SegmentFileService.class).asEagerSingleton();
         bind(SegmentManager.class).asEagerSingleton();
         bind(Log.class).asEagerSingleton();
         bind(Compactor.class).asEagerSingleton();

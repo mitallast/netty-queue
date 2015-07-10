@@ -5,9 +5,7 @@ import java.io.File;
 class SegmentFile {
     private final File file;
 
-    SegmentFile(File file) {
-        if (!isSegmentFile(file))
-            throw new IllegalArgumentException("Not a valid segment file");
+    public SegmentFile(File file) {
         this.file = file;
     }
 
@@ -25,36 +23,5 @@ class SegmentFile {
 
     public long version() {
         return Long.valueOf(file.getName().substring(file.getName().lastIndexOf('-') + 1, file.getName().lastIndexOf('.')));
-    }
-
-    public static boolean isSegmentFile(File file) {
-        return isFile(file, "log");
-    }
-
-    public static boolean isIndexFile(File file) {
-        return isFile(file, "index");
-    }
-
-    public static boolean isDescriptorFile(File file) {
-        return isFile(file, "info");
-    }
-
-    public static boolean isFile(File file, String extension) {
-        return file.getName().indexOf('-') != -1
-            && file.getName().indexOf('-', file.getName().indexOf('-') + 1) != -1
-            && file.getName().lastIndexOf('.') > file.getName().lastIndexOf('-')
-            && file.getName().endsWith("." + extension);
-    }
-
-    public static File createSegmentFile(File directory, long id, long version) {
-        return new File(directory, String.format("log-%d-%d.log", id, version));
-    }
-
-    public static File createIndexFile(File directory, long id, long version) {
-        return new File(directory, String.format("log-%d-%d.index", id, version));
-    }
-
-    public static File createDescriptorFile(File directory, long id, long version) {
-        return new File(directory, String.format("log-%d-%d.info", id, version));
     }
 }

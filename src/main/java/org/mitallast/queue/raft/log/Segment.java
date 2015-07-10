@@ -116,7 +116,7 @@ public class Segment implements Closeable {
         streamOutput.writeStreamable(entryBuilder);
         // flush();
 
-        int end = buffer.writerIndex() + 1;
+        int end = buffer.writerIndex();
         offsetIndex.index(offset, start, end - start);
 
         // Reset skip to zero since we wrote a new entry.

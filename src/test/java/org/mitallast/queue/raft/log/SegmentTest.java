@@ -73,8 +73,10 @@ public class SegmentTest extends BaseTest {
     @Test
     public void testAppendEntry() throws Exception {
         LogEntry[] entries = generate((int) segment.descriptor().maxEntries());
+        Assert.assertEquals(segment.size(), segmentIndex.nextPosition());
         for (LogEntry entry : entries) {
             segment.appendEntry(entry);
+            Assert.assertEquals(segment.size(), segmentIndex.nextPosition());
         }
 
         for (LogEntry entry : entries) {
@@ -99,6 +101,7 @@ public class SegmentTest extends BaseTest {
             ReflectionAssert.assertReflectionEquals(descriptor, reopenSegment.descriptor());
             Assert.assertFalse(reopenSegment.isEmpty());
             Assert.assertTrue(reopenSegment.isFull());
+            Assert.assertEquals(segmentIndex.nextPosition(), reopenSegmentIndex.nextPosition());
             Assert.assertEquals(segment.size(), reopenSegment.size());
             Assert.assertEquals(segment.length(), reopenSegment.length());
             Assert.assertEquals(segment.firstIndex(), reopenSegment.firstIndex());

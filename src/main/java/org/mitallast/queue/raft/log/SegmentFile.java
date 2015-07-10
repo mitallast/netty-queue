@@ -4,24 +4,24 @@ import java.io.File;
 
 class SegmentFile {
     private final File file;
+    private final long id;
+    private final long version;
 
-    public SegmentFile(File file) {
+    public SegmentFile(File file, long id, long version) {
         this.file = file;
+        this.id = id;
+        this.version = version;
     }
 
     public File file() {
         return file;
     }
 
-    public File index() {
-        return new File(file.getParentFile(), file.getName().substring(0, file.getName().lastIndexOf('.') + 1) + "index");
-    }
-
     public long id() {
-        return Long.valueOf(file.getName().substring(file.getName().lastIndexOf('-', file.getName().lastIndexOf('-') - 1) + 1, file.getName().lastIndexOf('-')));
+        return id;
     }
 
     public long version() {
-        return Long.valueOf(file.getName().substring(file.getName().lastIndexOf('-') + 1, file.getName().lastIndexOf('.')));
+        return version;
     }
 }

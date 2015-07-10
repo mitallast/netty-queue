@@ -6,9 +6,12 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 
 import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SegmentFileService extends AbstractComponent {
 
+    private final static Pattern descriptorPattern = Pattern.compile("^log-(\\d+)-(\\d+)\\.[a-z]+");
     private final File directory;
 
     @Inject
@@ -19,27 +22,23 @@ public class SegmentFileService extends AbstractComponent {
         directory = new File(workDir, componentSettings.get("log_dir", "log"));
     }
 
-    public ImmutableList<File> listFiles() {
-        return ImmutableList.copyOf(directory.listFiles(File::isFile));
+    public ImmutableList<SegmentFile> listDescriptorFiles() {
+        return listFiles(".descriptor");
     }
 
-    public boolean isSegmentFile(File file) {
-        return isFile(file, "log");
-    }
-
-    public boolean isIndexFile(File file) {
-        return isFile(file, "index");
-    }
-
-    public boolean isDescriptorFile(File file) {
-        return isFile(file, "info");
-    }
-
-    public boolean isFile(File file, String extension) {
-        return file.getName().indexOf('-') != -1
-            && file.getName().indexOf('-', file.getName().indexOf('-') + 1) != -1
-            && file.getName().lastIndexOf('.') > file.getName().lastIndexOf('-')
-            && file.getName().endsWith("." + extension);
+    public ImmutableList<SegmentFile> listFiles(String extension) {
+        ImmutableList.Builder<SegmentFile> builder = ImmutableList.builder();
+        for (File file : directory.listFiles(File::isFile)) {
+            if (file.getName().endsWith(extension)) {
+                Matcher matcher = descriptorPattern.matcher(file.getName());
+                if (matcher.matches()) {
+                    long id = Long.parseLong(matcher.group(1), 10);
+                    long version = Long.parseLong(matcher.group(2), 10);
+                    builder.add(new SegmentFile(file, id, version));
+                }
+            }
+        }
+        return builder.build();
     }
 
     public File createSegmentFile(SegmentDescriptor descriptor) {

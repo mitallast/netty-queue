@@ -162,6 +162,7 @@ public class Segment implements Closeable {
         return this;
     }
 
+    @Deprecated
     public void delete() throws IOException {
         close();
         assert file.delete();

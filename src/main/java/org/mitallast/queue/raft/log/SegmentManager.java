@@ -17,16 +17,18 @@ public class SegmentManager extends AbstractLifecycleComponent {
     private final StreamService streamService;
     private final SegmentFileService fileService;
     private final SegmentDescriptorService descriptorService;
+    private final SegmentIndexService indexService;
 
     private Segment currentSegment;
     private ImmutableSortedMap<Long, Segment> segments = ImmutableSortedMap.of();
 
     @Inject
-    public SegmentManager(Settings settings, StreamService streamService, SegmentFileService fileService, SegmentDescriptorService descriptorService) {
+    public SegmentManager(Settings settings, StreamService streamService, SegmentFileService fileService, SegmentDescriptorService descriptorService, SegmentIndexService indexService) {
         super(settings);
         this.streamService = streamService;
         this.fileService = fileService;
         this.descriptorService = descriptorService;
+        this.indexService = indexService;
     }
 
     @Override
@@ -152,7 +154,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     public Segment createSegment(SegmentDescriptor descriptor) throws IOException {
         File segmentFile = fileService.createSegmentFile(descriptor);
-        Segment segment = new Segment(segmentFile, descriptor, createIndex(descriptor), streamService);
+        Segment segment = new Segment(segmentFile, descriptor, indexService.createIndex(descriptor), streamService);
         logger.info("created segment: {}", segment);
         return segment;
     }
@@ -168,19 +170,9 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     private Segment loadSegment(SegmentDescriptor descriptor) throws IOException {
         File segmentFile = fileService.createSegmentFile(descriptor);
-        Segment segment = new Segment(segmentFile, descriptor, createIndex(descriptor), streamService);
+        Segment segment = new Segment(segmentFile, descriptor, indexService.createIndex(descriptor), streamService);
         logger.info("loaded segment: {}:{}", descriptor.id(), descriptor.version());
         return segment;
-    }
-
-    private SegmentIndex createIndex(SegmentDescriptor descriptor) throws IOException {
-        File file = fileService.createIndexFile(descriptor);
-        if (file.exists()) {
-            if (!file.createNewFile()) {
-                throw new IOException("Error create io file");
-            }
-        }
-        return new SegmentIndex(file, (int) descriptor.maxEntries());
     }
 
     public void replace(Segment segment) throws IOException {
@@ -215,9 +207,10 @@ public class SegmentManager extends AbstractLifecycleComponent {
             Segment segment = this.segments.get(oldSegment.descriptor().index());
             if (segment == null || segment.descriptor().id() != oldSegment.descriptor().id() || segment.descriptor().version() > oldSegment.descriptor().version()) {
                 logger.info("deleting segment: {}:{}", oldSegment.descriptor().id(), oldSegment.descriptor().version());
-                descriptorService.deleteDescriptor(oldSegment.descriptor());
                 oldSegment.close();
                 oldSegment.delete();
+                descriptorService.deleteDescriptor(oldSegment.descriptor());
+                indexService.deleteIndex(oldSegment.descriptor());
             }
         }
     }

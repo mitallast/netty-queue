@@ -69,15 +69,8 @@ public class MajorCompaction extends Compaction {
                 logger.info("compacting {}", segment);
                 Segment compactSegment;
                 try {
-                    SegmentDescriptor descriptor = SegmentDescriptor.builder()
-                        .setId(segment.descriptor().id())
-                        .setVersion(segment.descriptor().version() + 1)
-                        .setIndex(segment.descriptor().index())
-                        .setMaxEntrySize(segment.descriptor().maxEntrySize())
-                        .setMaxSegmentSize(segment.descriptor().maxSegmentSize())
-                        .setMaxEntries(segment.descriptor().maxEntries())
-                        .build();
-                    compactSegment = manager.createSegment(descriptor);
+                    SegmentDescriptor next = segment.descriptor().nextVersion();
+                    compactSegment = manager.createSegment(next);
                 } catch (IOException e) {
                     return Futures.completeExceptionally(e);
                 }

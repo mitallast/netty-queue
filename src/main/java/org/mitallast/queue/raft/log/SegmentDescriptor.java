@@ -61,6 +61,10 @@ public class SegmentDescriptor {
             '}';
     }
 
+    public SegmentDescriptor nextVersion() {
+        return toBuilder().nextVersion().build();
+    }
+
     public Builder toBuilder() {
         return new Builder(this);
     }
@@ -101,6 +105,11 @@ public class SegmentDescriptor {
 
         public Builder setVersion(long version) {
             this.version = version;
+            return this;
+        }
+
+        public Builder nextVersion() {
+            this.version++;
             return this;
         }
 

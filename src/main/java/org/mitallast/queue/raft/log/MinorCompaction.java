@@ -111,15 +111,8 @@ public class MinorCompaction extends Compaction {
         // Create an initial compact segment.
         Segment compactSegment;
         try {
-            SegmentDescriptor descriptor = SegmentDescriptor.builder()
-                .setId(segment.descriptor().id())
-                .setVersion(segment.descriptor().version() + 1)
-                .setIndex(segment.descriptor().index())
-                .setMaxEntrySize(segment.descriptor().maxEntrySize())
-                .setMaxSegmentSize(segment.descriptor().maxSegmentSize())
-                .setMaxEntries(segment.descriptor().maxEntries())
-                .build();
-            compactSegment = manager.createSegment(descriptor);
+            SegmentDescriptor next = segment.descriptor().nextVersion();
+            compactSegment = manager.createSegment(next);
         } catch (IOException e) {
             future.completeExceptionally(e);
             return future;
@@ -185,14 +178,7 @@ public class MinorCompaction extends Compaction {
      */
     private Segment nextCompactSegment(long index, Segment segment, Segment compactSegment, List<Segment> compactSegments, SegmentManager manager) throws IOException {
         if (compactSegment.isFull()) {
-            SegmentDescriptor descriptor = SegmentDescriptor.builder()
-                .setId(segment.descriptor().id())
-                .setVersion(segment.descriptor().version() + 1)
-                .setIndex(index)
-                .setMaxEntrySize(segment.descriptor().maxEntrySize())
-                .setMaxSegmentSize(segment.descriptor().maxSegmentSize())
-                .setMaxEntries(segment.descriptor().maxEntries())
-                .build();
+            SegmentDescriptor descriptor = segment.descriptor().nextVersion();
             Segment newSegment = manager.createSegment(descriptor);
             compactSegments.add(newSegment);
             return newSegment;

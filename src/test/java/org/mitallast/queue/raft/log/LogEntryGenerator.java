@@ -25,7 +25,7 @@ public class LogEntryGenerator {
             switch (random.nextInt(7)) {
                 case 0:
                     entries[i] = CommandEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .setTimestamp(random.nextLong())
                         .setSession(random.nextLong())
@@ -36,14 +36,14 @@ public class LogEntryGenerator {
                     break;
                 case 1:
                     entries[i] = JoinEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .setMember(randomNode())
                         .build();
                     break;
                 case 2:
                     entries[i] = KeepAliveEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .setTimestamp(random.nextLong())
                         .setSession(random.nextLong())
@@ -51,20 +51,20 @@ public class LogEntryGenerator {
                     break;
                 case 3:
                     entries[i] = LeaveEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .setMember(randomNode())
                         .build();
                     break;
                 case 4:
                     entries[i] = NoOpEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .build();
                     break;
                 case 5:
                     entries[i] = QueryEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .setTimestamp(random.nextLong())
                         .setVersion(random.nextInt())
@@ -74,7 +74,7 @@ public class LogEntryGenerator {
                     break;
                 case 6:
                     entries[i] = RegisterEntry.builder()
-                        .setIndex(i)
+                        .setIndex(i + 1)
                         .setTerm(i)
                         .setTimestamp(random.nextLong())
                         .build();

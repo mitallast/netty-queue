@@ -11,12 +11,10 @@ import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.raft.RaftStreamService;
 import org.mitallast.queue.raft.log.entry.LogEntry;
-import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.io.File;
 
 public class SegmentBenchmark extends BaseTest {
-    private ExecutionContext executionContext;
     private StreamService streamService;
     private SegmentDescriptor descriptor;
     private Segment segment;
@@ -33,8 +31,6 @@ public class SegmentBenchmark extends BaseTest {
     public void setUp() throws Exception {
         streamService = new InternalStreamService(ImmutableSettings.EMPTY);
         new RaftStreamService(streamService);
-        executionContext = new ExecutionContext(ImmutableSettings.EMPTY);
-        executionContext.start();
         descriptor = SegmentDescriptor.builder()
             .setId(0)
             .setIndex(0)
@@ -49,37 +45,23 @@ public class SegmentBenchmark extends BaseTest {
         }
 
         segmentIndex = new SegmentIndex(testFolder.newFile(), (int) descriptor.maxEntries());
-        segment = new Segment(streamService, file, segmentIndex, executionContext);
+        segment = new Segment(streamService, file, segmentIndex);
     }
 
     @After
     public void tearDown() throws Exception {
-        executionContext.submit(() -> {
-            try {
-                segment.close();
-                segmentIndex.close();
-            } catch (Throwable e) {
-                logger.error("error", e);
-            }
-        }).get();
-        executionContext.stop();
-        executionContext.close();
+        segment.close();
+        segmentIndex.close();
     }
 
     @Test
     public void testAppend() throws Exception {
-        executionContext.submit(() -> {
-            try {
-                LogEntry[] entries = entryGenerator.generate(max());
-                long start = System.currentTimeMillis();
-                for (LogEntry entry : entries) {
-                    segment.appendEntry(entry);
-                }
-                long end = System.currentTimeMillis();
-                printQps("append", max(), start, end);
-            } catch (Throwable e) {
-                assert false : e;
-            }
-        }).get();
+        LogEntry[] entries = entryGenerator.generate(max());
+        long start = System.currentTimeMillis();
+        for (LogEntry entry : entries) {
+            segment.appendEntry(entry);
+        }
+        long end = System.currentTimeMillis();
+        printQps("append", max(), start, end);
     }
 }

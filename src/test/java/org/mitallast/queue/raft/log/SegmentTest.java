@@ -12,17 +12,11 @@ import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.raft.RaftStreamService;
 import org.mitallast.queue.raft.log.entry.LogEntry;
-import org.mitallast.queue.raft.util.ExecutionContext;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
 import org.unitils.reflectionassert.ReflectionAssert;
 
 import java.io.File;
 
 public class SegmentTest extends BaseTest {
-    @Spy
-    private ExecutionContext executionContext;
     private StreamService streamService;
     private SegmentDescriptor descriptor;
     private Segment segment;
@@ -34,11 +28,6 @@ public class SegmentTest extends BaseTest {
     public void setUp() throws Exception {
         streamService = new InternalStreamService(ImmutableSettings.EMPTY);
         new RaftStreamService(streamService);
-        executionContext = new ExecutionContext(ImmutableSettings.EMPTY);
-        executionContext.start();
-
-        MockitoAnnotations.initMocks(this);
-        Mockito.doNothing().when(executionContext).checkThread();
 
         descriptor = SegmentDescriptor.builder()
             .setId(0)
@@ -54,15 +43,13 @@ public class SegmentTest extends BaseTest {
         }
 
         segmentIndex = new SegmentIndex(testFolder.newFile(), (int) descriptor.maxEntries());
-        segment = new Segment(streamService, file, segmentIndex, executionContext);
+        segment = new Segment(streamService, file, segmentIndex);
     }
 
     @After
     public void tearDown() throws Exception {
         segment.close();
         segmentIndex.close();
-        executionContext.stop();
-        executionContext.close();
     }
 
     @Test
@@ -91,7 +78,7 @@ public class SegmentTest extends BaseTest {
         segment.flush();
 
         try (SegmentIndex reopenSegmentIndex = new SegmentIndex(segmentIndex.file(), (int) descriptor.maxEntries());
-             Segment reopenSegment = new Segment(streamService, segment.file(), reopenSegmentIndex, executionContext)
+             Segment reopenSegment = new Segment(streamService, segment.file(), reopenSegmentIndex)
         ) {
             ReflectionAssert.assertReflectionEquals(descriptor, reopenSegment.descriptor());
             Assert.assertFalse(reopenSegment.isEmpty());

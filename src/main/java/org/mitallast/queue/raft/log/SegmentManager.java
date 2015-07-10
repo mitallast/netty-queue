@@ -9,12 +9,10 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.common.unit.ByteSizeValue;
-import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 
 public class SegmentManager extends AbstractLifecycleComponent {
 
@@ -22,16 +20,14 @@ public class SegmentManager extends AbstractLifecycleComponent {
     protected final long maxSegmentSize;
     protected final long maxEntriesPerSegment;
 
-    private final ExecutionContext executionContext;
     private final StreamService streamService;
     private final File directory;
     private Segment currentSegment;
     private ImmutableSortedMap<Long, Segment> segments = ImmutableSortedMap.of();
 
     @Inject
-    public SegmentManager(Settings settings, ExecutionContext executionContext, StreamService streamService) {
+    public SegmentManager(Settings settings, StreamService streamService) {
         super(settings);
-        this.executionContext = executionContext;
         this.streamService = streamService;
         File workDir = new File(this.settings.get("work_dir", "data"));
         directory = new File(workDir, componentSettings.get("log_dir", "log"));
@@ -42,72 +38,48 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() throws IOException {
-        try {
-            executionContext.submit(() -> {
-                try {
-                    // Load existing log segments from disk.
-                    ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
-                    for (Segment segment : loadSegments()) {
-                        builder.put(segment.descriptor().index(), segment);
-                    }
-                    segments = builder.build();
+        // Load existing log segments from disk.
+        ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
+        for (Segment segment : loadSegments()) {
+            builder.put(segment.descriptor().index(), segment);
+        }
+        segments = builder.build();
 
-                    if (!segments.isEmpty()) {
-                        currentSegment = segments.lastEntry().getValue();
-                    } else {
-                        SegmentDescriptor descriptor = new SegmentDescriptor.Builder()
-                            .setId(1)
-                            .setIndex(1)
-                            .setVersion(1)
-                            .setMaxEntrySize(maxEntrySize)
-                            .setMaxSegmentSize(maxSegmentSize)
-                            .setMaxEntries(maxEntriesPerSegment)
-                            .build();
-                        currentSegment = createSegment(descriptor);
-                        segments = ImmutableSortedMap.of(1l, currentSegment);
-                    }
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
-                }
-            }).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
-        } catch (ExecutionException e) {
-            throw new IOException(e.getCause());
+        if (!segments.isEmpty()) {
+            currentSegment = segments.lastEntry().getValue();
+        } else {
+            SegmentDescriptor descriptor = new SegmentDescriptor.Builder()
+                .setId(1)
+                .setIndex(1)
+                .setVersion(1)
+                .setMaxEntrySize(maxEntrySize)
+                .setMaxSegmentSize(maxSegmentSize)
+                .setMaxEntries(maxEntriesPerSegment)
+                .build();
+            currentSegment = createSegment(descriptor);
+            segments = ImmutableSortedMap.of(1l, currentSegment);
         }
     }
 
     @Override
     protected void doStop() throws IOException {
-        try {
-            executionContext.submit(() -> {
-                for (Segment segment : segments.values()) {
-                    logger.info("closing segment: {}", segment.descriptor().id());
-                    try {
-                        segment.close();
-                    } catch (IOException e) {
-                        logger.error("error close segment", e);
-                    }
-                }
-                segments = ImmutableSortedMap.of();
-                currentSegment = null;
-            }).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
-        } catch (ExecutionException e) {
-            throw new IOException(e.getCause());
+        for (Segment segment : segments.values()) {
+            logger.info("closing segment: {}", segment.descriptor().id());
+            try {
+                segment.close();
+            } catch (IOException e) {
+                logger.error("error close segment", e);
+            }
         }
+        segments = ImmutableSortedMap.of();
+        currentSegment = null;
     }
 
     @Override
     protected void doClose() throws IOException {
-
     }
 
     public void delete() throws IOException {
-        executionContext.checkThread();
         for (Segment segment : loadSegments()) {
             logger.info("deleting segment: {}", segment.descriptor().id());
             segment.delete();
@@ -115,24 +87,20 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     public Segment firstSegment() {
-        executionContext.checkThread();
         Map.Entry<Long, Segment> segment = segments.firstEntry();
         return segment != null ? segment.getValue() : null;
     }
 
     public Segment lastSegment() {
-        executionContext.checkThread();
         Map.Entry<Long, Segment> segment = segments.lastEntry();
         return segment != null ? segment.getValue() : null;
     }
 
     public Segment currentSegment() {
-        executionContext.checkThread();
         return currentSegment != null ? currentSegment : lastSegment();
     }
 
     public Segment nextSegment() throws IOException {
-        executionContext.checkThread();
         Segment lastSegment = lastSegment();
         SegmentDescriptor descriptor = new SegmentDescriptor.Builder()
             .setId(lastSegment != null ? lastSegment.descriptor().id() + 1 : 1)
@@ -151,12 +119,10 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     public Collection<Segment> segments() {
-        executionContext.checkThread();
         return segments.values();
     }
 
     public Segment segment(long index) {
-        executionContext.checkThread();
         // Check if the current segment contains the given index first in order to prevent an unnecessary map lookup.
         if (currentSegment != null && currentSegment.containsIndex(index))
             return currentSegment;
@@ -166,9 +132,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         return segment != null ? segment.getValue() : null;
     }
 
-
     public void remove(Segment removed) throws IOException {
-        executionContext.checkThread();
         currentSegment = null;
 
         ImmutableSortedMap<Long, Segment> removalSegments = segments.tailMap(removed.descriptor().index());
@@ -186,7 +150,6 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     private void resetCurrentSegment() throws IOException {
-        executionContext.checkThread();
         Segment lastSegment = lastSegment();
         if (lastSegment != null) {
             currentSegment = lastSegment;
@@ -208,20 +171,18 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     public Segment createSegment(SegmentDescriptor descriptor) throws IOException {
-        executionContext.checkThread();
         File segmentFile = SegmentFile.createSegmentFile(directory, descriptor.id(), descriptor.version());
 
         try (StreamOutput streamOutput = streamService.output(segmentFile)) {
             streamOutput.writeStreamable(descriptor.toBuilder());
         }
 
-        Segment segment = new Segment(streamService, segmentFile, createIndex(descriptor), executionContext);
+        Segment segment = new Segment(streamService, segmentFile, createIndex(descriptor));
         logger.info("created segment: {}", segment);
         return segment;
     }
 
     private Collection<Segment> loadSegments() throws IOException {
-        executionContext.checkThread();
         // Ensure log directories are created.
         assert directory.mkdirs();
 
@@ -273,16 +234,14 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     public Segment loadSegment(SegmentDescriptor descriptor) throws IOException {
-        executionContext.checkThread();
         File file = SegmentFile.createSegmentFile(directory, descriptor.id(), descriptor.version());
 
-        Segment segment = new Segment(streamService, file, createIndex(descriptor), executionContext);
+        Segment segment = new Segment(streamService, file, createIndex(descriptor));
         logger.info("loaded segment: {} ({})", descriptor.id(), file.getName());
         return segment;
     }
 
     private SegmentIndex createIndex(SegmentDescriptor descriptor) throws IOException {
-        executionContext.checkThread();
         File file = SegmentFile.createIndexFile(directory, descriptor.id(), descriptor.version());
         if (file.exists()) {
             if (!file.createNewFile()) {
@@ -293,8 +252,6 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     public void replace(Segment segment) throws IOException {
-        executionContext.checkThread();
-
         Segment oldSegment = segments.get(segment.descriptor().index());
 
         ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
@@ -312,7 +269,6 @@ public class SegmentManager extends AbstractLifecycleComponent {
     }
 
     public void update(Collection<Segment> segments) throws IOException {
-        executionContext.checkThread();
         ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
         segments.forEach(s -> builder.put(s.descriptor().index(), s));
         ImmutableSortedMap<Long, Segment> newSegments = builder.build();

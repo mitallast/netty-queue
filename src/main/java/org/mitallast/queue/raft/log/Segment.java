@@ -7,7 +7,6 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.raft.log.entry.LogEntry;
-import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.io.Closeable;
 import java.io.File;
@@ -21,10 +20,9 @@ public class Segment implements Closeable {
     private final StreamInput streamInput;
     private final StreamOutput streamOutput;
     private final SegmentIndex offsetIndex;
-    private final ExecutionContext executionContext;
     private int skip = 0;
 
-    public Segment(StreamService streamService, File file, SegmentIndex offsetIndex, ExecutionContext executionContext) throws IOException {
+    public Segment(StreamService streamService, File file, SegmentIndex offsetIndex) throws IOException {
         this.file = file;
         try (StreamInput input = streamService.input(file)) {
             this.descriptor = input.readStreamable(SegmentDescriptor.Builder::new).build();
@@ -32,7 +30,6 @@ public class Segment implements Closeable {
         this.fileBuffer = new MemoryMappedFileBuffer(file, SegmentDescriptor.SIZE, descriptor.maxSegmentSize());
         this.buffer = fileBuffer.buffer();
         this.offsetIndex = offsetIndex;
-        this.executionContext = executionContext;
         this.streamInput = streamService.input(buffer);
         this.streamOutput = streamService.output(buffer);
 
@@ -96,7 +93,6 @@ public class Segment implements Closeable {
     }
 
     public long appendEntry(LogEntry entry) throws IOException {
-        executionContext.checkThread();
         if (isFull()) {
             throw new IllegalStateException("segment is full");
         }
@@ -125,7 +121,6 @@ public class Segment implements Closeable {
     }
 
     public <T extends LogEntry> T getEntry(long index) throws IOException {
-        executionContext.checkThread();
         checkRange(index);
 
         // Get the offset of the index within this segment.
@@ -147,23 +142,19 @@ public class Segment implements Closeable {
     }
 
     public boolean containsIndex(long index) {
-        executionContext.checkThread();
         return !isEmpty() && index >= descriptor.index() && index <= lastIndex();
     }
 
     public boolean containsEntry(long index) throws IOException {
-        executionContext.checkThread();
         return containsIndex(index) && offsetIndex.contains(offset(index));
     }
 
     public Segment skip(long entries) {
-        executionContext.checkThread();
         this.skip += entries;
         return this;
     }
 
     public Segment truncate(long index) throws IOException {
-        executionContext.checkThread();
         int offset = offset(index);
         if (offset < offsetIndex.lastOffset()) {
             int diff = offsetIndex.lastOffset() - offset;
@@ -174,14 +165,12 @@ public class Segment implements Closeable {
     }
 
     public void delete() throws IOException {
-        executionContext.checkThread();
         close();
         assert file.delete();
         offsetIndex.delete();
     }
 
     public Segment flush() throws IOException {
-        executionContext.checkThread();
         fileBuffer.flush();
         offsetIndex.flush();
         return this;
@@ -189,7 +178,6 @@ public class Segment implements Closeable {
 
     @Override
     public void close() throws IOException {
-        executionContext.checkThread();
         fileBuffer.close();
         offsetIndex.close();
     }

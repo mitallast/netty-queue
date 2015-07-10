@@ -1,11 +1,9 @@
 package org.mitallast.queue.raft.log;
 
-import com.google.common.net.HostAndPort;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.InternalStreamService;
@@ -13,11 +11,8 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.raft.RaftStreamService;
-import org.mitallast.queue.raft.log.entry.*;
-import org.mitallast.queue.raft.resource.manager.CreatePath;
-import org.mitallast.queue.raft.resource.manager.PathExists;
+import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
-import org.mitallast.queue.transport.DiscoveryNode;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
@@ -72,7 +67,7 @@ public class SegmentTest extends BaseTest {
 
     @Test
     public void testAppendEntry() throws Exception {
-        LogEntry[] entries = generate((int) segment.descriptor().maxEntries());
+        LogEntry[] entries = entryGenerator.generate((int) segment.descriptor().maxEntries());
         Assert.assertEquals(segment.size(), segmentIndex.nextPosition());
         for (LogEntry entry : entries) {
             segment.appendEntry(entry);
@@ -88,7 +83,7 @@ public class SegmentTest extends BaseTest {
 
     @Test
     public void testReopen() throws Exception {
-        LogEntry[] entries = generate((int) segment.descriptor().maxEntries());
+        LogEntry[] entries = entryGenerator.generate((int) segment.descriptor().maxEntries());
         for (LogEntry entry : entries) {
             segment.appendEntry(entry);
         }
@@ -114,77 +109,5 @@ public class SegmentTest extends BaseTest {
                 ReflectionAssert.assertReflectionEquals(entry, segment.getEntry(entry.index()));
             }
         }
-    }
-
-    private LogEntry[] generate(int max) {
-        LogEntry[] entries = new LogEntry[max];
-        for (int i = 0; i < max; i++) {
-
-            switch (random.nextInt(7)) {
-                case 0:
-                    entries[i] = CommandEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .setTimestamp(random.nextLong())
-                        .setSession(random.nextLong())
-                        .setRequest(random.nextLong())
-                        .setResponse(random.nextLong())
-                        .setCommand(new CreatePath("some path"))
-                        .build();
-                    break;
-                case 1:
-                    entries[i] = JoinEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .setMember(randomNode())
-                        .build();
-                    break;
-                case 2:
-                    entries[i] = KeepAliveEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .setTimestamp(random.nextLong())
-                        .setSession(random.nextLong())
-                        .build();
-                    break;
-                case 3:
-                    entries[i] = LeaveEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .setMember(randomNode())
-                        .build();
-                    break;
-                case 4:
-                    entries[i] = NoOpEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .build();
-                    break;
-                case 5:
-                    entries[i] = QueryEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .setTimestamp(random.nextLong())
-                        .setVersion(random.nextInt())
-                        .setSession(random.nextInt())
-                        .setQuery(new PathExists("some path"))
-                        .build();
-                    break;
-                case 6:
-                    entries[i] = RegisterEntry.builder()
-                        .setIndex(i)
-                        .setTerm(i)
-                        .setTimestamp(random.nextLong())
-                        .build();
-                    break;
-                default:
-                    assert false;
-            }
-        }
-        return entries;
-    }
-
-    private DiscoveryNode randomNode() {
-        return new DiscoveryNode(randomUUID().toString(), HostAndPort.fromParts("localhost", random.nextInt(10000)), Version.CURRENT);
     }
 }

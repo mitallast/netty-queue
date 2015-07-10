@@ -6,6 +6,7 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,11 +16,16 @@ public class SegmentFileService extends AbstractComponent {
     private final File directory;
 
     @Inject
-    public SegmentFileService(Settings settings) {
+    public SegmentFileService(Settings settings) throws IOException {
         super(settings);
 
         File workDir = new File(this.settings.get("work_dir", "data"));
         directory = new File(workDir, componentSettings.get("log_dir", "log"));
+        if (!directory.exists()) {
+            if (!directory.mkdir()) {
+                throw new IOException("Error create directory: " + directory);
+            }
+        }
     }
 
     public ImmutableList<SegmentFile> listDescriptorFiles() {

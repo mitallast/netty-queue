@@ -6,13 +6,10 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.InternalStreamService;
-import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.raft.RaftStreamService;
 import org.mitallast.queue.raft.log.entry.LogEntry;
-
-import java.io.File;
 
 public class SegmentBenchmark extends BaseTest {
     private StreamService streamService;
@@ -37,15 +34,11 @@ public class SegmentBenchmark extends BaseTest {
             .setMaxEntries(max())
             .setMaxEntrySize(1000)
             .setMaxSegmentSize(ByteSizeUnit.GB.toBytes(1))
-            .setVersion(0).build();
-
-        File file = testFolder.newFile();
-        try (StreamOutput output = streamService.output(file)) {
-            output.writeStreamable(descriptor.toBuilder());
-        }
+            .setVersion(0)
+            .build();
 
         segmentIndex = new SegmentIndex(testFolder.newFile(), (int) descriptor.maxEntries());
-        segment = new Segment(streamService, file, segmentIndex);
+        segment = new Segment(testFolder.newFile(), descriptor, segmentIndex, streamService);
     }
 
     @After

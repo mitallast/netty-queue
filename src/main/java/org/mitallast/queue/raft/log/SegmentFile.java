@@ -35,6 +35,10 @@ class SegmentFile {
         return isFile(file, "index");
     }
 
+    public static boolean isDescriptorFile(File file) {
+        return isFile(file, "info");
+    }
+
     public static boolean isFile(File file, String extension) {
         return file.getName().indexOf('-') != -1
             && file.getName().indexOf('-', file.getName().indexOf('-') + 1) != -1
@@ -50,4 +54,7 @@ class SegmentFile {
         return new File(directory, String.format("log-%d-%d.index", id, version));
     }
 
+    public static File createDescriptorFile(File directory, long id, long version) {
+        return new File(directory, String.format("log-%d-%d.info", id, version));
+    }
 }

@@ -22,12 +22,10 @@ public class Segment implements Closeable {
     private final SegmentIndex offsetIndex;
     private int skip = 0;
 
-    public Segment(StreamService streamService, File file, SegmentIndex offsetIndex) throws IOException {
+    public Segment(File file, SegmentDescriptor descriptor, SegmentIndex offsetIndex, StreamService streamService) throws IOException {
         this.file = file;
-        try (StreamInput input = streamService.input(file)) {
-            this.descriptor = input.readStreamable(SegmentDescriptor.Builder::new).build();
-        }
-        this.fileBuffer = new MemoryMappedFileBuffer(file, SegmentDescriptor.SIZE, descriptor.maxSegmentSize());
+        this.descriptor = descriptor;
+        this.fileBuffer = new MemoryMappedFileBuffer(file, descriptor.maxSegmentSize());
         this.buffer = fileBuffer.buffer();
         this.offsetIndex = offsetIndex;
         this.streamInput = streamService.input(buffer);

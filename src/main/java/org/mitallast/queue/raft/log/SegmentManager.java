@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.log;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
@@ -18,10 +19,11 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     protected final long maxEntrySize;
     protected final long maxSegmentSize;
-    protected final long maxEntriesPerSegment;
+    protected final long maxEntries;
 
     private final StreamService streamService;
     private final File directory;
+
     private Segment currentSegment;
     private ImmutableSortedMap<Long, Segment> segments = ImmutableSortedMap.of();
 
@@ -31,9 +33,10 @@ public class SegmentManager extends AbstractLifecycleComponent {
         this.streamService = streamService;
         File workDir = new File(this.settings.get("work_dir", "data"));
         directory = new File(workDir, componentSettings.get("log_dir", "log"));
+
         maxEntrySize = componentSettings.getAsBytesSize("max_entry_size", new ByteSizeValue(100, ByteSizeUnit.MB)).bytes();
         maxSegmentSize = componentSettings.getAsBytesSize("max_segment_size", new ByteSizeValue(100, ByteSizeUnit.MB)).bytes();
-        maxEntriesPerSegment = componentSettings.getAsLong("max_entries_per_segment", 1000000l);
+        maxEntries = componentSettings.getAsLong("max_entries_per_segment", 1000000l);
     }
 
     @Override
@@ -48,14 +51,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         if (!segments.isEmpty()) {
             currentSegment = segments.lastEntry().getValue();
         } else {
-            SegmentDescriptor descriptor = new SegmentDescriptor.Builder()
-                .setId(1)
-                .setIndex(1)
-                .setVersion(1)
-                .setMaxEntrySize(maxEntrySize)
-                .setMaxSegmentSize(maxSegmentSize)
-                .setMaxEntries(maxEntriesPerSegment)
-                .build();
+            SegmentDescriptor descriptor = createDescriptor(1, 1, 1);
             currentSegment = createSegment(descriptor);
             segments = ImmutableSortedMap.of(1l, currentSegment);
         }
@@ -102,14 +98,11 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     public Segment nextSegment() throws IOException {
         Segment lastSegment = lastSegment();
-        SegmentDescriptor descriptor = new SegmentDescriptor.Builder()
-            .setId(lastSegment != null ? lastSegment.descriptor().id() + 1 : 1)
-            .setIndex(currentSegment.lastIndex() + 1)
-            .setVersion(1)
-            .setMaxEntrySize(maxEntrySize)
-            .setMaxSegmentSize(maxSegmentSize)
-            .setMaxEntries(maxEntriesPerSegment)
-            .build();
+        SegmentDescriptor descriptor = createDescriptor(
+            lastSegment != null ? lastSegment.descriptor().id() + 1 : 1,
+            currentSegment.lastIndex() + 1,
+            1
+        );
         currentSegment = createSegment(descriptor);
         segments = ImmutableSortedMap.<Long, Segment>naturalOrder()
             .putAll(segments)
@@ -154,14 +147,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         if (lastSegment != null) {
             currentSegment = lastSegment;
         } else {
-            SegmentDescriptor descriptor = new SegmentDescriptor.Builder()
-                .setId(1)
-                .setIndex(1)
-                .setVersion(1)
-                .setMaxEntrySize(maxEntrySize)
-                .setMaxSegmentSize(maxSegmentSize)
-                .setMaxEntries(maxEntriesPerSegment)
-                .build();
+            SegmentDescriptor descriptor = createDescriptor(1, 1, 1);
             currentSegment = createSegment(descriptor);
             segments = ImmutableSortedMap.<Long, Segment>naturalOrder()
                 .putAll(segments)
@@ -172,12 +158,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     public Segment createSegment(SegmentDescriptor descriptor) throws IOException {
         File segmentFile = SegmentFile.createSegmentFile(directory, descriptor.id(), descriptor.version());
-
-        try (StreamOutput streamOutput = streamService.output(segmentFile)) {
-            streamOutput.writeStreamable(descriptor.toBuilder());
-        }
-
-        Segment segment = new Segment(streamService, segmentFile, createIndex(descriptor));
+        Segment segment = new Segment(segmentFile, descriptor, createIndex(descriptor), streamService);
         logger.info("created segment: {}", segment);
         return segment;
     }
@@ -186,58 +167,18 @@ public class SegmentManager extends AbstractLifecycleComponent {
         // Ensure log directories are created.
         assert directory.mkdirs();
 
-        // Create a map of descriptors for each existing segment in the log. This is done by iterating through the log
-        // directory and finding segment files for this log name. For each segment file, check the consistency of the file
-        // by comparing versions and locked state in order to prevent lost data from failures during log compaction.
-        Map<Long, SegmentDescriptor> descriptors = new HashMap<>();
-        for (File file : directory.listFiles(File::isFile)) {
-            if (SegmentFile.isSegmentFile(file)) {
-                SegmentFile segmentFile = new SegmentFile(file);
-                try {
-                    // Create a new segment descriptor.
-                    final SegmentDescriptor descriptor;
-                    try (StreamInput streamInput = streamService.input(file)) {
-                        descriptor = streamInput.readStreamable(SegmentDescriptor.Builder::new).build();
-                    }
-                    // Check that the descriptor matches the segment file metadata.
-                    if (descriptor.id() != segmentFile.id()) {
-                        throw new DescriptorException(String.format("descriptor ID does not match filename ID: %s", segmentFile.file().getName()));
-                    }
-                    if (descriptor.version() != segmentFile.version()) {
-                        throw new DescriptorException(String.format("descriptor version does not match filename version: %s", segmentFile.file().getName()));
-                    }
-
-                    // If a descriptor already exists for the segment, compare the descriptor versions.
-                    SegmentDescriptor existingDescriptor = descriptors.get(segmentFile.id());
-
-                    // If this segment's version is greater than the existing segment's version and the segment is locked then
-                    // overwrite it. The segment will be locked if all entries have been committed, e.g. after compaction.
-                    if (existingDescriptor == null) {
-                        logger.info("found segment: {} ({})", descriptor.id(), segmentFile.file().getName());
-                        descriptors.put(descriptor.id(), descriptor);
-                    } else if (descriptor.version() > existingDescriptor.version()) {
-                        logger.info("replaced segment {} with newer version: {} ({})", existingDescriptor.id(), descriptor.version(), segmentFile.file().getName());
-                        descriptors.put(descriptor.id(), descriptor);
-                    }
-                } catch (IOException | NumberFormatException e) {
-                    logger.error("unexpected error", e);
-                }
-            }
-        }
-
         // Once we've constructed a map of the most recent descriptors, load the segments.
         List<Segment> segments = new ArrayList<>();
-        for (SegmentDescriptor descriptor : descriptors.values()) {
+        for (SegmentDescriptor descriptor : loadDescriptors()) {
             segments.add(loadSegment(descriptor));
         }
         return segments;
     }
 
-    public Segment loadSegment(SegmentDescriptor descriptor) throws IOException {
-        File file = SegmentFile.createSegmentFile(directory, descriptor.id(), descriptor.version());
-
-        Segment segment = new Segment(streamService, file, createIndex(descriptor));
-        logger.info("loaded segment: {} ({})", descriptor.id(), file.getName());
+    private Segment loadSegment(SegmentDescriptor descriptor) throws IOException {
+        File segmentFile = SegmentFile.createSegmentFile(directory, descriptor.id(), descriptor.version());
+        Segment segment = new Segment(segmentFile, descriptor, createIndex(descriptor), streamService);
+        logger.info("loaded segment: {}:{}", descriptor.id(), descriptor.version());
         return segment;
     }
 
@@ -262,7 +203,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         segments = builder.build();
 
         if (oldSegment != null) {
-            logger.info("deleting segment: {}-{}", oldSegment.descriptor().id(), oldSegment.descriptor().version());
+            logger.info("deleting segment: {}:{}", oldSegment.descriptor().id(), oldSegment.descriptor().version());
             oldSegment.close();
             oldSegment.delete();
         }
@@ -282,10 +223,79 @@ public class SegmentManager extends AbstractLifecycleComponent {
         for (Segment oldSegment : oldSegments.values()) {
             Segment segment = this.segments.get(oldSegment.descriptor().index());
             if (segment == null || segment.descriptor().id() != oldSegment.descriptor().id() || segment.descriptor().version() > oldSegment.descriptor().version()) {
-                logger.info("deleting segment: {}-{}", oldSegment.descriptor().id(), oldSegment.descriptor().version());
+                logger.info("deleting segment: {}:{}", oldSegment.descriptor().id(), oldSegment.descriptor().version());
+                deleteDescriptor(oldSegment.descriptor());
                 oldSegment.close();
                 oldSegment.delete();
             }
         }
+    }
+
+    private SegmentDescriptor createDescriptor(long id, long index, long version) throws IOException {
+        SegmentDescriptor descriptor = SegmentDescriptor.builder()
+            .setId(id)
+            .setIndex(index)
+            .setVersion(version)
+            .setMaxEntrySize(maxEntrySize)
+            .setMaxSegmentSize(maxSegmentSize)
+            .setMaxEntries(maxEntries)
+            .build();
+        File file = SegmentFile.createDescriptorFile(directory, descriptor.id(), descriptor.version());
+        logger.info("write segment {}:{}", descriptor.id(), descriptor.version());
+        try (StreamOutput output = streamService.output(file)) {
+            output.writeStreamable(descriptor.toBuilder());
+        }
+        return descriptor;
+    }
+
+    private SegmentDescriptor readDescriptor(File file) throws IOException {
+        try (StreamInput input = streamService.input(file)) {
+            SegmentFile segmentFile = new SegmentFile(file);
+            logger.info("read segment {}:{}", segmentFile.id(), segmentFile.version());
+            SegmentDescriptor descriptor = input.readStreamable(SegmentDescriptor.Builder::new).build();
+            // Check that the descriptor matches the segment file metadata.
+            if (descriptor.id() != segmentFile.id()) {
+                throw new DescriptorException(String.format("descriptor ID does not match filename ID: %s", segmentFile.file().getName()));
+            }
+            if (descriptor.version() != segmentFile.version()) {
+                throw new DescriptorException(String.format("descriptor version does not match filename version: %s", segmentFile.file().getName()));
+            }
+            return descriptor;
+        }
+    }
+
+    private void deleteDescriptor(SegmentDescriptor descriptor) throws IOException {
+        logger.info("delete segment {}:{}", descriptor.id(), descriptor.version());
+        File file = SegmentFile.createDescriptorFile(directory, descriptor.id(), descriptor.version());
+        if (file.exists()) {
+            assert file.delete();
+        }
+    }
+
+    private ImmutableList<SegmentDescriptor> loadDescriptors() throws IOException {
+        // Create a map of descriptors for each existing segment in the log. This is done by iterating through the log
+        // directory and finding segment files for this log name. For each segment file, check the consistency of the file
+        // by comparing versions and locked state in order to prevent lost data from failures during log compaction.
+        Map<Long, SegmentDescriptor> descriptors = new HashMap<>();
+        for (File file : directory.listFiles(File::isFile)) {
+            if (SegmentFile.isDescriptorFile(file)) {
+                SegmentDescriptor descriptor = readDescriptor(file);
+                // If a descriptor already exists for the segment, compare the descriptor versions.
+                SegmentDescriptor existingDescriptor = descriptors.get(descriptor.id());
+
+                // If this segment's version is greater than the existing segment's version and the segment is locked then
+                // overwrite it. The segment will be locked if all entries have been committed, e.g. after compaction.
+                if (existingDescriptor == null) {
+                    logger.info("found segment: {}:{})", descriptor.id(), descriptor.version());
+                    descriptors.put(descriptor.id(), descriptor);
+                } else if (descriptor.version() > existingDescriptor.version()) {
+                    logger.info("replaced {}:{} with newer version: {}:{}",
+                        existingDescriptor.id(), existingDescriptor.version(),
+                        descriptor.id(), descriptor.version());
+                    descriptors.put(descriptor.id(), descriptor);
+                }
+            }
+        }
+        return ImmutableList.copyOf(descriptors.values());
     }
 }

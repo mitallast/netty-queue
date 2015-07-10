@@ -7,7 +7,6 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.InternalStreamService;
-import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.raft.RaftStreamService;
@@ -35,15 +34,12 @@ public class SegmentTest extends BaseTest {
             .setMaxEntries(100)
             .setMaxEntrySize(1000)
             .setMaxSegmentSize(ByteSizeUnit.MB.toBytes(10))
-            .setVersion(0).build();
+            .setVersion(0)
+            .build();
 
         File file = testFolder.newFile();
-        try (StreamOutput output = streamService.output(file)) {
-            output.writeStreamable(descriptor.toBuilder());
-        }
-
         segmentIndex = new SegmentIndex(testFolder.newFile(), (int) descriptor.maxEntries());
-        segment = new Segment(streamService, file, segmentIndex);
+        segment = new Segment(file, descriptor, segmentIndex, streamService);
     }
 
     @After
@@ -78,7 +74,7 @@ public class SegmentTest extends BaseTest {
         segment.flush();
 
         try (SegmentIndex reopenSegmentIndex = new SegmentIndex(segmentIndex.file(), (int) descriptor.maxEntries());
-             Segment reopenSegment = new Segment(streamService, segment.file(), reopenSegmentIndex)
+             Segment reopenSegment = new Segment(segment.file(), descriptor, reopenSegmentIndex, streamService)
         ) {
             ReflectionAssert.assertReflectionEquals(descriptor, reopenSegment.descriptor());
             Assert.assertFalse(reopenSegment.isEmpty());

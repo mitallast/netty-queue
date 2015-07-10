@@ -1,11 +1,10 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft.log.compaction;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.unit.TimeValue;
-import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.io.IOException;
@@ -14,10 +13,10 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class Compactor extends AbstractLifecycleComponent {
-    private final Log log;
-    private final EntryFilter filter;
     private final ExecutionContext context;
     private final long compactionInterval;
+    private final MinorCompactionFactory minorCompactionFactory;
+    private final MajorCompactionFactory majorCompactionFactory;
     private volatile long commit;
     private volatile long compact;
     private volatile Compaction compaction;
@@ -26,11 +25,11 @@ public class Compactor extends AbstractLifecycleComponent {
     private volatile ScheduledFuture<?> scheduledFuture;
 
     @Inject
-    public Compactor(Settings settings, Log log, EntryFilter filter, ExecutionContext context) {
+    public Compactor(Settings settings, ExecutionContext context, MinorCompactionFactory minorCompactionFactory, MajorCompactionFactory majorCompactionFactory) {
         super(settings);
-        this.log = log;
-        this.filter = filter;
         this.context = context;
+        this.minorCompactionFactory = minorCompactionFactory;
+        this.majorCompactionFactory = majorCompactionFactory;
         this.compactionInterval = componentSettings.getAsTime("interval", TimeValue.timeValueHours(1)).millis();
     }
 
@@ -50,17 +49,17 @@ public class Compactor extends AbstractLifecycleComponent {
         compactFuture = CompletableFuture.supplyAsync(() -> {
             if (compaction == null) {
                 if (System.currentTimeMillis() - lastCompaction > compactionInterval) {
-                    compaction = new MajorCompaction(settings, compact, filter, context);
+                    compaction = majorCompactionFactory.create(compact);
                     lastCompaction = System.currentTimeMillis();
                 } else {
-                    compaction = new MinorCompaction(settings, commit, filter, context);
+                    compaction = minorCompactionFactory.create(commit);
                 }
                 return compaction;
             }
             return null;
         }, context.executor()).thenCompose(c -> {
             if (compaction != null) {
-                return compaction.run(log.segments).thenRun(() -> {
+                return compaction.run().thenRun(() -> {
                     synchronized (this) {
                         compactFuture = null;
                     }

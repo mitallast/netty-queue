@@ -1,6 +1,7 @@
 package org.mitallast.queue.raft;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import org.mitallast.queue.raft.action.append.AppendAction;
 import org.mitallast.queue.raft.action.command.CommandAction;
 import org.mitallast.queue.raft.action.join.JoinAction;
@@ -13,6 +14,7 @@ import org.mitallast.queue.raft.cluster.Cluster;
 import org.mitallast.queue.raft.cluster.Members;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.*;
+import org.mitallast.queue.raft.log.compaction.*;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.raft.resource.ResourceService;
@@ -36,7 +38,15 @@ public class RaftModule extends AbstractModule {
         bind(SegmentService.class).asEagerSingleton();
         bind(SegmentManager.class).asEagerSingleton();
         bind(Log.class).asEagerSingleton();
+
+        // log compactor
         bind(Compactor.class).asEagerSingleton();
+        install(new FactoryModuleBuilder()
+            .implement(MinorCompaction.class, MinorCompaction.class)
+            .build(MinorCompactionFactory.class));
+        install(new FactoryModuleBuilder()
+            .implement(MajorCompaction.class, MajorCompaction.class)
+            .build(MajorCompactionFactory.class));
 
         // state
         bind(ClusterState.class).asEagerSingleton();

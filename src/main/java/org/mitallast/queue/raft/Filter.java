@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft;
 
-import org.mitallast.queue.raft.log.Compaction;
+import org.mitallast.queue.raft.log.compaction.Compaction;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

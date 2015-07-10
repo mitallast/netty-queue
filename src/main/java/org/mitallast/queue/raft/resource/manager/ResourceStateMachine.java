@@ -8,7 +8,7 @@ import org.mitallast.queue.raft.Apply;
 import org.mitallast.queue.raft.Commit;
 import org.mitallast.queue.raft.Filter;
 import org.mitallast.queue.raft.StateMachine;
-import org.mitallast.queue.raft.log.Compaction;
+import org.mitallast.queue.raft.log.compaction.Compaction;
 import org.mitallast.queue.raft.resource.ResourceCommand;
 import org.mitallast.queue.raft.resource.ResourceOperation;
 import org.mitallast.queue.raft.resource.ResourceQuery;

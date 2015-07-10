@@ -1,7 +1,12 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft.log.compaction;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.raft.log.Segment;
+import org.mitallast.queue.raft.log.SegmentDescriptor;
+import org.mitallast.queue.raft.log.SegmentManager;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -14,12 +19,21 @@ import java.util.stream.Collectors;
 
 public class MajorCompaction extends Compaction {
     private final EntryFilter filter;
+    private final SegmentManager segmentManager;
     private final ExecutionContext executionContext;
 
-    public MajorCompaction(Settings settings, long index, EntryFilter filter, ExecutionContext executionContext) {
+    @Inject
+    public MajorCompaction(
+        Settings settings,
+        ExecutionContext executionContext,
+        EntryFilter filter,
+        SegmentManager segmentManager,
+        @Assisted long index
+    ) {
         super(settings, index);
         this.filter = filter;
         this.executionContext = executionContext;
+        this.segmentManager = segmentManager;
     }
 
     @Override
@@ -28,31 +42,31 @@ public class MajorCompaction extends Compaction {
     }
 
     @Override
-    CompletableFuture<Void> run(SegmentManager segments) {
+    CompletableFuture<Void> run() {
         CompletableFuture<Void> future = Futures.future();
         executionContext.execute(() -> {
             logger.info("Compacting the log");
             setRunning(true);
-            compactSegments(getActiveSegments(segments).iterator(), segments, future)
+            compactSegments(getActiveSegments().iterator(), future)
                 .whenComplete((result, error) -> setRunning(false));
         });
         return future;
     }
 
-    private List<Segment> getActiveSegments(SegmentManager manager) {
-        List<Segment> segments = manager.segments().stream()
+    private List<Segment> getActiveSegments() {
+        List<Segment> segments = segmentManager.segments().stream()
             .filter(segment -> !segment.isEmpty() && segment.lastIndex() <= index())
             .collect(Collectors.toList());
         logger.info("found {} compactable segments", segments.size());
         return segments;
     }
 
-    private CompletableFuture<Void> compactSegments(Iterator<Segment> iterator, SegmentManager manager, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> compactSegments(Iterator<Segment> iterator, CompletableFuture<Void> future) {
         if (iterator.hasNext()) {
-            compactSegment(iterator.next(), manager).whenCompleteAsync((result, error) -> {
+            compactSegment(iterator.next()).whenCompleteAsync((result, error) -> {
                 executionContext.checkThread();
                 if (error == null) {
-                    compactSegments(iterator, manager, future);
+                    compactSegments(iterator, future);
                 } else {
                     future.completeExceptionally(error);
                 }
@@ -63,21 +77,21 @@ public class MajorCompaction extends Compaction {
         return future;
     }
 
-    private CompletableFuture<Void> compactSegment(Segment segment, SegmentManager manager) {
+    private CompletableFuture<Void> compactSegment(Segment segment) {
         return shouldCompactSegment(segment, Futures.future()).thenCompose(compact -> {
             if (compact) {
                 logger.info("compacting {}", segment);
                 Segment compactSegment;
                 try {
                     SegmentDescriptor next = segment.descriptor().nextVersion();
-                    compactSegment = manager.createSegment(next);
+                    compactSegment = segmentManager.createSegment(next);
                 } catch (IOException e) {
                     return Futures.completeExceptionally(e);
                 }
                 return compactSegment(segment, segment.firstIndex(), compactSegment, Futures.future())
                     .thenAcceptAsync((replacedSegment) -> {
                         try {
-                            manager.replace(replacedSegment);
+                            segmentManager.replace(replacedSegment);
                         } catch (IOException e) {
                             logger.error("error replace", e);
                         }

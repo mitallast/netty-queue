@@ -7,7 +7,7 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.*;
-import org.mitallast.queue.raft.log.Compaction;
+import org.mitallast.queue.raft.log.compaction.Compaction;
 import org.mitallast.queue.raft.resource.AbstractResource;
 import org.mitallast.queue.raft.resource.Stateful;
 import org.mitallast.queue.raft.resource.result.BooleanResult;

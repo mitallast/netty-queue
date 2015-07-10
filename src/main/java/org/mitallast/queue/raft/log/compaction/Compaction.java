@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft.log.compaction;
 
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
@@ -32,7 +32,7 @@ public abstract class Compaction extends AbstractComponent {
         return !running;
     }
 
-    abstract CompletableFuture<Void> run(SegmentManager segments);
+    abstract CompletableFuture<Void> run();
 
     public enum Type {
 

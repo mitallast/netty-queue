@@ -1,7 +1,13 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft.log.compaction;
 
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.raft.log.Segment;
+import org.mitallast.queue.raft.log.SegmentDescriptor;
+import org.mitallast.queue.raft.log.SegmentDescriptorService;
+import org.mitallast.queue.raft.log.SegmentManager;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -13,12 +19,24 @@ import java.util.stream.Collectors;
 
 public class MinorCompaction extends Compaction {
     private final EntryFilter filter;
+    private final SegmentManager segmentManager;
+    private final SegmentDescriptorService descriptorService;
     private final ExecutionContext executionContext;
 
-    public MinorCompaction(Settings settings, long index, EntryFilter filter, ExecutionContext executionContext) {
+    @Inject
+    public MinorCompaction(
+        Settings settings,
+        ExecutionContext executionContext,
+        EntryFilter filter,
+        SegmentManager segmentManager,
+        SegmentDescriptorService descriptorService,
+        @Assisted long index
+    ) {
         super(settings, index);
         this.filter = filter;
         this.executionContext = executionContext;
+        this.segmentManager = segmentManager;
+        this.descriptorService = descriptorService;
     }
 
     @Override
@@ -27,12 +45,12 @@ public class MinorCompaction extends Compaction {
     }
 
     @Override
-    CompletableFuture<Void> run(SegmentManager segments) {
+    CompletableFuture<Void> run() {
         CompletableFuture<Void> future = Futures.future();
         executionContext.execute(() -> {
             logger.info("Compacting the log");
             setRunning(true);
-            compactLevels(getCompactSegments(segments).iterator(), segments, future)
+            compactLevels(getCompactSegments().iterator(), future)
                 .whenComplete((result, error) -> setRunning(false));
         });
         return future;
@@ -41,16 +59,16 @@ public class MinorCompaction extends Compaction {
     /**
      * Returns a list of segment levels to compact.
      */
-    private List<List<Segment>> getCompactSegments(SegmentManager manager) {
+    private List<List<Segment>> getCompactSegments() {
         List<List<Segment>> allSegments = new ArrayList<>();
-        SortedMap<Long, List<Segment>> levels = createLevels(manager);
+        SortedMap<Long, List<Segment>> levels = createLevels();
 
         // Given a sorted list of segment levels, iterate through segments to find a level that should be compacted.
         // Compaction eligibility is determined based on the level and compaction factor.
         for (Map.Entry<Long, List<Segment>> entry : levels.entrySet()) {
             long version = entry.getKey();
             List<Segment> level = entry.getValue();
-            if (level.stream().mapToLong(Segment::size).sum() > Math.pow(manager.descriptorService().getMaxSegmentSize(), version - 1)) {
+            if (level.stream().mapToLong(Segment::size).sum() > Math.pow(descriptorService.getMaxSegmentSize(), version - 1)) {
                 allSegments.add(level);
             }
         }
@@ -60,11 +78,11 @@ public class MinorCompaction extends Compaction {
     /**
      * Creates a map of level numbers to segments.
      */
-    private SortedMap<Long, List<Segment>> createLevels(SegmentManager segments) {
+    private SortedMap<Long, List<Segment>> createLevels() {
         // Iterate through segments from oldest to newest and create a map of levels based on segment versions. Because of
         // the nature of this compaction strategy, segments of the same level should always be next to one another.
         TreeMap<Long, List<Segment>> levels = new TreeMap<>();
-        for (Segment segment : segments.segments()) {
+        for (Segment segment : segmentManager.segments()) {
             if (segment.lastIndex() <= index()) {
                 List<Segment> level = levels.get(segment.descriptor().version());
                 if (level == null) {
@@ -80,11 +98,11 @@ public class MinorCompaction extends Compaction {
     /**
      * Compacts all levels.
      */
-    private CompletableFuture<Void> compactLevels(Iterator<List<Segment>> iterator, SegmentManager manager, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> compactLevels(Iterator<List<Segment>> iterator, CompletableFuture<Void> future) {
         if (iterator.hasNext()) {
-            compactLevel(iterator.next(), manager, Futures.future()).whenCompleteAsync((result, error) -> {
+            compactLevel(iterator.next(), Futures.future()).whenCompleteAsync((result, error) -> {
                 if (error == null) {
-                    compactLevels(iterator, manager, future);
+                    compactLevels(iterator, future);
                 } else {
                     future.completeExceptionally(error);
                 }
@@ -98,7 +116,7 @@ public class MinorCompaction extends Compaction {
     /**
      * Compacts a level.
      */
-    private CompletableFuture<Void> compactLevel(List<Segment> segments, SegmentManager manager, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> compactLevel(List<Segment> segments, CompletableFuture<Void> future) {
         logger.info("compacting {}", segments);
 
         // Copy the list of segments. We'll be removing segments as they're compacted, but we need to remember the full
@@ -112,7 +130,7 @@ public class MinorCompaction extends Compaction {
         Segment compactSegment;
         try {
             SegmentDescriptor next = segment.descriptor().nextVersion();
-            compactSegment = manager.createSegment(next);
+            compactSegment = segmentManager.createSegment(next);
         } catch (IOException e) {
             future.completeExceptionally(e);
             return future;
@@ -122,11 +140,11 @@ public class MinorCompaction extends Compaction {
         List<Segment> compactSegments = new ArrayList<>();
         compactSegments.add(compactSegment);
 
-        compactSegments(segment, segment.firstIndex(), compactSegment, levelSegments, compactSegments, manager, Futures.future())
+        compactSegments(segment, segment.firstIndex(), compactSegment, levelSegments, compactSegments, Futures.future())
             .whenCompleteAsync((result, error) -> {
                 if (error == null) {
                     try {
-                        updateSegments(segments, result, manager);
+                        updateSegments(segments, result);
                         future.complete(null);
                     } catch (IOException e) {
                         future.completeExceptionally(e);
@@ -141,7 +159,14 @@ public class MinorCompaction extends Compaction {
     /**
      * Compacts a set of segments in the level.
      */
-    private CompletableFuture<List<Segment>> compactSegments(Segment segment, long index, Segment compactSegment, List<Segment> segments, List<Segment> compactSegments, SegmentManager manager, CompletableFuture<List<Segment>> future) {
+    private CompletableFuture<List<Segment>> compactSegments(
+        Segment segment,
+        long index,
+        Segment compactSegment,
+        List<Segment> segments,
+        List<Segment> compactSegments,
+        CompletableFuture<List<Segment>> future
+    ) {
         // Read the entry from the segment. If the entry is null or filtered out of the log, skip the entry, otherwise
         // append it to the compact segment.
         try {
@@ -159,10 +184,12 @@ public class MinorCompaction extends Compaction {
                         future.complete(compactSegments);
                     } else {
                         Segment nextSegment = segments.remove(0);
-                        compactSegments(nextSegment, nextSegment.firstIndex(), nextCompactSegment(nextSegment.firstIndex(), nextSegment, compactSegment, compactSegments, manager), segments, compactSegments, manager, future);
+                        Segment nextCompactSegment = nextCompactSegment(nextSegment, compactSegment, compactSegments);
+                        compactSegments(nextSegment, nextSegment.firstIndex(), nextCompactSegment, segments, compactSegments, future);
                     }
                 } else {
-                    compactSegments(segment, index + 1, nextCompactSegment(index + 1, segment, compactSegment, compactSegments, manager), segments, compactSegments, manager, future);
+                    Segment nextCompactSegment = nextCompactSegment(segment, compactSegment, compactSegments);
+                    compactSegments(segment, index + 1, nextCompactSegment, segments, compactSegments, future);
                 }
             } else {
                 compactSegment.skip(1);
@@ -176,10 +203,10 @@ public class MinorCompaction extends Compaction {
     /**
      * Returns the next compact segment for the given segment and compact segment.
      */
-    private Segment nextCompactSegment(long index, Segment segment, Segment compactSegment, List<Segment> compactSegments, SegmentManager manager) throws IOException {
+    private Segment nextCompactSegment(Segment segment, Segment compactSegment, List<Segment> compactSegments) throws IOException {
         if (compactSegment.isFull()) {
             SegmentDescriptor descriptor = segment.descriptor().nextVersion();
-            Segment newSegment = manager.createSegment(descriptor);
+            Segment newSegment = segmentManager.createSegment(descriptor);
             compactSegments.add(newSegment);
             return newSegment;
         } else {
@@ -190,12 +217,12 @@ public class MinorCompaction extends Compaction {
     /**
      * Updates the log segments.
      */
-    private void updateSegments(List<Segment> segments, List<Segment> compactSegments, SegmentManager manager) throws IOException {
+    private void updateSegments(List<Segment> segments, List<Segment> compactSegments) throws IOException {
         Set<Long> segmentIds = segments.stream().map(s -> s.descriptor().id()).collect(Collectors.toSet());
         Map<Long, Segment> mappedSegments = compactSegments.stream().collect(Collectors.toMap(s -> s.descriptor().id(), s -> s));
 
         List<Segment> updatedSegments = new ArrayList<>();
-        for (Segment segment : manager.segments()) {
+        for (Segment segment : segmentManager.segments()) {
             if (!segmentIds.contains(segment.descriptor().id())) {
                 updatedSegments.add(segment);
             } else {
@@ -206,7 +233,7 @@ public class MinorCompaction extends Compaction {
             }
         }
 
-        manager.update(updatedSegments);
+        segmentManager.update(updatedSegments);
     }
 
 }

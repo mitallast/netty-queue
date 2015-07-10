@@ -3,7 +3,7 @@ package org.mitallast.queue.raft;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.log.Compaction;
+import org.mitallast.queue.raft.log.compaction.Compaction;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;

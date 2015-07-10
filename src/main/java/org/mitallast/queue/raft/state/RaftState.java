@@ -9,7 +9,7 @@ import org.mitallast.queue.common.unit.TimeValue;
 import org.mitallast.queue.raft.*;
 import org.mitallast.queue.raft.cluster.Cluster;
 import org.mitallast.queue.raft.cluster.Member;
-import org.mitallast.queue.raft.log.Compaction;
+import org.mitallast.queue.raft.log.compaction.Compaction;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;

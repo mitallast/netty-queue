@@ -61,10 +61,6 @@ public class SegmentManager extends AbstractLifecycleComponent {
     protected void doClose() throws IOException {
     }
 
-    public SegmentDescriptorService descriptorService() {
-        return descriptorService;
-    }
-
     public void delete() throws IOException {
         for (Segment segment : loadSegments()) {
             deleteSegment(segment);

@@ -18,7 +18,7 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Cluster;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.util.concurrent.CompletableFuture;
@@ -26,13 +26,13 @@ import java.util.concurrent.CompletableFuture;
 public abstract class AbstractState extends AbstractComponent {
     protected final RaftStateContext context;
     protected final ExecutionContext executionContext;
-    protected final Cluster cluster;
+    protected final TransportCluster transportCluster;
 
-    protected AbstractState(Settings settings, RaftStateContext context, ExecutionContext executionContext, Cluster cluster) {
+    protected AbstractState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster transportCluster) {
         super(settings);
         this.context = context;
         this.executionContext = executionContext;
-        this.cluster = cluster;
+        this.transportCluster = transportCluster;
     }
 
     public abstract RaftStateType type();

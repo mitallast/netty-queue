@@ -5,29 +5,35 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.RaftException;
 import org.mitallast.queue.raft.action.RaftResponse;
 import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.transport.DiscoveryNode;
-import org.mitallast.queue.transport.TransportListener;
 import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-public class TransportCluster extends AbstractCluster implements TransportListener {
-
+public class TransportCluster extends AbstractLifecycleComponent {
     private final TransportService transportService;
+    private final Member localMember;
+    private final ConcurrentMap<DiscoveryNode, Member> members = new ConcurrentHashMap<>();
 
     @Inject
     protected TransportCluster(Settings settings, TransportService transportService) {
-        super(settings, new TransportMember(transportService.localNode(), Member.Type.ACTIVE, transportService), ImmutableList.of());
+        super(settings);
         this.transportService = transportService;
-        this.transportService.addListener(this);
+        this.localMember = new TransportMember(transportService.localNode(), Member.Type.ACTIVE, transportService);
 
-        String[] nodes = this.componentSettings.getAsArray("nodes");
+        String[] nodes = componentSettings.getAsArray("nodes");
         for (String node : nodes) {
             HostAndPort hostAndPort = HostAndPort.fromString(node);
             DiscoveryNode discoveryNode = new DiscoveryNode(node, hostAndPort, Version.CURRENT);
@@ -37,29 +43,36 @@ public class TransportCluster extends AbstractCluster implements TransportListen
         }
     }
 
-    @Override
-    public void connected(HostAndPort address) {
-        logger.info("node connected {}", address);
+    public Member member() {
+        return localMember;
     }
 
-    @Override
-    public void connected(DiscoveryNode node) {
-        logger.info("node connected {}", node);
-        addMember(node);
+    public synchronized void addMember(Member member) {
+        members.putIfAbsent(member.node(), member);
     }
 
-    @Override
-    public void disconnected(HostAndPort address) {
-        logger.info("node disconnected {}", address);
+    public synchronized void addMember(DiscoveryNode node) {
+        members.computeIfAbsent(node, this::createMember);
     }
 
-    @Override
-    public void disconnected(DiscoveryNode node) {
-        logger.info("node disconnected {}", node);
-        removeMember(node);
+    public synchronized CompletableFuture<Void> removeMember(DiscoveryNode node) {
+        members.remove(node);
+        return Futures.complete(null);
     }
 
-    @Override
+    public List<Member> members() {
+        return ImmutableList.copyOf(members.values());
+    }
+
+    public Member member(DiscoveryNode node) {
+        return members.get(node);
+    }
+
+    public CompletionStage<Void> configure(Collection<DiscoveryNode> discoveryNodes) {
+        discoveryNodes.forEach(this::addMember);
+        return Futures.complete(null);
+    }
+
     protected Member createMember(DiscoveryNode discoveryNode) {
         return new TransportMember(discoveryNode, Member.Type.PASSIVE, transportService);
     }

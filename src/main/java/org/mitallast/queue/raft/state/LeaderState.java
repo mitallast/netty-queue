@@ -20,8 +20,8 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Cluster;
 import org.mitallast.queue.raft.cluster.Member;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
@@ -36,7 +36,7 @@ class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
     private volatile ScheduledFuture<?> currentTimer;
 
-    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, Cluster cluster) {
+    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
         super(settings, context, executionContext, cluster);
     }
 
@@ -67,7 +67,7 @@ class LeaderState extends ActiveState {
      */
     private void takeLeadership() {
         executionContext.checkThread();
-        context.setLeader(cluster.member().node());
+        context.setLeader(transportCluster.member().node());
     }
 
     /**
@@ -389,7 +389,7 @@ class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setSession(sessionId)
-                                .setMembers(cluster.members().stream().map(Member::node).collect(Collectors.toList()))
+                                .setMembers(transportCluster.members().stream().map(Member::node).collect(Collectors.toList()))
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -457,7 +457,7 @@ class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setVersion(version)
-                                .setMembers(cluster.members().stream().map(Member::node).collect(Collectors.toList()))
+                                .setMembers(transportCluster.members().stream().map(Member::node).collect(Collectors.toList()))
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -619,9 +619,9 @@ class LeaderState extends ActiveState {
         private volatile int quorumIndex;
 
         private Replicator() {
-            Set<Member> members = cluster.members().stream()
+            Set<Member> members = transportCluster.members().stream()
                 // not local and only active
-                .filter(m -> !m.node().equals(cluster.member().node()) && m.type() == Member.Type.ACTIVE)
+                .filter(m -> !m.node().equals(transportCluster.member().node()) && m.type() == Member.Type.ACTIVE)
                 .collect(Collectors.toSet());
             for (Member member : members) {
                 this.replicas.add(new Replica(this.replicas.size(), member));
@@ -864,7 +864,7 @@ class LeaderState extends ActiveState {
                 executionContext.checkThread();
                 AppendRequest request = AppendRequest.builder()
                     .setTerm(context.getTerm())
-                    .setLeader(cluster.member().node())
+                    .setLeader(transportCluster.member().node())
                     .setLogIndex(prevIndex)
                     .setLogTerm(prevEntry != null ? prevEntry.term() : 0)
                     .setEntries(entries)

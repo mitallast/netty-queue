@@ -10,8 +10,8 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Cluster;
 import org.mitallast.queue.raft.cluster.Member;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.log.entry.QueryEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 abstract class ActiveState extends PassiveState {
 
-    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, Cluster cluster) {
+    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
         super(settings, context, executionContext, cluster);
     }
 
@@ -82,8 +82,8 @@ abstract class ActiveState extends PassiveState {
         // If the requesting candidate is our self then always vote for our self. Votes
         // for self are done by calling the local node. Note that this obviously
         // doesn't make sense for a leader.
-        else if (cluster.member().node().equals(request.candidate())) {
-            context.setLastVotedFor(cluster.member().node());
+        else if (transportCluster.member().node().equals(request.candidate())) {
+            context.setLastVotedFor(transportCluster.member().node());
             logger.info("accepted {}: candidate is the local member", request);
             return VoteResponse.builder()
                 .setStatus(ResponseStatus.OK)
@@ -93,7 +93,7 @@ abstract class ActiveState extends PassiveState {
         }
         // If the requesting candidate is not a known member of the cluster (to this
         // node) then don't vote for it. Only vote for candidates that we know about.
-        else if (!cluster.members().stream().map(Member::node).collect(Collectors.toSet()).contains(request.candidate())) {
+        else if (!transportCluster.members().stream().map(Member::node).collect(Collectors.toSet()).contains(request.candidate())) {
             logger.info("rejected {}: candidate is not known to the local member", request);
             return VoteResponse.builder()
                 .setStatus(ResponseStatus.OK)
@@ -181,7 +181,7 @@ abstract class ActiveState extends PassiveState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         }
-        return cluster.member(context.getLeader()).send(request);
+        return transportCluster.member(context.getLeader()).send(request);
     }
 
     private CompletableFuture<QueryResponse> querySequential(QueryRequest request) {

@@ -10,8 +10,6 @@ import org.mitallast.queue.raft.action.leave.LeaveAction;
 import org.mitallast.queue.raft.action.query.QueryAction;
 import org.mitallast.queue.raft.action.register.RegisterAction;
 import org.mitallast.queue.raft.action.vote.VoteAction;
-import org.mitallast.queue.raft.cluster.Cluster;
-import org.mitallast.queue.raft.cluster.Members;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.*;
 import org.mitallast.queue.raft.log.compaction.*;
@@ -55,8 +53,6 @@ public class RaftModule extends AbstractModule {
         bind(RaftStateClient.class).to(RaftStateContext.class);
         // cluster
         bind(TransportCluster.class).asEagerSingleton();
-        bind(Cluster.class).to(TransportCluster.class);
-        bind(Members.class).to(TransportCluster.class);
 
         // resource
         bind(ResourceRegistry.class).asEagerSingleton();

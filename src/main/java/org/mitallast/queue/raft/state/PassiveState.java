@@ -20,7 +20,7 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Cluster;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class PassiveState extends AbstractState {
     protected volatile boolean transition;
 
-    public PassiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, Cluster cluster) {
+    public PassiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
         super(settings, context, executionContext, cluster);
     }
 
@@ -243,7 +243,7 @@ public class PassiveState extends AbstractState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         } else {
-            return cluster.member(context.getLeader()).send(request);
+            return transportCluster.member(context.getLeader()).send(request);
         }
     }
 
@@ -256,7 +256,7 @@ public class PassiveState extends AbstractState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         } else {
-            return cluster.member(context.getLeader()).send(request);
+            return transportCluster.member(context.getLeader()).send(request);
         }
     }
 
@@ -279,7 +279,7 @@ public class PassiveState extends AbstractState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         } else {
-            return cluster.member(context.getLeader()).send(request);
+            return transportCluster.member(context.getLeader()).send(request);
         }
     }
 
@@ -292,7 +292,7 @@ public class PassiveState extends AbstractState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         } else {
-            return cluster.member(context.getLeader()).send(request);
+            return transportCluster.member(context.getLeader()).send(request);
         }
     }
 
@@ -305,7 +305,7 @@ public class PassiveState extends AbstractState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         } else {
-            return cluster.member(context.getLeader()).send(request);
+            return transportCluster.member(context.getLeader()).send(request);
         }
     }
 
@@ -318,7 +318,7 @@ public class PassiveState extends AbstractState {
                 .setError(RaftError.NO_LEADER_ERROR)
                 .build());
         } else {
-            return cluster.member(context.getLeader()).send(request);
+            return transportCluster.member(context.getLeader()).send(request);
         }
     }
 }

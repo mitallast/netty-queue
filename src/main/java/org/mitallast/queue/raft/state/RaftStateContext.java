@@ -11,8 +11,8 @@ import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
-import org.mitallast.queue.raft.cluster.Cluster;
 import org.mitallast.queue.raft.cluster.Member;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.Log;
 import org.mitallast.queue.raft.log.compaction.Compactor;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -32,7 +32,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     private final RaftState stateMachine;
     private final Log log;
     private final Compactor compactor;
-    private final Cluster cluster;
+    private final TransportCluster transportCluster;
     private final ClusterState members;
     private final ExecutionContext executionContext;
     private final long electionTimeout;
@@ -46,19 +46,19 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     private volatile long globalIndex;
 
     @Inject
-    public RaftStateContext(Settings settings, RaftState raftState, Log log, Compactor compactor, Cluster cluster, ClusterState clusterState, ExecutionContext executionContext) throws ExecutionException, InterruptedException {
-        super(settings, cluster, executionContext);
+    public RaftStateContext(Settings settings, RaftState raftState, Log log, Compactor compactor, TransportCluster transportCluster, ClusterState clusterState, ExecutionContext executionContext) throws ExecutionException, InterruptedException {
+        super(settings, transportCluster, executionContext);
         this.log = log;
         this.stateMachine = raftState;
         this.compactor = compactor;
-        this.cluster = cluster;
+        this.transportCluster = transportCluster;
         this.members = clusterState;
         this.executionContext = executionContext;
         this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueSeconds(1)).millis();
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueSeconds(1)).millis();
         executionContext.submit(() -> {
             transition(StartState.class);
-            for (Member member : cluster.members()) {
+            for (Member member : transportCluster.members()) {
                 members.addMember(new MemberState(member.node(), member.type()));
             }
         }).get();
@@ -186,7 +186,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     protected Member selectMember(Query<?> query) {
         executionContext.checkThread();
         if (!query.consistency().isLeaderRequired()) {
-            return cluster.member();
+            return transportCluster.member();
         }
         return super.selectMember(query);
     }
@@ -218,12 +218,12 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             if (this.state != null) {
                 this.state.close();
             }
-            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, Cluster.class);
+            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, TransportCluster.class);
             if (constructor == null) {
                 logger.error("Error find constructor for {}", state);
                 throw new IOException("Error find constructor for " + state);
             }
-            this.state = constructor.newInstance(this.settings, this, executionContext, cluster);
+            this.state = constructor.newInstance(this.settings, this, executionContext, transportCluster);
             this.state.open();
         } catch (Exception e) {
             logger.error("error transitioning", e);
@@ -241,7 +241,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> join(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        join(new ArrayList<>(cluster.members()), Futures.future()).whenComplete((result, error) -> {
+        join(new ArrayList<>(transportCluster.members()), Futures.future()).whenComplete((result, error) -> {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(null);
@@ -266,7 +266,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         executionContext.checkThread();
         logger.info("joining cluster via {}", member.node());
         JoinRequest request = JoinRequest.builder()
-            .setMember(cluster.member().node())
+            .setMember(transportCluster.member().node())
             .build();
         member.<JoinRequest, JoinResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
@@ -285,7 +285,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> leave() {
         executionContext.checkThread();
-        return leave(cluster.members().stream()
+        return leave(transportCluster.members().stream()
             .filter(m -> m.type() == Member.Type.ACTIVE)
             .collect(Collectors.toList()), Futures.future());
     }
@@ -303,7 +303,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         executionContext.checkThread();
         logger.info("leaving cluster via {}", member.node());
         LeaveRequest request = LeaveRequest.builder()
-            .setMember(cluster.member().node())
+            .setMember(transportCluster.member().node())
             .build();
         member.<LeaveRequest, LeaveResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
@@ -360,7 +360,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         super.doStart();
         try {
             executionContext.submit(() -> {
-                if (cluster.member().type() == Member.Type.PASSIVE) {
+                if (transportCluster.member().type() == Member.Type.PASSIVE) {
                     transition(PassiveState.class);
                     join();
                 } else {

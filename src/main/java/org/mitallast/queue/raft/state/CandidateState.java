@@ -7,8 +7,8 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Cluster;
 import org.mitallast.queue.raft.cluster.Member;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.Quorum;
@@ -27,7 +27,7 @@ class CandidateState extends ActiveState {
     private volatile Quorum quorum;
     private volatile ScheduledFuture<?> currentTimer;
 
-    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, Cluster cluster) {
+    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
         super(settings, context, executionContext, cluster);
     }
 
@@ -79,7 +79,7 @@ class CandidateState extends ActiveState {
         }, delay, TimeUnit.MILLISECONDS);
 
         final AtomicBoolean complete = new AtomicBoolean();
-        final Set<Member> votingMembers = cluster.members().stream()
+        final Set<Member> votingMembers = transportCluster.members().stream()
             .filter(m -> m.type() == Member.Type.ACTIVE)
             .collect(Collectors.toSet());
 
@@ -107,7 +107,7 @@ class CandidateState extends ActiveState {
             logger.info("requesting vote from {} for term {}", member, context.getTerm());
             VoteRequest request = VoteRequest.builder()
                 .setTerm(context.getTerm())
-                .setCandidate(cluster.member().node())
+                .setCandidate(transportCluster.member().node())
                 .setLogIndex(lastIndex)
                 .setLogTerm(lastTerm)
                 .build();
@@ -162,7 +162,7 @@ class CandidateState extends ActiveState {
         }
 
         // If the vote request is not for this candidate then reject the vote.
-        if (request.candidate().equals(cluster.member().node())) {
+        if (request.candidate().equals(transportCluster.member().node())) {
             return Futures.complete(VoteResponse.builder()
                 .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())

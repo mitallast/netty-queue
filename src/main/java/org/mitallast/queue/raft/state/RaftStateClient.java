@@ -16,7 +16,7 @@ import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.cluster.Member;
-import org.mitallast.queue.raft.cluster.Members;
+import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
 
@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class RaftStateClient extends AbstractLifecycleComponent {
-    private final Members members;
+    private final TransportCluster transportCluster;
     private final ExecutionContext executionContext;
     private final AtomicBoolean keepAlive = new AtomicBoolean();
     private final Random random = new Random();
@@ -50,9 +50,9 @@ public class RaftStateClient extends AbstractLifecycleComponent {
     private volatile ScheduledFuture<?> registerTimer;
 
     @Inject
-    public RaftStateClient(Settings settings, Members members, ExecutionContext executionContext) {
+    public RaftStateClient(Settings settings, TransportCluster transportCluster, ExecutionContext executionContext) {
         super(settings);
-        this.members = members;
+        this.transportCluster = transportCluster;
         this.executionContext = executionContext;
         this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueSeconds(1)).millis();
     }
@@ -175,7 +175,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         executionContext.checkThread();
         if (leader == null)
             throw new IllegalStateException("unknown leader");
-        return members.member(leader);
+        return transportCluster.member(leader);
     }
 
     /**
@@ -226,9 +226,9 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         executionContext.checkThread();
         ConsistencyLevel level = query.consistency();
         if (level.isLeaderRequired()) {
-            return members.member(getLeader());
+            return transportCluster.member(getLeader());
         } else {
-            return members.members().get(random.nextInt(members.members().size()));
+            return transportCluster.members().get(random.nextInt(transportCluster.members().size()));
         }
     }
 
@@ -239,7 +239,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
 
     private CompletableFuture<Void> register(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        register(new ArrayList<>(members.members())).whenComplete((result, error) -> {
+        register(new ArrayList<>(transportCluster.members())).whenComplete((result, error) -> {
             if (error == null) {
                 future.complete(null);
             } else {
@@ -256,7 +256,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
             setTerm(response.term());
             setLeader(response.leader());
             setSession(response.session());
-            return this.members.configure(response.members().toArray(new DiscoveryNode[response.members().size()]));
+            return this.transportCluster.configure(response.members());
         });
     }
 
@@ -306,7 +306,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         executionContext.checkThread();
         if (keepAlive.compareAndSet(false, true)) {
             logger.debug("sending keep alive request");
-            keepAlive(members.members().stream()
+            keepAlive(transportCluster.members().stream()
                 .filter(m -> m.type() == Member.Type.ACTIVE)
                 .collect(Collectors.toList())).thenRun(() -> keepAlive.set(false));
         }
@@ -321,7 +321,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
             setTerm(response.term());
             setLeader(response.leader());
             setVersion(response.version());
-            return this.members.configure(response.members().toArray(new DiscoveryNode[response.members().size()]));
+            return this.transportCluster.configure(response.members());
         });
     }
 

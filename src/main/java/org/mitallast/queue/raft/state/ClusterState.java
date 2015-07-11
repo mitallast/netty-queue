@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.state;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
@@ -8,6 +9,7 @@ import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ClusterState extends AbstractComponent implements Iterable<MemberState> {
     private final Map<DiscoveryNode, MemberState> members = new HashMap<>();
@@ -75,19 +77,36 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
         }
     }
 
-    MemberState getMember(DiscoveryNode node) {
+    public MemberState getMember(DiscoveryNode node) {
         executionContext.checkThread();
         return members.get(node);
     }
 
-    List<MemberState> getActiveMembers() {
+    public ImmutableList<MemberState> getActiveMembers() {
         executionContext.checkThread();
-        return activeMembers;
+        return ImmutableList.copyOf(activeMembers);
     }
 
-    List<MemberState> getPassiveMembers() {
+    public ImmutableList<MemberState> getPassiveMembers() {
         executionContext.checkThread();
-        return passiveMembers;
+        return ImmutableList.copyOf(passiveMembers);
+    }
+
+    public ImmutableList<MemberState> getMembers() {
+        executionContext.checkThread();
+        return ImmutableList.copyOf(passiveMembers);
+    }
+
+    public ImmutableList<DiscoveryNode> activeNodes() {
+        return ImmutableList.copyOf(getActiveMembers().stream().map(MemberState::getNode).collect(Collectors.toList()));
+    }
+
+    public ImmutableList<DiscoveryNode> passiveNodes() {
+        return ImmutableList.copyOf(getPassiveMembers().stream().map(MemberState::getNode).collect(Collectors.toList()));
+    }
+
+    public ImmutableList<DiscoveryNode> nodes() {
+        return ImmutableList.copyOf(getMembers().stream().map(MemberState::getNode).collect(Collectors.toList()));
     }
 
     @Override

@@ -245,7 +245,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> join(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        join(new ArrayList<>(transportCluster.members().stream().map(Member::node).collect(Collectors.toList())), Futures.future()).whenComplete((result, error) -> {
+        join(new ArrayList<>(clusterState.nodes()), Futures.future()).whenComplete((result, error) -> {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(null);

@@ -27,7 +27,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class RaftStateContext extends RaftStateClient implements Protocol {
     private final RaftState stateMachine;
@@ -289,10 +288,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> leave() {
         executionContext.checkThread();
-        return leave(transportCluster.members().stream()
-            .filter(m -> m.type() == Member.Type.ACTIVE)
-            .map(Member::node)
-            .collect(Collectors.toList()), Futures.future());
+        return leave(new ArrayList<>(clusterState.nodes()), Futures.future());
     }
 
     private CompletableFuture<Void> leave(List<DiscoveryNode> members, CompletableFuture<Void> future) {

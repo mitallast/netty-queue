@@ -31,18 +31,13 @@ public class TransportCluster extends AbstractLifecycleComponent {
         for (String node : nodes) {
             HostAndPort hostAndPort = HostAndPort.fromString(node);
             DiscoveryNode discoveryNode = new DiscoveryNode(node, hostAndPort, Version.CURRENT);
-            Member member = createMember(discoveryNode);
-            member.type = Member.Type.ACTIVE;
-            addMember(member);
+            Member member = new Member(discoveryNode, Member.Type.ACTIVE);
+            members.put(member.node(), member);
         }
     }
 
-    public synchronized void addMember(Member member) {
-        members.putIfAbsent(member.node(), member);
-    }
-
     public synchronized void addMember(DiscoveryNode node) {
-        members.computeIfAbsent(node, this::createMember);
+        members.computeIfAbsent(node, $ -> new Member(node, Member.Type.PASSIVE));
     }
 
     public synchronized CompletableFuture<Void> removeMember(DiscoveryNode node) {
@@ -54,17 +49,9 @@ public class TransportCluster extends AbstractLifecycleComponent {
         return ImmutableList.copyOf(members.values());
     }
 
-    public Member member(DiscoveryNode node) {
-        return members.get(node);
-    }
-
     public CompletionStage<Void> configure(Collection<DiscoveryNode> discoveryNodes) {
         discoveryNodes.forEach(this::addMember);
         return Futures.complete(null);
-    }
-
-    protected Member createMember(DiscoveryNode discoveryNode) {
-        return new Member(discoveryNode, Member.Type.PASSIVE);
     }
 
     @Override

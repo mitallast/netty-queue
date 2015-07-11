@@ -5,8 +5,6 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Member;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -23,8 +21,8 @@ class FollowerState extends ActiveState {
     private final Random random = new Random();
     private volatile ScheduledFuture<?> heartbeatTimer;
 
-    public FollowerState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
-        super(settings, context, executionContext, cluster, transportService);
+    public FollowerState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+        super(settings, context, executionContext, transportService);
     }
 
     @Override
@@ -81,14 +79,20 @@ class FollowerState extends ActiveState {
         return response;
     }
 
-    /**
-     * Replicates commits to the given member.
-     */
-    private void replicateCommits(DiscoveryNode node) throws IOException {
-        executionContext.checkThread();
-        MemberState member = context.getMembers().getMember(node);
-        if (isActiveReplica(member)) {
-            commit(member);
+    @Override
+    protected CompletableFuture<?> applyEntry(LogEntry entry) {
+        return super.applyEntry(entry).thenRun(this::replicateCommits);
+    }
+
+    private void replicateCommits() {
+        for (MemberState member : context.getMembers()) {
+            if (isActiveReplica(member)) {
+                try {
+                    commit(member);
+                } catch (IOException e) {
+                    logger.error("error commit replica");
+                }
+            }
         }
     }
 
@@ -97,7 +101,7 @@ class FollowerState extends ActiveState {
      */
     private boolean isActiveReplica(MemberState member) {
         executionContext.checkThread();
-        if (member != null && member.getType() == Member.Type.PASSIVE) {
+        if (member != null && member.getType() == MemberState.Type.PASSIVE) {
             MemberState thisMember = context.getMembers().getMember(transportService.localNode());
             int index = thisMember.getIndex();
             int activeMembers = context.getMembers().getActiveMembers().size();

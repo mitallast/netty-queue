@@ -18,7 +18,6 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.TransportService;
 
@@ -26,8 +25,8 @@ import java.util.concurrent.CompletableFuture;
 
 class StartState extends AbstractState {
 
-    public StartState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
-        super(settings, context, executionContext, cluster, transportService);
+    public StartState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+        super(settings, context, executionContext, transportService);
     }
 
     @Override

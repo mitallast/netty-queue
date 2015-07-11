@@ -7,8 +7,6 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.unit.TimeValue;
 import org.mitallast.queue.raft.*;
-import org.mitallast.queue.raft.cluster.Member;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.compaction.Compaction;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -23,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RaftState extends AbstractComponent implements EntryFilter {
     private final StateMachine stateMachine;
-    private final TransportCluster transportCluster;
     private final ClusterState members;
     private final ExecutionContext executionContext;
     private final Map<Long, RaftSession> sessions = new ConcurrentHashMap<>();
@@ -33,10 +30,9 @@ public class RaftState extends AbstractComponent implements EntryFilter {
     private volatile long lastApplied;
 
     @Inject
-    public RaftState(Settings settings, StateMachine stateMachine, TransportCluster transportCluster, ClusterState members, ExecutionContext executionContext) {
+    public RaftState(Settings settings, StateMachine stateMachine, ClusterState members, ExecutionContext executionContext) {
         super(settings);
         this.stateMachine = stateMachine;
-        this.transportCluster = transportCluster;
         this.members = members;
         this.executionContext = executionContext;
         this.sessionTimeout = componentSettings.getAsTime("session_timeout", TimeValue.timeValueSeconds(5)).millis();
@@ -275,10 +271,9 @@ public class RaftState extends AbstractComponent implements EntryFilter {
     private CompletableFuture<Long> join(long index, DiscoveryNode node) {
         executionContext.checkThread();
         logger.info("join node index: {} node: {}", index, node);
-        transportCluster.addMember(node);
         MemberState member = members.getMember(node);
         if (member == null) {
-            member = new MemberState(node, Member.Type.PASSIVE).setVersion(index);
+            member = new MemberState(node, MemberState.Type.PASSIVE).setVersion(index);
             members.addMember(member);
         }
         setLastApplied(index);
@@ -287,7 +282,6 @@ public class RaftState extends AbstractComponent implements EntryFilter {
 
     private CompletableFuture<Void> leave(long index, DiscoveryNode node) {
         executionContext.checkThread();
-        transportCluster.removeMember(node);
         MemberState member = members.getMember(node);
         if (member != null) {
             members.removeMember(member);

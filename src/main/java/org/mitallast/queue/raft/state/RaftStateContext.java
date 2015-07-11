@@ -11,7 +11,6 @@ import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.Log;
 import org.mitallast.queue.raft.log.compaction.Compactor;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -47,12 +46,11 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         RaftState raftState,
         Log log,
         Compactor compactor,
-        TransportCluster transportCluster,
         TransportService transportService,
         ClusterState clusterState,
         ExecutionContext executionContext
     ) throws ExecutionException, InterruptedException {
-        super(settings, transportCluster, transportService, clusterState, executionContext);
+        super(settings, transportService, clusterState, executionContext);
         this.log = log;
         this.stateMachine = raftState;
         this.compactor = compactor;
@@ -217,12 +215,12 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             if (this.state != null) {
                 this.state.close();
             }
-            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, TransportCluster.class, TransportService.class);
+            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, TransportService.class);
             if (constructor == null) {
                 logger.error("Error find constructor for {}", state);
                 throw new IOException("Error find constructor for " + state);
             }
-            this.state = constructor.newInstance(this.settings, this, executionContext, transportCluster, transportService);
+            this.state = constructor.newInstance(this.settings, this, executionContext, transportService);
             this.state.open();
         } catch (Exception e) {
             logger.error("error transitioning", e);

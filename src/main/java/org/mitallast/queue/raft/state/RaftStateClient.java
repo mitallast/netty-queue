@@ -18,7 +18,6 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
@@ -34,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class RaftStateClient extends AbstractLifecycleComponent {
-    protected final TransportCluster transportCluster;
     protected final TransportService transportService;
     protected final ClusterState clusterState;
     protected final ExecutionContext executionContext;
@@ -53,9 +51,8 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     private volatile ScheduledFuture<?> currentTimer;
     private volatile ScheduledFuture<?> registerTimer;
 
-    public RaftStateClient(Settings settings, TransportCluster transportCluster, TransportService transportService, ClusterState clusterState, ExecutionContext executionContext) {
+    public RaftStateClient(Settings settings, TransportService transportService, ClusterState clusterState, ExecutionContext executionContext) {
         super(settings);
-        this.transportCluster = transportCluster;
         this.transportService = transportService;
         this.clusterState = clusterState;
         this.executionContext = executionContext;

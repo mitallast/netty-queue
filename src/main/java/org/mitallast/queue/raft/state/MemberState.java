@@ -1,17 +1,16 @@
 package org.mitallast.queue.raft.state;
 
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 class MemberState {
     private final DiscoveryNode node;
-    private final Member.Type type;
+    private final Type type;
     private volatile long version;
     private volatile int index;
     private volatile long matchIndex;
     private volatile long nextIndex;
 
-    public MemberState(DiscoveryNode node, Member.Type type) {
+    public MemberState(DiscoveryNode node, Type type) {
         this.node = node;
         this.type = type;
     }
@@ -20,7 +19,7 @@ class MemberState {
         return node;
     }
 
-    Member.Type getType() {
+    Type getType() {
         return type;
     }
 
@@ -79,5 +78,9 @@ class MemberState {
     @Override
     public String toString() {
         return "MemberState{node=" + node + '}';
+    }
+
+    public enum Type {
+        PASSIVE, ACTIVE
     }
 }

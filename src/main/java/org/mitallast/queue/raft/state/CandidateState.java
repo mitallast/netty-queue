@@ -7,7 +7,6 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.Quorum;
@@ -25,8 +24,8 @@ class CandidateState extends ActiveState {
     private volatile Quorum quorum;
     private volatile ScheduledFuture<?> currentTimer;
 
-    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
-        super(settings, context, executionContext, cluster, transportService);
+    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+        super(settings, context, executionContext, transportService);
     }
 
     @Override

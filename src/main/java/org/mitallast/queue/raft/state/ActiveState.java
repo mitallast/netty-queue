@@ -10,7 +10,6 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.log.entry.QueryEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -22,8 +21,8 @@ import java.util.stream.Collectors;
 
 abstract class ActiveState extends PassiveState {
 
-    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
-        super(settings, context, executionContext, cluster, transportService);
+    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+        super(settings, context, executionContext, transportService);
     }
 
     @Override

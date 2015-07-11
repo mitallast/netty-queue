@@ -19,7 +19,6 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.TransportService;
@@ -34,8 +33,8 @@ class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
     private volatile ScheduledFuture<?> currentTimer;
 
-    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
-        super(settings, context, executionContext, cluster, transportService);
+    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+        super(settings, context, executionContext, transportService);
     }
 
     @Override

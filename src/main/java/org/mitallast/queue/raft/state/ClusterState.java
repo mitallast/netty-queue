@@ -6,7 +6,6 @@ import com.google.inject.Inject;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
@@ -25,7 +24,7 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
 
     public ClusterState addMember(MemberState member) {
         assert members.putIfAbsent(member.getNode(), member) == null;
-        if (member.getType() == Member.Type.ACTIVE) {
+        if (member.getType() == MemberState.Type.ACTIVE) {
             addActiveMember(member);
         } else {
             addPassiveMember(member);
@@ -45,7 +44,7 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
 
     ClusterState removeMember(MemberState member) {
         members.remove(member.getNode());
-        if (member.getType() == Member.Type.ACTIVE) {
+        if (member.getType() == MemberState.Type.ACTIVE) {
             removeActiveMember(member);
         } else {
             removePassiveMember(member);
@@ -110,7 +109,7 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
         for (String node : nodes) {
             HostAndPort hostAndPort = HostAndPort.fromString(node);
             DiscoveryNode discoveryNode = new DiscoveryNode(node, hostAndPort, Version.CURRENT);
-            addMember(new MemberState(discoveryNode, Member.Type.ACTIVE));
+            addMember(new MemberState(discoveryNode, MemberState.Type.ACTIVE));
         }
     }
 

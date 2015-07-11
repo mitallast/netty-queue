@@ -1,6 +1,5 @@
 package org.mitallast.queue.raft.cluster;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.mitallast.queue.Version;
@@ -12,7 +11,6 @@ import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,10 +41,6 @@ public class TransportCluster extends AbstractLifecycleComponent {
     public synchronized CompletableFuture<Void> removeMember(DiscoveryNode node) {
         members.remove(node);
         return Futures.complete(null);
-    }
-
-    public List<Member> members() {
-        return ImmutableList.copyOf(members.values());
     }
 
     public CompletionStage<Void> configure(Collection<DiscoveryNode> discoveryNodes) {

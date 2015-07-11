@@ -262,7 +262,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             setTerm(response.term());
             setLeader(response.leader());
             setSession(response.session());
-            return this.transportCluster.configure(response.members());
+            return Futures.complete(null);
         });
     }
 
@@ -282,6 +282,8 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         RegisterRequest request = RegisterRequest.builder()
             .setMember(member)
             .build();
+
+        transportService.connectToNode(member.address());
         transportService.client(member.address()).<RegisterRequest, RegisterResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(response);
@@ -325,7 +327,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             setTerm(response.term());
             setLeader(response.leader());
             setVersion(response.version());
-            return this.transportCluster.configure(response.members());
+            return Futures.complete(null);
         });
     }
 
@@ -345,6 +347,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         KeepAliveRequest request = KeepAliveRequest.builder()
             .setSession(getSession())
             .build();
+
         transportService.client(member.address()).<KeepAliveRequest, KeepAliveResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(response);

@@ -17,6 +17,7 @@ import org.mitallast.queue.raft.log.Log;
 import org.mitallast.queue.raft.log.compaction.Compactor;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -32,9 +33,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     private final RaftState stateMachine;
     private final Log log;
     private final Compactor compactor;
-    private final TransportCluster transportCluster;
     private final ClusterState members;
-    private final ExecutionContext executionContext;
     private final long electionTimeout;
     private final long heartbeatInterval;
 
@@ -46,14 +45,21 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     private volatile long globalIndex;
 
     @Inject
-    public RaftStateContext(Settings settings, RaftState raftState, Log log, Compactor compactor, TransportCluster transportCluster, ClusterState clusterState, ExecutionContext executionContext) throws ExecutionException, InterruptedException {
-        super(settings, transportCluster, executionContext);
+    public RaftStateContext(
+        Settings settings,
+        RaftState raftState,
+        Log log,
+        Compactor compactor,
+        TransportCluster transportCluster,
+        TransportService transportService,
+        ClusterState clusterState,
+        ExecutionContext executionContext
+    ) throws ExecutionException, InterruptedException {
+        super(settings, transportCluster, transportService, executionContext);
         this.log = log;
         this.stateMachine = raftState;
         this.compactor = compactor;
-        this.transportCluster = transportCluster;
         this.members = clusterState;
-        this.executionContext = executionContext;
         this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueSeconds(1)).millis();
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueSeconds(1)).millis();
         executionContext.submit(() -> {
@@ -218,12 +224,12 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             if (this.state != null) {
                 this.state.close();
             }
-            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, TransportCluster.class);
+            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, TransportCluster.class, TransportService.class);
             if (constructor == null) {
                 logger.error("Error find constructor for {}", state);
                 throw new IOException("Error find constructor for " + state);
             }
-            this.state = constructor.newInstance(this.settings, this, executionContext, transportCluster);
+            this.state = constructor.newInstance(this.settings, this, executionContext, transportCluster, transportService);
             this.state.open();
         } catch (Exception e) {
             logger.error("error transitioning", e);
@@ -266,9 +272,9 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         executionContext.checkThread();
         logger.info("joining cluster via {}", member.node());
         JoinRequest request = JoinRequest.builder()
-            .setMember(transportCluster.member().node())
+            .setMember(transportService.localNode())
             .build();
-        member.<JoinRequest, JoinResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.node().address()).<JoinRequest, JoinResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 setLeader(response.leader());
                 setTerm(response.term());
@@ -303,9 +309,9 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         executionContext.checkThread();
         logger.info("leaving cluster via {}", member.node());
         LeaveRequest request = LeaveRequest.builder()
-            .setMember(transportCluster.member().node())
+            .setMember(transportService.localNode())
             .build();
-        member.<LeaveRequest, LeaveResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.node().address()).<LeaveRequest, LeaveResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(null);
                 logger.info("left cluster");

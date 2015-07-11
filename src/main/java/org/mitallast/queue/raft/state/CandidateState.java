@@ -11,6 +11,7 @@ import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.Quorum;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.Random;
@@ -26,8 +27,8 @@ class CandidateState extends ActiveState {
     private volatile Quorum quorum;
     private volatile ScheduledFuture<?> currentTimer;
 
-    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
-        super(settings, context, executionContext, cluster);
+    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
+        super(settings, context, executionContext, cluster, transportService);
     }
 
     @Override
@@ -106,11 +107,12 @@ class CandidateState extends ActiveState {
             logger.info("requesting vote from {} for term {}", member, context.getTerm());
             VoteRequest request = VoteRequest.builder()
                 .setTerm(context.getTerm())
-                .setCandidate(transportCluster.member().node())
+                .setCandidate(transportService.localNode())
                 .setLogIndex(lastIndex)
                 .setLogTerm(lastTerm)
                 .build();
-            member.<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
+
+            transportService.client(member.node().address()).<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
                 if (!complete.get()) {
                     if (error != null) {
                         logger.warn(error.getMessage());
@@ -161,7 +163,7 @@ class CandidateState extends ActiveState {
         }
 
         // If the vote request is not for this candidate then reject the vote.
-        if (request.candidate().equals(transportCluster.member().node())) {
+        if (request.candidate().equals(transportService.localNode())) {
             return Futures.complete(VoteResponse.builder()
                 .setTerm(context.getTerm())
                 .setVoted(true)

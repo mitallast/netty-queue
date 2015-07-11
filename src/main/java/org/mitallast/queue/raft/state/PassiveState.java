@@ -23,6 +23,7 @@ import org.mitallast.queue.raft.action.vote.VoteResponse;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -31,8 +32,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class PassiveState extends AbstractState {
     protected volatile boolean transition;
 
-    public PassiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
-        super(settings, context, executionContext, cluster);
+    public PassiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
+        super(settings, context, executionContext, cluster, transportService);
     }
 
     @Override
@@ -236,7 +237,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportCluster.member(context.getLeader()).send(request);
+            return transportService.client(context.getLeader().address()).send(request);
         }
     }
 
@@ -248,7 +249,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportCluster.member(context.getLeader()).send(request);
+            return transportService.client(context.getLeader().address()).send(request);
         }
     }
 
@@ -270,7 +271,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportCluster.member(context.getLeader()).send(request);
+            return transportService.client(context.getLeader().address()).send(request);
         }
     }
 
@@ -282,7 +283,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportCluster.member(context.getLeader()).send(request);
+            return transportService.client(context.getLeader().address()).send(request);
         }
     }
 
@@ -294,7 +295,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportCluster.member(context.getLeader()).send(request);
+            return transportService.client(context.getLeader().address()).send(request);
         }
     }
 
@@ -306,7 +307,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportCluster.member(context.getLeader()).send(request);
+            return transportService.client(context.getLeader().address()).send(request);
         }
     }
 }

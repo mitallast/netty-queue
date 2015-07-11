@@ -10,6 +10,7 @@ import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.*;
@@ -22,8 +23,8 @@ class FollowerState extends ActiveState {
     private final Random random = new Random();
     private volatile ScheduledFuture<?> heartbeatTimer;
 
-    public FollowerState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
-        super(settings, context, executionContext, cluster);
+    public FollowerState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
+        super(settings, context, executionContext, cluster, transportService);
     }
 
     @Override
@@ -97,7 +98,7 @@ class FollowerState extends ActiveState {
     private boolean isActiveReplica(MemberState member) {
         executionContext.checkThread();
         if (member != null && member.getType() == Member.Type.PASSIVE) {
-            MemberState thisMember = context.getMembers().getMember(transportCluster.member().node());
+            MemberState thisMember = context.getMembers().getMember(transportService.localNode());
             int index = thisMember.getIndex();
             int activeMembers = context.getMembers().getActiveMembers().size();
             int passiveMembers = context.getMembers().getPassiveMembers().size();
@@ -172,7 +173,7 @@ class FollowerState extends ActiveState {
         executionContext.checkThread();
         AppendRequest request = AppendRequest.builder()
             .setTerm(context.getTerm())
-            .setLeader(transportCluster.member().node())
+            .setLeader(transportService.localNode())
             .setLogIndex(prevIndex)
             .setLogTerm(prevEntry != null ? prevEntry.term() : 0)
             .setEntries(entries)
@@ -182,7 +183,8 @@ class FollowerState extends ActiveState {
 
         committing.add(member.getNode());
         logger.debug("sent {} to {}", request, member);
-        transportCluster.member(member.getNode()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
+
+        transportService.client(member.getNode().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
             committing.remove(member.getNode());
             if (error == null) {
                 logger.debug("received {} from {}", response, member);

@@ -22,6 +22,7 @@ import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,8 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class RaftStateClient extends AbstractLifecycleComponent {
-    private final TransportCluster transportCluster;
-    private final ExecutionContext executionContext;
+    protected final TransportCluster transportCluster;
+    protected final TransportService transportService;
+    protected final ExecutionContext executionContext;
     private final AtomicBoolean keepAlive = new AtomicBoolean();
     private final Random random = new Random();
     private final long keepAliveInterval;
@@ -53,9 +55,10 @@ public class RaftStateClient extends AbstractLifecycleComponent {
     private volatile ScheduledFuture<?> registerTimer;
 
     @Inject
-    public RaftStateClient(Settings settings, TransportCluster transportCluster, ExecutionContext executionContext) {
+    public RaftStateClient(Settings settings, TransportCluster transportCluster, TransportService transportService, ExecutionContext executionContext) {
         super(settings);
         this.transportCluster = transportCluster;
+        this.transportService = transportService;
         this.executionContext = executionContext;
         this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueSeconds(1)).millis();
     }
@@ -158,7 +161,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
                     .setCommand(command)
                     .build();
 
-                member.<CommandRequest, CommandResponse>send(request).whenCompleteAsync((response, error) -> {
+                transportService.client(member.node().address()).<CommandRequest, CommandResponse>send(request).whenCompleteAsync((response, error) -> {
                     if (error == null) {
                         future.complete((R) response.result());
                         setResponse(Math.max(getResponse(), requestId));
@@ -213,7 +216,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
                     .setSession(getSession())
                     .setQuery(query)
                     .build();
-                member.<QueryRequest, QueryResponse>send(request).whenCompleteAsync((response, error) -> {
+                transportService.client(member.node().address()).<QueryRequest, QueryResponse>send(request).whenCompleteAsync((response, error) -> {
                     if (error == null) {
                         future.complete((R) response.result());
                     } else {
@@ -279,7 +282,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         RegisterRequest request = RegisterRequest.builder()
             .setMember(member.node())
             .build();
-        member.<RegisterRequest, RegisterResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.node().address()).<RegisterRequest, RegisterResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(response);
                 logger.info("registered new session: {}", getSession());
@@ -344,7 +347,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         KeepAliveRequest request = KeepAliveRequest.builder()
             .setSession(getSession())
             .build();
-        member.<KeepAliveRequest, KeepAliveResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.node().address()).<KeepAliveRequest, KeepAliveResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(response);
             } else {

@@ -23,6 +23,7 @@ import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.*;
@@ -35,8 +36,8 @@ class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
     private volatile ScheduledFuture<?> currentTimer;
 
-    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
-        super(settings, context, executionContext, cluster);
+    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
+        super(settings, context, executionContext, cluster, transportService);
     }
 
     @Override
@@ -66,7 +67,7 @@ class LeaderState extends ActiveState {
      */
     private void takeLeadership() {
         executionContext.checkThread();
-        context.setLeader(transportCluster.member().node());
+        context.setLeader(transportService.localNode());
     }
 
     /**
@@ -591,7 +592,7 @@ class LeaderState extends ActiveState {
         private Replicator() {
             Set<Member> members = transportCluster.members().stream()
                 // not local and only active
-                .filter(m -> !m.node().equals(transportCluster.member().node()) && m.type() == Member.Type.ACTIVE)
+                .filter(m -> !m.node().equals(transportService.localNode()) && m.type() == Member.Type.ACTIVE)
                 .collect(Collectors.toSet());
             for (Member member : members) {
                 this.replicas.add(new Replica(this.replicas.size(), member));
@@ -834,7 +835,7 @@ class LeaderState extends ActiveState {
                 executionContext.checkThread();
                 AppendRequest request = AppendRequest.builder()
                     .setTerm(context.getTerm())
-                    .setLeader(transportCluster.member().node())
+                    .setLeader(transportService.localNode())
                     .setLogIndex(prevIndex)
                     .setLogTerm(prevEntry != null ? prevEntry.term() : 0)
                     .setEntries(entries)
@@ -844,7 +845,7 @@ class LeaderState extends ActiveState {
 
                 committing = true;
                 logger.debug("sent {} to {}", request, this.member);
-                this.member.<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
+                transportService.client(member.node().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
                     committing = false;
                     if (error == null) {
                         logger.debug("received {} from {}", response, this.member);

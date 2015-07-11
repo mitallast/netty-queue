@@ -15,6 +15,7 @@ import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.log.entry.QueryEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -22,8 +23,8 @@ import java.util.stream.Collectors;
 
 abstract class ActiveState extends PassiveState {
 
-    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster) {
-        super(settings, context, executionContext, cluster);
+    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportCluster cluster, TransportService transportService) {
+        super(settings, context, executionContext, cluster, transportService);
     }
 
     @Override
@@ -81,8 +82,8 @@ abstract class ActiveState extends PassiveState {
         // If the requesting candidate is our self then always vote for our self. Votes
         // for self are done by calling the local node. Note that this obviously
         // doesn't make sense for a leader.
-        else if (transportCluster.member().node().equals(request.candidate())) {
-            context.setLastVotedFor(transportCluster.member().node());
+        else if (transportService.localNode().equals(request.candidate())) {
+            context.setLastVotedFor(transportService.localNode());
             logger.info("accepted {}: candidate is the local member", request);
             return VoteResponse.builder()
                 .setTerm(context.getTerm())
@@ -174,7 +175,7 @@ abstract class ActiveState extends PassiveState {
                 .setError(new NoLeaderException())
                 .build());
         }
-        return transportCluster.member(context.getLeader()).send(request);
+        return transportService.client(context.getLeader().address()).send(request);
     }
 
     private CompletableFuture<QueryResponse> querySequential(QueryRequest request) {

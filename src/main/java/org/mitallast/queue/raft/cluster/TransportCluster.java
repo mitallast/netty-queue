@@ -4,8 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.mitallast.queue.Version;
-import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
@@ -29,7 +27,7 @@ public class TransportCluster extends AbstractLifecycleComponent {
     protected TransportCluster(Settings settings, TransportService transportService) {
         super(settings);
         this.transportService = transportService;
-        this.localMember = new TransportMember(transportService.localNode(), Member.Type.ACTIVE, transportService);
+        this.localMember = new Member(transportService.localNode(), Member.Type.ACTIVE);
 
         String[] nodes = componentSettings.getAsArray("nodes");
         for (String node : nodes) {
@@ -72,7 +70,7 @@ public class TransportCluster extends AbstractLifecycleComponent {
     }
 
     protected Member createMember(DiscoveryNode discoveryNode) {
-        return new TransportMember(discoveryNode, Member.Type.PASSIVE, transportService);
+        return new Member(discoveryNode, Member.Type.PASSIVE);
     }
 
     @Override
@@ -88,25 +86,5 @@ public class TransportCluster extends AbstractLifecycleComponent {
 
     @Override
     protected void doClose() throws IOException {
-
-    }
-
-    private static class TransportMember extends Member {
-        private final TransportService transportService;
-
-        protected TransportMember(DiscoveryNode node, Type type, TransportService transportService) {
-            super(node, type);
-            this.transportService = transportService;
-        }
-
-        @Override
-        public <T extends ActionRequest, R extends ActionResponse> CompletableFuture<R> send(T message) {
-            return transportService.client(node().address()).<T, R>send(message);
-        }
-
-        @Override
-        public String toString() {
-            return "TransportMember{node=" + node() + "}";
-        }
     }
 }

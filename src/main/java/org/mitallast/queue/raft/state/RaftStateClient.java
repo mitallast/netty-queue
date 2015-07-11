@@ -18,7 +18,6 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -33,7 +32,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 public abstract class RaftStateClient extends AbstractLifecycleComponent {
     protected final TransportCluster transportCluster;
@@ -314,10 +312,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         executionContext.checkThread();
         if (keepAlive.compareAndSet(false, true)) {
             logger.debug("sending keep alive request");
-            keepAlive(transportCluster.members().stream()
-                .filter(m -> m.type() == Member.Type.ACTIVE)
-                .map(Member::node)
-                .collect(Collectors.toList())).thenRun(() -> keepAlive.set(false));
+            keepAlive(new ArrayList<>(clusterState.nodes())).thenRun(() -> keepAlive.set(false));
         }
     }
 

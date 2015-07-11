@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft.state;
 
-import com.google.inject.Inject;
+import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
@@ -35,9 +35,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-public class RaftStateClient extends AbstractLifecycleComponent {
+public abstract class RaftStateClient extends AbstractLifecycleComponent {
     protected final TransportCluster transportCluster;
     protected final TransportService transportService;
+    protected final ClusterState clusterState;
     protected final ExecutionContext executionContext;
     private final AtomicBoolean keepAlive = new AtomicBoolean();
     private final Random random = new Random();
@@ -54,11 +55,11 @@ public class RaftStateClient extends AbstractLifecycleComponent {
     private volatile ScheduledFuture<?> currentTimer;
     private volatile ScheduledFuture<?> registerTimer;
 
-    @Inject
-    public RaftStateClient(Settings settings, TransportCluster transportCluster, TransportService transportService, ExecutionContext executionContext) {
+    public RaftStateClient(Settings settings, TransportCluster transportCluster, TransportService transportService, ClusterState clusterState, ExecutionContext executionContext) {
         super(settings);
         this.transportCluster = transportCluster;
         this.transportService = transportService;
+        this.clusterState = clusterState;
         this.executionContext = executionContext;
         this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueSeconds(1)).millis();
     }
@@ -234,8 +235,8 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         if (level.isLeaderRequired()) {
             return transportService.localNode();
         } else {
-            List<Member> members = transportCluster.members();
-            return members.get(random.nextInt(members.size())).node();
+            ImmutableList<DiscoveryNode> nodes = clusterState.nodes();
+            return nodes.get(random.nextInt(nodes.size()));
         }
     }
 

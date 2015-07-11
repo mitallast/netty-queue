@@ -33,7 +33,6 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     private final RaftState stateMachine;
     private final Log log;
     private final Compactor compactor;
-    private final ClusterState members;
     private final long electionTimeout;
     private final long heartbeatInterval;
 
@@ -55,17 +54,16 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         ClusterState clusterState,
         ExecutionContext executionContext
     ) throws ExecutionException, InterruptedException {
-        super(settings, transportCluster, transportService, executionContext);
+        super(settings, transportCluster, transportService, clusterState, executionContext);
         this.log = log;
         this.stateMachine = raftState;
         this.compactor = compactor;
-        this.members = clusterState;
         this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueSeconds(1)).millis();
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueSeconds(1)).millis();
         executionContext.submit(() -> {
             transition(StartState.class);
             for (Member member : transportCluster.members()) {
-                members.addMember(new MemberState(member.node(), member.type()));
+                clusterState.addMember(new MemberState(member.node(), member.type()));
             }
         }).get();
     }
@@ -83,7 +81,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     ClusterState getMembers() {
         executionContext.checkThread();
-        return members;
+        return clusterState;
     }
 
     @Override

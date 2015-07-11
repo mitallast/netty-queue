@@ -20,14 +20,12 @@ import java.util.concurrent.ConcurrentMap;
 
 public class TransportCluster extends AbstractLifecycleComponent {
     private final TransportService transportService;
-    private final Member localMember;
     private final ConcurrentMap<DiscoveryNode, Member> members = new ConcurrentHashMap<>();
 
     @Inject
     protected TransportCluster(Settings settings, TransportService transportService) {
         super(settings);
         this.transportService = transportService;
-        this.localMember = new Member(transportService.localNode(), Member.Type.ACTIVE);
 
         String[] nodes = componentSettings.getAsArray("nodes");
         for (String node : nodes) {
@@ -37,10 +35,6 @@ public class TransportCluster extends AbstractLifecycleComponent {
             member.type = Member.Type.ACTIVE;
             addMember(member);
         }
-    }
-
-    public Member member() {
-        return localMember;
     }
 
     public synchronized void addMember(Member member) {

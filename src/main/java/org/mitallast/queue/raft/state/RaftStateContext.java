@@ -189,10 +189,10 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     }
 
     @Override
-    protected Member selectMember(Query<?> query) {
+    protected DiscoveryNode selectMember(Query<?> query) {
         executionContext.checkThread();
         if (!query.consistency().isLeaderRequired()) {
-            return transportCluster.member();
+            return transportService.localNode();
         }
         return super.selectMember(query);
     }
@@ -366,7 +366,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         super.doStart();
         try {
             executionContext.submit(() -> {
-                if (transportCluster.member().type() == Member.Type.PASSIVE) {
+                if (settings.getAsBoolean("raft.passive", false)) {
                     transition(PassiveState.class);
                     join();
                 } else {

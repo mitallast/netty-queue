@@ -140,9 +140,9 @@ public class RaftStateClient extends AbstractLifecycleComponent {
             if (session == 0)
                 future.completeExceptionally(new IllegalStateException("session not open"));
 
-            Member member;
+            DiscoveryNode member;
             try {
-                member = selectMember(command);
+                member = selectMember();
             } catch (IllegalStateException e) {
                 future.completeExceptionally(e);
                 return;
@@ -161,7 +161,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
                     .setCommand(command)
                     .build();
 
-                transportService.client(member.node().address()).<CommandRequest, CommandResponse>send(request).whenCompleteAsync((response, error) -> {
+                transportService.client(member.address()).<CommandRequest, CommandResponse>send(request).whenCompleteAsync((response, error) -> {
                     if (error == null) {
                         future.complete((R) response.result());
                         setResponse(Math.max(getResponse(), requestId));
@@ -177,11 +177,11 @@ public class RaftStateClient extends AbstractLifecycleComponent {
     /**
      * Selects the member to which to send the given command.
      */
-    protected Member selectMember(Command<?> command) {
+    protected DiscoveryNode selectMember() {
         executionContext.checkThread();
         if (leader == null)
             throw new IllegalStateException("unknown leader");
-        return transportCluster.member(leader);
+        return leader;
     }
 
     /**
@@ -200,7 +200,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
             if (session == 0)
                 future.completeExceptionally(new IllegalStateException("session not open"));
 
-            Member member;
+            DiscoveryNode member;
             try {
                 member = selectMember(query);
             } catch (IllegalStateException e) {
@@ -216,7 +216,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
                     .setSession(getSession())
                     .setQuery(query)
                     .build();
-                transportService.client(member.node().address()).<QueryRequest, QueryResponse>send(request).whenCompleteAsync((response, error) -> {
+                transportService.client(member.address()).<QueryRequest, QueryResponse>send(request).whenCompleteAsync((response, error) -> {
                     if (error == null) {
                         future.complete((R) response.result());
                     } else {
@@ -228,13 +228,14 @@ public class RaftStateClient extends AbstractLifecycleComponent {
         return future;
     }
 
-    protected Member selectMember(Query<?> query) {
+    protected DiscoveryNode selectMember(Query<?> query) {
         executionContext.checkThread();
         ConsistencyLevel level = query.consistency();
         if (level.isLeaderRequired()) {
-            return transportCluster.member(getLeader());
+            return transportService.localNode();
         } else {
-            return transportCluster.members().get(random.nextInt(transportCluster.members().size()));
+            List<Member> members = transportCluster.members();
+            return members.get(random.nextInt(members.size())).node();
         }
     }
 

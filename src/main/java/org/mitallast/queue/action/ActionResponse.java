@@ -1,6 +1,7 @@
 package org.mitallast.queue.action;
 
 import org.mitallast.queue.common.builder.Entry;
+import org.mitallast.queue.common.stream.StreamableError;
 
 public interface ActionResponse<E extends ActionResponse> extends Entry<E> {
 
@@ -8,7 +9,7 @@ public interface ActionResponse<E extends ActionResponse> extends Entry<E> {
         return error() != null;
     }
 
-    default ActionResponseError error() {
+    default StreamableError error() {
         return null;
     }
 }

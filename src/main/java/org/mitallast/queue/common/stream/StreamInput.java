@@ -2,6 +2,7 @@ package org.mitallast.queue.common.stream;
 
 import com.google.common.collect.ImmutableList;
 import io.netty.buffer.ByteBuf;
+import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -145,5 +146,10 @@ public interface StreamInput extends DataInput, Closeable {
             }
             return builder.build();
         }
+    }
+
+    default <T extends StreamableError> T readError() throws IOException {
+        EntryBuilder<T> streamable = readStreamable();
+        return streamable.build();
     }
 }

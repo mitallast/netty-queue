@@ -1,7 +1,6 @@
 package org.mitallast.queue.action.queues.delete;
 
 import org.mitallast.queue.action.ActionResponse;
-import org.mitallast.queue.action.ActionResponseError;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
@@ -30,7 +29,6 @@ public class DeleteQueueResponse implements ActionResponse<DeleteQueueResponse> 
 
     public static class Builder implements EntryBuilder<DeleteQueueResponse> {
         private boolean deleted;
-        private ActionResponseError error;
 
         private Builder from(DeleteQueueResponse entry) {
             deleted = entry.deleted;
@@ -39,11 +37,6 @@ public class DeleteQueueResponse implements ActionResponse<DeleteQueueResponse> 
 
         public Builder setDeleted(boolean deleted) {
             this.deleted = deleted;
-            return this;
-        }
-
-        public Builder setError(ActionResponseError error) {
-            this.error = error;
             return this;
         }
 

@@ -19,7 +19,6 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -30,7 +29,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
@@ -590,14 +588,12 @@ class LeaderState extends ActiveState {
         private volatile int quorumIndex;
 
         private Replicator() {
-            Set<Member> members = transportCluster.members().stream()
-                // not local and only active
-                .filter(m -> !m.node().equals(transportService.localNode()) && m.type() == Member.Type.ACTIVE)
-                .collect(Collectors.toSet());
-            for (Member member : members) {
-                this.replicas.add(new Replica(this.replicas.size(), member));
-                this.commitTimes.add(System.currentTimeMillis());
-            }
+            context.getMembers().getMembers().stream()
+                .filter(state -> !state.getNode().equals(transportService.localNode()))
+                .forEach(state -> {
+                    replicas.add(new Replica(this.replicas.size(), state));
+                    commitTimes.add(System.currentTimeMillis());
+                });
 
             this.quorum = (int) Math.floor((this.replicas.size() + 1) / 2.0);
             this.quorumIndex = quorum - 1;
@@ -731,16 +727,14 @@ class LeaderState extends ActiveState {
          */
         private class Replica {
             private final int id;
-            private final Member member;
             private final MemberState state;
             private volatile boolean committing;
 
-            private Replica(int id, Member member) {
+            private Replica(int id, MemberState state) {
                 executionContext.checkThread();
                 this.id = id;
-                this.member = member;
-                state = context.getMembers().getMember(member.node());
-                state.setNextIndex(Math.max(state.getMatchIndex(), Math.max(context.getLog().lastIndex(), 1)));
+                this.state = state;
+                this.state.setNextIndex(Math.max(state.getMatchIndex(), Math.max(context.getLog().lastIndex(), 1)));
             }
 
             /**
@@ -821,7 +815,7 @@ class LeaderState extends ActiveState {
              */
             private void entriesCommit() throws IOException {
                 executionContext.checkThread();
-                logger.debug("entries commit for {}", member);
+                logger.debug("entries commit for {}", state.getNode());
                 long prevIndex = getPrevIndex();
                 LogEntry prevEntry = getPrevEntry(prevIndex);
                 List<LogEntry> entries = getEntries(prevIndex);
@@ -844,13 +838,13 @@ class LeaderState extends ActiveState {
                     .build();
 
                 committing = true;
-                logger.debug("sent {} to {}", request, this.member);
-                transportService.client(member.node().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
+                logger.debug("sent {} to {}", request, state.getNode());
+                transportService.client(state.getNode().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
                     committing = false;
                     if (error == null) {
-                        logger.debug("received {} from {}", response, this.member);
+                        logger.debug("received {} from {}", response, state.getNode());
                         if (response.term() > context.getTerm()) {
-                            logger.info("received higher term from {}", this.member);
+                            logger.info("received higher term from {}", state.getNode());
                             transition(RaftStateType.FOLLOWER);
                         } else {
                             // Update the commit time for the replica. This will cause heartbeat futures to be triggered.
@@ -923,7 +917,7 @@ class LeaderState extends ActiveState {
                 } else if (response.logIndex() != 0) {
                     state.setMatchIndex(Math.max(state.getMatchIndex(), response.logIndex()));
                 }
-                logger.debug("reset match index for {} to {}", member, state.getMatchIndex());
+                logger.debug("reset match index for {} to {}", state.getNode(), state.getMatchIndex());
             }
 
             private void resetNextIndex() {
@@ -933,7 +927,7 @@ class LeaderState extends ActiveState {
                 } else {
                     state.setNextIndex(context.getLog().firstIndex());
                 }
-                logger.debug("reset next index for {} to {}", member, state.getNextIndex());
+                logger.debug("reset next index for {} to {}", state.getNode(), state.getNextIndex());
             }
 
         }

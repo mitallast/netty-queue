@@ -10,7 +10,6 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.log.entry.QueryEntry;
@@ -92,8 +91,8 @@ abstract class ActiveState extends PassiveState {
         }
         // If the requesting candidate is not a known member of the cluster (to this
         // node) then don't vote for it. Only vote for candidates that we know about.
-        else if (!transportCluster.members().stream().map(Member::node).collect(Collectors.toSet()).contains(request.candidate())) {
-            logger.info("rejected {}: candidate is not known to the local member", request);
+        else if (!context.getMembers().getMembers().stream().map(MemberState::getNode).collect(Collectors.toSet()).contains(request.candidate())) {
+            logger.info("rejected {}: candidate is not known to the local member: {}", request, context.getMembers().nodes());
             return VoteResponse.builder()
                 .setTerm(context.getTerm())
                 .setVoted(false)

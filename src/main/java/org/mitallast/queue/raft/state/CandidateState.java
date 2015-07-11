@@ -1,12 +1,12 @@
 package org.mitallast.queue.raft.state;
 
+import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -15,12 +15,10 @@ import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 class CandidateState extends ActiveState {
     private final Random random = new Random();
@@ -79,9 +77,7 @@ class CandidateState extends ActiveState {
         }, delay, TimeUnit.MILLISECONDS);
 
         final AtomicBoolean complete = new AtomicBoolean();
-        final Set<Member> votingMembers = transportCluster.members().stream()
-            .filter(m -> m.type() == Member.Type.ACTIVE)
-            .collect(Collectors.toSet());
+        ImmutableList<MemberState> votingMembers = context.getMembers().getActiveMembers();
 
         // Send vote requests to all nodes. The vote request that is sent
         // to this node will be automatically successful.
@@ -103,7 +99,7 @@ class CandidateState extends ActiveState {
         // of the cluster and vote each member for a vote.
         logger.info("requesting votes from {}", votingMembers);
         final long lastTerm = lastEntry != null ? lastEntry.term() : 0;
-        for (Member member : votingMembers) {
+        for (MemberState member : votingMembers) {
             logger.info("requesting vote from {} for term {}", member, context.getTerm());
             VoteRequest request = VoteRequest.builder()
                 .setTerm(context.getTerm())
@@ -112,7 +108,7 @@ class CandidateState extends ActiveState {
                 .setLogTerm(lastTerm)
                 .build();
 
-            transportService.client(member.node().address()).<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
+            transportService.client(member.getNode().address()).<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
                 if (!complete.get()) {
                     if (error != null) {
                         logger.warn(error.getMessage());

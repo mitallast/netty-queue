@@ -23,9 +23,9 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
         this.executionContext = executionContext;
     }
 
-    ClusterState addMember(MemberState member) {
+    public ClusterState addMember(MemberState member) {
         executionContext.checkThread();
-        members.put(member.getNode(), member);
+        assert members.putIfAbsent(member.getNode(), member) == null;
         if (member.getType() == Member.Type.ACTIVE) {
             addActiveMember(member);
         } else {
@@ -94,7 +94,7 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
 
     public ImmutableList<MemberState> getMembers() {
         executionContext.checkThread();
-        return ImmutableList.copyOf(passiveMembers);
+        return ImmutableList.copyOf(members.values());
     }
 
     public ImmutableList<DiscoveryNode> activeNodes() {

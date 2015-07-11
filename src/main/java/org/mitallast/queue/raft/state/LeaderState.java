@@ -377,7 +377,7 @@ class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setSession(sessionId)
-                                .setMembers(transportCluster.members().stream().map(Member::node).collect(Collectors.toList()))
+                                .setMembers(context.getMembers().nodes())
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -440,7 +440,7 @@ class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setVersion(version)
-                                .setMembers(transportCluster.members().stream().map(Member::node).collect(Collectors.toList()))
+                                .setMembers(context.getMembers().nodes())
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);

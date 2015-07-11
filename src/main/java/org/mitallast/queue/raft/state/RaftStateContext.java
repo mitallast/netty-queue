@@ -196,14 +196,14 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     }
 
     @Override
-    protected CompletableFuture<Void> register(List<Member> members) {
+    protected CompletableFuture<Void> register(List<DiscoveryNode> members) {
         executionContext.checkThread();
         return register(members, Futures.future())
             .thenAcceptAsync(response -> setSession(response.session()), executionContext.executor());
     }
 
     @Override
-    protected CompletableFuture<Void> keepAlive(List<Member> members) {
+    protected CompletableFuture<Void> keepAlive(List<DiscoveryNode> members) {
         executionContext.checkThread();
         return keepAlive(members, Futures.future())
             .thenAcceptAsync(response -> setVersion(response.version()), executionContext.executor());
@@ -245,7 +245,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> join(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        join(new ArrayList<>(transportCluster.members()), Futures.future()).whenComplete((result, error) -> {
+        join(new ArrayList<>(transportCluster.members().stream().map(Member::node).collect(Collectors.toList())), Futures.future()).whenComplete((result, error) -> {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(null);
@@ -257,7 +257,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return future;
     }
 
-    private CompletableFuture<Void> join(List<Member> members, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> join(List<DiscoveryNode> members, CompletableFuture<Void> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
             future.completeExceptionally(new NoLeaderException("no leader found"));
@@ -266,13 +266,13 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return join(selectMember(members), members, future);
     }
 
-    private CompletableFuture<Void> join(Member member, List<Member> members, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> join(DiscoveryNode member, List<DiscoveryNode> members, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        logger.info("joining cluster via {}", member.node());
+        logger.info("joining cluster via {}", member);
         JoinRequest request = JoinRequest.builder()
             .setMember(transportService.localNode())
             .build();
-        transportService.client(member.node().address()).<JoinRequest, JoinResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.address()).<JoinRequest, JoinResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 setLeader(response.leader());
                 setTerm(response.term());
@@ -291,10 +291,11 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         executionContext.checkThread();
         return leave(transportCluster.members().stream()
             .filter(m -> m.type() == Member.Type.ACTIVE)
+            .map(Member::node)
             .collect(Collectors.toList()), Futures.future());
     }
 
-    private CompletableFuture<Void> leave(List<Member> members, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> leave(List<DiscoveryNode> members, CompletableFuture<Void> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
             future.completeExceptionally(new NoLeaderException("no leader found"));
@@ -303,13 +304,13 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return leave(selectMember(members), members, future);
     }
 
-    private CompletableFuture<Void> leave(Member member, List<Member> members, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> leave(DiscoveryNode member, List<DiscoveryNode> members, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        logger.info("leaving cluster via {}", member.node());
+        logger.info("leaving cluster via {}", member);
         LeaveRequest request = LeaveRequest.builder()
             .setMember(transportService.localNode())
             .build();
-        transportService.client(member.node().address()).<LeaveRequest, LeaveResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.address()).<LeaveRequest, LeaveResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(null);
                 logger.info("left cluster");

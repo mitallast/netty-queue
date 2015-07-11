@@ -247,7 +247,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
 
     private CompletableFuture<Void> register(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        register(new ArrayList<>(transportCluster.members())).whenComplete((result, error) -> {
+        register(new ArrayList<>(clusterState.nodes())).whenComplete((result, error) -> {
             if (error == null) {
                 future.complete(null);
             } else {
@@ -258,7 +258,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         return future;
     }
 
-    protected CompletableFuture<Void> register(List<Member> members) {
+    protected CompletableFuture<Void> register(List<DiscoveryNode> members) {
         executionContext.checkThread();
         return register(members, Futures.future()).thenCompose(response -> {
             setTerm(response.term());
@@ -271,20 +271,20 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     /**
      * Registers the client by contacting a random member.
      */
-    protected CompletableFuture<RegisterResponse> register(List<Member> members, CompletableFuture<RegisterResponse> future) {
+    protected CompletableFuture<RegisterResponse> register(List<DiscoveryNode> members, CompletableFuture<RegisterResponse> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
             future.completeExceptionally(new NoLeaderException("no leader found"));
             return future;
         }
 
-        Member member = selectMember(members);
+        DiscoveryNode member = selectMember(members);
 
-        logger.info("registering session via {}", member.node());
+        logger.info("registering session via {}", member);
         RegisterRequest request = RegisterRequest.builder()
-            .setMember(member.node())
+            .setMember(member)
             .build();
-        transportService.client(member.node().address()).<RegisterRequest, RegisterResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.address()).<RegisterRequest, RegisterResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(response);
                 logger.info("registered new session: {}", getSession());
@@ -316,6 +316,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             logger.debug("sending keep alive request");
             keepAlive(transportCluster.members().stream()
                 .filter(m -> m.type() == Member.Type.ACTIVE)
+                .map(Member::node)
                 .collect(Collectors.toList())).thenRun(() -> keepAlive.set(false));
         }
     }
@@ -323,7 +324,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     /**
      * Sends a keep alive request.
      */
-    protected CompletableFuture<Void> keepAlive(List<Member> members) {
+    protected CompletableFuture<Void> keepAlive(List<DiscoveryNode> members) {
         executionContext.checkThread();
         return keepAlive(members, Futures.future()).thenCompose(response -> {
             setTerm(response.term());
@@ -336,7 +337,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     /**
      * Registers the client by contacting a random member.
      */
-    protected CompletableFuture<KeepAliveResponse> keepAlive(List<Member> members, CompletableFuture<KeepAliveResponse> future) {
+    protected CompletableFuture<KeepAliveResponse> keepAlive(List<DiscoveryNode> members, CompletableFuture<KeepAliveResponse> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
             future.completeExceptionally(new NoLeaderException());
@@ -344,12 +345,12 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             return future;
         }
 
-        Member member = selectMember(members);
+        DiscoveryNode member = selectMember(members);
 
         KeepAliveRequest request = KeepAliveRequest.builder()
             .setSession(getSession())
             .build();
-        transportService.client(member.node().address()).<KeepAliveRequest, KeepAliveResponse>send(request).whenCompleteAsync((response, error) -> {
+        transportService.client(member.address()).<KeepAliveRequest, KeepAliveResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
                 future.complete(response);
             } else {
@@ -362,11 +363,11 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     /**
      * Selects a random member from the given members list.
      */
-    protected Member selectMember(List<Member> members) {
+    protected DiscoveryNode selectMember(List<DiscoveryNode> members) {
         executionContext.checkThread();
         if (leader != null) {
             for (int i = 0; i < members.size(); i++) {
-                if (leader.address().equals(members.get(i).node().address())) {
+                if (leader.equals(members.get(i))) {
                     return members.remove(i);
                 }
             }

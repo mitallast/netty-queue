@@ -56,7 +56,7 @@ public class TransportCluster extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() throws IOException {
-        for (Member member : members()) {
+        for (Member member : members.values()) {
             transportService.connectToNode(member.node().address());
         }
     }

@@ -30,7 +30,7 @@ public class SegmentBenchmark extends BaseTest {
         new RaftStreamService(streamService);
         descriptor = SegmentDescriptor.builder()
             .setId(0)
-            .setIndex(0)
+            .setIndex(1)
             .setMaxEntries(max())
             .setMaxEntrySize(1000)
             .setMaxSegmentSize(ByteSizeUnit.GB.toBytes(1))

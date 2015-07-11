@@ -30,7 +30,7 @@ public class SegmentTest extends BaseTest {
 
         descriptor = SegmentDescriptor.builder()
             .setId(0)
-            .setIndex(0)
+            .setIndex(1)
             .setMaxEntries(100)
             .setMaxEntrySize(1000)
             .setMaxSegmentSize(ByteSizeUnit.MB.toBytes(10))

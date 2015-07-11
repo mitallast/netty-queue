@@ -1,30 +1,29 @@
 package org.mitallast.queue.raft.state;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
-import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.Version;
+import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.cluster.Member;
-import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ClusterState extends AbstractComponent implements Iterable<MemberState> {
+public class ClusterState extends AbstractLifecycleComponent implements Iterable<MemberState> {
     private final Map<DiscoveryNode, MemberState> members = new HashMap<>();
     private final List<MemberState> activeMembers = new ArrayList<>();
     private final List<MemberState> passiveMembers = new ArrayList<>();
-    private final ExecutionContext executionContext;
 
     @Inject
-    public ClusterState(Settings settings, ExecutionContext executionContext) {
+    public ClusterState(Settings settings) {
         super(settings);
-        this.executionContext = executionContext;
     }
 
     public ClusterState addMember(MemberState member) {
-        executionContext.checkThread();
         assert members.putIfAbsent(member.getNode(), member) == null;
         if (member.getType() == Member.Type.ACTIVE) {
             addActiveMember(member);
@@ -35,19 +34,16 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
     }
 
     private void addActiveMember(MemberState member) {
-        executionContext.checkThread();
         activeMembers.add(member);
         logger.info("add active member {}", member.getNode());
         logger.info("active members: {}", activeMembers);
     }
 
     private void addPassiveMember(MemberState member) {
-        executionContext.checkThread();
         passiveMembers.add(member);
     }
 
     ClusterState removeMember(MemberState member) {
-        executionContext.checkThread();
         members.remove(member.getNode());
         if (member.getType() == Member.Type.ACTIVE) {
             removeActiveMember(member);
@@ -58,7 +54,6 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
     }
 
     private void removeActiveMember(MemberState member) {
-        executionContext.checkThread();
         Iterator<MemberState> iterator = activeMembers.iterator();
         while (iterator.hasNext()) {
             if (iterator.next().getNode().equals(member.getNode())) {
@@ -68,7 +63,6 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
     }
 
     private void removePassiveMember(MemberState member) {
-        executionContext.checkThread();
         Iterator<MemberState> iterator = passiveMembers.iterator();
         while (iterator.hasNext()) {
             if (iterator.next().getNode().equals(member.getNode())) {
@@ -78,22 +72,18 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
     }
 
     public MemberState getMember(DiscoveryNode node) {
-        executionContext.checkThread();
         return members.get(node);
     }
 
     public ImmutableList<MemberState> getActiveMembers() {
-        executionContext.checkThread();
         return ImmutableList.copyOf(activeMembers);
     }
 
     public ImmutableList<MemberState> getPassiveMembers() {
-        executionContext.checkThread();
         return ImmutableList.copyOf(passiveMembers);
     }
 
     public ImmutableList<MemberState> getMembers() {
-        executionContext.checkThread();
         return ImmutableList.copyOf(members.values());
     }
 
@@ -111,8 +101,27 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
 
     @Override
     public Iterator<MemberState> iterator() {
-        executionContext.checkThread();
         return new ClusterStateIterator(members.entrySet().iterator());
+    }
+
+    @Override
+    protected void doStart() throws IOException {
+        String[] nodes = settings.getAsArray("raft.cluster.nodes");
+        for (String node : nodes) {
+            HostAndPort hostAndPort = HostAndPort.fromString(node);
+            DiscoveryNode discoveryNode = new DiscoveryNode(node, hostAndPort, Version.CURRENT);
+            addMember(new MemberState(discoveryNode, Member.Type.ACTIVE));
+        }
+    }
+
+    @Override
+    protected void doStop() throws IOException {
+
+    }
+
+    @Override
+    protected void doClose() throws IOException {
+
     }
 
     private class ClusterStateIterator implements Iterator<MemberState> {
@@ -120,26 +129,22 @@ public class ClusterState extends AbstractComponent implements Iterable<MemberSt
         private MemberState member;
 
         private ClusterStateIterator(Iterator<Map.Entry<DiscoveryNode, MemberState>> iterator) {
-            executionContext.checkThread();
             this.iterator = iterator;
         }
 
         @Override
         public boolean hasNext() {
-            executionContext.checkThread();
             return iterator.hasNext();
         }
 
         @Override
         public MemberState next() {
-            executionContext.checkThread();
             member = iterator.next().getValue();
             return member;
         }
 
         @Override
         public void remove() {
-            executionContext.checkThread();
             iterator.remove();
             removeMember(member);
         }

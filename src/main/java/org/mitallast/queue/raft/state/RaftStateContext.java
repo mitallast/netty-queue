@@ -11,7 +11,6 @@ import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
-import org.mitallast.queue.raft.cluster.Member;
 import org.mitallast.queue.raft.cluster.TransportCluster;
 import org.mitallast.queue.raft.log.Log;
 import org.mitallast.queue.raft.log.compaction.Compactor;
@@ -61,9 +60,6 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueSeconds(1)).millis();
         executionContext.submit(() -> {
             transition(StartState.class);
-            for (Member member : transportCluster.members()) {
-                clusterState.addMember(new MemberState(member.node(), member.type()));
-            }
         }).get();
     }
 

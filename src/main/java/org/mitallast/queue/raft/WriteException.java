@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class WriteException extends RaftException {
-    private static final RaftError TYPE = RaftError.COMMAND_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public WriteException(String message, Object... args) {
-        super(TYPE, message, args);
+public class WriteException extends StreamableError {
+
+    public WriteException() {
+        this("failed to obtain write quorum");
     }
 
-    public WriteException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public WriteException(String message) {
+        super(message);
     }
 
-    public WriteException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, WriteException> {
+
+        @Override
+        public WriteException build() {
+            return new WriteException(message);
+        }
+    }
 }

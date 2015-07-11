@@ -3,9 +3,9 @@ package org.mitallast.queue.raft.state;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.raft.ApplicationException;
 import org.mitallast.queue.raft.ConsistencyLevel;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.raft.NoLeaderException;
 import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
@@ -74,7 +74,6 @@ abstract class ActiveState extends PassiveState {
         if (request.term() < context.getTerm()) {
             logger.info("rejected {}: candidate's term is less than the current term", request);
             return VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(false)
                 .build();
@@ -86,7 +85,6 @@ abstract class ActiveState extends PassiveState {
             context.setLastVotedFor(transportCluster.member().node());
             logger.info("accepted {}: candidate is the local member", request);
             return VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(true)
                 .build();
@@ -96,7 +94,6 @@ abstract class ActiveState extends PassiveState {
         else if (!transportCluster.members().stream().map(Member::node).collect(Collectors.toSet()).contains(request.candidate())) {
             logger.info("rejected {}: candidate is not known to the local member", request);
             return VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(false)
                 .build();
@@ -106,13 +103,11 @@ abstract class ActiveState extends PassiveState {
             if (logUpToDate(request.logIndex(), request.logTerm(), request)) {
                 context.setLastVotedFor(request.candidate());
                 return VoteResponse.builder()
-                    .setStatus(ResponseStatus.OK)
                     .setTerm(context.getTerm())
                     .setVoted(true)
                     .build();
             } else {
                 return VoteResponse.builder()
-                    .setStatus(ResponseStatus.OK)
                     .setTerm(context.getTerm())
                     .setVoted(false)
                     .build();
@@ -122,7 +117,6 @@ abstract class ActiveState extends PassiveState {
         else {
             logger.info("rejected {}: already voted for {}", request, context.getLastVotedFor());
             return VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(false)
                 .build();
@@ -177,8 +171,7 @@ abstract class ActiveState extends PassiveState {
         if (context.getLeader() == null) {
             logger.error("no leader error");
             return Futures.complete(QueryResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         }
         return transportCluster.member(context.getLeader()).send(request);
@@ -208,15 +201,13 @@ abstract class ActiveState extends PassiveState {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.OK)
                     .setVersion(version)
                     .setResult(result)
                     .build());
             } else {
                 logger.error("application error", error);
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.APPLICATION_ERROR)
+                    .setError(new ApplicationException())
                     .build());
             }
         });
@@ -247,15 +238,13 @@ abstract class ActiveState extends PassiveState {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.OK)
                     .setVersion(version)
                     .setResult(result)
                     .build());
             } else {
                 logger.error("application error", error);
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.APPLICATION_ERROR)
+                    .setError(new ApplicationException())
                     .build());
             }
         });

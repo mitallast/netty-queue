@@ -144,7 +144,8 @@ public abstract class StateMachine extends AbstractLifecycleComponent {
         try {
             return (boolean) findFilter(commit.type(), compaction.type()).invoke(this, commit);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new ApplicationException("failed to filter command", e);
+            logger.error("internal error", e);
+            throw new ApplicationException("failed to filter command");
         }
     }
 
@@ -155,7 +156,7 @@ public abstract class StateMachine extends AbstractLifecycleComponent {
             return (T) findOperation(commit.type()).invoke(this, commit);
         } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error("error apply {}", commit, e);
-            throw new ApplicationException("failed to invoke operation", e);
+            throw new ApplicationException("failed to invoke operation");
         }
     }
 }

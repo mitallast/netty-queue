@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class NoLeaderException extends RaftException {
-    private static final RaftError TYPE = RaftError.NO_LEADER_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public NoLeaderException(String message, Object... args) {
-        super(TYPE, message, args);
+public class NoLeaderException extends StreamableError {
+
+    public NoLeaderException() {
+        this("not the leader");
     }
 
-    public NoLeaderException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public NoLeaderException(String message) {
+        super(message);
     }
 
-    public NoLeaderException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, NoLeaderException> {
+
+        @Override
+        public NoLeaderException build() {
+            return new NoLeaderException(message);
+        }
+    }
 }

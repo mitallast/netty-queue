@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class ReadException extends RaftException {
-    private static final RaftError TYPE = RaftError.QUERY_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public ReadException(String message, Object... args) {
-        super(TYPE, message, args);
+public class ReadException extends StreamableError {
+
+    public ReadException() {
+        this("failed to obtain read quorum");
     }
 
-    public ReadException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public ReadException(String message) {
+        super(message);
     }
 
-    public ReadException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, ReadException> {
+
+        @Override
+        public ReadException build() {
+            return new ReadException(message);
+        }
+    }
 }

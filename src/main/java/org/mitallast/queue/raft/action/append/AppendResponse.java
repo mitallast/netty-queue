@@ -1,34 +1,28 @@
 package org.mitallast.queue.raft.action.append;
 
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 
 import java.io.IOException;
 
-public class AppendResponse implements RaftResponse<AppendResponse> {
-    private final ResponseStatus status;
-    private final RaftError error;
+public class AppendResponse implements ActionResponse<AppendResponse> {
+    private final StreamableError error;
     private final long term;
     private final long logIndex;
     private final boolean succeeded;
 
-    private AppendResponse(ResponseStatus status, RaftError error, long term, long logIndex, boolean succeeded) {
-        this.status = status;
+    private AppendResponse(StreamableError error, long term, long logIndex, boolean succeeded) {
         this.error = error;
         this.term = term;
         this.logIndex = logIndex;
         this.succeeded = succeeded;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    @Override
+    public StreamableError error() {
         return error;
     }
 
@@ -47,7 +41,6 @@ public class AppendResponse implements RaftResponse<AppendResponse> {
     @Override
     public String toString() {
         return "AppendResponse{" +
-            "status=" + status +
             ", error=" + error +
             ", term=" + term +
             ", logIndex=" + logIndex +
@@ -65,26 +58,19 @@ public class AppendResponse implements RaftResponse<AppendResponse> {
     }
 
     public static class Builder implements EntryBuilder<AppendResponse> {
-        private ResponseStatus status;
-        private RaftError error;
+        private StreamableError error;
         private long term;
         private long logIndex;
         private boolean succeeded;
 
         private Builder from(AppendResponse entry) {
-            status = entry.status;
             error = entry.error;
             logIndex = entry.logIndex;
             succeeded = entry.succeeded;
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -105,14 +91,13 @@ public class AppendResponse implements RaftResponse<AppendResponse> {
         }
 
         public AppendResponse build() {
-            return new AppendResponse(status, error, term, logIndex, succeeded);
+            return new AppendResponse(error, term, logIndex, succeeded);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             term = stream.readLong();
@@ -122,11 +107,12 @@ public class AppendResponse implements RaftResponse<AppendResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeLong(term);
             stream.writeLong(logIndex);
             stream.writeBoolean(succeeded);

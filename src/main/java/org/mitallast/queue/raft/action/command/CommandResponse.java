@@ -1,33 +1,27 @@
 package org.mitallast.queue.raft.action.command;
 
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 
 import java.io.IOException;
 
-public class CommandResponse implements RaftResponse<CommandResponse> {
-    protected final RaftError error;
-    protected final ResponseStatus status;
+public class CommandResponse implements ActionResponse<CommandResponse> {
+    private final StreamableError error;
     private final long version;
     private final Streamable result;
 
-    private CommandResponse(ResponseStatus status, RaftError error, long version, Streamable result) {
-        this.status = status;
+    private CommandResponse(StreamableError error, long version, Streamable result) {
         this.error = error;
         this.version = version;
         this.result = result;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    @Override
+    public StreamableError error() {
         return error;
     }
 
@@ -43,7 +37,6 @@ public class CommandResponse implements RaftResponse<CommandResponse> {
     public String toString() {
         return "CommandResponse{" +
             "error=" + error +
-            ", status=" + status +
             ", version=" + version +
             ", result=" + result +
             '}';
@@ -59,25 +52,18 @@ public class CommandResponse implements RaftResponse<CommandResponse> {
     }
 
     public static class Builder implements EntryBuilder<CommandResponse> {
-        private ResponseStatus status;
-        private RaftError error;
+        private StreamableError error;
         private long version;
         private Streamable result;
 
         public Builder from(CommandResponse entry) {
-            status = entry.status;
             error = entry.error;
             version = entry.version;
             result = entry.result;
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -93,14 +79,13 @@ public class CommandResponse implements RaftResponse<CommandResponse> {
         }
 
         public CommandResponse build() {
-            return new CommandResponse(status, error, version, result);
+            return new CommandResponse(error, version, result);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             version = stream.readLong();
@@ -109,11 +94,12 @@ public class CommandResponse implements RaftResponse<CommandResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeLong(version);
             stream.writeClass(result.getClass());
             stream.writeStreamable(result);

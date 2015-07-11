@@ -1,35 +1,28 @@
 package org.mitallast.queue.raft.action.vote;
 
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class VoteResponse implements RaftResponse<VoteResponse> {
-    private final RaftError error;
-    private final ResponseStatus status;
+public class VoteResponse implements ActionResponse<VoteResponse> {
+    private final StreamableError error;
     private final DiscoveryNode member;
     private final long term;
     private final boolean voted;
 
-    public VoteResponse(ResponseStatus status, RaftError error, DiscoveryNode member, long term, boolean voted) {
-        this.status = status;
+    public VoteResponse(StreamableError error, DiscoveryNode member, long term, boolean voted) {
         this.error = error;
         this.member = member;
         this.term = term;
         this.voted = voted;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    public StreamableError error() {
         return error;
     }
 
@@ -49,7 +42,6 @@ public class VoteResponse implements RaftResponse<VoteResponse> {
     public String toString() {
         return "VoteResponse{" +
             "error=" + error +
-            ", status=" + status +
             ", member=" + member +
             ", term=" + term +
             ", voted=" + voted +
@@ -66,14 +58,12 @@ public class VoteResponse implements RaftResponse<VoteResponse> {
     }
 
     public static class Builder implements EntryBuilder<VoteResponse> {
-        private ResponseStatus status = ResponseStatus.OK;
-        private RaftError error;
+        private StreamableError error;
         private DiscoveryNode member;
         private long term;
         private boolean voted;
 
         private Builder from(VoteResponse entry) {
-            status = entry.status;
             error = entry.error;
             member = entry.member;
             term = entry.term;
@@ -81,12 +71,7 @@ public class VoteResponse implements RaftResponse<VoteResponse> {
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -107,14 +92,13 @@ public class VoteResponse implements RaftResponse<VoteResponse> {
         }
 
         public VoteResponse build() {
-            return new VoteResponse(status, error, member, term, voted);
+            return new VoteResponse(error, member, term, voted);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             member = stream.readStreamableOrNull(DiscoveryNode::new);
@@ -124,11 +108,12 @@ public class VoteResponse implements RaftResponse<VoteResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeStreamableOrNull(member);
             stream.writeLong(term);
             stream.writeBoolean(voted);

@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class InternalException extends RaftException {
-    private static final RaftError TYPE = RaftError.ILLEGAL_MEMBER_STATE_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public InternalException(String message, Object... args) {
-        super(TYPE, message, args);
+public class InternalException extends StreamableError {
+
+    public InternalException() {
+        this("internal error");
     }
 
-    public InternalException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public InternalException(String message) {
+        super(message);
     }
 
-    public InternalException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, InternalException> {
+
+        @Override
+        public InternalException build() {
+            return new InternalException(message);
+        }
+    }
 }

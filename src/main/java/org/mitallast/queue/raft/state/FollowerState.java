@@ -1,7 +1,6 @@
 package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
@@ -187,35 +186,31 @@ class FollowerState extends ActiveState {
             committing.remove(member.getNode());
             if (error == null) {
                 logger.debug("received {} from {}", response, member);
-                if (response.status() == ResponseStatus.OK) {
-                    // If replication succeeded then trigger commit futures.
-                    if (response.succeeded()) {
-                        updateMatchIndex(member, response);
-                        updateNextIndex(member);
+                // If replication succeeded then trigger commit futures.
+                if (response.succeeded()) {
+                    updateMatchIndex(member, response);
+                    updateNextIndex(member);
 
-                        // If there are more entries to send then attempt to send another commit.
-                        if (hasMoreEntries(member)) {
-                            try {
-                                commit(member);
-                            } catch (IOException e) {
-                                logger.error("error commit", e);
-                            }
-                        }
-                    } else {
-                        resetMatchIndex(member, response);
-                        resetNextIndex(member);
-
-                        // If there are more entries to send then attempt to send another commit.
-                        if (hasMoreEntries(member)) {
-                            try {
-                                commit(member);
-                            } catch (IOException e) {
-                                logger.error("error commit", e);
-                            }
+                    // If there are more entries to send then attempt to send another commit.
+                    if (hasMoreEntries(member)) {
+                        try {
+                            commit(member);
+                        } catch (IOException e) {
+                            logger.error("error commit", e);
                         }
                     }
                 } else {
-                    logger.warn(response.error() != null ? response.error().toString() : "");
+                    resetMatchIndex(member, response);
+                    resetNextIndex(member);
+
+                    // If there are more entries to send then attempt to send another commit.
+                    if (hasMoreEntries(member)) {
+                        try {
+                            commit(member);
+                        } catch (IOException e) {
+                            logger.error("error commit", e);
+                        }
+                    }
                 }
             } else {
                 logger.warn(error.getMessage());

@@ -1,33 +1,26 @@
 package org.mitallast.queue.raft.action.join;
 
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class JoinResponse implements RaftResponse<JoinResponse> {
-    private final RaftError error;
-    private final ResponseStatus status;
+public class JoinResponse implements ActionResponse<JoinResponse> {
+    private final StreamableError error;
     private final DiscoveryNode leader;
     private final long term;
 
-    public JoinResponse(ResponseStatus status, RaftError error, DiscoveryNode leader, long term) {
-        this.status = status;
+    public JoinResponse(StreamableError error, DiscoveryNode leader, long term) {
         this.error = error;
         this.leader = leader;
         this.term = term;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    public StreamableError error() {
         return error;
     }
 
@@ -43,7 +36,6 @@ public class JoinResponse implements RaftResponse<JoinResponse> {
     public String toString() {
         return "JoinResponse{" +
             "error=" + error +
-            ", status=" + status +
             ", leader=" + leader +
             ", term=" + term +
             '}';
@@ -59,25 +51,18 @@ public class JoinResponse implements RaftResponse<JoinResponse> {
     }
 
     public static class Builder implements EntryBuilder<JoinResponse> {
-        private ResponseStatus status;
-        private RaftError error;
+        private StreamableError error;
         private DiscoveryNode leader;
         private long term;
 
         private Builder from(JoinResponse entry) {
-            status = entry.status;
             error = entry.error;
             leader = entry.leader;
             term = entry.term;
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -93,14 +78,13 @@ public class JoinResponse implements RaftResponse<JoinResponse> {
         }
 
         public JoinResponse build() {
-            return new JoinResponse(status, error, leader, term);
+            return new JoinResponse(error, leader, term);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             leader = stream.readStreamable(DiscoveryNode::new);
@@ -109,11 +93,12 @@ public class JoinResponse implements RaftResponse<JoinResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeStreamable(leader);
             stream.writeLong(term);
         }

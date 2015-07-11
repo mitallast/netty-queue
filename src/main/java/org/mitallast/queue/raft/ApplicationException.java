@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class ApplicationException extends RaftException {
-    private static final RaftError TYPE = RaftError.APPLICATION_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public ApplicationException(String message, Object... args) {
-        super(TYPE, message, args);
+public class ApplicationException extends StreamableError {
+
+    public ApplicationException() {
+        this("an application error occurred");
     }
 
-    public ApplicationException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public ApplicationException(String message) {
+        super(message);
     }
 
-    public ApplicationException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, ApplicationException> {
+
+        @Override
+        public ApplicationException build() {
+            return new ApplicationException(message);
+        }
+    }
 }

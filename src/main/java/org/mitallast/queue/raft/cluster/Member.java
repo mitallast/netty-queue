@@ -1,7 +1,7 @@
 package org.mitallast.queue.raft.cluster;
 
 import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.raft.action.RaftResponse;
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.concurrent.CompletableFuture;
@@ -23,7 +23,7 @@ public abstract class Member {
         return type;
     }
 
-    public abstract <T extends ActionRequest, R extends RaftResponse> CompletableFuture<R> send(T message);
+    public abstract <T extends ActionRequest, R extends ActionResponse> CompletableFuture<R> send(T message);
 
     public enum Type {
         PASSIVE, ACTIVE

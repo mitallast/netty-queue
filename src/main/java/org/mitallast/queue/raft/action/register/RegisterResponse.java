@@ -1,27 +1,24 @@
 package org.mitallast.queue.raft.action.register;
 
 import com.google.common.collect.ImmutableList;
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.Collection;
 
-public class RegisterResponse implements RaftResponse<RegisterResponse> {
-    private final RaftError error;
-    private final ResponseStatus status;
+public class RegisterResponse implements ActionResponse<RegisterResponse> {
+    private final StreamableError error;
     private final long term;
     private final long session;
     private final DiscoveryNode leader;
     private final ImmutableList<DiscoveryNode> members;
 
-    public RegisterResponse(ResponseStatus status, RaftError error, long term, long session, DiscoveryNode leader, ImmutableList<DiscoveryNode> members) {
-        this.status = status;
+    public RegisterResponse(StreamableError error, long term, long session, DiscoveryNode leader, ImmutableList<DiscoveryNode> members) {
         this.error = error;
         this.term = term;
         this.session = session;
@@ -29,11 +26,8 @@ public class RegisterResponse implements RaftResponse<RegisterResponse> {
         this.members = members;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    @Override
+    public StreamableError error() {
         return error;
     }
 
@@ -57,7 +51,6 @@ public class RegisterResponse implements RaftResponse<RegisterResponse> {
     public String toString() {
         return "RegisterResponse{" +
             "error=" + error +
-            ", status=" + status +
             ", term=" + term +
             ", session=" + session +
             ", leader=" + leader +
@@ -75,15 +68,13 @@ public class RegisterResponse implements RaftResponse<RegisterResponse> {
     }
 
     public static class Builder implements EntryBuilder<RegisterResponse> {
-        private ResponseStatus status;
-        private RaftError error;
+        private StreamableError error;
         private long term;
         private long session;
         private DiscoveryNode leader;
         private ImmutableList<DiscoveryNode> members;
 
         private Builder from(RegisterResponse entry) {
-            status = entry.status;
             error = entry.error;
             term = entry.term;
             session = entry.session;
@@ -92,12 +83,7 @@ public class RegisterResponse implements RaftResponse<RegisterResponse> {
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -123,14 +109,13 @@ public class RegisterResponse implements RaftResponse<RegisterResponse> {
         }
 
         public RegisterResponse build() {
-            return new RegisterResponse(status, error, term, session, leader, members);
+            return new RegisterResponse(error, term, session, leader, members);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             term = stream.readLong();
@@ -141,11 +126,12 @@ public class RegisterResponse implements RaftResponse<RegisterResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeLong(term);
             stream.writeLong(session);
             stream.writeStreamable(leader);

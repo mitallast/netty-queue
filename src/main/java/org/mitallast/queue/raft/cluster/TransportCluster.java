@@ -5,12 +5,10 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.action.ActionRequest;
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.RaftException;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
 
@@ -102,19 +100,8 @@ public class TransportCluster extends AbstractLifecycleComponent {
         }
 
         @Override
-        public <T extends ActionRequest, R extends RaftResponse> CompletableFuture<R> send(T message) {
-            CompletableFuture<R> future = Futures.future();
-            // map response error status as exception object
-            transportService.client(node().address()).<T, R>send(message).whenComplete((response, throwable) -> {
-                if (throwable != null) {
-                    future.completeExceptionally(throwable);
-                } else if (response.status() == ResponseStatus.ERROR) {
-                    future.completeExceptionally(new RaftException(response.error()));
-                } else {
-                    future.complete(response);
-                }
-            });
-            return future;
+        public <T extends ActionRequest, R extends ActionResponse> CompletableFuture<R> send(T message) {
+            return transportService.client(node().address()).<T, R>send(message);
         }
 
         @Override

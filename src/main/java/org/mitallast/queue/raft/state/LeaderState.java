@@ -3,7 +3,6 @@ package org.mitallast.queue.raft.state;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.*;
-import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.command.CommandRequest;
@@ -159,7 +158,6 @@ class LeaderState extends ActiveState {
             return super.vote(request);
         } else {
             return Futures.complete(VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(false)
                 .build());
@@ -173,7 +171,6 @@ class LeaderState extends ActiveState {
             return super.append(request);
         } else if (request.term() < context.getTerm()) {
             return Futures.complete(AppendResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
                 .setLogIndex(context.getLog().lastIndex())
@@ -220,35 +217,30 @@ class LeaderState extends ActiveState {
                             executionContext.checkThread();
                             if (error == null) {
                                 future.complete(CommandResponse.builder()
-                                    .setStatus(ResponseStatus.OK)
                                     .setResult(result)
                                     .build());
                             } else {
                                 logger.error("command error", error);
                                 future.complete(CommandResponse.builder()
-                                    .setStatus(ResponseStatus.ERROR)
-                                    .setError(RaftError.INTERNAL_ERROR)
+                                    .setError(new InternalException())
                                     .build());
                             }
                         });
                     } else {
                         future.complete(CommandResponse.builder()
-                            .setStatus(ResponseStatus.OK)
                             .setResult(null)
                             .build());
                     }
                 } catch (IOException e) {
                     logger.error("error apply entry", e);
                     future.complete(CommandResponse.builder()
-                        .setStatus(ResponseStatus.ERROR)
-                        .setError(RaftError.INTERNAL_ERROR)
+                        .setError(new InternalException())
                         .build());
                 }
             } else {
                 logger.error("error apply entry", commitError);
                 future.complete(CommandResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.PROTOCOL_ERROR)
+                    .setError(new WriteException())
                     .build());
             }
         });
@@ -321,8 +313,7 @@ class LeaderState extends ActiveState {
             } else {
                 logger.error("commitError error", commitError);
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.COMMAND_ERROR)
+                    .setError(new ReadException())
                     .build());
             }
         });
@@ -338,21 +329,18 @@ class LeaderState extends ActiveState {
         context.getStateMachine().apply(entry).whenComplete((result, error) -> {
             if (error == null) {
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.OK)
                     .setVersion(version)
                     .setResult(result)
                     .build());
             } else if (error instanceof ApplicationException) {
                 logger.error("application error", error);
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.APPLICATION_ERROR)
+                    .setError(new ApplicationException())
                     .build());
             } else {
                 logger.error("internal error", error);
                 future.complete(QueryResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.INTERNAL_ERROR)
+                    .setError(new InternalException())
                     .build());
             }
         });
@@ -385,7 +373,6 @@ class LeaderState extends ActiveState {
                     context.getStateMachine().apply(entry).whenComplete((sessionId, sessionError) -> {
                         if (sessionError == null) {
                             future.complete(RegisterResponse.builder()
-                                .setStatus(ResponseStatus.OK)
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setSession(sessionId)
@@ -394,29 +381,25 @@ class LeaderState extends ActiveState {
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
                             future.complete(RegisterResponse.builder()
-                                .setStatus(ResponseStatus.ERROR)
-                                .setError(RaftError.APPLICATION_ERROR)
+                                .setError(new ApplicationException())
                                 .build());
                         } else {
                             logger.error("session error", sessionError);
                             future.complete(RegisterResponse.builder()
-                                .setStatus(ResponseStatus.ERROR)
-                                .setError(RaftError.INTERNAL_ERROR)
+                                .setError(new InternalException())
                                 .build());
                         }
                     });
                 } catch (IOException e) {
                     logger.error("io error", e);
                     future.complete(RegisterResponse.builder()
-                        .setStatus(ResponseStatus.ERROR)
-                        .setError(RaftError.INTERNAL_ERROR)
+                        .setError(new InternalException())
                         .build());
                 }
             } else {
                 logger.error("commit error", commitError);
                 future.complete(RegisterResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.PROTOCOL_ERROR)
+                    .setError(new ProtocolException())
                     .build());
             }
         });
@@ -453,7 +436,6 @@ class LeaderState extends ActiveState {
                         executionContext.checkThread();
                         if (sessionError == null) {
                             future.complete(KeepAliveResponse.builder()
-                                .setStatus(ResponseStatus.OK)
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setVersion(version)
@@ -462,29 +444,25 @@ class LeaderState extends ActiveState {
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
                             future.complete(KeepAliveResponse.builder()
-                                .setStatus(ResponseStatus.ERROR)
-                                .setError(RaftError.APPLICATION_ERROR)
+                                .setError(new ApplicationException())
                                 .build());
                         } else {
                             logger.error("session error", sessionError);
                             future.complete(KeepAliveResponse.builder()
-                                .setStatus(ResponseStatus.ERROR)
-                                .setError(RaftError.INTERNAL_ERROR)
+                                .setError(new InternalException())
                                 .build());
                         }
                     });
                 } catch (IOException e) {
                     logger.error("io error", e);
                     future.complete(KeepAliveResponse.builder()
-                        .setStatus(ResponseStatus.ERROR)
-                        .setError(RaftError.INTERNAL_ERROR)
+                        .setError(new InternalException())
                         .build());
                 }
             } else {
                 logger.error("commit error", commitError);
                 future.complete(KeepAliveResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.PROTOCOL_ERROR)
+                    .setError(new ProtocolException())
                     .build());
             }
         });
@@ -517,30 +495,26 @@ class LeaderState extends ActiveState {
                         executionContext.checkThread();
                         if (sessionError == null) {
                             future.complete(JoinResponse.builder()
-                                .setStatus(ResponseStatus.OK)
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .build());
                         } else {
                             logger.error("session error", sessionError);
                             future.complete(JoinResponse.builder()
-                                .setStatus(ResponseStatus.ERROR)
-                                .setError(RaftError.INTERNAL_ERROR)
+                                .setError(new InternalException())
                                 .build());
                         }
                     });
                 } catch (IOException e) {
                     logger.error("io error", e);
                     future.complete(JoinResponse.builder()
-                        .setStatus(ResponseStatus.ERROR)
-                        .setError(RaftError.PROTOCOL_ERROR)
+                        .setError(new ProtocolException())
                         .build());
                 }
             } else {
                 logger.error("commit error", commitError);
                 future.complete(JoinResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.PROTOCOL_ERROR)
+                    .setError(new ProtocolException())
                     .build());
             }
         });
@@ -574,28 +548,24 @@ class LeaderState extends ActiveState {
                         executionContext.checkThread();
                         if (sessionError == null) {
                             future.complete(LeaveResponse.builder()
-                                .setStatus(ResponseStatus.OK)
                                 .build());
                         } else {
                             logger.error("session error", sessionError);
                             future.complete(LeaveResponse.builder()
-                                .setStatus(ResponseStatus.ERROR)
-                                .setError(RaftError.INTERNAL_ERROR)
+                                .setError(new InternalException())
                                 .build());
                         }
                     });
                 } catch (IOException e) {
                     logger.error("io error", e);
                     future.complete(LeaveResponse.builder()
-                        .setStatus(ResponseStatus.ERROR)
-                        .setError(RaftError.INTERNAL_ERROR)
+                        .setError(new InternalException())
                         .build());
                 }
             } else {
                 logger.error("commit error", commitError);
                 future.complete(LeaveResponse.builder()
-                    .setStatus(ResponseStatus.ERROR)
-                    .setError(RaftError.PROTOCOL_ERROR)
+                    .setError(new ProtocolException())
                     .build());
             }
         });
@@ -878,7 +848,10 @@ class LeaderState extends ActiveState {
                     committing = false;
                     if (error == null) {
                         logger.debug("received {} from {}", response, this.member);
-                        if (response.status() == ResponseStatus.OK) {
+                        if (response.term() > context.getTerm()) {
+                            logger.info("received higher term from {}", this.member);
+                            transition(RaftStateType.FOLLOWER);
+                        } else {
                             // Update the commit time for the replica. This will cause heartbeat futures to be triggered.
                             commitTime(id);
 
@@ -915,11 +888,6 @@ class LeaderState extends ActiveState {
                                     }
                                 }
                             }
-                        } else if (response.term() > context.getTerm()) {
-                            logger.info("received higher term from {}", this.member);
-                            transition(RaftStateType.FOLLOWER);
-                        } else {
-                            logger.warn("{}", response.error() != null ? response.error() : "");
                         }
                     } else {
                         logger.warn(error.getMessage());

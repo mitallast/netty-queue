@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class UnknownSessionException extends RaftException {
-    private static final RaftError TYPE = RaftError.UNKNOWN_SESSION_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public UnknownSessionException(String message, Object... args) {
-        super(TYPE, message, args);
+public class UnknownSessionException extends StreamableError {
+
+    public UnknownSessionException() {
+        this("unknown member session");
     }
 
-    public UnknownSessionException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public UnknownSessionException(String message) {
+        super(message);
     }
 
-    public UnknownSessionException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, UnknownSessionException> {
+
+        @Override
+        public UnknownSessionException build() {
+            return new UnknownSessionException(message);
+        }
+    }
 }

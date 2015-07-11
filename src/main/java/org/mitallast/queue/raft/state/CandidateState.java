@@ -2,7 +2,6 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.action.ResponseStatus;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
@@ -164,13 +163,11 @@ class CandidateState extends ActiveState {
         // If the vote request is not for this candidate then reject the vote.
         if (request.candidate().equals(transportCluster.member().node())) {
             return Futures.complete(VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(true)
                 .build());
         } else {
             return Futures.complete(VoteResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setVoted(false)
                 .build());

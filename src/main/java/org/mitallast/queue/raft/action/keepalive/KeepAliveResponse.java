@@ -1,27 +1,24 @@
 package org.mitallast.queue.raft.action.keepalive;
 
 import com.google.common.collect.ImmutableList;
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.Collection;
 
-public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
-    private final RaftError error;
-    private final ResponseStatus status;
+public class KeepAliveResponse implements ActionResponse<KeepAliveResponse> {
+    private final StreamableError error;
     private final long version;
     private final long term;
     private final DiscoveryNode leader;
     private final ImmutableList<DiscoveryNode> members;
 
-    public KeepAliveResponse(ResponseStatus status, RaftError error, long version, long term, DiscoveryNode leader, ImmutableList<DiscoveryNode> members) {
-        this.status = status;
+    public KeepAliveResponse(StreamableError error, long version, long term, DiscoveryNode leader, ImmutableList<DiscoveryNode> members) {
         this.error = error;
         this.version = version;
         this.term = term;
@@ -29,11 +26,8 @@ public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
         this.members = members;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    @Override
+    public StreamableError error() {
         return error;
     }
 
@@ -57,7 +51,6 @@ public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
     public String toString() {
         return "KeepAliveResponse{" +
             "error=" + error +
-            ", status=" + status +
             ", version=" + version +
             ", term=" + term +
             ", leader=" + leader +
@@ -75,15 +68,13 @@ public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
     }
 
     public static class Builder implements EntryBuilder<KeepAliveResponse> {
-        private ResponseStatus status;
-        private RaftError error;
+        private StreamableError error;
         private long version;
         private long term;
         private DiscoveryNode leader;
         private ImmutableList<DiscoveryNode> members;
 
         private Builder from(KeepAliveResponse entry) {
-            status = entry.status;
             error = entry.error;
             version = entry.version;
             term = entry.term;
@@ -92,12 +83,7 @@ public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -124,14 +110,13 @@ public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
 
         @Override
         public KeepAliveResponse build() {
-            return new KeepAliveResponse(status, error, version, term, leader, members);
+            return new KeepAliveResponse(error, version, term, leader, members);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             version = stream.readLong();
@@ -142,11 +127,12 @@ public class KeepAliveResponse implements RaftResponse<KeepAliveResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeLong(version);
             stream.writeLong(term);
             stream.writeStreamable(leader);

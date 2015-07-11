@@ -1,18 +1,31 @@
 package org.mitallast.queue.raft;
 
-public class ProtocolException extends RaftException {
-    private static final RaftError TYPE = RaftError.APPLICATION_ERROR;
+import org.mitallast.queue.common.stream.StreamableError;
 
-    public ProtocolException(String message, Object... args) {
-        super(TYPE, message, args);
+public class ProtocolException extends StreamableError {
+
+    public ProtocolException() {
+        this("protocol error");
     }
 
-    public ProtocolException(Throwable cause, String message, Object... args) {
-        super(TYPE, cause, message, args);
+    public ProtocolException(String message) {
+        super(message);
     }
 
-    public ProtocolException(Throwable cause) {
-        super(TYPE, cause);
+    @Override
+    public Builder toBuilder() {
+        return new Builder().from(this);
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder extends StreamableError.Builder<Builder, ProtocolException> {
+
+        @Override
+        public ProtocolException build() {
+            return new ProtocolException(message);
+        }
+    }
 }

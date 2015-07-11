@@ -2,8 +2,8 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.raft.IllegalMemberStateException;
+import org.mitallast.queue.raft.NoLeaderException;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.command.CommandRequest;
@@ -79,7 +79,6 @@ public class PassiveState extends AbstractState {
         if (request.term() < context.getTerm()) {
             logger.warn("rejected {}: request term is less than the current term ({})", request, context.getTerm());
             return AppendResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
                 .setLogIndex(context.getLog().lastIndex())
@@ -96,7 +95,6 @@ public class PassiveState extends AbstractState {
         if (request.logIndex() != 0 && context.getLog().isEmpty()) {
             logger.warn("rejected {}: previous index ({}) is greater than the local log's last index ({})", request, request.logIndex(), context.getLog().lastIndex());
             return AppendResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
                 .setLogIndex(context.getLog().lastIndex())
@@ -104,7 +102,6 @@ public class PassiveState extends AbstractState {
         } else if (request.logIndex() != 0 && context.getLog().lastIndex() != 0 && request.logIndex() > context.getLog().lastIndex()) {
             logger.warn("rejected {}: previous index ({}) is greater than the local log's last index ({})", request, request.logIndex(), context.getLog().lastIndex());
             return AppendResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
                 .setLogIndex(context.getLog().lastIndex())
@@ -116,7 +113,6 @@ public class PassiveState extends AbstractState {
         if (entry == null || entry.term() != request.logTerm()) {
             logger.warn("rejected {}: request log term does not match local log term {} for the same entry", request, entry != null ? entry.term() : null);
             return AppendResponse.builder()
-                .setStatus(ResponseStatus.OK)
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
                 .setLogIndex(request.logIndex() <= context.getLog().lastIndex() ? request.logIndex() - 1 : context.getLog().lastIndex())
@@ -168,7 +164,6 @@ public class PassiveState extends AbstractState {
         });
 
         return AppendResponse.builder()
-            .setStatus(ResponseStatus.OK)
             .setTerm(context.getTerm())
             .setSucceeded(true)
             .setLogIndex(context.getLog().lastIndex())
@@ -229,8 +224,7 @@ public class PassiveState extends AbstractState {
     public CompletableFuture<VoteResponse> vote(VoteRequest request) {
         executionContext.checkThread();
         return Futures.complete(VoteResponse.builder()
-            .setStatus(ResponseStatus.ERROR)
-            .setError(RaftError.ILLEGAL_MEMBER_STATE_ERROR)
+            .setError(new IllegalMemberStateException())
             .build());
     }
 
@@ -239,8 +233,7 @@ public class PassiveState extends AbstractState {
         executionContext.checkThread();
         if (context.getLeader() == null) {
             return Futures.complete(CommandResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         } else {
             return transportCluster.member(context.getLeader()).send(request);
@@ -252,8 +245,7 @@ public class PassiveState extends AbstractState {
         executionContext.checkThread();
         if (context.getLeader() == null) {
             return Futures.complete(QueryResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         } else {
             return transportCluster.member(context.getLeader()).send(request);
@@ -275,8 +267,7 @@ public class PassiveState extends AbstractState {
         executionContext.checkThread();
         if (context.getLeader() == null) {
             return Futures.complete(RegisterResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         } else {
             return transportCluster.member(context.getLeader()).send(request);
@@ -288,8 +279,7 @@ public class PassiveState extends AbstractState {
         executionContext.checkThread();
         if (context.getLeader() == null) {
             return Futures.complete(KeepAliveResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         } else {
             return transportCluster.member(context.getLeader()).send(request);
@@ -301,8 +291,7 @@ public class PassiveState extends AbstractState {
         executionContext.checkThread();
         if (context.getLeader() == null) {
             return Futures.complete(JoinResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         } else {
             return transportCluster.member(context.getLeader()).send(request);
@@ -314,8 +303,7 @@ public class PassiveState extends AbstractState {
         executionContext.checkThread();
         if (context.getLeader() == null) {
             return Futures.complete(LeaveResponse.builder()
-                .setStatus(ResponseStatus.ERROR)
-                .setError(RaftError.NO_LEADER_ERROR)
+                .setError(new NoLeaderException())
                 .build());
         } else {
             return transportCluster.member(context.getLeader()).send(request);

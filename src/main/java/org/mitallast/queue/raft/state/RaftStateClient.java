@@ -6,7 +6,10 @@ import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.unit.TimeValue;
-import org.mitallast.queue.raft.*;
+import org.mitallast.queue.raft.Command;
+import org.mitallast.queue.raft.ConsistencyLevel;
+import org.mitallast.queue.raft.NoLeaderException;
+import org.mitallast.queue.raft.Query;
 import org.mitallast.queue.raft.action.command.CommandRequest;
 import org.mitallast.queue.raft.action.command.CommandResponse;
 import org.mitallast.queue.raft.action.keepalive.KeepAliveRequest;
@@ -331,7 +334,7 @@ public class RaftStateClient extends AbstractLifecycleComponent {
     protected CompletableFuture<KeepAliveResponse> keepAlive(List<Member> members, CompletableFuture<KeepAliveResponse> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
-            future.completeExceptionally(RaftError.NO_LEADER_ERROR.createException());
+            future.completeExceptionally(new NoLeaderException());
             keepAlive.set(false);
             return future;
         }

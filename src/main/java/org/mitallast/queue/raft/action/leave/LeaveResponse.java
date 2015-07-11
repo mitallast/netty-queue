@@ -1,31 +1,24 @@
 package org.mitallast.queue.raft.action.leave;
 
+import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftError;
-import org.mitallast.queue.raft.action.RaftResponse;
-import org.mitallast.queue.raft.action.ResponseStatus;
+import org.mitallast.queue.common.stream.StreamableError;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class LeaveResponse implements RaftResponse<LeaveResponse> {
-    private final RaftError error;
-    private final ResponseStatus status;
+public class LeaveResponse implements ActionResponse<LeaveResponse> {
+    private final StreamableError error;
     private final DiscoveryNode member;
 
-    public LeaveResponse(ResponseStatus status, RaftError error, DiscoveryNode member) {
-        this.status = status;
+    public LeaveResponse(StreamableError error, DiscoveryNode member) {
         this.error = error;
         this.member = member;
     }
 
-    public ResponseStatus status() {
-        return status;
-    }
-
-    public RaftError error() {
+    public StreamableError error() {
         return error;
     }
 
@@ -37,7 +30,6 @@ public class LeaveResponse implements RaftResponse<LeaveResponse> {
     public String toString() {
         return "LeaveResponse{" +
             "error=" + error +
-            ", status=" + status +
             ", member=" + member +
             '}';
     }
@@ -52,23 +44,16 @@ public class LeaveResponse implements RaftResponse<LeaveResponse> {
     }
 
     public static class Builder implements EntryBuilder<LeaveResponse> {
-        private ResponseStatus status;
-        private RaftError error;
+        private StreamableError error;
         private DiscoveryNode member;
 
         private Builder from(LeaveResponse entry) {
-            status = entry.status;
             error = entry.error;
             member = entry.member;
             return this;
         }
 
-        public Builder setStatus(ResponseStatus status) {
-            this.status = status;
-            return this;
-        }
-
-        public Builder setError(RaftError error) {
+        public Builder setError(StreamableError error) {
             this.error = error;
             return this;
         }
@@ -80,14 +65,13 @@ public class LeaveResponse implements RaftResponse<LeaveResponse> {
 
         @Override
         public LeaveResponse build() {
-            return new LeaveResponse(status, error, member);
+            return new LeaveResponse(error, member);
         }
 
         @Override
         public void readFrom(StreamInput stream) throws IOException {
-            status = stream.readEnum(ResponseStatus.class);
-            if (!ResponseStatus.OK.equals(status)) {
-                error = stream.readEnum(RaftError.class);
+            if (stream.readBoolean()) {
+                error = stream.readError();
                 return;
             }
             member = stream.readStreamable(DiscoveryNode::new);
@@ -95,11 +79,12 @@ public class LeaveResponse implements RaftResponse<LeaveResponse> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeEnum(status);
-            if (!ResponseStatus.OK.equals(status)) {
-                stream.writeEnum(error);
+            if (error != null) {
+                stream.writeBoolean(true);
+                stream.writeError(error);
                 return;
             }
+            stream.writeBoolean(false);
             stream.writeStreamable(member);
         }
     }

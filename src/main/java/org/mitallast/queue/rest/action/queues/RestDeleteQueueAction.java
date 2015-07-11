@@ -6,7 +6,6 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.action.queues.delete.DeleteQueueRequest;
 import org.mitallast.queue.action.queues.delete.DeleteQueueResponse;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.queues.QueueMissingException;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -38,11 +37,7 @@ public class RestDeleteQueueAction extends BaseRestHandler {
                     if (response.isDeleted()) {
                         session.sendResponse(new StatusRestResponse(HttpResponseStatus.ACCEPTED));
                     } else {
-                        if (response.error() instanceof QueueMissingException) {
-                            session.sendResponse(new StringRestResponse(
-                                HttpResponseStatus.NOT_FOUND,
-                                response.error().getMessage()));
-                        }
+                        session.sendResponse(new StringRestResponse(HttpResponseStatus.NOT_FOUND, "Queue not found"));
                     }
                 } else {
                     session.sendResponse(error);

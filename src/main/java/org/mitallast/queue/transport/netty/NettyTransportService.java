@@ -72,7 +72,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                         } else {
                             if (frame instanceof StreamableTransportFrame) {
                                 EntryBuilder<ActionResponse> builder = ((StreamableTransportFrame) frame).message();
-                                future.complete(builder.build());
+                                ActionResponse response = builder.build();
+                                if (response.hasError()) {
+                                    future.completeExceptionally(response.error());
+                                } else {
+                                    future.complete(response);
+                                }
                             } else {
                                 future.complete(frame);
                             }
@@ -241,7 +246,18 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         @Override
         @SuppressWarnings("unchecked")
         public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
-            return transportController.dispatchRequest(request);
+            CompletableFuture<Response> future = transportController.dispatchRequest(request);
+            CompletableFuture<Response> responseFuture = Futures.future();
+            future.whenComplete((response, error) -> {
+                if (error != null) {
+                    responseFuture.completeExceptionally(error);
+                } else if (response.hasError()) {
+                    responseFuture.completeExceptionally(response.error());
+                } else {
+                    responseFuture.complete(response);
+                }
+            });
+            return responseFuture;
         }
     }
 

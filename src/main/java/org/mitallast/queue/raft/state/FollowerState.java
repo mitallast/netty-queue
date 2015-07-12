@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.state;
 
+import com.google.inject.Inject;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
@@ -21,6 +22,7 @@ class FollowerState extends ActiveState {
     private final Random random = new Random();
     private volatile ScheduledFuture<?> heartbeatTimer;
 
+    @Inject
     public FollowerState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
         super(settings, context, executionContext, transportService);
     }

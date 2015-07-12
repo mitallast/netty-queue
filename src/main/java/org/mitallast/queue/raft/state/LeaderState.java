@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.state;
 
+import com.google.inject.Inject;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.*;
@@ -33,6 +34,7 @@ class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
     private volatile ScheduledFuture<?> currentTimer;
 
+    @Inject
     public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
         super(settings, context, executionContext, transportService);
     }

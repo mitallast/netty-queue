@@ -1,6 +1,7 @@
 package org.mitallast.queue.raft.state;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.action.append.AppendRequest;
@@ -24,6 +25,7 @@ class CandidateState extends ActiveState {
     private volatile Quorum quorum;
     private volatile ScheduledFuture<?> currentTimer;
 
+    @Inject
     public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
         super(settings, context, executionContext, transportService);
     }

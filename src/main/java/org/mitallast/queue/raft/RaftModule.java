@@ -17,10 +17,7 @@ import org.mitallast.queue.raft.resource.ResourceFactory;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.manager.ResourceStateMachine;
-import org.mitallast.queue.raft.state.ClusterState;
-import org.mitallast.queue.raft.state.RaftState;
-import org.mitallast.queue.raft.state.RaftStateClient;
-import org.mitallast.queue.raft.state.RaftStateContext;
+import org.mitallast.queue.raft.state.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
 public class RaftModule extends AbstractModule {
@@ -40,6 +37,7 @@ public class RaftModule extends AbstractModule {
             .build(MajorCompactionFactory.class));
 
         // state
+        bind(RaftStateFactory.class).asEagerSingleton();
         bind(ClusterState.class).asEagerSingleton();
         bind(RaftState.class).asEagerSingleton();
         bind(RaftStateContext.class).asEagerSingleton();

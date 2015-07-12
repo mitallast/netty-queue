@@ -18,7 +18,6 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +26,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 public class RaftStateContext extends RaftStateClient implements Protocol {
+    private final RaftStateFactory stateFactory;
     private final RaftState stateMachine;
     private final RaftLog log;
     private final Compactor compactor;
@@ -43,6 +43,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     @Inject
     public RaftStateContext(
         Settings settings,
+        RaftStateFactory stateFactory,
         RaftState raftState,
         RaftLog log,
         Compactor compactor,
@@ -54,6 +55,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.log = log;
         this.stateMachine = raftState;
         this.compactor = compactor;
+        this.stateFactory = stateFactory;
         this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueSeconds(1)).millis();
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueSeconds(1)).millis();
         executionContext.submit(() -> {
@@ -202,31 +204,20 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             .thenAcceptAsync(response -> setVersion(response.version()), executionContext.executor());
     }
 
-    synchronized CompletableFuture<RaftStateType> transition(Class<? extends AbstractState> state) {
+    public synchronized void transition(Class<? extends AbstractState> state) {
         executionContext.checkThread();
         if (this.state != null && state == this.state.getClass()) {
-            return Futures.complete(this.state.type());
+            return;
         }
 
         logger.info("transitioning to {}", state.getSimpleName());
 
         // Force state transitions to occur synchronously in order to prevent race conditions.
-        try {
-            if (this.state != null) {
-                this.state.close();
-            }
-            Constructor<? extends AbstractState> constructor = state.getConstructor(Settings.class, RaftStateContext.class, ExecutionContext.class, TransportService.class);
-            if (constructor == null) {
-                logger.error("Error find constructor for {}", state);
-                throw new IOException("Error find constructor for " + state);
-            }
-            this.state = constructor.newInstance(this.settings, this, executionContext, transportService);
-            this.state.open();
-        } catch (Exception e) {
-            logger.error("error transitioning", e);
-            throw new IllegalStateException("failed to initialize Raft state", e);
+        if (this.state != null) {
+            this.state.close();
         }
-        return Futures.complete(null);
+        this.state = stateFactory.create(state);
+        this.state.open();
     }
 
     private CompletableFuture<Void> join() {

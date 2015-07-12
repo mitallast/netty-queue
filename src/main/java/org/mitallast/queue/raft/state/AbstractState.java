@@ -18,21 +18,13 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.util.ExecutionContext;
-import org.mitallast.queue.transport.TransportService;
 
 import java.util.concurrent.CompletableFuture;
 
 public abstract class AbstractState extends AbstractComponent {
-    protected final RaftStateContext context;
-    protected final ExecutionContext executionContext;
-    protected final TransportService transportService;
 
-    protected AbstractState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+    protected AbstractState(Settings settings) {
         super(settings);
-        this.context = context;
-        this.executionContext = executionContext;
-        this.transportService = transportService;
     }
 
     public abstract RaftStateType type();

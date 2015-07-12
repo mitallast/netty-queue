@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.state;
 
+import com.google.inject.Inject;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.IllegalMemberStateException;
@@ -29,10 +30,17 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PassiveState extends AbstractState {
+    protected final RaftStateContext context;
+    protected final ExecutionContext executionContext;
+    protected final TransportService transportService;
     protected volatile boolean transition;
 
+    @Inject
     public PassiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
-        super(settings, context, executionContext, transportService);
+        super(settings);
+        this.context = context;
+        this.executionContext = executionContext;
+        this.transportService = transportService;
     }
 
     @Override

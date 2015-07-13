@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseIntegrationTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
+import org.mitallast.queue.log.entry.TextLogEntry;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
@@ -11,6 +12,7 @@ import org.mitallast.queue.raft.resource.Node;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.structures.AsyncBoolean;
 import org.mitallast.queue.raft.resource.structures.AsyncMap;
+import org.mitallast.queue.raft.resource.structures.LogResource;
 import org.mitallast.queue.raft.state.RaftStateContext;
 import org.mitallast.queue.raft.state.RaftStateType;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -112,6 +114,11 @@ public class IntegrationTest extends BaseIntegrationTest {
         Assert.assertFalse(asyncMap.containsKey(bar).get());
         Assert.assertNull(asyncMap.put(bar, baz).get());
         Assert.assertTrue(asyncMap.containsKey(bar).get());
+
+        LogResource logResource = resourceService.create("log", LogResource.class).get();
+
+        Long index = logResource.appendEntry(TextLogEntry.builder().setMessage("hello world").build()).get();
+        Assert.assertNotNull(index);
 
         logger.info("close nodes");
     }

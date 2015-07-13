@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-class LeaderState extends ActiveState {
+public class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
     private volatile ScheduledFuture<?> currentTimer;
 

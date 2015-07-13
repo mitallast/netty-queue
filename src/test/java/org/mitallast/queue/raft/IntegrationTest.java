@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseIntegrationTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.node.InternalNode;
-import org.mitallast.queue.raft.log.Log;
+import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.resource.Node;
 import org.mitallast.queue.raft.resource.ResourceService;
@@ -43,7 +43,7 @@ public class IntegrationTest extends BaseIntegrationTest {
         logger.info("node2 is {}", node2.injector().getInstance(RaftStateContext.class).getState());
 
         node1.injector().getInstance(ExecutionContext.class).submit(() -> {
-            Log log = node1.injector().getInstance(Log.class);
+            RaftLog log = node1.injector().getInstance(RaftLog.class);
             logger.info("log first index {}", log.firstIndex());
             logger.info("log last index {}", log.lastIndex());
             logger.info("log size {}", log.size());

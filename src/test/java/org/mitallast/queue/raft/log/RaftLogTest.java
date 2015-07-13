@@ -1,6 +1,7 @@
 package org.mitallast.queue.raft.log;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
@@ -9,17 +10,13 @@ import org.mitallast.queue.common.stream.InternalStreamService;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.raft.RaftStreamService;
 import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.unitils.reflectionassert.ReflectionAssert;
 
-public class LogBenchmark extends BaseTest {
+public class RaftLogTest extends BaseTest {
     private SegmentManager segmentManager;
-    private Log log;
+    private RaftLog log;
 
-    private LogEntryGenerator generator = new LogEntryGenerator(random);
-
-    @Override
-    protected int max() {
-        return 1000000;
-    }
+    private RaftLogEntryGenerator generator = new RaftLogEntryGenerator(random);
 
     @Before
     public void setUp() throws Exception {
@@ -33,7 +30,7 @@ public class LogBenchmark extends BaseTest {
         SegmentService segmentService = new SegmentService(ImmutableSettings.EMPTY, streamService, fileService, indexService);
         segmentManager = new SegmentManager(ImmutableSettings.EMPTY, descriptorService, segmentService);
         segmentManager.start();
-        log = new Log(ImmutableSettings.EMPTY, segmentManager);
+        log = new RaftLog(ImmutableSettings.EMPTY, segmentManager);
     }
 
     @After
@@ -45,11 +42,44 @@ public class LogBenchmark extends BaseTest {
     @Test
     public void testAppend() throws Exception {
         LogEntry[] entries = generator.generate(max());
-        long start = System.currentTimeMillis();
         for (LogEntry entry : entries) {
             log.appendEntry(entry);
         }
-        long end = System.currentTimeMillis();
-        printQps("append", max(), start, end);
+    }
+
+    @Test
+    public void testContainsIndex() throws Exception {
+        LogEntry[] entries = generator.generate(max());
+        for (LogEntry entry : entries) {
+            log.appendEntry(entry);
+        }
+
+        for (LogEntry entry : entries) {
+            Assert.assertTrue(log.containsIndex(entry.index()));
+        }
+    }
+
+    @Test
+    public void testContainsEntry() throws Exception {
+        LogEntry[] entries = generator.generate(max());
+        for (LogEntry entry : entries) {
+            log.appendEntry(entry);
+        }
+
+        for (LogEntry entry : entries) {
+            Assert.assertTrue(log.containsEntry(entry.index()));
+        }
+    }
+
+    @Test
+    public void testGetEntry() throws Exception {
+        LogEntry[] entries = generator.generate(max());
+        for (LogEntry entry : entries) {
+            log.appendEntry(entry);
+        }
+
+        for (LogEntry entry : entries) {
+            ReflectionAssert.assertReflectionEquals(entry, log.getEntry(entry.index()));
+        }
     }
 }

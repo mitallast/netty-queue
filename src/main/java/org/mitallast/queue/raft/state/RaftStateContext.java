@@ -11,7 +11,7 @@ import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
-import org.mitallast.queue.raft.log.Log;
+import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.compaction.Compactor;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RaftStateContext extends RaftStateClient implements Protocol {
     private final RaftState stateMachine;
-    private final Log log;
+    private final RaftLog log;
     private final Compactor compactor;
     private final long electionTimeout;
     private final long heartbeatInterval;
@@ -44,7 +44,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     public RaftStateContext(
         Settings settings,
         RaftState raftState,
-        Log log,
+        RaftLog log,
         Compactor compactor,
         TransportService transportService,
         ClusterState clusterState,
@@ -175,7 +175,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return stateMachine;
     }
 
-    public Log getLog() {
+    public RaftLog getLog() {
         return log;
     }
 

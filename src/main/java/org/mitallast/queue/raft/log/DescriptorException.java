@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft.log;
 
-public class DescriptorException extends LogException {
+public class DescriptorException extends RaftLogException {
 
     public DescriptorException(String message, Object... args) {
         super(String.format(message, args));

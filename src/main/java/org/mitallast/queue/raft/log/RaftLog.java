@@ -7,12 +7,12 @@ import org.mitallast.queue.raft.log.entry.LogEntry;
 
 import java.io.IOException;
 
-public class Log extends AbstractComponent {
+public class RaftLog extends AbstractComponent {
 
     protected final SegmentManager segments;
 
     @Inject
-    public Log(Settings settings, SegmentManager segments) {
+    public RaftLog(Settings settings, SegmentManager segments) {
         super(settings);
         this.segments = segments;
     }
@@ -76,7 +76,7 @@ public class Log extends AbstractComponent {
         return segment != null && segment.containsEntry(index);
     }
 
-    public Log skip(long entries) throws IOException {
+    public RaftLog skip(long entries) throws IOException {
         Segment segment = segments.currentSegment();
         while (segment.length() + entries > Integer.MAX_VALUE) {
             int skip = Integer.MAX_VALUE - segment.length();
@@ -88,7 +88,7 @@ public class Log extends AbstractComponent {
         return this;
     }
 
-    public Log truncate(long index) throws IOException {
+    public RaftLog truncate(long index) throws IOException {
         checkIndex(index);
         if (lastIndex() == index)
             return this;

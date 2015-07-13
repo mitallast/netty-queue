@@ -34,7 +34,7 @@ public class RaftModule extends AbstractModule {
         bind(SegmentIndexService.class).asEagerSingleton();
         bind(SegmentService.class).asEagerSingleton();
         bind(SegmentManager.class).asEagerSingleton();
-        bind(Log.class).asEagerSingleton();
+        bind(RaftLog.class).asEagerSingleton();
 
         // log compactor
         bind(Compactor.class).asEagerSingleton();

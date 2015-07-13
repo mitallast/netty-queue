@@ -11,10 +11,10 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.util.Random;
 import java.util.UUID;
 
-public class LogEntryGenerator {
+public class RaftLogEntryGenerator {
     private final Random random;
 
-    public LogEntryGenerator(Random random) {
+    public RaftLogEntryGenerator(Random random) {
         this.random = random;
     }
 

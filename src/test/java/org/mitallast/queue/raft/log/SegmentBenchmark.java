@@ -17,7 +17,7 @@ public class SegmentBenchmark extends BaseTest {
     private Segment segment;
     private SegmentIndex segmentIndex;
 
-    private LogEntryGenerator entryGenerator = new LogEntryGenerator(random);
+    private RaftLogEntryGenerator entryGenerator = new RaftLogEntryGenerator(random);
 
     @Override
     protected int max() {

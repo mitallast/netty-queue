@@ -21,7 +21,7 @@ public class SegmentTest extends BaseTest {
     private Segment segment;
     private SegmentIndex segmentIndex;
 
-    private LogEntryGenerator entryGenerator = new LogEntryGenerator(random);
+    private RaftLogEntryGenerator entryGenerator = new RaftLogEntryGenerator(random);
 
     @Before
     public void setUp() throws Exception {

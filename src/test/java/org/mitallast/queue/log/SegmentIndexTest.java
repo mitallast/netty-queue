@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -30,7 +30,7 @@ public class SegmentIndexTest extends BaseTest {
     public void testContains() throws Exception {
         LogEntry[] entries = generate();
         for (LogEntry entry : entries) {
-            segmentIndex.index(entry.offset, entry.position, entry.length);
+            segmentIndex.index(entry.offset, entry.position, entry.length, MessageStatus.QUEUED);
         }
         for (LogEntry entry : entries) {
             Assert.assertTrue(segmentIndex.contains(entry.offset));
@@ -41,7 +41,7 @@ public class SegmentIndexTest extends BaseTest {
     public void testSearch() throws Exception {
         LogEntry[] entries = generate();
         for (LogEntry entry : entries) {
-            segmentIndex.index(entry.offset, entry.position, entry.length);
+            segmentIndex.index(entry.offset, entry.position, entry.length, MessageStatus.QUEUED);
         }
         for (LogEntry entry : entries) {
             Assert.assertEquals(entry.offset * SegmentIndex.ENTRY_SIZE, segmentIndex.search(entry.offset));
@@ -52,7 +52,7 @@ public class SegmentIndexTest extends BaseTest {
     public void testPosition() throws Exception {
         LogEntry[] entries = generate();
         for (LogEntry entry : entries) {
-            segmentIndex.index(entry.offset, entry.position, entry.length);
+            segmentIndex.index(entry.offset, entry.position, entry.length, MessageStatus.QUEUED);
         }
         for (LogEntry entry : entries) {
             Assert.assertEquals(entry.position, segmentIndex.position(entry.offset));
@@ -63,7 +63,7 @@ public class SegmentIndexTest extends BaseTest {
     public void testLength() throws Exception {
         LogEntry[] entries = generate();
         for (LogEntry entry : entries) {
-            segmentIndex.index(entry.offset, entry.position, entry.length);
+            segmentIndex.index(entry.offset, entry.position, entry.length, MessageStatus.QUEUED);
         }
         for (LogEntry entry : entries) {
             Assert.assertEquals(entry.length, segmentIndex.length(entry.offset));
@@ -75,7 +75,7 @@ public class SegmentIndexTest extends BaseTest {
         LogEntry[] entries = generate(max() / 2);
 
         for (LogEntry entry : entries) {
-            segmentIndex.index(entry.offset, entry.position, entry.length);
+            segmentIndex.index(entry.offset, entry.position, entry.length, MessageStatus.QUEUED);
         }
 
         segmentIndex.flush();

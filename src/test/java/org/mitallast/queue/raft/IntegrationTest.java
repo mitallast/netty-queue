@@ -6,7 +6,7 @@ import org.mitallast.queue.common.BaseIntegrationTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.raft.log.RaftLog;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.resource.Node;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.structures.AsyncBoolean;
@@ -50,7 +50,7 @@ public class IntegrationTest extends BaseIntegrationTest {
             logger.info("log length {}", log.length());
             for (long i = log.firstIndex(); i < log.lastIndex(); i++) {
                 try {
-                    LogEntry entry = log.getEntry(i);
+                    RaftLogEntry entry = log.getEntry(i);
                     logger.info("[{}] {}", i, entry);
                 } catch (IOException e) {
                     logger.error("error", e);

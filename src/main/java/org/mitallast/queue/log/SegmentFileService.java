@@ -1,7 +1,7 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
+import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -15,12 +15,11 @@ public class SegmentFileService extends AbstractComponent {
     private final static Pattern descriptorPattern = Pattern.compile("^log-(\\d+)-(\\d+)\\.[a-z]+");
     private final File directory;
 
-    @Inject
     public SegmentFileService(Settings settings) throws IOException {
         super(settings);
 
         File workDir = new File(this.settings.get("work_dir", "data"));
-        directory = new File(workDir, componentSettings.get("log_dir", "log"));
+        directory = new File(workDir, componentSettings.get("name", UUIDs.generateRandom().toString()));
         if (!directory.exists()) {
             if (!directory.mkdir()) {
                 throw new IOException("Error create directory: " + directory);

@@ -10,8 +10,8 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.log.entry.LogEntry;
 import org.mitallast.queue.raft.log.entry.QueryEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.TransportService;
 
@@ -132,7 +132,7 @@ abstract class ActiveState extends PassiveState {
             // Otherwise, load the last entry in the log. The last entry should be
             // at least as up to date as the candidates entry and term.
             long lastIndex = context.getLog().lastIndex();
-            LogEntry entry = context.getLog().getEntry(lastIndex);
+            RaftLogEntry entry = context.getLog().getEntry(lastIndex);
             if (entry == null) {
                 logger.info("accepted {}: candidate's log is up-to-date", request);
                 return true;

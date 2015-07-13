@@ -1,7 +1,6 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -24,7 +23,6 @@ public class SegmentDescriptorService extends AbstractComponent {
     private final long maxSegmentSize;
     private final long maxEntries;
 
-    @Inject
     public SegmentDescriptorService(Settings settings, SegmentFileService fileService, StreamService streamService) {
         super(settings);
         this.fileService = fileService;

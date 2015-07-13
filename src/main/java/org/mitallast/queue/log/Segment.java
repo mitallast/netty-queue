@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.builder.EntryBuilder;
@@ -6,7 +6,7 @@ import org.mitallast.queue.common.mmap.MemoryMappedFileBuffer;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.log.entry.LogEntry;
 
 import java.io.Closeable;
 import java.io.File;
@@ -111,7 +111,7 @@ public class Segment implements Closeable {
         // flush();
 
         int end = buffer.writerIndex();
-        offsetIndex.index(offset, start, end - start);
+        offsetIndex.index(offset, start, end - start, MessageStatus.QUEUED);
 
         // Reset skip to zero since we wrote a new entry.
         skip = 0;
@@ -155,7 +155,7 @@ public class Segment implements Closeable {
     public Segment truncate(long index) throws IOException {
         int offset = offset(index);
         if (offset < offsetIndex.lastOffset()) {
-            int diff = offsetIndex.lastOffset() - offset;
+            int diff = (int) (offsetIndex.lastOffset() - offset);
             skip = Math.max(skip - diff, 0);
             offsetIndex.truncate(offset);
         }

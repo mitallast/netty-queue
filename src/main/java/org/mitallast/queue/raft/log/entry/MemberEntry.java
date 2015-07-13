@@ -6,7 +6,7 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public abstract class MemberEntry<E extends MemberEntry<E>> extends LogEntry<E> {
+public abstract class MemberEntry<E extends MemberEntry<E>> extends RaftLogEntry<E> {
     protected final DiscoveryNode member;
 
     public MemberEntry(long index, long term, DiscoveryNode member) {

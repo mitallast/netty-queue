@@ -4,12 +4,13 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.log.Segment;
-import org.mitallast.queue.raft.log.SegmentDescriptor;
-import org.mitallast.queue.raft.log.SegmentDescriptorService;
-import org.mitallast.queue.raft.log.SegmentManager;
+import org.mitallast.queue.log.Segment;
+import org.mitallast.queue.log.SegmentDescriptor;
+import org.mitallast.queue.log.SegmentDescriptorService;
+import org.mitallast.queue.log.SegmentManager;
+import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.io.IOException;
@@ -28,15 +29,14 @@ public class MinorCompaction extends Compaction {
         Settings settings,
         ExecutionContext executionContext,
         EntryFilter filter,
-        SegmentManager segmentManager,
-        SegmentDescriptorService descriptorService,
+        RaftLog raftLog,
         @Assisted long index
     ) {
         super(settings, index);
         this.filter = filter;
         this.executionContext = executionContext;
-        this.segmentManager = segmentManager;
-        this.descriptorService = descriptorService;
+        this.segmentManager = raftLog.segmentManager();
+        this.descriptorService = raftLog.segmentManager().descriptorService();
     }
 
     @Override
@@ -170,7 +170,7 @@ public class MinorCompaction extends Compaction {
         // Read the entry from the segment. If the entry is null or filtered out of the log, skip the entry, otherwise
         // append it to the compact segment.
         try {
-            LogEntry entry = segment.getEntry(index);
+            RaftLogEntry entry = segment.getEntry(index);
             if (entry != null) {
                 if (filter.accept(entry, this)) {
                     compactSegment.appendEntry(entry);

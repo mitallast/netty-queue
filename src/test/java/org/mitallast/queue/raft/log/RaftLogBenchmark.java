@@ -7,12 +7,13 @@ import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.InternalStreamService;
 import org.mitallast.queue.common.stream.StreamService;
+import org.mitallast.queue.log.*;
 import org.mitallast.queue.raft.RaftStreamService;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 
 public class RaftLogBenchmark extends BaseTest {
     private SegmentManager segmentManager;
-    private RaftLog log;
+    private RaftLog raftLog;
 
     private RaftLogEntryGenerator generator = new RaftLogEntryGenerator(random);
 
@@ -33,7 +34,8 @@ public class RaftLogBenchmark extends BaseTest {
         SegmentService segmentService = new SegmentService(ImmutableSettings.EMPTY, streamService, fileService, indexService);
         segmentManager = new SegmentManager(ImmutableSettings.EMPTY, descriptorService, segmentService);
         segmentManager.start();
-        log = new RaftLog(ImmutableSettings.EMPTY, segmentManager);
+        Log log = new Log(ImmutableSettings.EMPTY, segmentManager);
+        raftLog = new RaftLog(ImmutableSettings.EMPTY, log);
     }
 
     @After
@@ -44,10 +46,10 @@ public class RaftLogBenchmark extends BaseTest {
 
     @Test
     public void testAppend() throws Exception {
-        LogEntry[] entries = generator.generate(max());
+        RaftLogEntry[] entries = generator.generate(max());
         long start = System.currentTimeMillis();
-        for (LogEntry entry : entries) {
-            log.appendEntry(entry);
+        for (RaftLogEntry entry : entries) {
+            raftLog.appendEntry(entry);
         }
         long end = System.currentTimeMillis();
         printQps("append", max(), start, end);

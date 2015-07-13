@@ -3,111 +3,87 @@ package org.mitallast.queue.raft.log;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.log.Log;
+import org.mitallast.queue.log.LogService;
+import org.mitallast.queue.log.SegmentManager;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 
 import java.io.IOException;
 
 public class RaftLog extends AbstractComponent {
 
-    protected final SegmentManager segments;
+    private final Log log;
 
     @Inject
-    public RaftLog(Settings settings, SegmentManager segments) {
+    public RaftLog(Settings settings, LogService logService) throws IOException {
         super(settings);
-        this.segments = segments;
+        this.log = logService.openLog("raft");
     }
 
-    private void checkIndex(long index) {
-        if (!containsIndex(index))
-            throw new IndexOutOfBoundsException(index + " is not a valid log index");
+    public RaftLog(Settings settings, Log log) {
+        super(settings);
+        this.log = log;
+    }
+
+    public SegmentManager segmentManager() {
+        return log.segmentManager();
     }
 
     public boolean isEmpty() {
-        return segments.firstSegment().isEmpty();
+        return log.isEmpty();
     }
 
     public long size() {
-        return segments.segments().stream().mapToLong(Segment::size).sum();
+        return log.size();
     }
 
     public long length() {
-        return segments.segments().stream().mapToLong(Segment::length).sum();
+        return log.length();
     }
 
     public long firstIndex() {
-        return !isEmpty() ? segments.firstSegment().descriptor().index() : 0;
+        return log.firstIndex();
     }
 
     public long nextIndex() {
-        return segments.currentSegment().nextIndex();
+        return log.nextIndex();
     }
 
     public long lastIndex() {
-        return !isEmpty() ? segments.lastSegment().lastIndex() : 0;
+        return log.lastIndex();
     }
 
-    private void checkRoll() throws IOException {
-        if (segments.currentSegment().isFull()) {
-            segments.nextSegment();
-        }
+    public long appendEntry(RaftLogEntry entry) throws IOException {
+        return log.appendEntry(entry);
     }
 
-    public long appendEntry(LogEntry entry) throws IOException {
-        checkRoll();
-        return segments.currentSegment().appendEntry(entry);
-    }
-
-    public <T extends LogEntry> T getEntry(long index) throws IOException {
-        checkIndex(index);
-        Segment segment = segments.segment(index);
-        if (segment == null)
-            throw new IndexOutOfBoundsException("invalid index: " + index);
-        return segment.getEntry(index);
+    public <T extends RaftLogEntry> T getEntry(long index) throws IOException {
+        return log.getEntry(index);
     }
 
     public boolean containsIndex(long index) {
-        return !isEmpty() && firstIndex() <= index && index <= lastIndex();
+        return log.containsIndex(index);
     }
 
     public boolean containsEntry(long index) throws IOException {
-        if (!containsIndex(index))
-            return false;
-        Segment segment = segments.segment(index);
-        return segment != null && segment.containsEntry(index);
+        return log.containsEntry(index);
     }
 
     public RaftLog skip(long entries) throws IOException {
-        Segment segment = segments.currentSegment();
-        while (segment.length() + entries > Integer.MAX_VALUE) {
-            int skip = Integer.MAX_VALUE - segment.length();
-            segment.skip(skip);
-            entries -= skip;
-            segment = segments.nextSegment();
-        }
-        segment.skip(entries);
+        log.skip(entries);
         return this;
     }
 
     public RaftLog truncate(long index) throws IOException {
-        checkIndex(index);
-        if (lastIndex() == index)
-            return this;
-
-        for (Segment segment : segments.segments()) {
-            if (segment.containsIndex(index)) {
-                segment.truncate(index);
-            } else if (segment.descriptor().index() > index) {
-                segments.remove(segment);
-            }
-        }
+        log.truncate(index);
         return this;
     }
 
     public void flush() throws IOException {
-        segments.currentSegment().flush();
+        log.flush();
     }
 
     public void delete() throws IOException {
-        segments.delete();
+        log.delete();
     }
 }

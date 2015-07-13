@@ -20,7 +20,7 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.TransportService;
 
@@ -109,7 +109,7 @@ public class PassiveState extends AbstractState {
         }
 
         // If the previous entry term doesn't match the local previous term then reject the request.
-        LogEntry entry = context.getLog().getEntry(request.logIndex());
+        RaftLogEntry entry = context.getLog().getEntry(request.logIndex());
         if (entry == null || entry.term() != request.logTerm()) {
             logger.warn("rejected {}: request log term does not match local log term {} for the same entry", request, entry != null ? entry.term() : null);
             return AppendResponse.builder()
@@ -129,14 +129,14 @@ public class PassiveState extends AbstractState {
         if (!request.entries().isEmpty()) {
 
             // Iterate through request entries and append them to the log.
-            for (LogEntry entry : request.entries()) {
+            for (RaftLogEntry entry : request.entries()) {
                 // If the entry index is greater than the last log index, skip missing entries.
                 if (!context.getLog().containsIndex(entry.index())) {
                     context.getLog().skip(entry.index() - context.getLog().lastIndex() - 1).appendEntry(entry);
                     logger.debug("appended {} to log at index {}", entry, entry.index());
                 } else {
                     // Compare the term of the received entry with the matching entry in the log.
-                    LogEntry match = context.getLog().getEntry(entry.index());
+                    RaftLogEntry match = context.getLog().getEntry(entry.index());
                     if (match != null) {
                         if (entry.term() != match.term()) {
                             // We found an invalid entry in the log. Remove the invalid entry and append the new entry.
@@ -191,7 +191,7 @@ public class PassiveState extends AbstractState {
             CompletableFuture<Void> future = Futures.future();
 
             for (long i = lastApplied + 1; i <= effectiveIndex; i++) {
-                LogEntry entry = context.getLog().getEntry(i);
+                RaftLogEntry entry = context.getLog().getEntry(i);
                 if (entry != null) {
                     applyEntry(entry).whenComplete((result, error) -> {
                         executionContext.checkThread();
@@ -208,7 +208,7 @@ public class PassiveState extends AbstractState {
         return Futures.complete(null);
     }
 
-    protected CompletableFuture<?> applyEntry(LogEntry entry) {
+    protected CompletableFuture<?> applyEntry(RaftLogEntry entry) {
         executionContext.checkThread();
         return context.getStateMachine().apply(entry);
     }

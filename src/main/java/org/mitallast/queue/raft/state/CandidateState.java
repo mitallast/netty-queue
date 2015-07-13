@@ -7,7 +7,7 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.Quorum;
 import org.mitallast.queue.transport.TransportService;
@@ -92,7 +92,7 @@ class CandidateState extends ActiveState {
         // First, load the last log entry to get its term. We load the entry
         // by its index since the index is required by the protocol.
         long lastIndex = context.getLog().lastIndex();
-        LogEntry lastEntry = lastIndex != 0 ? context.getLog().getEntry(lastIndex) : null;
+        RaftLogEntry lastEntry = lastIndex != 0 ? context.getLog().getEntry(lastIndex) : null;
 
         // Once we got the last log term, iterate through each current member
         // of the cluster and vote each member for a vote.

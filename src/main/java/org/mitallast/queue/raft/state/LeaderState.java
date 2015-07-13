@@ -104,7 +104,7 @@ class LeaderState extends ActiveState {
         if (!context.getLog().isEmpty()) {
             int count = 0;
             for (long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex()); lastApplied <= index; lastApplied++) {
-                LogEntry entry = context.getLog().getEntry(lastApplied);
+                RaftLogEntry entry = context.getLog().getEntry(lastApplied);
                 if (entry != null) {
                     context.getStateMachine().apply(entry).whenComplete((result, error) -> {
                         executionContext.checkThread();
@@ -764,7 +764,7 @@ class LeaderState extends ActiveState {
             /**
              * Gets the previous entry.
              */
-            private LogEntry getPrevEntry(long prevIndex) throws IOException {
+            private RaftLogEntry getPrevEntry(long prevIndex) throws IOException {
                 executionContext.checkThread();
                 if (context.getLog().containsIndex(prevIndex)) {
                     return context.getLog().getEntry(prevIndex);
@@ -776,7 +776,7 @@ class LeaderState extends ActiveState {
              * Gets a list of entries to send.
              */
             @SuppressWarnings("unchecked")
-            private List<LogEntry> getEntries(long prevIndex) throws IOException {
+            private List<RaftLogEntry> getEntries(long prevIndex) throws IOException {
                 executionContext.checkThread();
                 long index;
                 if (context.getLog().isEmpty()) {
@@ -787,9 +787,9 @@ class LeaderState extends ActiveState {
                     index = context.getLog().firstIndex();
                 }
 
-                List<LogEntry> entries = new ArrayList<>(1024);
+                List<RaftLogEntry> entries = new ArrayList<>(1024);
                 while (index <= context.getLog().lastIndex()) {
-                    LogEntry entry = context.getLog().getEntry(index);
+                    RaftLogEntry entry = context.getLog().getEntry(index);
                     if (entry != null) {
                         entries.add(entry);
                     }
@@ -805,7 +805,7 @@ class LeaderState extends ActiveState {
             private void emptyCommit() throws IOException {
                 executionContext.checkThread();
                 long prevIndex = getPrevIndex();
-                LogEntry prevEntry = getPrevEntry(prevIndex);
+                RaftLogEntry prevEntry = getPrevEntry(prevIndex);
                 commit(prevIndex, prevEntry, Collections.EMPTY_LIST);
             }
 
@@ -816,15 +816,15 @@ class LeaderState extends ActiveState {
                 executionContext.checkThread();
                 logger.debug("entries commit for {}", state.getNode());
                 long prevIndex = getPrevIndex();
-                LogEntry prevEntry = getPrevEntry(prevIndex);
-                List<LogEntry> entries = getEntries(prevIndex);
+                RaftLogEntry prevEntry = getPrevEntry(prevIndex);
+                List<RaftLogEntry> entries = getEntries(prevIndex);
                 commit(prevIndex, prevEntry, entries);
             }
 
             /**
              * Sends a commit message.
              */
-            private void commit(long prevIndex, LogEntry prevEntry, List<LogEntry> entries) {
+            private void commit(long prevIndex, RaftLogEntry prevEntry, List<RaftLogEntry> entries) {
                 executionContext.checkThread();
                 AppendRequest request = AppendRequest.builder()
                     .setTerm(context.getTerm())

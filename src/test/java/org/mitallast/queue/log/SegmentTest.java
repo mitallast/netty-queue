@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -9,8 +9,8 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.InternalStreamService;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
-import org.mitallast.queue.raft.RaftStreamService;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.log.entry.LogEntry;
+import org.mitallast.queue.log.entry.TextLogEntry;
 import org.unitils.reflectionassert.ReflectionAssert;
 
 import java.io.File;
@@ -21,12 +21,10 @@ public class SegmentTest extends BaseTest {
     private Segment segment;
     private SegmentIndex segmentIndex;
 
-    private RaftLogEntryGenerator entryGenerator = new RaftLogEntryGenerator(random);
-
     @Before
     public void setUp() throws Exception {
         streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        new RaftStreamService(streamService);
+        new LogStreamService(streamService);
 
         descriptor = SegmentDescriptor.builder()
             .setId(0)
@@ -50,7 +48,7 @@ public class SegmentTest extends BaseTest {
 
     @Test
     public void testAppendEntry() throws Exception {
-        LogEntry[] entries = entryGenerator.generate((int) segment.descriptor().maxEntries());
+        LogEntry[] entries = generate((int) segment.descriptor().maxEntries());
         Assert.assertEquals(segment.size(), segmentIndex.nextPosition());
         for (LogEntry entry : entries) {
             segment.appendEntry(entry);
@@ -64,9 +62,20 @@ public class SegmentTest extends BaseTest {
         }
     }
 
+    private LogEntry[] generate(int max) {
+        LogEntry[] logEntries = new LogEntry[max];
+        for (int i = 0; i < max; i++) {
+            logEntries[i] = TextLogEntry.builder()
+                .setIndex(i + 1)
+                .setMessage(randomUUID().toString())
+                .build();
+        }
+        return logEntries;
+    }
+
     @Test
     public void testReopen() throws Exception {
-        LogEntry[] entries = entryGenerator.generate((int) segment.descriptor().maxEntries());
+        LogEntry[] entries = generate((int) segment.descriptor().maxEntries());
         for (LogEntry entry : entries) {
             segment.appendEntry(entry);
         }

@@ -5,7 +5,7 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
@@ -80,7 +80,7 @@ class FollowerState extends ActiveState {
     }
 
     @Override
-    protected CompletableFuture<?> applyEntry(LogEntry entry) {
+    protected CompletableFuture<?> applyEntry(RaftLogEntry entry) {
         return super.applyEntry(entry).thenRun(this::replicateCommits);
     }
 
@@ -129,8 +129,8 @@ class FollowerState extends ActiveState {
 
         if (!committing.contains(member.getNode())) {
             long prevIndex = getPrevIndex(member);
-            LogEntry prevEntry = getPrevEntry(prevIndex);
-            List<LogEntry> entries = getEntries(prevIndex);
+            RaftLogEntry prevEntry = getPrevEntry(prevIndex);
+            List<RaftLogEntry> entries = getEntries(prevIndex);
             commit(member, prevIndex, prevEntry, entries);
         }
     }
@@ -140,7 +140,7 @@ class FollowerState extends ActiveState {
         return member.getNextIndex() - 1;
     }
 
-    private LogEntry getPrevEntry(long prevIndex) throws IOException {
+    private RaftLogEntry getPrevEntry(long prevIndex) throws IOException {
         executionContext.checkThread();
         if (context.getLog().containsIndex(prevIndex)) {
             return context.getLog().getEntry(prevIndex);
@@ -148,7 +148,7 @@ class FollowerState extends ActiveState {
         return null;
     }
 
-    private List<LogEntry> getEntries(long prevIndex) throws IOException {
+    private List<RaftLogEntry> getEntries(long prevIndex) throws IOException {
         executionContext.checkThread();
         long index;
         if (context.getLog().isEmpty()) {
@@ -159,9 +159,9 @@ class FollowerState extends ActiveState {
             index = context.getLog().firstIndex();
         }
 
-        List<LogEntry> entries = new ArrayList<>(1024);
+        List<RaftLogEntry> entries = new ArrayList<>(1024);
         while (index <= context.getLog().lastIndex()) {
-            LogEntry entry = context.getLog().getEntry(index);
+            RaftLogEntry entry = context.getLog().getEntry(index);
             if (entry != null) {
                 entries.add(entry);
             }
@@ -173,7 +173,7 @@ class FollowerState extends ActiveState {
     /**
      * Sends a commit message.
      */
-    private void commit(MemberState member, long prevIndex, LogEntry prevEntry, List<LogEntry> entries) {
+    private void commit(MemberState member, long prevIndex, RaftLogEntry prevEntry, List<RaftLogEntry> entries) {
         executionContext.checkThread();
         AppendRequest request = AppendRequest.builder()
             .setTerm(context.getTerm())

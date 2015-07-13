@@ -11,6 +11,7 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamModule;
 import org.mitallast.queue.common.strings.Strings;
+import org.mitallast.queue.log.LogModule;
 import org.mitallast.queue.queues.transactional.TransactionalQueuesModule;
 import org.mitallast.queue.raft.RaftModule;
 import org.mitallast.queue.rest.RestModule;
@@ -33,6 +34,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         modules.add(new ComponentModule(this.settings));
         modules.add(new StreamModule());
         modules.add(new TransactionalQueuesModule());
+        modules.add(new LogModule());
         modules.add(new ActionModule());
         modules.add(new TransportModule());
         if (settings.getAsBoolean("rest.enabled", true)) {

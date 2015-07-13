@@ -5,7 +5,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 
 import java.io.IOException;
 
-public abstract class TimestampedEntry<E extends TimestampedEntry<E>> extends LogEntry<E> {
+public abstract class TimestampedEntry<E extends TimestampedEntry<E>> extends RaftLogEntry<E> {
 
     protected final long timestamp;
 
@@ -18,7 +18,7 @@ public abstract class TimestampedEntry<E extends TimestampedEntry<E>> extends Lo
         return timestamp;
     }
 
-    public static abstract class Builder<B extends Builder<B, E>, E extends TimestampedEntry> extends LogEntry.Builder<B, E> {
+    public static abstract class Builder<B extends Builder<B, E>, E extends TimestampedEntry> extends RaftLogEntry.Builder<B, E> {
         protected long timestamp;
 
         public B from(E entry) {

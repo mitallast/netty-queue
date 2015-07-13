@@ -6,7 +6,7 @@ import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.validation.ValidationBuilder;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
@@ -19,9 +19,9 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
     private final long logTerm;
     private final long commitIndex;
     private final long globalIndex;
-    private final ImmutableList<LogEntry> entries;
+    private final ImmutableList<RaftLogEntry> entries;
 
-    private AppendRequest(DiscoveryNode leader, long term, long logIndex, long logTerm, long commitIndex, long globalIndex, ImmutableList<LogEntry> entries) {
+    private AppendRequest(DiscoveryNode leader, long term, long logIndex, long logTerm, long commitIndex, long globalIndex, ImmutableList<RaftLogEntry> entries) {
         this.leader = leader;
         this.term = term;
         this.logIndex = logIndex;
@@ -59,7 +59,7 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
         return globalIndex;
     }
 
-    public ImmutableList<LogEntry> entries() {
+    public ImmutableList<RaftLogEntry> entries() {
         return entries;
     }
 
@@ -97,7 +97,7 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
         private long logTerm;
         private long commitIndex;
         private long globalIndex;
-        private ImmutableList<LogEntry> entries;
+        private ImmutableList<RaftLogEntry> entries;
 
         private Builder from(AppendRequest entry) {
             leader = entry.leader;
@@ -140,8 +140,8 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
             return this;
         }
 
-        public Builder setEntries(Collection<LogEntry> entries) {
-            this.entries = ImmutableList.<LogEntry>builder().addAll(entries).build();
+        public Builder setEntries(Collection<RaftLogEntry> entries) {
+            this.entries = ImmutableList.<RaftLogEntry>builder().addAll(entries).build();
             return this;
         }
 
@@ -158,10 +158,10 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
             commitIndex = stream.readLong();
             globalIndex = stream.readLong();
             int count = stream.readInt();
-            ImmutableList.Builder<LogEntry> builder = ImmutableList.builder();
+            ImmutableList.Builder<RaftLogEntry> builder = ImmutableList.builder();
             for (int i = 0; i < count; i++) {
-                EntryBuilder<LogEntry> entryBuilder = stream.readStreamable();
-                LogEntry entry = entryBuilder.build();
+                EntryBuilder<RaftLogEntry> entryBuilder = stream.readStreamable();
+                RaftLogEntry entry = entryBuilder.build();
                 builder.add(entry);
             }
             entries = builder.build();
@@ -176,7 +176,7 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
             stream.writeLong(commitIndex);
             stream.writeLong(globalIndex);
             stream.writeInt(entries.size());
-            for (LogEntry entry : entries) {
+            for (RaftLogEntry entry : entries) {
                 EntryBuilder entryBuilder = entry.toBuilder();
                 stream.writeClass(entryBuilder.getClass());
                 stream.writeStreamable(entryBuilder);

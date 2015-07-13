@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import org.junit.After;
 import org.junit.Before;
@@ -8,16 +8,14 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.InternalStreamService;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.unit.ByteSizeUnit;
-import org.mitallast.queue.raft.RaftStreamService;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.log.entry.LogEntry;
+
 
 public class SegmentBenchmark extends BaseTest {
     private StreamService streamService;
     private SegmentDescriptor descriptor;
     private Segment segment;
     private SegmentIndex segmentIndex;
-
-    private RaftLogEntryGenerator entryGenerator = new RaftLogEntryGenerator(random);
 
     @Override
     protected int max() {
@@ -27,7 +25,7 @@ public class SegmentBenchmark extends BaseTest {
     @Before
     public void setUp() throws Exception {
         streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        new RaftStreamService(streamService);
+        new LogStreamService(streamService);
         descriptor = SegmentDescriptor.builder()
             .setId(0)
             .setIndex(1)
@@ -49,7 +47,7 @@ public class SegmentBenchmark extends BaseTest {
 
     @Test
     public void testAppend() throws Exception {
-        LogEntry[] entries = entryGenerator.generate(max());
+        LogEntry[] entries = LogEntryGenerator.generate(max());
         long start = System.currentTimeMillis();
         for (LogEntry entry : entries) {
             segment.appendEntry(entry);

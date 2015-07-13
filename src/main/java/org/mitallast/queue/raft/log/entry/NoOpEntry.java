@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft.log.entry;
 
-public class NoOpEntry extends LogEntry<NoOpEntry> {
+public class NoOpEntry extends RaftLogEntry<NoOpEntry> {
     public NoOpEntry(long index, long term) {
         super(index, term);
     }
@@ -22,7 +22,7 @@ public class NoOpEntry extends LogEntry<NoOpEntry> {
         return new Builder();
     }
 
-    public static class Builder extends LogEntry.Builder<Builder, NoOpEntry> {
+    public static class Builder extends RaftLogEntry.Builder<Builder, NoOpEntry> {
 
         public NoOpEntry build() {
             return new NoOpEntry(index, term);

@@ -1,6 +1,5 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
-import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -11,7 +10,6 @@ public class SegmentIndexService extends AbstractComponent {
 
     private final SegmentFileService fileService;
 
-    @Inject
     public SegmentIndexService(Settings settings, SegmentFileService fileService) {
         super(settings);
         this.fileService = fileService;

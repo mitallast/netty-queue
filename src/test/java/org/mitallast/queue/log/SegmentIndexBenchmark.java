@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import org.junit.After;
 import org.junit.Before;
@@ -21,7 +21,7 @@ public class SegmentIndexBenchmark extends BaseTest {
         fullSegmentIndex = new SegmentIndex(testFolder.newFile(), max());
 
         for (int i = 0; i < max(); i++) {
-            fullSegmentIndex.index(i, i * 100l, 100);
+            fullSegmentIndex.index(i, i * 100l, 100, MessageStatus.QUEUED);
         }
     }
 
@@ -41,7 +41,7 @@ public class SegmentIndexBenchmark extends BaseTest {
     public void benchIndex() throws Exception {
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
-            emptySegmentIndex.index(i, i * 100, 100);
+            emptySegmentIndex.index(i, i * 100, 100, MessageStatus.QUEUED);
         }
         long end = System.currentTimeMillis();
         printQps("index", max(), start, end);

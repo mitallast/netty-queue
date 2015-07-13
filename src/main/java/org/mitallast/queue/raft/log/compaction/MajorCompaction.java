@@ -4,11 +4,12 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.raft.log.Segment;
-import org.mitallast.queue.raft.log.SegmentDescriptor;
-import org.mitallast.queue.raft.log.SegmentManager;
+import org.mitallast.queue.log.Segment;
+import org.mitallast.queue.log.SegmentDescriptor;
+import org.mitallast.queue.log.SegmentManager;
+import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
-import org.mitallast.queue.raft.log.entry.LogEntry;
+import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
 import java.io.IOException;
@@ -27,13 +28,13 @@ public class MajorCompaction extends Compaction {
         Settings settings,
         ExecutionContext executionContext,
         EntryFilter filter,
-        SegmentManager segmentManager,
+        RaftLog raftLog,
         @Assisted long index
     ) {
         super(settings, index);
         this.filter = filter;
         this.executionContext = executionContext;
-        this.segmentManager = segmentManager;
+        this.segmentManager = raftLog.segmentManager();
     }
 
     @Override
@@ -104,7 +105,7 @@ public class MajorCompaction extends Compaction {
 
     private CompletableFuture<Segment> compactSegment(Segment segment, long index, Segment compactSegment, CompletableFuture<Segment> future) {
         try {
-            LogEntry entry = segment.getEntry(index);
+            RaftLogEntry entry = segment.getEntry(index);
             if (entry != null) {
                 if (filter.accept(entry, this)) {
                     compactSegment.appendEntry(entry);
@@ -140,7 +141,7 @@ public class MajorCompaction extends Compaction {
 
     private CompletableFuture<Boolean> shouldCompactSegment(Segment segment, long index, CompletableFuture<Boolean> future) {
         try {
-            LogEntry entry = segment.getEntry(index);
+            RaftLogEntry entry = segment.getEntry(index);
             if (entry != null) {
                 if (!filter.accept(entry, this)) {
                     future.complete(true);

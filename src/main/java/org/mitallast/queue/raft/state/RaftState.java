@@ -53,7 +53,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         }
     }
 
-    public boolean filter(LogEntry entry, Compaction compaction) {
+    public boolean filter(RaftLogEntry entry, Compaction compaction) {
         executionContext.checkThread();
         if (entry instanceof CommandEntry) {
             return filter((CommandEntry) entry, compaction);
@@ -108,7 +108,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         return !compaction.type().isOrdered();
     }
 
-    public CompletableFuture<?> apply(LogEntry entry) {
+    public CompletableFuture<?> apply(RaftLogEntry entry) {
         executionContext.checkThread();
         if (entry instanceof CommandEntry) {
             return apply((CommandEntry) entry);
@@ -291,7 +291,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
     }
 
     @Override
-    public boolean accept(LogEntry entry, Compaction compaction) {
+    public boolean accept(RaftLogEntry entry, Compaction compaction) {
         executionContext.checkThread();
         return this.filter(entry, compaction);
     }

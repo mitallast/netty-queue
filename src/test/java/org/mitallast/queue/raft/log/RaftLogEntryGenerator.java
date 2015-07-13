@@ -18,8 +18,8 @@ public class RaftLogEntryGenerator {
         this.random = random;
     }
 
-    public LogEntry[] generate(int max) {
-        LogEntry[] entries = new LogEntry[max];
+    public RaftLogEntry[] generate(int max) {
+        RaftLogEntry[] entries = new RaftLogEntry[max];
         for (int i = 0; i < max; i++) {
 
             switch (random.nextInt(7)) {

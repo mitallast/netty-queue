@@ -1,7 +1,6 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.log;
 
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -18,11 +17,14 @@ public class SegmentManager extends AbstractLifecycleComponent {
     private Segment currentSegment;
     private ImmutableSortedMap<Long, Segment> segments = ImmutableSortedMap.of();
 
-    @Inject
     public SegmentManager(Settings settings, SegmentDescriptorService descriptorService, SegmentService segmentService) {
         super(settings);
         this.descriptorService = descriptorService;
         this.segmentService = segmentService;
+    }
+
+    public SegmentDescriptorService descriptorService() {
+        return descriptorService;
     }
 
     @Override

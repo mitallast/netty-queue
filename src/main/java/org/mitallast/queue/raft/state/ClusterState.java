@@ -7,6 +7,7 @@ import org.mitallast.queue.Version;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.*;
@@ -16,18 +17,21 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
     private final Map<DiscoveryNode, MemberState> members = new HashMap<>();
     private final List<MemberState> activeMembers = new ArrayList<>();
     private final List<MemberState> passiveMembers = new ArrayList<>();
+    private final TransportService transportService;
 
     @Inject
-    public ClusterState(Settings settings) {
+    public ClusterState(Settings settings, TransportService transportService) {
         super(settings);
+        this.transportService = transportService;
     }
 
     public ClusterState addMember(MemberState member) {
-        assert members.putIfAbsent(member.getNode(), member) == null;
-        if (member.getType() == MemberState.Type.ACTIVE) {
-            addActiveMember(member);
-        } else {
-            addPassiveMember(member);
+        if (members.putIfAbsent(member.getNode(), member) == null) {
+            if (member.getType() == MemberState.Type.ACTIVE) {
+                addActiveMember(member);
+            } else {
+                addPassiveMember(member);
+            }
         }
         return this;
     }
@@ -105,11 +109,15 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
 
     @Override
     protected void doStart() throws IOException {
+        MemberState.Type type = settings.getAsBoolean("raft.passive", false) ? MemberState.Type.PASSIVE : MemberState.Type.ACTIVE;
+        addMember(new MemberState(transportService.localNode(), type));
         String[] nodes = settings.getAsArray("raft.cluster.nodes");
         for (String node : nodes) {
             HostAndPort hostAndPort = HostAndPort.fromString(node);
-            DiscoveryNode discoveryNode = new DiscoveryNode(node, hostAndPort, Version.CURRENT);
-            addMember(new MemberState(discoveryNode, MemberState.Type.ACTIVE));
+            if (!hostAndPort.equals(transportService.localAddress())) {
+                DiscoveryNode discoveryNode = new DiscoveryNode(node, hostAndPort, Version.CURRENT);
+                addMember(new MemberState(discoveryNode, MemberState.Type.ACTIVE));
+            }
         }
     }
 

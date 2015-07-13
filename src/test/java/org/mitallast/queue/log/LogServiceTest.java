@@ -19,7 +19,7 @@ public class LogServiceTest extends BaseIntegrationTest {
 
         LogService logService = node.injector().getInstance(LogService.class);
 
-        Log log = logService.openLog("test log");
+        Log log = logService.log("test log");
 
         log.appendEntry(TextLogEntry.builder()
             .setIndex(log.nextIndex())

@@ -17,7 +17,7 @@ public class RaftLog extends AbstractComponent {
     @Inject
     public RaftLog(Settings settings, LogService logService) throws IOException {
         super(settings);
-        this.log = logService.openLog("raft");
+        this.log = logService.log("raft");
     }
 
     public RaftLog(Settings settings, Log log) {

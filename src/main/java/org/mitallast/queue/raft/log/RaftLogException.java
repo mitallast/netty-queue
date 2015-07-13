@@ -2,9 +2,6 @@ package org.mitallast.queue.raft.log;
 
 public class RaftLogException extends RuntimeException {
 
-    public RaftLogException() {
-    }
-
     public RaftLogException(String message) {
         super(message);
     }

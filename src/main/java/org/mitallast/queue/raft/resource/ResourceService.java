@@ -2,6 +2,7 @@ package org.mitallast.queue.raft.resource;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.raft.Protocol;
+import org.mitallast.queue.raft.StateMachine;
 import org.mitallast.queue.raft.resource.manager.*;
 import org.mitallast.queue.raft.resource.result.BooleanResult;
 import org.mitallast.queue.raft.resource.result.StringListResult;
@@ -16,12 +17,10 @@ public class ResourceService {
     public static final String PATH_SEPARATOR = "/";
     protected final Protocol protocol;
     private final Map<String, Node> nodes = new ConcurrentHashMap<>();
-    private final ResourceRegistry registry;
 
     @Inject
-    public ResourceService(Protocol protocol, ResourceRegistry registry) {
+    public ResourceService(Protocol protocol) {
         this.protocol = protocol;
-        this.registry = registry;
     }
 
     protected Node node(String path) {
@@ -55,9 +54,18 @@ public class ResourceService {
     public <T extends Resource> CompletableFuture<T> create(String path, Class<? extends T> type) {
         return protocol.submit(CreateResource.builder()
             .setPath(path)
-            .setType(registry.lookup(type))
+            .setType(lookup(type))
             .build())
             .thenApply(id -> createResource(type, id.get()));
+    }
+
+    private Class<? extends StateMachine> lookup(Class<? extends Resource> resourceType) {
+        Stateful stateful = resourceType.getAnnotation(Stateful.class);
+        if (stateful != null) {
+            return stateful.value();
+        } else {
+            throw new IllegalArgumentException("unknown resource state: " + resourceType);
+        }
     }
 
     public CompletableFuture<Boolean> delete(String path) {

@@ -14,7 +14,6 @@ import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.compaction.*;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.resource.ResourceFactory;
-import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.manager.ResourceStateMachine;
 import org.mitallast.queue.raft.state.*;
@@ -45,7 +44,6 @@ public class RaftModule extends AbstractModule {
 
         // resource
         bind(ResourceFactory.class).asEagerSingleton();
-        bind(ResourceRegistry.class).asEagerSingleton();
 
         // state machine
         bind(ResourceStateMachine.class).asEagerSingleton();

@@ -7,8 +7,6 @@ import org.mitallast.queue.common.stream.Streamable;
 import java.io.IOException;
 
 public class SegmentDescriptor {
-    public final static long SIZE = Long.BYTES * 6;
-
     private final long id;
     private final long index;
     private final long version;

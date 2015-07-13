@@ -1,6 +1,5 @@
 package org.mitallast.queue.log.entry;
 
-import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 
@@ -19,7 +18,7 @@ public class TextLogEntry extends LogEntry<TextLogEntry> {
     }
 
     @Override
-    public EntryBuilder<TextLogEntry> toBuilder() {
+    public Builder toBuilder() {
         return new Builder().from(this);
     }
 

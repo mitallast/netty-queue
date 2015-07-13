@@ -10,6 +10,7 @@ import org.mitallast.queue.raft.Filter;
 import org.mitallast.queue.raft.StateMachine;
 import org.mitallast.queue.raft.log.compaction.Compaction;
 import org.mitallast.queue.raft.resource.ResourceCommand;
+import org.mitallast.queue.raft.resource.ResourceFactory;
 import org.mitallast.queue.raft.resource.ResourceOperation;
 import org.mitallast.queue.raft.resource.ResourceQuery;
 import org.mitallast.queue.raft.resource.result.BooleanResult;
@@ -22,13 +23,15 @@ import java.util.Map;
 
 public class ResourceStateMachine extends StateMachine {
     private static final String PATH_SEPARATOR = "/";
+    private final ResourceFactory resourceFactory;
     private final Map<Long, NodeHolder> nodes = new HashMap<>();
     private final Map<Long, StateMachine> resources = new HashMap<>();
     private NodeHolder node;
 
     @Inject
-    public ResourceStateMachine(Settings settings) {
+    public ResourceStateMachine(Settings settings, ResourceFactory resourceFactory) {
         super(settings);
+        this.resourceFactory = resourceFactory;
     }
 
     private void init(Commit commit) {
@@ -189,9 +192,7 @@ public class ResourceStateMachine extends StateMachine {
         if (node.resource == 0) {
             node.resource = commit.index();
             try {
-                StateMachine resource = commit.operation().type()
-                    .getConstructor(Settings.class)
-                    .newInstance(settings);
+                StateMachine resource = resourceFactory.create(commit.operation().type(), path);
                 resource.start();
                 nodes.put(node.resource, node);
                 resources.put(node.resource, resource);

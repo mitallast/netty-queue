@@ -1,6 +1,7 @@
 package org.mitallast.queue.raft.resource.structures;
 
 
+import com.google.inject.Inject;
 import org.mitallast.queue.common.builder.Entry;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.settings.Settings;
@@ -552,6 +553,7 @@ public class AsyncMap<K extends Streamable, V extends Streamable> extends Abstra
     public static class StateMachine<K extends Streamable, V extends Streamable> extends org.mitallast.queue.raft.StateMachine {
         private final Map<K, Commit<? extends KeyValueCommand<K, V>>> map = new HashMap<>();
 
+        @Inject
         public StateMachine(Settings settings) {
             super(settings);
         }

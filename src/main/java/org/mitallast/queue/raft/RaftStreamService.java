@@ -28,6 +28,7 @@ import org.mitallast.queue.raft.resource.result.StringListResult;
 import org.mitallast.queue.raft.resource.result.VoidResult;
 import org.mitallast.queue.raft.resource.structures.AsyncBoolean;
 import org.mitallast.queue.raft.resource.structures.AsyncMap;
+import org.mitallast.queue.raft.resource.structures.LogResource;
 import org.mitallast.queue.raft.util.StringValue;
 
 public class RaftStreamService {
@@ -41,6 +42,7 @@ public class RaftStreamService {
         registerAsyncMap(streamService);
         registerResource(streamService);
         registerExceptions(streamService);
+        registerLogResource(streamService);
     }
 
     private void registerActionEntry(StreamService streamService) {
@@ -132,5 +134,10 @@ public class RaftStreamService {
         streamService.registerClass(ReadException.Builder.class, ReadException::builder, ++index);
         streamService.registerClass(UnknownSessionException.Builder.class, UnknownSessionException::builder, ++index);
         streamService.registerClass(WriteException.Builder.class, WriteException::builder, ++index);
+    }
+
+    private void registerLogResource(StreamService streamService) {
+        int index = 10000;
+        streamService.registerClass(LogResource.AppendEntry.Builder.class, LogResource.AppendEntry::builder, ++index);
     }
 }

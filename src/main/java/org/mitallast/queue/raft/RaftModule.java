@@ -13,6 +13,7 @@ import org.mitallast.queue.raft.action.vote.VoteAction;
 import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.compaction.*;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
+import org.mitallast.queue.raft.resource.ResourceFactory;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.manager.ResourceStateMachine;
@@ -45,6 +46,7 @@ public class RaftModule extends AbstractModule {
         bind(RaftStateClient.class).to(RaftStateContext.class);
 
         // resource
+        bind(ResourceFactory.class).asEagerSingleton();
         bind(ResourceRegistry.class).asEagerSingleton();
 
         // state machine

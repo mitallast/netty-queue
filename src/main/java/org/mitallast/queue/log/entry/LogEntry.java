@@ -18,6 +18,9 @@ public abstract class LogEntry<E extends LogEntry<E>> implements Entry<E> {
         return index;
     }
 
+    @Override
+    public abstract Builder<? extends Builder, E> toBuilder();
+
     public static abstract class Builder<B extends Builder<B, E>, E extends LogEntry> implements EntryBuilder<E> {
         protected long index;
 

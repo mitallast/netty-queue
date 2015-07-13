@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.resource.structures;
 
+import com.google.inject.Inject;
 import org.mitallast.queue.common.builder.Entry;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.settings.Settings;
@@ -249,6 +250,7 @@ public class AsyncBoolean extends AbstractResource {
         private final AtomicBoolean value = new AtomicBoolean();
         private volatile long version;
 
+        @Inject
         public StateMachine(Settings settings) {
             super(settings);
         }

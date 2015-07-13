@@ -36,6 +36,7 @@ public class HttpSession implements RestSession {
         if (bytes >= 0) {
             httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes);
         }
+        httpResponse.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
         if (!httpRequest.protocolVersion().isKeepAliveDefault()) {
             boolean isKeepAlive = KEEP_ALIVE.equalsIgnoreCase(httpRequest.headers().get(HttpHeaderNames.CONNECTION));
             if (isKeepAlive) {
@@ -46,7 +47,7 @@ public class HttpSession implements RestSession {
                 return;
             }
         }
-        ctx.write(httpResponse, ctx.voidPromise());
+        ctx.writeAndFlush(httpResponse, ctx.voidPromise());
     }
 
     @Override
@@ -64,6 +65,6 @@ public class HttpSession implements RestSession {
         httpResponse.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, httpResponse.content().readableBytes());
         httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(httpResponse).addListener(ChannelFutureListener.CLOSE);
     }
 }

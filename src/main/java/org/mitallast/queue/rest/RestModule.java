@@ -1,6 +1,7 @@
 package org.mitallast.queue.rest;
 
 import com.google.inject.AbstractModule;
+import org.mitallast.queue.rest.action.ResourceAction;
 import org.mitallast.queue.rest.action.RestIndexAction;
 import org.mitallast.queue.rest.action.queue.*;
 import org.mitallast.queue.rest.action.queue.transactional.*;
@@ -35,5 +36,6 @@ public class RestModule extends AbstractModule {
         bind(RestQueuesStatsAction.class).asEagerSingleton();
 
         bind(RestIndexAction.class).asEagerSingleton();
+        bind(ResourceAction.class).asEagerSingleton();
     }
 }

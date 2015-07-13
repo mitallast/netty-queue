@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Queue Admin Page</title>
+
+    <link href="http://localhost:8080/resources/webjars/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+    <link href="dashboard.css" rel="stylesheet">
+    <script src="http://localhost:8080/resources/webjars/jquery/2.1.4/jquery.min.js"></script>
+    <script src="http://localhost:8080/resources/webjars/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="http://localhost:8080/resources/webjars/handlebars/3.0.0-1/handlebars.min.js"></script>
+    <script src="dashboard.js"></script>
+</head>
+
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Queue Admin Page</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#stats-view">Statistic</a></li>
+                <li><a href="#create-queue-view">Create queue</a></li>
+            </ul>
+            <!--
+            <form class="navbar-form navbar-right">
+                <input type="text" class="form-control" placeholder="Search...">
+            </form>
+            -->
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+            <ul class="nav nav-sidebar">
+                <li class="active"><a href="#stats-view">Statistic <span class="sr-only">(current)</span></a></li>
+                <li><a href="#create-queue-view">Create queue</a></li>
+            </ul>
+        </div>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"></div>
+    </div>
+</div>
+<script id="stats-view" type="text/x-handlebars-template">
+    <h1 class="page-header">Statistic</h1>
+    {{#if queues}}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>name</th>
+                <th>size</th>
+                <th>action</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each queues}}
+            <tr>
+                <td>{{name}}</td>
+                <td>{{size}}</td>
+                <td>
+                    <a href="#queue-view" data-queue="{{name}}" class="btn btn-xs btn-default">view</a>
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <p>No queues found</p>
+    {{/if}}
+</script>
+<script id="queue-view" type="text/x-handlebars-template">
+    <h1 class="page-header">Queue {{queue}}</h1>
+</script>
+<script id="create-queue-view" type="text/x-handlebars-template">
+    <h1 class="page-header">Create queue</h1>
+
+    <div class="row">
+        <form class="col-sm-9 col-md-5" id="create-queue-form">
+            <div class="form-group">
+                <label for="queue-name" class="control-label">Queue name</label>
+                <input type="text" class="form-control" id="queue-name" name="name" placeholder="name">
+            </div>
+            <button type="submit" class="btn btn-default">Submit</button>
+        </form>
+    </div>
+</script>
+</body>
+</html>

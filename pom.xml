@@ -25,6 +25,8 @@
         <leveldb.version>1.8</leveldb.version>
         <uuid.version>3.4</uuid.version>
         <trove.version>3.0.3</trove.version>
+        <webjars.bootstrap.version>3.3.5</webjars.bootstrap.version>
+        <webjars.jquery.version>2.1.4</webjars.jquery.version>
     </properties>
 
     <dependencies>
@@ -128,6 +130,30 @@
             <artifactId>trove4j</artifactId>
             <version>${trove.version}</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>bootstrap</artifactId>
+            <version>${webjars.bootstrap.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>jquery</artifactId>
+            <version>${webjars.jquery.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>handlebars</artifactId>
+            <version>3.0.0-1</version>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.webjars</groupId>
+                    <artifactId>jquery</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

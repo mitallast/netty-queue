@@ -1,20 +1,16 @@
 $(function () {
     var $main = $(".main");
     initActions(window.document);
-    statsView();
+    resourcesView();
 
     function initActions($context) {
-        $('a[href="#stats-view"]', $context).click(function (e) {
+        $('a[href="#resources-view"][data-path]', $context).click(function (e) {
             e.preventDefault();
-            statsView();
+            resourcesView($(this).data('path'));
         });
-        $('a[href="#create-queue-view"]', $context).click(function (e) {
+        $('a[href="#create-resource-view"]', $context).click(function (e) {
             e.preventDefault();
-            createQueueView();
-        });
-        $('a[href="#queue-view"][data-queue]', $context).click(function (e) {
-            e.preventDefault();
-            queueView($(this).data('queue'));
+            createResourceView();
         });
     }
 
@@ -23,43 +19,36 @@ $(function () {
         initActions($main);
     }
 
-    function statsView() {
-        var template = Handlebars.compile($("#stats-view").html());
-        $.getJSON("http://localhost:8080/_stats", function (data) {
+    function resourcesView(path) {
+        var template = Handlebars.compile($("#resources-view").html());
+        $.getJSON("http://localhost:8080/_raft/resource", {path: path}, function (data) {
+            if (path != "/") {
+                data.basepath = path;
+            }
             renderMain(template(data));
-        })
+        });
     }
 
-    function queueView(queue) {
-        var template = Handlebars.compile($("#queue-view").html());
-        renderMain(template({
-            queue: queue
-        }));
-    }
-
-    function createQueueView() {
-        var template = Handlebars.compile($("#create-queue-view").html());
-        renderMain(template());
-        var $form = $main.find("#create-queue-form");
-        $form.submit(function (e) {
+    function createResourceView() {
+        var template = Handlebars.compile($("#create-resource-view").html());
+        renderMain(template);
+        var $form = $main.find("#create-resource-form").submit(function (e) {
             e.preventDefault();
-            var $name = $form.find("input[name=name]");
-            var queue = $name.val();
-            $form.find(".has-error").removeClass("has-error");
-            if (!/\w+/.test(queue)) {
-                $name.parent(".form-group").addClass("has-error");
+            var path = $form.find("[name=path]").val();
+            if (!/\w+/.test(path)) {
                 return;
             }
             $.ajax({
-                url: "http://localhost:8080/" + queue,
                 method: "POST",
+                url: "http://localhost:8080/_raft/resource?" + $form.serialize(),
                 success: function (data) {
-                    statsView();
+                    console.log(data);
+                    resourcesView("/");
                 },
-                error: function (hxr, status, error) {
-                    console.log(hxr, status, error);
+                error: function (xhr, status, error) {
+                    console.log(xhr, status, error);
                 }
             })
-        })
+        });
     }
 });

@@ -24,23 +24,25 @@ public class RestGetResourcesAction extends BaseRestHandler {
     public RestGetResourcesAction(Settings settings, RestController controller, ResourceService resourceService) {
         super(settings);
         this.resourceService = resourceService;
-        controller.registerHandler(HttpMethod.GET, "/raft/resource", this);
+        controller.registerHandler(HttpMethod.GET, "/_raft/resource", this);
     }
 
     @Override
     public void handleRequest(RestRequest request, RestSession session) {
-        String path = request.hasParam("resource") ? request.param("resource").toString() : "/";
+        String path = request.hasParam("path") ? request.param("path").toString() : "/";
 
         resourceService.children(path).whenComplete((resources, error) -> {
             if (error == null) {
                 ByteBuf buffer = Unpooled.buffer();
                 try (XStreamBuilder builder = createBuilder(request, buffer)) {
+                    builder.writeStartObject();
                     builder.writeFieldName("resources");
                     builder.writeStartArray();
                     for (String resource : resources) {
                         builder.writeString(resource);
                     }
                     builder.writeEndArray();
+                    builder.writeEndObject();
                 } catch (IOException e) {
                     session.sendResponse(e);
                     return;

@@ -19,7 +19,7 @@ public class SegmentIndexService extends AbstractComponent {
 
     public SegmentIndex createIndex(SegmentDescriptor descriptor) throws IOException {
         File file = fileService.createIndexFile(descriptor);
-        if (file.exists()) {
+        if (!file.exists()) {
             if (!file.createNewFile()) {
                 throw new IOException("Error create io file");
             }

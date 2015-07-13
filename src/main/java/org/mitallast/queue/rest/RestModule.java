@@ -8,6 +8,7 @@ import org.mitallast.queue.rest.action.queue.transactional.*;
 import org.mitallast.queue.rest.action.queues.RestCreateQueueAction;
 import org.mitallast.queue.rest.action.queues.RestDeleteQueueAction;
 import org.mitallast.queue.rest.action.queues.RestQueuesStatsAction;
+import org.mitallast.queue.rest.action.raft.RestGetResourcesAction;
 import org.mitallast.queue.rest.transport.HttpServer;
 
 public class RestModule extends AbstractModule {
@@ -34,6 +35,8 @@ public class RestModule extends AbstractModule {
         bind(RestCreateQueueAction.class).asEagerSingleton();
         bind(RestDeleteQueueAction.class).asEagerSingleton();
         bind(RestQueuesStatsAction.class).asEagerSingleton();
+
+        bind(RestGetResourcesAction.class).asEagerSingleton();
 
         bind(RestIndexAction.class).asEagerSingleton();
         bind(ResourceAction.class).asEagerSingleton();

@@ -2,10 +2,10 @@ package org.mitallast.queue.raft.resource;
 
 import com.google.common.base.Preconditions;
 import org.mitallast.queue.raft.resource.manager.PathChildren;
+import org.mitallast.queue.raft.resource.result.StringListResult;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 public class Node {
     private final String path;
@@ -32,14 +32,11 @@ public class Node {
         return resourceService.node(this.path + path);
     }
 
-    public CompletableFuture<List<Node>> children() {
+    public CompletableFuture<List<String>> children() {
         return resourceService.protocol.submit(PathChildren.builder()
             .setPath(path)
             .build())
-            .thenApply(children ->
-                children.get().stream()
-                    .map(resourceService::node)
-                    .collect(Collectors.toList()));
+            .thenApply(StringListResult::get);
     }
 
     public CompletableFuture<Boolean> exists() {

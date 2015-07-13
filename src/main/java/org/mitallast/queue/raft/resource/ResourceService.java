@@ -2,13 +2,12 @@ package org.mitallast.queue.raft.resource;
 
 import com.google.inject.Inject;
 import org.mitallast.queue.raft.Protocol;
-import org.mitallast.queue.raft.resource.manager.CreatePath;
-import org.mitallast.queue.raft.resource.manager.CreateResource;
-import org.mitallast.queue.raft.resource.manager.DeletePath;
-import org.mitallast.queue.raft.resource.manager.PathExists;
+import org.mitallast.queue.raft.resource.manager.*;
 import org.mitallast.queue.raft.resource.result.BooleanResult;
+import org.mitallast.queue.raft.resource.result.StringListResult;
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,7 +24,7 @@ public class ResourceService {
         this.registry = registry;
     }
 
-    public Node node(String path) {
+    protected Node node(String path) {
         if (path == null)
             throw new NullPointerException("path cannot be null");
         if (!path.startsWith(PATH_SEPARATOR))
@@ -44,6 +43,13 @@ public class ResourceService {
             .setPath(path)
             .build())
             .thenApply(result -> node(path));
+    }
+
+    public CompletableFuture<List<String>> children(String path) {
+        return protocol.submit(PathChildren.builder()
+            .setPath(path)
+            .build())
+            .thenApply(StringListResult::get);
     }
 
     public <T extends Resource> CompletableFuture<T> create(String path, Class<? extends T> type) {

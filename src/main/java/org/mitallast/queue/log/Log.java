@@ -78,7 +78,7 @@ public class Log extends AbstractComponent {
         return segment != null && segment.containsEntry(index);
     }
 
-    public Log skip(long entries) throws IOException {
+    public void skip(long entries) throws IOException {
         Segment segment = segmentManager.currentSegment();
         while (segment.length() + entries > Integer.MAX_VALUE) {
             int skip = Integer.MAX_VALUE - segment.length();
@@ -87,13 +87,12 @@ public class Log extends AbstractComponent {
             segment = segmentManager.nextSegment();
         }
         segment.skip(entries);
-        return this;
     }
 
-    public Log truncate(long index) throws IOException {
+    public void truncate(long index) throws IOException {
         checkIndex(index);
         if (lastIndex() == index)
-            return this;
+            return;
 
         for (Segment segment : segmentManager.segments()) {
             if (segment.containsIndex(index)) {
@@ -102,7 +101,6 @@ public class Log extends AbstractComponent {
                 segmentManager.remove(segment);
             }
         }
-        return this;
     }
 
     public void flush() throws IOException {

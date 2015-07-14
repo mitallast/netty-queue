@@ -11,6 +11,7 @@ import org.mitallast.queue.raft.action.query.QueryAction;
 import org.mitallast.queue.raft.action.register.RegisterAction;
 import org.mitallast.queue.raft.action.vote.VoteAction;
 import org.mitallast.queue.raft.log.RaftLog;
+import org.mitallast.queue.raft.log.SegmentRaftLog;
 import org.mitallast.queue.raft.log.compaction.*;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.resource.ResourceFactory;
@@ -26,7 +27,8 @@ public class RaftModule extends AbstractModule {
         bind(RaftStreamService.class).asEagerSingleton();
 
         // log
-        bind(RaftLog.class).asEagerSingleton();
+        bind(SegmentRaftLog.class).asEagerSingleton();
+        bind(RaftLog.class).to(SegmentRaftLog.class);
         bind(Compactor.class).asEagerSingleton();
         install(new FactoryModuleBuilder()
             .implement(MinorCompaction.class, MinorCompaction.class)

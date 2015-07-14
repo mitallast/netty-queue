@@ -140,7 +140,8 @@ public class PassiveState extends AbstractState {
             for (RaftLogEntry entry : request.entries()) {
                 // If the entry index is greater than the last log index, skip missing entries.
                 if (!context.getLog().containsIndex(entry.index())) {
-                    context.getLog().skip(entry.index() - context.getLog().lastIndex() - 1).appendEntry(entry);
+                    context.getLog().skip(entry.index() - context.getLog().lastIndex() - 1);
+                    context.getLog().appendEntry(entry);
                     logger.debug("appended {} to log at index {}", entry, entry.index());
                 } else {
                     // Compare the term of the received entry with the matching entry in the log.
@@ -155,7 +156,8 @@ public class PassiveState extends AbstractState {
                             logger.debug("appended {} to log at index {}", entry, entry.index());
                         }
                     } else {
-                        context.getLog().truncate(entry.index() - 1).appendEntry(entry);
+                        context.getLog().truncate(entry.index() - 1);
+                        context.getLog().appendEntry(entry);
                         logger.debug("appended {} to log at index {}", entry, entry.index());
                     }
                 }

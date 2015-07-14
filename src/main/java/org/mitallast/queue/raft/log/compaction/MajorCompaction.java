@@ -7,7 +7,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.log.Segment;
 import org.mitallast.queue.log.SegmentDescriptor;
 import org.mitallast.queue.log.SegmentManager;
-import org.mitallast.queue.raft.log.RaftLog;
+import org.mitallast.queue.raft.log.SegmentRaftLog;
 import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -28,7 +28,7 @@ public class MajorCompaction extends Compaction {
         Settings settings,
         ExecutionContext executionContext,
         EntryFilter filter,
-        RaftLog raftLog,
+        SegmentRaftLog raftLog,
         @Assisted long index
     ) {
         super(settings, index);

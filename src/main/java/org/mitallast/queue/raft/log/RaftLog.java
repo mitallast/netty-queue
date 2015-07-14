@@ -1,89 +1,36 @@
 package org.mitallast.queue.raft.log;
 
-import com.google.inject.Inject;
-import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.settings.Settings;
-import org.mitallast.queue.log.Log;
-import org.mitallast.queue.log.LogService;
-import org.mitallast.queue.log.SegmentManager;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 
 import java.io.IOException;
 
-public class RaftLog extends AbstractComponent {
+public interface RaftLog {
 
-    private final Log log;
+    boolean isEmpty();
 
-    @Inject
-    public RaftLog(Settings settings, LogService logService) throws IOException {
-        super(settings);
-        this.log = logService.log("raft");
-    }
+    long size();
 
-    public RaftLog(Settings settings, Log log) {
-        super(settings);
-        this.log = log;
-    }
+    long length();
 
-    public SegmentManager segmentManager() {
-        return log.segmentManager();
-    }
+    long firstIndex();
 
-    public boolean isEmpty() {
-        return log.isEmpty();
-    }
+    long nextIndex();
 
-    public long size() {
-        return log.size();
-    }
+    long lastIndex();
 
-    public long length() {
-        return log.length();
-    }
+    long appendEntry(RaftLogEntry entry) throws IOException;
 
-    public long firstIndex() {
-        return log.firstIndex();
-    }
+    <T extends RaftLogEntry> T getEntry(long index) throws IOException;
 
-    public long nextIndex() {
-        return log.nextIndex();
-    }
+    boolean containsIndex(long index);
 
-    public long lastIndex() {
-        return log.lastIndex();
-    }
+    boolean containsEntry(long index) throws IOException;
 
-    public long appendEntry(RaftLogEntry entry) throws IOException {
-        return log.appendEntry(entry);
-    }
+    void skip(long entries) throws IOException;
 
-    public <T extends RaftLogEntry> T getEntry(long index) throws IOException {
-        return log.getEntry(index);
-    }
+    void truncate(long index) throws IOException;
 
-    public boolean containsIndex(long index) {
-        return log.containsIndex(index);
-    }
+    void flush() throws IOException;
 
-    public boolean containsEntry(long index) throws IOException {
-        return log.containsEntry(index);
-    }
-
-    public RaftLog skip(long entries) throws IOException {
-        log.skip(entries);
-        return this;
-    }
-
-    public RaftLog truncate(long index) throws IOException {
-        log.truncate(index);
-        return this;
-    }
-
-    public void flush() throws IOException {
-        log.flush();
-    }
-
-    public void delete() throws IOException {
-        log.delete();
-    }
+    void delete() throws IOException;
 }

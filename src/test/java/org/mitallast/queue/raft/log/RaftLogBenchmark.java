@@ -35,7 +35,7 @@ public class RaftLogBenchmark extends BaseTest {
         segmentManager = new SegmentManager(ImmutableSettings.EMPTY, descriptorService, segmentService);
         segmentManager.start();
         Log log = new Log(ImmutableSettings.EMPTY, segmentManager);
-        raftLog = new RaftLog(ImmutableSettings.EMPTY, log);
+        raftLog = new SegmentRaftLog(ImmutableSettings.EMPTY, log);
     }
 
     @After

@@ -8,16 +8,6 @@ public interface RaftLog {
 
     boolean isEmpty();
 
-    /**
-     * @return size in bytes
-     */
-    long size();
-
-    /**
-     * @return log entries count
-     */
-    long length();
-
     long firstIndex();
 
     long nextIndex();

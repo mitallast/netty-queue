@@ -32,10 +32,6 @@ public class SegmentRaftLog extends AbstractComponent implements RaftLog {
         return log.isEmpty();
     }
 
-    public long size() {
-        return log.size();
-    }
-
     public long length() {
         return log.length();
     }

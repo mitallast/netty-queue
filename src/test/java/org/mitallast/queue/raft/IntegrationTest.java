@@ -48,8 +48,6 @@ public class IntegrationTest extends BaseIntegrationTest {
             RaftLog log = node1.injector().getInstance(RaftLog.class);
             logger.info("log first index {}", log.firstIndex());
             logger.info("log last index {}", log.lastIndex());
-            logger.info("log size {}", log.size());
-            logger.info("log length {}", log.length());
             for (long i = log.firstIndex(); i < log.lastIndex(); i++) {
                 try {
                     RaftLogEntry entry = log.getEntry(i);

@@ -742,7 +742,7 @@ public class LeaderState extends ActiveState {
                     // If the log is empty then send an empty commit.
                     // If the next index hasn't yet been set then we send an empty commit first.
                     // If the next index is greater than the last index then send an empty commit.
-                    if (context.getLog().isEmpty() || state.getNextIndex() > context.getLog().lastIndex()) {
+                    if (state.getNextIndex() > context.getLog().lastIndex()) {
                         emptyCommit();
                     } else {
                         entriesCommit();
@@ -790,12 +790,11 @@ public class LeaderState extends ActiveState {
             /**
              * Performs an empty commit.
              */
-            @SuppressWarnings("unchecked")
             private void emptyCommit() throws IOException {
                 executionContext.checkThread();
                 long prevIndex = getPrevIndex();
                 RaftLogEntry prevEntry = getPrevEntry(prevIndex);
-                commit(prevIndex, prevEntry, Collections.EMPTY_LIST);
+                commit(prevIndex, prevEntry, Collections.emptyList());
             }
 
             /**

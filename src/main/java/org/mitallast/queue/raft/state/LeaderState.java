@@ -772,19 +772,11 @@ public class LeaderState extends ActiveState {
             /**
              * Gets a list of entries to send.
              */
-            @SuppressWarnings("unchecked")
             private List<RaftLogEntry> getEntries(long prevIndex) throws IOException {
                 executionContext.checkThread();
-                long index;
-                if (context.getLog().isEmpty()) {
-                    return Collections.EMPTY_LIST;
-                } else if (prevIndex != 0) {
-                    index = prevIndex + 1;
-                } else {
-                    index = context.getLog().firstIndex();
-                }
+                long index = Math.max(context.getLog().firstIndex(), prevIndex + 1);
 
-                List<RaftLogEntry> entries = new ArrayList<>(1024);
+                List<RaftLogEntry> entries = new ArrayList<>();
                 while (index <= context.getLog().lastIndex()) {
                     RaftLogEntry entry = context.getLog().getEntry(index);
                     if (entry != null) {

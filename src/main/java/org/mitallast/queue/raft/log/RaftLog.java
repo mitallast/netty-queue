@@ -6,8 +6,6 @@ import java.io.IOException;
 
 public interface RaftLog {
 
-    boolean isEmpty();
-
     long firstIndex();
 
     long nextIndex();

@@ -42,10 +42,21 @@ public class RaftLogTest extends BaseTest {
     }
 
     @Test
+    public void testInitialState() throws Exception {
+        Assert.assertEquals(0, raftLog.firstIndex());
+        Assert.assertEquals(1, raftLog.nextIndex());
+        Assert.assertEquals(0, raftLog.lastIndex());
+    }
+
+    @Test
     public void testAppend() throws Exception {
         RaftLogEntry[] entries = generator.generate(max());
+        int index = 0;
         for (RaftLogEntry entry : entries) {
+            Assert.assertEquals(index, raftLog.lastIndex());
             raftLog.appendEntry(entry);
+            index++;
+            Assert.assertEquals(index, raftLog.lastIndex());
         }
     }
 

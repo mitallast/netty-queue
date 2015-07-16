@@ -152,16 +152,8 @@ class FollowerState extends ActiveState {
 
     private List<RaftLogEntry> getEntries(long prevIndex) throws IOException {
         executionContext.checkThread();
-        long index;
-        if (context.getLog().isEmpty()) {
-            return Collections.emptyList();
-        } else if (prevIndex != 0) {
-            index = prevIndex + 1;
-        } else {
-            index = context.getLog().firstIndex();
-        }
-
-        List<RaftLogEntry> entries = new ArrayList<>(1024);
+        long index = Math.max(prevIndex + 1, context.getLog().firstIndex());
+        List<RaftLogEntry> entries = new ArrayList<>();
         while (index <= context.getLog().lastIndex()) {
             RaftLogEntry entry = context.getLog().getEntry(index);
             if (entry != null) {

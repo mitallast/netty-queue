@@ -100,22 +100,15 @@ public class PassiveState extends AbstractState {
 
     private AppendResponse doCheckPreviousEntry(AppendRequest request) throws IOException {
         executionContext.checkThread();
-        if (request.logIndex() != 0 && context.getLog().isEmpty()) {
-            logger.warn("rejected {}: previous index ({}) is greater than the local log's last index ({})", request, request.logIndex(), context.getLog().lastIndex());
+        long lastIndex = context.getLog().lastIndex();
+        if (request.logIndex() > lastIndex) {
+            logger.warn("rejected {}: previous index ({}) is greater than the local log's last index ({})", request, request.logIndex(), lastIndex);
             return AppendResponse.builder()
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
-                .setLogIndex(context.getLog().lastIndex())
-                .build();
-        } else if (request.logIndex() != 0 && context.getLog().lastIndex() != 0 && request.logIndex() > context.getLog().lastIndex()) {
-            logger.warn("rejected {}: previous index ({}) is greater than the local log's last index ({})", request, request.logIndex(), context.getLog().lastIndex());
-            return AppendResponse.builder()
-                .setTerm(context.getTerm())
-                .setSucceeded(false)
-                .setLogIndex(context.getLog().lastIndex())
+                .setLogIndex(lastIndex)
                 .build();
         }
-
         // If the previous entry term doesn't match the local previous term then reject the request.
         RaftLogEntry entry = context.getLog().getEntry(request.logIndex());
         if (entry == null || entry.term() != request.logTerm()) {
@@ -123,11 +116,10 @@ public class PassiveState extends AbstractState {
             return AppendResponse.builder()
                 .setTerm(context.getTerm())
                 .setSucceeded(false)
-                .setLogIndex(request.logIndex() <= context.getLog().lastIndex() ? request.logIndex() - 1 : context.getLog().lastIndex())
+                .setLogIndex(request.logIndex() <= lastIndex ? request.logIndex() - 1 : lastIndex)
                 .build();
-        } else {
-            return doAppendEntries(request);
         }
+        return doAppendEntries(request);
     }
 
     private AppendResponse doAppendEntries(AppendRequest request) throws IOException {

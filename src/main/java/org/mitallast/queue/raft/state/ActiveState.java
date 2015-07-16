@@ -124,32 +124,32 @@ abstract class ActiveState extends PassiveState {
 
     private boolean logUpToDate(long index, long term, ActionRequest request) throws IOException {
         executionContext.checkThread();
+
+        // Otherwise, load the last entry in the log. The last entry should be
+        // at least as up to date as the candidates entry and term.
+        long lastIndex = context.getLog().lastIndex();
         // If the log is empty then vote for the candidate.
-        if (context.getLog().isEmpty()) {
+        if (lastIndex == 0) {
             logger.info("accepted {}: candidate's log is up-to-date", request);
             return true;
-        } else {
-            // Otherwise, load the last entry in the log. The last entry should be
-            // at least as up to date as the candidates entry and term.
-            long lastIndex = context.getLog().lastIndex();
-            RaftLogEntry entry = context.getLog().getEntry(lastIndex);
-            if (entry == null) {
+        }
+        RaftLogEntry entry = context.getLog().getEntry(lastIndex);
+        if (entry == null) {
+            logger.info("accepted {}: candidate's log is up-to-date", request);
+            return true;
+        }
+
+        if (index != 0 && index >= lastIndex) {
+            if (term >= entry.term()) {
                 logger.info("accepted {}: candidate's log is up-to-date", request);
                 return true;
-            }
-
-            if (index != 0 && index >= lastIndex) {
-                if (term >= entry.term()) {
-                    logger.info("accepted {}: candidate's log is up-to-date", request);
-                    return true;
-                } else {
-                    logger.info("rejected {}: candidate's last log term ({}) is in conflict with local log ({})", request, term, entry.term());
-                    return false;
-                }
             } else {
-                logger.info("rejected {}: candidate's last log entry ({}) is at a lower index than the local log ({})", request, index, lastIndex);
+                logger.info("rejected {}: candidate's last log term ({}) is in conflict with local log ({})", request, term, entry.term());
                 return false;
             }
+        } else {
+            logger.info("rejected {}: candidate's last log entry ({}) is at a lower index than the local log ({})", request, index, lastIndex);
+            return false;
         }
     }
 

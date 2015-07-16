@@ -103,21 +103,16 @@ public class LeaderState extends ActiveState {
      */
     private void applyEntries(long index) throws IOException {
         executionContext.checkThread();
-        if (!context.getLog().isEmpty()) {
-            int count = 0;
-            for (long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex()); lastApplied <= index; lastApplied++) {
-                RaftLogEntry entry = context.getLog().getEntry(lastApplied);
-                if (entry != null) {
-                    context.getStateMachine().apply(entry).whenComplete((result, error) -> {
-                        executionContext.checkThread();
-                        if (error != null) {
-                            logger.warn("application error occurred: {}", error);
-                        }
-                    });
-                }
-                count++;
+        for (long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex()); lastApplied <= index; lastApplied++) {
+            RaftLogEntry entry = context.getLog().getEntry(lastApplied);
+            if (entry != null) {
+                context.getStateMachine().apply(entry).whenComplete((result, error) -> {
+                    executionContext.checkThread();
+                    if (error != null) {
+                        logger.warn("application error occurred: {}", error);
+                    }
+                });
             }
-            logger.debug("applied {} entries to log", count);
         }
     }
 

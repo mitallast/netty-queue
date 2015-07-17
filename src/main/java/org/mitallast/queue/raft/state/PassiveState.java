@@ -134,7 +134,7 @@ public class PassiveState extends AbstractState {
                 if (!context.getLog().containsIndex(entry.index())) {
                     context.getLog().skip(entry.index() - context.getLog().lastIndex() - 1);
                     context.getLog().appendEntry(entry);
-                    logger.debug("appended {} to log at index {}", entry, entry.index());
+                    logger.trace("appended {} to log at index {}", entry, entry.index());
                 } else {
                     // Compare the term of the received entry with the matching entry in the log.
                     RaftLogEntry match = context.getLog().getEntry(entry.index());
@@ -145,12 +145,12 @@ public class PassiveState extends AbstractState {
                             logger.warn("appended entry term does not match local log, removing incorrect entries");
                             context.getLog().truncate(entry.index() - 1);
                             context.getLog().appendEntry(entry);
-                            logger.debug("appended {} to log at index {}", entry, entry.index());
+                            logger.trace("appended {} to log at index {}", entry, entry.index());
                         }
                     } else {
                         context.getLog().truncate(entry.index() - 1);
                         context.getLog().appendEntry(entry);
-                        logger.debug("appended {} to log at index {}", entry, entry.index());
+                        logger.trace("appended {} to log at index {}", entry, entry.index());
                     }
                 }
             }

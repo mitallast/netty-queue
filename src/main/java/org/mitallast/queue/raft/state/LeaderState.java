@@ -198,7 +198,7 @@ public class LeaderState extends ActiveState {
         } catch (IOException e) {
             return Futures.completeExceptionally(e);
         }
-        logger.debug("appended entry to log at index {}", index);
+        logger.trace("appended entry to log at index {}", index);
 
 
         CompletableFuture<CommandResponse> future = Futures.future();

@@ -44,7 +44,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
     }
 
     private void setLastApplied(long lastApplied) {
-        logger.debug("last applied {}", lastApplied);
+        logger.trace("last applied {}", lastApplied);
         executionContext.checkThread();
         this.lastApplied = lastApplied;
         List<Runnable> queries = this.queries.remove(lastApplied);

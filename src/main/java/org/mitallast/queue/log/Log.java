@@ -56,7 +56,14 @@ public class Log extends AbstractComponent {
 
     public long appendEntry(LogEntry entry) throws IOException {
         checkRoll();
-        return segmentManager.currentSegment().appendEntry(entry);
+        while (true) {
+            try {
+                return segmentManager.currentSegment().appendEntry(entry);
+            } catch (IndexOutOfBoundsException e) {
+                logger.debug("index is full");
+                segmentManager.nextSegment();
+            }
+        }
     }
 
     public <T extends LogEntry> T getEntry(long index) throws IOException {

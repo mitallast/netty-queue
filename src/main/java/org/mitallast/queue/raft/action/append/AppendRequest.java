@@ -31,6 +31,10 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
         this.entries = entries;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public DiscoveryNode leader() {
         return leader;
     }
@@ -39,21 +43,17 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
         return term;
     }
 
-
     public long logIndex() {
         return logIndex;
     }
-
 
     public long logTerm() {
         return logTerm;
     }
 
-
     public long commitIndex() {
         return commitIndex;
     }
-
 
     public long globalIndex() {
         return globalIndex;
@@ -77,17 +77,13 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
             ", logTerm=" + logTerm +
             ", commitIndex=" + commitIndex +
             ", globalIndex=" + globalIndex +
-            ", entries=" + entries +
+                ", entries=" + entries.size() +
             '}';
     }
 
     @Override
     public Builder toBuilder() {
         return new Builder().from(this);
-    }
-
-    public static Builder builder() {
-        return new Builder();
     }
 
     public static class Builder implements EntryBuilder<AppendRequest> {

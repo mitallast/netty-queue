@@ -151,7 +151,7 @@ public abstract class StateMachine extends AbstractLifecycleComponent {
 
     @SuppressWarnings("unchecked")
     public <T extends Streamable> T apply(Commit<? extends Operation<T>> commit) {
-        logger.debug("apply {}", commit);
+        logger.trace("apply {}", commit);
         try {
             return (T) findOperation(commit.type()).invoke(this, commit);
         } catch (IllegalAccessException | InvocationTargetException e) {

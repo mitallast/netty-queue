@@ -11,6 +11,7 @@ import java.util.concurrent.*;
 
 public class ExecutionContext extends AbstractLifecycleComponent {
     private final ScheduledExecutorService executorService;
+    private final Executor executor;
     private final Thread executorThread;
 
     @Inject
@@ -18,30 +19,73 @@ public class ExecutionContext extends AbstractLifecycleComponent {
         super(settings);
         executorService = NamedExecutors.newScheduledSingleThreadPool("raft");
         executorThread = executorService.submit(Thread::currentThread).get();
+        executor = command -> executorService.execute(() -> {
+            try {
+                command.run();
+            } catch (Throwable e) {
+                logger.error("unexpected error", e);
+                throw new RuntimeException(e);
+            }
+        });
     }
 
-    public ScheduledExecutorService executor() {
-        return executorService;
+    public Executor executor() {
+        return executor;
     }
 
     public void execute(Runnable runnable) {
-        executorService.execute(runnable);
+        executorService.execute(() -> {
+            try {
+                runnable.run();
+            } catch (Throwable e) {
+                logger.error("unexpected error", e);
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public <T> Future<T> submit(Callable<T> callable) {
-        return executorService.submit(callable);
+        return executorService.submit(() -> {
+            try {
+                return callable.call();
+            } catch (Throwable e) {
+                logger.error("unexpected error", e);
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public Future submit(Runnable runnable) {
-        return executorService.submit(runnable);
+        return executorService.submit(() -> {
+            try {
+                runnable.run();
+            } catch (Throwable e) {
+                logger.error("unexpected error", e);
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public ScheduledFuture<?> schedule(Runnable runnable, long delay, TimeUnit unit) {
-        return executorService.schedule(runnable, delay, unit);
+        return executorService.schedule(() -> {
+            try {
+                runnable.run();
+            } catch (Throwable e) {
+                logger.error("unexpected error", e);
+                throw new RuntimeException(e);
+            }
+        }, delay, unit);
     }
 
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
-        return executorService.scheduleAtFixedRate(runnable, initialDelay, period, unit);
+        return executorService.scheduleAtFixedRate(() -> {
+            try {
+                runnable.run();
+            } catch (Throwable e) {
+                logger.error("unexpected error", e);
+                throw new RuntimeException(e);
+            }
+        }, initialDelay, period, unit);
     }
 
     public void checkThread() {

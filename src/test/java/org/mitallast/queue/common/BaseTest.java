@@ -2,6 +2,7 @@ package org.mitallast.queue.common;
 
 import com.google.common.collect.ImmutableList;
 import io.netty.buffer.ByteBuf;
+import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
@@ -16,9 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class BaseTest {
 
@@ -28,6 +27,15 @@ public class BaseTest {
 
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
+
+    private ExecutorService executorService = Executors.newCachedThreadPool(NamedExecutors.newThreadFactory("test"));
+
+    @After
+    public void tearDownExecutorService() throws Exception {
+        executorService.shutdownNow();
+        executorService.awaitTermination(1, TimeUnit.MINUTES);
+        assert executorService.isTerminated();
+    }
 
     protected int concurrency() {
         return Runtime.getRuntime().availableProcessors();
@@ -46,61 +54,49 @@ public class BaseTest {
     }
 
     protected void executeConcurrent(Task task) throws Exception {
-        final ExecutorService executorService = NamedExecutors.newFixedThreadPool("test", concurrency());
-        try {
-            final List<Future> futures = new ArrayList<>(concurrency());
-            for (int i = 0; i < concurrency(); i++) {
-                Future future = executorService.submit(() -> {
-                    try {
-                        task.execute();
-                    } catch (Exception e) {
-                        assert false : e;
-                    }
-                });
-                futures.add(future);
-            }
-            for (Future future : futures) {
-                future.get();
-            }
-        } finally {
-            executorService.shutdown();
-            executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        final List<Future> futures = new ArrayList<>(concurrency());
+        for (int i = 0; i < concurrency(); i++) {
+            Future future = executorService.submit(() -> {
+                try {
+                    task.execute();
+                } catch (Exception e) {
+                    assert false : e;
+                }
+            });
+            futures.add(future);
+        }
+        for (Future future : futures) {
+            future.get();
         }
     }
 
     protected void executeConcurrent(ThreadTask task) throws Exception {
-        final ExecutorService executorService = NamedExecutors.newFixedThreadPool("test", concurrency());
-        try {
-            final List<Future> futures = new ArrayList<>(concurrency());
-            for (int i = 0; i < concurrency(); i++) {
-                final int thread = i;
-                Future future = executorService.submit(() -> {
-                    try {
-                        task.execute(thread, concurrency());
-                    } catch (Exception e) {
-                        assert false : e;
-                    }
-                });
-                futures.add(future);
-            }
-            for (Future future : futures) {
-                future.get();
-            }
-        } finally {
-            executorService.shutdown();
-            executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        final List<Future> futures = new ArrayList<>(concurrency());
+        for (int i = 0; i < concurrency(); i++) {
+            final int thread = i;
+            Future future = executorService.submit(() -> {
+                try {
+                    task.execute(thread, concurrency());
+                } catch (Exception e) {
+                    assert false : e;
+                }
+            });
+            futures.add(future);
+        }
+        for (Future future : futures) {
+            future.get();
         }
     }
 
-    protected void executeAsync(Task task) throws Exception {
-        Thread thread = new Thread(() -> {
+    protected <T> Future<T> submit(Callable<T> callable) throws Exception {
+        return executorService.submit(() -> {
             try {
-                task.execute();
+                return callable.call();
             } catch (Exception e) {
                 assert false : e;
+                throw e;
             }
         });
-        thread.start();
     }
 
     protected void printQps(String metric, long total, long start, long end) {

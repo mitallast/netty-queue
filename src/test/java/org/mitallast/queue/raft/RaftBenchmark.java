@@ -2,26 +2,18 @@ package org.mitallast.queue.raft;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.BaseIntegrationTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.log.LogEntryGenerator;
 import org.mitallast.queue.log.entry.LogEntry;
-import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.structures.AsyncBoolean;
 import org.mitallast.queue.raft.resource.structures.LogResource;
-import org.mitallast.queue.raft.state.RaftStateContext;
-import org.mitallast.queue.raft.state.RaftStateType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
-public class RaftBenchmark extends BaseIntegrationTest {
+public class RaftBenchmark extends BaseRaftTest {
 
-    private InternalNode[] nodes;
-    private InternalNode leader = null;
     private ResourceService resourceService;
     private AsyncBoolean asyncBoolean;
 
@@ -31,41 +23,9 @@ public class RaftBenchmark extends BaseIntegrationTest {
     }
 
     @Before
-    public void setUp() throws Exception {
-        int[] ports = new int[3];
-        InternalNode[] nodes = new InternalNode[ports.length];
-
-        StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < ports.length; i++) {
-            ports[i] = random.nextInt(10000) + 20000;
-            if (i > 0) {
-                buffer.append(", ");
-            }
-            buffer.append("127.0.0.1:").append(ports[i]);
-        }
-        String nodesString = buffer.toString();
-
-        for (int i = 0; i < nodes.length; i++) {
-            nodes[i] = createNode(ImmutableSettings.builder()
-                .put(settings())
-                .put("transport.port", ports[i])
-                .put("raft.cluster.nodes", nodesString)
-                .build());
-        }
-        // await for leader election
-        do {
-            Thread.sleep(TimeUnit.SECONDS.toMillis(5));
-            for (InternalNode node : nodes) {
-                if (node.injector().getInstance(RaftStateContext.class).getState() == RaftStateType.LEADER) {
-                    leader = node;
-                    resourceService = leader.injector().getInstance(ResourceService.class);
-                    asyncBoolean = resourceService.create("boolean", AsyncBoolean.class).get();
-                    Thread.sleep(TimeUnit.SECONDS.toMillis(2));
-                    break;
-                }
-            }
-        } while (leader == null);
-
+    public void setUpResource() throws Exception {
+        resourceService = leader.injector().getInstance(ResourceService.class);
+        asyncBoolean = resourceService.create("boolean", AsyncBoolean.class).get();
     }
 
     @Test

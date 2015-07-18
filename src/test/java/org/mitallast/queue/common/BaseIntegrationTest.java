@@ -8,13 +8,13 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class BaseIntegrationTest extends BaseTest {
 
     private static int nodeCounter = 0;
-    private List<InternalNode> nodes = new ArrayList<>();
+    private List<InternalNode> nodes = new CopyOnWriteArrayList<>();
 
     protected InternalNode createNode() throws Exception {
         return createNode(settings());

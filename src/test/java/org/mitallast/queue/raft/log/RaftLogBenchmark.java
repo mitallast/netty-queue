@@ -47,6 +47,10 @@ public class RaftLogBenchmark extends BaseTest {
     @Test
     public void testAppend() throws Exception {
         RaftLogEntry[] entries = generator.generate(max());
+        for (RaftLogEntry entry : entries) {
+            raftLog.appendEntry(entry);
+        }
+        entries = generator.generate(max(), max());
         long start = System.currentTimeMillis();
         for (RaftLogEntry entry : entries) {
             raftLog.appendEntry(entry);

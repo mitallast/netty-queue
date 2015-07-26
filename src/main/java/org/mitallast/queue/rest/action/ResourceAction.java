@@ -47,7 +47,7 @@ public class ResourceAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, RestSession session) {
-        logger.info("try find {}", request.getQueryPath());
+        logger.trace("try find {}", request.getQueryPath());
         final InputStream resourceStream;
         if (request.getQueryPath().startsWith("/resources/webjars/")) {
             resourceStream = getClass().getResourceAsStream("/META-INF" + request.getQueryPath());

@@ -56,7 +56,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         this.transportService = transportService;
         this.clusterState = clusterState;
         this.executionContext = executionContext;
-        this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueSeconds(1)).millis();
+        this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueMinutes(1)).millis();
     }
 
     public DiscoveryNode getLeader() {

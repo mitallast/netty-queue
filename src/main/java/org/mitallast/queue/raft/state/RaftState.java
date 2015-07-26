@@ -35,7 +35,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         this.stateMachine = stateMachine;
         this.members = members;
         this.executionContext = executionContext;
-        this.sessionTimeout = componentSettings.getAsTime("session_timeout", TimeValue.timeValueSeconds(5)).millis();
+        this.sessionTimeout = componentSettings.getAsTime("session_timeout", TimeValue.timeValueMinutes(5)).millis();
     }
 
     public long getLastApplied() {

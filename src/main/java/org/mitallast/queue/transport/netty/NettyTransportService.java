@@ -22,7 +22,9 @@ import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -285,8 +287,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     channels[i] = channelFutures[i]
                         .awaitUninterruptibly()
                         .channel();
-                    channels[i].attr(responseMapAttr).set(new ConcurrentHashMap<>());
-                    channels[i].attr(flushCounterAttr).set(new AtomicLong());
+                    initChannel(channels[i]);
                 } catch (Throwable e) {
                     logger.error("error connect to {}", address, e);
                     if (reconnectScheduled.compareAndSet(false, true)) {
@@ -304,18 +305,29 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             for (int i = 0; i < channels.length; i++) {
                 if (channels[i] == null || !channels[i].isOpen()) {
                     try {
-                        Channel newChannel = connect(address)
+                        channels[i] = connect(address)
                             .awaitUninterruptibly()
                             .channel();
-                        newChannel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
-                        newChannel.attr(flushCounterAttr).set(new AtomicLong());
-                        channels[i] = newChannel;
+                        initChannel(channels[i]);
                     } catch (Throwable e) {
                         logger.error("error reconnect to {}", address, e);
                     }
                 }
             }
             reconnectScheduled.set(false);
+        }
+
+        private void initChannel(Channel newChannel) {
+            newChannel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
+            newChannel.attr(flushCounterAttr).set(new AtomicLong());
+            newChannel.closeFuture().addListener(future -> {
+                ConcurrentMap<Long, CompletableFuture> futures = newChannel.attr(responseMapAttr).get();
+                Iterator<Map.Entry<Long, CompletableFuture>> iterator = futures.entrySet().iterator();
+                while (iterator.hasNext()) {
+                    iterator.next().getValue().completeExceptionally(new IOException("channel is closed"));
+                    iterator.remove();
+                }
+            });
         }
 
         @Override

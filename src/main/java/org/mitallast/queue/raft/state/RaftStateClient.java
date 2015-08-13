@@ -148,26 +148,51 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
                 setLeader(null);
                 future.completeExceptionally(new IllegalStateException("unknown leader"));
             } else {
-                // TODO: This should retry on timeouts with the same request ID.
-                long requestId = ++request;
                 CommandRequest request = CommandRequest.builder()
                     .setSession(getSession())
-                    .setRequest(requestId)
+                    .setRequest(++this.request)
                     .setResponse(getResponse())
                     .setCommand(command)
                     .build();
 
-                transportService.client(member.address()).<CommandRequest, CommandResponse>send(request).whenCompleteAsync((response, error) -> {
-                    if (error == null) {
-                        future.complete((R) response.result());
-                        setResponse(Math.max(getResponse(), requestId));
-                    } else {
-                        future.completeExceptionally(error);
-                    }
-                }, executionContext.executor());
+                submit(request, future);
             }
         });
         return future;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <R extends Streamable> void submit(CommandRequest request, CompletableFuture<R> future) {
+        DiscoveryNode member;
+        try {
+            member = selectMember();
+        } catch (IllegalStateException e) {
+            future.completeExceptionally(e);
+            return;
+        }
+        if (member == null) {
+            setLeader(null);
+            future.completeExceptionally(new IllegalStateException("unknown leader"));
+        } else {
+            CompletableFuture<CommandResponse> transportFuture = transportService.client(member.address()).<CommandRequest, CommandResponse>send(request);
+            // retry
+            ScheduledFuture<?> scheduledFuture = executionContext.schedule(() -> {
+                transportFuture.cancel(false);
+                if (!future.isCancelled()) {
+                    submit(request, future);
+                }
+            }, 1, TimeUnit.MINUTES);
+            // response handler
+            transportFuture.whenCompleteAsync((response, error) -> {
+                scheduledFuture.cancel(false);
+                if (error == null) {
+                    future.complete((R) response.result());
+                    setResponse(Math.max(getResponse(), request.request()));
+                } else {
+                    future.completeExceptionally(error);
+                }
+            }, executionContext.executor());
+        }
     }
 
     /**

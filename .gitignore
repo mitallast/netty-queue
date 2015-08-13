@@ -1,4 +1,5 @@
-target
+target/
 .idea
 *.iml
 data/*
+doc/images

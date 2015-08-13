@@ -1,0 +1,40 @@
+= Raft Command
+
+
+Server sequence diagram:
+
+[plantuml, raft-command-server, svg]
+....
+skinparam monochrome true
+
+CommandAction --> LeaderState: command()
+Command --> LeaderState: command()
+LeaderState --> Log: appendEntry(Command)
+LeaderState --> Replicator: commit(Command)
+Replicator --> Replicator: replicate(Command)
+Replicator --> LeaderState: whenComplete(Command)
+LeaderState --> RaftState: apply(Command)
+RaftState --> ResourceStateMachine: apply(Command)
+ResourceStateMachine --> ResourceStateMachine: execute command
+ResourceStateMachine --> RaftState: future.complete();
+RaftState --> RaftSession: sessions.put(request, result)
+RaftState --> LeaderState: future.complete()
+CommandAction --> Transport: future.complete();
+....
+
+Client sequence diagram:
+
+
+[plantuml, raft-command-client, svg]
+....
+skinparam monochrome true
+
+Client --> Node: get resource service
+Node --> Client: return ResourceService
+Client --> ResourceService: create(path)
+ResourceService --> RaftStateClient: submit(PathExists(path))
+RaftStateClient --> RaftStateClient: selectMember()
+RaftStateClient --> Transport: send(CommandRequest)
+Transport --> RaftStateClient: future.complete()
+RaftStateClient --> Client: future.complete()
+....

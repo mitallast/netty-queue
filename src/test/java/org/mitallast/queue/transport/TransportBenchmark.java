@@ -30,11 +30,8 @@ public class TransportBenchmark extends BaseQueueTest {
             .build();
     }
 
-    @Override
     @Before
     public void setUp() throws Exception {
-        super.setUp();
-
         TransportService transportService = node().injector().getInstance(TransportService.class);
         HostAndPort address = transportService.localAddress();
         // hack for not equals local node

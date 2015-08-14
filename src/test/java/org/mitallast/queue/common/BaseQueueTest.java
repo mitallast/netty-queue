@@ -17,7 +17,7 @@ public abstract class BaseQueueTest extends BaseIntegrationTest {
     private String queueName;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUpNode() throws Exception {
         queueName = randomUUID().toString();
         node = createNode();
     }

@@ -138,7 +138,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
 
             DiscoveryNode member;
             try {
-                member = selectMember();
+                member = selectLeader();
             } catch (IllegalStateException e) {
                 future.completeExceptionally(e);
                 return;
@@ -165,7 +165,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     private <R extends Streamable> void submit(CommandRequest request, CompletableFuture<R> future) {
         DiscoveryNode member;
         try {
-            member = selectMember();
+            member = selectLeader();
         } catch (IllegalStateException e) {
             future.completeExceptionally(e);
             return;
@@ -193,16 +193,6 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
                 }
             }, executionContext.executor());
         }
-    }
-
-    /**
-     * Selects the member to which to send the given command.
-     */
-    protected DiscoveryNode selectMember() {
-        executionContext.checkThread();
-        if (leader == null)
-            throw new IllegalStateException("unknown leader");
-        return leader;
     }
 
     /**
@@ -249,11 +239,28 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         return future;
     }
 
+    /**
+     * Selects leader to which to send the given command.
+     *
+     * @throws IllegalStateException if no leader found
+     */
+    protected DiscoveryNode selectLeader() {
+        executionContext.checkThread();
+        if (leader == null)
+            throw new IllegalStateException("unknown leader");
+        return leader;
+    }
+
+    /**
+     * Selects the node to which to send the given command.
+     *
+     * @throws IllegalStateException if no leader found
+     */
     protected DiscoveryNode selectMember(Query<?> query) {
         executionContext.checkThread();
         ConsistencyLevel level = query.consistency();
         if (level.isLeaderRequired()) {
-            return transportService.localNode();
+            return selectLeader();
         } else {
             ImmutableList<DiscoveryNode> nodes = clusterState.nodes();
             return nodes.get(random.nextInt(nodes.size()));

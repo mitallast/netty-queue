@@ -371,7 +371,7 @@ public class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setSession(sessionId)
-                                .setMembers(context.getMembers().nodes())
+                                .setMembers(context.clusterService().nodes())
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -434,7 +434,7 @@ public class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setVersion(version)
-                                .setMembers(context.getMembers().nodes())
+                                .setMembers(context.clusterService().nodes())
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -584,7 +584,7 @@ public class LeaderState extends ActiveState {
         private volatile int quorumIndex;
 
         private Replicator() {
-            context.getMembers().getMembers().stream()
+            context.clusterService().getMembers().stream()
                 .filter(state -> !state.getNode().equals(transportService.localNode()))
                 .forEach(state -> {
                     replicas.add(new Replica(this.replicas.size(), state));

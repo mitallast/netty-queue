@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class RaftStateClient extends AbstractLifecycleComponent {
     protected final TransportService transportService;
-    protected final ClusterState clusterState;
+    protected final ClusterService clusterService;
     protected final ExecutionContext executionContext;
     private final AtomicBoolean keepAlive = new AtomicBoolean();
     private final Random random = new Random();
@@ -51,10 +51,10 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     private volatile ScheduledFuture<?> currentTimer;
     private volatile ScheduledFuture<?> registerTimer;
 
-    public RaftStateClient(Settings settings, TransportService transportService, ClusterState clusterState, ExecutionContext executionContext) {
+    public RaftStateClient(Settings settings, TransportService transportService, ClusterService clusterService, ExecutionContext executionContext) {
         super(settings);
         this.transportService = transportService;
-        this.clusterState = clusterState;
+        this.clusterService = clusterService;
         this.executionContext = executionContext;
         this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueMinutes(1)).millis();
     }
@@ -262,7 +262,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         if (level.isLeaderRequired()) {
             return selectLeader();
         } else {
-            ImmutableList<DiscoveryNode> nodes = clusterState.nodes();
+            ImmutableList<DiscoveryNode> nodes = clusterService.nodes();
             return nodes.get(random.nextInt(nodes.size()));
         }
     }
@@ -274,7 +274,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
 
     private CompletableFuture<Void> register(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        register(new ArrayList<>(clusterState.nodes())).whenComplete((result, error) -> {
+        register(new ArrayList<>(clusterService.nodes())).whenComplete((result, error) -> {
             if (error == null) {
                 future.complete(null);
             } else {
@@ -343,7 +343,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         executionContext.checkThread();
         if (keepAlive.compareAndSet(false, true)) {
             logger.debug("sending keep alive request");
-            keepAlive(new ArrayList<>(clusterState.nodes())).thenRun(() -> keepAlive.set(false));
+            keepAlive(new ArrayList<>(clusterService.nodes())).thenRun(() -> keepAlive.set(false));
         }
     }
 

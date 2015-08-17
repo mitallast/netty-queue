@@ -87,15 +87,15 @@ class FollowerState extends ActiveState {
     }
 
     private void replicateCommits() {
-        for (MemberState member : context.getMembers()) {
-            if (isActiveReplica(member)) {
+        context.clusterService().getMembers().stream()
+            .filter(this::isActiveReplica)
+            .forEach(member -> {
                 try {
                     commit(member);
                 } catch (IOException e) {
                     logger.error("error commit replica");
                 }
-            }
-        }
+            });
     }
 
     /**
@@ -104,10 +104,10 @@ class FollowerState extends ActiveState {
     private boolean isActiveReplica(MemberState member) {
         executionContext.checkThread();
         if (member != null && member.getType() == MemberState.Type.PASSIVE) {
-            MemberState thisMember = context.getMembers().getMember(transportService.localNode());
+            MemberState thisMember = context.clusterService().getMember(transportService.localNode());
             int index = thisMember.getIndex();
-            int activeMembers = context.getMembers().getActiveMembers().size();
-            int passiveMembers = context.getMembers().getPassiveMembers().size();
+            int activeMembers = context.clusterService().getActiveMembers().size();
+            int passiveMembers = context.clusterService().getPassiveMembers().size();
             while (passiveMembers > index) {
                 if (index % passiveMembers == member.getIndex()) {
                     return true;

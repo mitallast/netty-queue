@@ -17,7 +17,6 @@ import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 abstract class ActiveState extends PassiveState {
 
@@ -90,8 +89,8 @@ abstract class ActiveState extends PassiveState {
         }
         // If the requesting candidate is not a known member of the cluster (to this
         // node) then don't vote for it. Only vote for candidates that we know about.
-        else if (!context.getMembers().getMembers().stream().map(MemberState::getNode).collect(Collectors.toSet()).contains(request.candidate())) {
-            logger.info("rejected {}: candidate is not known to the local member: {}", request, context.getMembers().nodes());
+        else if (!context.clusterService().containsNode(request.candidate())) {
+            logger.info("rejected {}: candidate is not known to the local member: {}", request, context.clusterService().nodes());
             return VoteResponse.builder()
                 .setTerm(context.getTerm())
                 .setVoted(false)

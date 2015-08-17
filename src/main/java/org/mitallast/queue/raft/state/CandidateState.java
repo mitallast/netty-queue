@@ -11,6 +11,7 @@ import org.mitallast.queue.raft.action.vote.VoteResponse;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.Quorum;
+import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
@@ -78,7 +79,7 @@ class CandidateState extends ActiveState {
         }, delay, TimeUnit.MILLISECONDS);
 
         final AtomicBoolean complete = new AtomicBoolean();
-        ImmutableList<MemberState> votingMembers = context.getMembers().getActiveMembers();
+        ImmutableList<DiscoveryNode> votingMembers = context.clusterService().activeNodes();
 
         // Send vote requests to all nodes. The vote request that is sent
         // to this node will be automatically successful.
@@ -100,7 +101,7 @@ class CandidateState extends ActiveState {
         // of the cluster and vote each member for a vote.
         logger.info("requesting votes from {}", votingMembers);
         final long lastTerm = lastEntry != null ? lastEntry.term() : 0;
-        for (MemberState member : votingMembers) {
+        for (DiscoveryNode member : votingMembers) {
             logger.info("requesting vote from {} for term {}", member, context.getTerm());
             VoteRequest request = VoteRequest.builder()
                 .setTerm(context.getTerm())
@@ -109,7 +110,7 @@ class CandidateState extends ActiveState {
                 .setLogTerm(lastTerm)
                 .build();
 
-            transportService.client(member.getNode().address()).<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
+            transportService.client(member.address()).<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
                 if (!complete.get()) {
                     if (error != null) {
                         logger.warn(error.getMessage());

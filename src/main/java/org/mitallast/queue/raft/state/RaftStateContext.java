@@ -48,10 +48,10 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         RaftLog log,
         Compactor compactor,
         TransportService transportService,
-        ClusterState clusterState,
+        ClusterService clusterService,
         ExecutionContext executionContext
     ) throws ExecutionException, InterruptedException {
-        super(settings, transportService, clusterState, executionContext);
+        super(settings, transportService, clusterService, executionContext);
         this.log = log;
         this.stateMachine = raftState;
         this.compactor = compactor;
@@ -74,9 +74,9 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return heartbeatInterval;
     }
 
-    ClusterState getMembers() {
+    ClusterService clusterService() {
         executionContext.checkThread();
-        return clusterState;
+        return clusterService;
     }
 
     @Override
@@ -229,7 +229,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> join(long interval, CompletableFuture<Void> future) {
         executionContext.checkThread();
-        join(new ArrayList<>(clusterState.nodes()), Futures.future()).whenComplete((result, error) -> {
+        join(new ArrayList<>(clusterService.nodes()), Futures.future()).whenComplete((result, error) -> {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(null);
@@ -273,7 +273,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> leave() {
         executionContext.checkThread();
-        return leave(new ArrayList<>(clusterState.nodes()), Futures.future());
+        return leave(new ArrayList<>(clusterService.nodes()), Futures.future());
     }
 
     private CompletableFuture<Void> leave(List<DiscoveryNode> members, CompletableFuture<Void> future) {

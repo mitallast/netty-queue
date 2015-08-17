@@ -13,19 +13,19 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ClusterState extends AbstractLifecycleComponent implements Iterable<MemberState> {
+public class ClusterService extends AbstractLifecycleComponent {
     private final Map<DiscoveryNode, MemberState> members = new HashMap<>();
     private final List<MemberState> activeMembers = new ArrayList<>();
     private final List<MemberState> passiveMembers = new ArrayList<>();
     private final TransportService transportService;
 
     @Inject
-    public ClusterState(Settings settings, TransportService transportService) {
+    public ClusterService(Settings settings, TransportService transportService) {
         super(settings);
         this.transportService = transportService;
     }
 
-    public ClusterState addMember(MemberState member) {
+    public ClusterService addMember(MemberState member) {
         if (members.putIfAbsent(member.getNode(), member) == null) {
             if (member.getType() == MemberState.Type.ACTIVE) {
                 addActiveMember(member);
@@ -46,7 +46,7 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
         passiveMembers.add(member);
     }
 
-    ClusterState removeMember(MemberState member) {
+    ClusterService removeMember(MemberState member) {
         members.remove(member.getNode());
         if (member.getType() == MemberState.Type.ACTIVE) {
             removeActiveMember(member);
@@ -91,20 +91,19 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
     }
 
     public ImmutableList<DiscoveryNode> activeNodes() {
-        return ImmutableList.copyOf(getActiveMembers().stream().map(MemberState::getNode).collect(Collectors.toList()));
+        return ImmutableList.copyOf(activeMembers.stream().map(MemberState::getNode).collect(Collectors.toList()));
     }
 
     public ImmutableList<DiscoveryNode> passiveNodes() {
-        return ImmutableList.copyOf(getPassiveMembers().stream().map(MemberState::getNode).collect(Collectors.toList()));
+        return ImmutableList.copyOf(passiveMembers.stream().map(MemberState::getNode).collect(Collectors.toList()));
     }
 
     public ImmutableList<DiscoveryNode> nodes() {
-        return ImmutableList.copyOf(getMembers().stream().map(MemberState::getNode).collect(Collectors.toList()));
+        return ImmutableList.copyOf(members.values().stream().map(MemberState::getNode).collect(Collectors.toList()));
     }
 
-    @Override
-    public Iterator<MemberState> iterator() {
-        return new ClusterStateIterator(members.entrySet().iterator());
+    public boolean containsNode(DiscoveryNode node) {
+        return members.containsKey(node);
     }
 
     @Override
@@ -129,31 +128,5 @@ public class ClusterState extends AbstractLifecycleComponent implements Iterable
     @Override
     protected void doClose() throws IOException {
 
-    }
-
-    private class ClusterStateIterator implements Iterator<MemberState> {
-        private final Iterator<Map.Entry<DiscoveryNode, MemberState>> iterator;
-        private MemberState member;
-
-        private ClusterStateIterator(Iterator<Map.Entry<DiscoveryNode, MemberState>> iterator) {
-            this.iterator = iterator;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return iterator.hasNext();
-        }
-
-        @Override
-        public MemberState next() {
-            member = iterator.next().getValue();
-            return member;
-        }
-
-        @Override
-        public void remove() {
-            iterator.remove();
-            removeMember(member);
-        }
     }
 }

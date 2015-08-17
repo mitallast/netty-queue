@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RaftState extends AbstractComponent implements EntryFilter {
     private final StateMachine stateMachine;
-    private final ClusterState members;
+    private final ClusterService members;
     private final ExecutionContext executionContext;
     private final Map<Long, RaftSession> sessions = new ConcurrentHashMap<>();
     private final Map<Long, List<Runnable>> queries = new ConcurrentHashMap<>();
@@ -30,7 +30,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
     private volatile long lastApplied;
 
     @Inject
-    public RaftState(Settings settings, StateMachine stateMachine, ClusterState members, ExecutionContext executionContext) {
+    public RaftState(Settings settings, StateMachine stateMachine, ClusterService members, ExecutionContext executionContext) {
         super(settings);
         this.stateMachine = stateMachine;
         this.members = members;

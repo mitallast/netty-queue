@@ -39,7 +39,7 @@ public class RaftModule extends AbstractModule {
 
         // state
         bind(RaftStateFactory.class).asEagerSingleton();
-        bind(ClusterState.class).asEagerSingleton();
+        bind(ClusterService.class).asEagerSingleton();
         bind(RaftState.class).asEagerSingleton();
         bind(RaftStateContext.class).asEagerSingleton();
         bind(RaftStateClient.class).to(RaftStateContext.class);

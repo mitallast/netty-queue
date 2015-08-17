@@ -10,6 +10,7 @@ import org.mitallast.queue.raft.action.leave.LeaveAction;
 import org.mitallast.queue.raft.action.query.QueryAction;
 import org.mitallast.queue.raft.action.register.RegisterAction;
 import org.mitallast.queue.raft.action.vote.VoteAction;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.SegmentRaftLog;
 import org.mitallast.queue.raft.log.compaction.*;
@@ -17,7 +18,10 @@ import org.mitallast.queue.raft.log.entry.EntryFilter;
 import org.mitallast.queue.raft.resource.ResourceFactory;
 import org.mitallast.queue.raft.resource.ResourceService;
 import org.mitallast.queue.raft.resource.manager.ResourceStateMachine;
-import org.mitallast.queue.raft.state.*;
+import org.mitallast.queue.raft.state.RaftState;
+import org.mitallast.queue.raft.state.RaftStateClient;
+import org.mitallast.queue.raft.state.RaftStateContext;
+import org.mitallast.queue.raft.state.RaftStateFactory;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
 public class RaftModule extends AbstractModule {

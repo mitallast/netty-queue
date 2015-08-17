@@ -2,7 +2,7 @@ package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.transport.DiscoveryNode;
 
-class MemberState {
+public class MemberState {
     private final DiscoveryNode node;
     private final Type type;
     private volatile long version;
@@ -15,11 +15,11 @@ class MemberState {
         this.type = type;
     }
 
-    DiscoveryNode getNode() {
+    public DiscoveryNode getNode() {
         return node;
     }
 
-    Type getType() {
+    public Type getType() {
         return type;
     }
 
@@ -27,7 +27,7 @@ class MemberState {
         return version;
     }
 
-    MemberState setVersion(long version) {
+    public MemberState setVersion(long version) {
         this.version = version;
         return this;
     }
@@ -36,25 +36,25 @@ class MemberState {
         return index;
     }
 
-    MemberState setIndex(int index) {
+    public MemberState setIndex(int index) {
         this.index = index;
         return this;
     }
 
-    long getMatchIndex() {
+    public long getMatchIndex() {
         return matchIndex;
     }
 
-    MemberState setMatchIndex(long matchIndex) {
+    public MemberState setMatchIndex(long matchIndex) {
         this.matchIndex = matchIndex;
         return this;
     }
 
-    long getNextIndex() {
+    public long getNextIndex() {
         return nextIndex;
     }
 
-    MemberState setNextIndex(long nextIndex) {
+    public MemberState setNextIndex(long nextIndex) {
         this.nextIndex = nextIndex;
         return this;
     }

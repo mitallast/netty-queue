@@ -11,6 +11,7 @@ import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.compaction.Compactor;
 import org.mitallast.queue.raft.util.ExecutionContext;

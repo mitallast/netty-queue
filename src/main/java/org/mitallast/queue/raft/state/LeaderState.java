@@ -584,7 +584,7 @@ public class LeaderState extends ActiveState {
         private volatile int quorumIndex;
 
         private Replicator() {
-            context.clusterService().getMembers().stream()
+            context.clusterService().members().stream()
                 .filter(state -> !state.getNode().equals(transportService.localNode()))
                 .forEach(state -> {
                     replicas.add(new Replica(this.replicas.size(), state));

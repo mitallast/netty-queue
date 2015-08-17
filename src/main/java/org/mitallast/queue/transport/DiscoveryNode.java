@@ -69,6 +69,6 @@ public class DiscoveryNode implements Streamable {
 
     @Override
     public String toString() {
-        return "DiscoveryNode{address=" + address + '}';
+        return "DiscoveryNode{" + address + '}';
     }
 }

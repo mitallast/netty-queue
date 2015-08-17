@@ -7,6 +7,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.unit.TimeValue;
 import org.mitallast.queue.raft.*;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.compaction.Compaction;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -99,7 +100,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
 
     public boolean filter(JoinEntry entry, Compaction compaction) {
         executionContext.checkThread();
-        MemberState member = members.getMember(entry.getMember());
+        MemberState member = members.member(entry.getMember());
         return member != null && member.getVersion() == entry.index();
     }
 
@@ -271,7 +272,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
     private CompletableFuture<Long> join(long index, DiscoveryNode node) {
         executionContext.checkThread();
         logger.info("join node index: {} node: {}", index, node);
-        MemberState member = members.getMember(node);
+        MemberState member = members.member(node);
         if (member == null) {
             member = new MemberState(node, MemberState.Type.PASSIVE).setVersion(index);
             members.addMember(member);
@@ -282,7 +283,7 @@ public class RaftState extends AbstractComponent implements EntryFilter {
 
     private CompletableFuture<Void> leave(long index, DiscoveryNode node) {
         executionContext.checkThread();
-        MemberState member = members.getMember(node);
+        MemberState member = members.member(node);
         if (member != null) {
             members.removeMember(member);
         }

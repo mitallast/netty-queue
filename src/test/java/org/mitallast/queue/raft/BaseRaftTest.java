@@ -17,9 +17,13 @@ public class BaseRaftTest extends BaseIntegrationTest {
     protected InternalNode[] nodes;
     protected InternalNode leader;
 
+    protected int nodeCount() {
+        return 2;
+    }
+
     @Before
     public void setUpNodes() throws Exception {
-        int[] ports = new int[3];
+        int[] ports = new int[nodeCount()];
         nodes = new InternalNode[ports.length];
 
         StringBuilder buffer = new StringBuilder();

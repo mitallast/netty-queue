@@ -219,19 +219,18 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     private CompletableFuture<Void> join() {
         executionContext.checkThread();
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> join(100, future));
+        executionContext.execute(() -> join(future));
         return future;
     }
 
-    private CompletableFuture<Void> join(long interval, CompletableFuture<Void> future) {
+    private CompletableFuture<Void> join(CompletableFuture<Void> future) {
         executionContext.checkThread();
         join(new ArrayList<>(clusterService.nodes()), Futures.future()).whenComplete((result, error) -> {
             executionContext.checkThread();
             if (error == null) {
                 future.complete(null);
             } else {
-                long nextInterval = Math.min(interval * 2, 5000);
-                joinTimer = executionContext.schedule(() -> join(nextInterval, future), nextInterval, TimeUnit.MILLISECONDS);
+                joinTimer = executionContext.schedule(() -> join(future), heartbeatInterval, TimeUnit.MILLISECONDS);
             }
         });
         return future;

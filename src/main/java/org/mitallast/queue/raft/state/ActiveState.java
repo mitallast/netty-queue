@@ -10,6 +10,7 @@ import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.entry.QueryEntry;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
@@ -20,8 +21,17 @@ import java.util.concurrent.CompletableFuture;
 
 abstract class ActiveState extends PassiveState {
 
-    protected ActiveState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
+    protected final ClusterService clusterService;
+
+    protected ActiveState(
+        Settings settings,
+        RaftStateContext context,
+        ExecutionContext executionContext,
+        TransportService transportService,
+        ClusterService clusterService
+    ) {
         super(settings, context, executionContext, transportService);
+        this.clusterService = clusterService;
     }
 
     @Override
@@ -89,8 +99,8 @@ abstract class ActiveState extends PassiveState {
         }
         // If the requesting candidate is not a known member of the cluster (to this
         // node) then don't vote for it. Only vote for candidates that we know about.
-        else if (!context.clusterService().containsNode(request.candidate())) {
-            logger.info("rejected {}: candidate is not known to the local member: {}", request, context.clusterService().nodes());
+        else if (!clusterService.containsNode(request.candidate())) {
+            logger.info("rejected {}: candidate is not known to the local member: {}", request, clusterService.nodes());
             return VoteResponse.builder()
                 .setTerm(context.getTerm())
                 .setVoted(false)

@@ -75,11 +75,6 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return heartbeatInterval;
     }
 
-    ClusterService clusterService() {
-        executionContext.checkThread();
-        return clusterService;
-    }
-
     @Override
     RaftStateContext setLeader(DiscoveryNode leader) {
         executionContext.checkThread();

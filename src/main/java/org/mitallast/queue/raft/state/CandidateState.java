@@ -8,6 +8,7 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.raft.util.Quorum;
@@ -27,8 +28,14 @@ class CandidateState extends ActiveState {
     private volatile ScheduledFuture<?> currentTimer;
 
     @Inject
-    public CandidateState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
-        super(settings, context, executionContext, transportService);
+    public CandidateState(
+        Settings settings,
+        RaftStateContext context,
+        ExecutionContext executionContext,
+        TransportService transportService,
+        ClusterService clusterService
+    ) {
+        super(settings, context, executionContext, transportService, clusterService);
     }
 
     @Override
@@ -79,7 +86,7 @@ class CandidateState extends ActiveState {
         }, delay, TimeUnit.MILLISECONDS);
 
         final AtomicBoolean complete = new AtomicBoolean();
-        ImmutableList<DiscoveryNode> votingMembers = context.clusterService().activeNodes();
+        ImmutableList<DiscoveryNode> votingMembers = clusterService.activeNodes();
 
         // Send vote requests to all nodes. The vote request that is sent
         // to this node will be automatically successful.

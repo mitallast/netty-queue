@@ -20,6 +20,7 @@ import org.mitallast.queue.raft.action.register.RegisterRequest;
 import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.entry.*;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.TransportService;
@@ -35,8 +36,14 @@ public class LeaderState extends ActiveState {
     private volatile ScheduledFuture<?> currentTimer;
 
     @Inject
-    public LeaderState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
-        super(settings, context, executionContext, transportService);
+    public LeaderState(
+        Settings settings,
+        RaftStateContext context,
+        ExecutionContext executionContext,
+        TransportService transportService,
+        ClusterService clusterService
+    ) {
+        super(settings, context, executionContext, transportService, clusterService);
     }
 
     @Override
@@ -371,7 +378,7 @@ public class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setSession(sessionId)
-                                .setMembers(context.clusterService().nodes())
+                                .setMembers(clusterService.nodes())
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -434,7 +441,7 @@ public class LeaderState extends ActiveState {
                                 .setLeader(context.getLeader())
                                 .setTerm(context.getTerm())
                                 .setVersion(version)
-                                .setMembers(context.clusterService().nodes())
+                                .setMembers(clusterService.nodes())
                                 .build());
                         } else if (sessionError instanceof ApplicationException) {
                             logger.error("application error", sessionError);
@@ -584,7 +591,7 @@ public class LeaderState extends ActiveState {
         private volatile int quorumIndex;
 
         private Replicator() {
-            context.clusterService().members().stream()
+            clusterService.members().stream()
                 .filter(state -> !state.getNode().equals(transportService.localNode()))
                 .forEach(state -> {
                     replicas.add(new Replica(this.replicas.size(), state));

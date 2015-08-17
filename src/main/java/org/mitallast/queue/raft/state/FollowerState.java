@@ -6,6 +6,7 @@ import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
+import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -23,8 +24,14 @@ class FollowerState extends ActiveState {
     private volatile ScheduledFuture<?> heartbeatTimer;
 
     @Inject
-    public FollowerState(Settings settings, RaftStateContext context, ExecutionContext executionContext, TransportService transportService) {
-        super(settings, context, executionContext, transportService);
+    public FollowerState(
+        Settings settings,
+        RaftStateContext context,
+        ExecutionContext executionContext,
+        TransportService transportService,
+        ClusterService clusterService
+    ) {
+        super(settings, context, executionContext, transportService, clusterService);
     }
 
     @Override
@@ -87,7 +94,7 @@ class FollowerState extends ActiveState {
     }
 
     private void replicateCommits() {
-        context.clusterService().members().stream()
+        clusterService.members().stream()
             .filter(this::isActiveReplica)
             .forEach(member -> {
                 try {
@@ -104,10 +111,10 @@ class FollowerState extends ActiveState {
     private boolean isActiveReplica(MemberState member) {
         executionContext.checkThread();
         if (member != null && member.getType() == MemberState.Type.PASSIVE) {
-            MemberState thisMember = context.clusterService().member(transportService.localNode());
+            MemberState thisMember = clusterService.member(transportService.localNode());
             int index = thisMember.getIndex();
-            int activeMembers = context.clusterService().activeMembers().size();
-            int passiveMembers = context.clusterService().passiveMembers().size();
+            int activeMembers = clusterService.activeMembers().size();
+            int passiveMembers = clusterService.passiveMembers().size();
             while (passiveMembers > index) {
                 if (index % passiveMembers == member.getIndex()) {
                     return true;

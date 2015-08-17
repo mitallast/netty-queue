@@ -112,7 +112,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         return segment != null ? segment.getValue() : null;
     }
 
-    public void remove(Segment removed) throws IOException {
+    public synchronized void remove(Segment removed) throws IOException {
         currentSegment = null;
 
         ImmutableSortedMap<Long, Segment> removalSegments = segments.tailMap(removed.descriptor().index());
@@ -143,7 +143,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         }
     }
 
-    public Segment createSegment(SegmentDescriptor descriptor) throws IOException {
+    public synchronized Segment createSegment(SegmentDescriptor descriptor) throws IOException {
         Segment segment = segmentService.createSegment(descriptor);
         logger.info("created segment: {}", segment);
         return segment;
@@ -164,8 +164,12 @@ public class SegmentManager extends AbstractLifecycleComponent {
         return segment;
     }
 
-    public void replace(Segment segment) throws IOException {
+    public synchronized void replace(Segment segment) throws IOException {
+        logger.info("replace segment: {}:{}", segment.descriptor().id(), segment.descriptor().version());
         Segment oldSegment = segments.get(segment.descriptor().index());
+        segments.forEach((index, s) -> {
+            logger.info("old segment: {}:{}", s.descriptor().id(), s.descriptor().version());
+        });
 
         ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
         segments.entrySet().stream()
@@ -173,13 +177,19 @@ public class SegmentManager extends AbstractLifecycleComponent {
             .forEach(builder::put);
         builder.put(segment.descriptor().index(), segment);
         segments = builder.build();
+        segments.forEach((index, s) -> {
+            logger.info("new segment: {}:{}", s.descriptor().id(), s.descriptor().version());
+        });
 
         if (oldSegment != null) {
+            if (oldSegment == currentSegment) {
+                currentSegment = segment;
+            }
             deleteSegment(oldSegment);
         }
     }
 
-    public void update(Collection<Segment> segments) throws IOException {
+    public synchronized void update(Collection<Segment> segments) throws IOException {
         ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
         segments.forEach(s -> builder.put(s.descriptor().index(), s));
         ImmutableSortedMap<Long, Segment> newSegments = builder.build();
@@ -203,5 +213,6 @@ public class SegmentManager extends AbstractLifecycleComponent {
         segment.close();
         descriptorService.deleteDescriptor(segment.descriptor());
         segmentService.deleteSegment(segment.descriptor());
+        logger.info("deleted segment: {}:{}", segment.descriptor().id(), segment.descriptor().version());
     }
 }

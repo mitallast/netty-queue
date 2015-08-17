@@ -21,6 +21,7 @@ public class Segment implements Closeable {
     private final StreamOutput streamOutput;
     private final SegmentIndex offsetIndex;
     private int skip = 0;
+    private boolean closed;
 
     public Segment(File file, SegmentDescriptor descriptor, SegmentIndex offsetIndex, StreamService streamService) throws IOException {
         this.file = file;
@@ -47,6 +48,9 @@ public class Segment implements Closeable {
     }
 
     public boolean isFull() throws IOException {
+        if (closed) {
+            throw new IllegalStateException("Segment is closed " + descriptor.index() + ":" + descriptor.version());
+        }
         return size() >= descriptor.maxSegmentSize()
             || offsetIndex.size() >= descriptor.maxEntries();
     }
@@ -55,6 +59,7 @@ public class Segment implements Closeable {
      * @return size in bytes
      */
     public long size() {
+        checkClosed();
         return buffer.writerIndex();
     }
 
@@ -91,8 +96,9 @@ public class Segment implements Closeable {
     }
 
     public long appendEntry(LogEntry entry) throws IOException {
+        checkClosed();
         if (isFull()) {
-            throw new IllegalStateException("segment is full");
+            throw new IllegalStateException("Segment is full " + descriptor.index() + ":" + descriptor.version());
         }
         long index = nextIndex();
         if (entry.index() != index) {
@@ -119,6 +125,7 @@ public class Segment implements Closeable {
     }
 
     public <T extends LogEntry> T getEntry(long index) throws IOException {
+        checkClosed();
         checkRange(index);
 
         // Get the offset of the index within this segment.
@@ -140,19 +147,23 @@ public class Segment implements Closeable {
     }
 
     public boolean containsIndex(long index) {
+        checkClosed();
         return !isEmpty() && index >= descriptor.index() && index <= lastIndex();
     }
 
     public boolean containsEntry(long index) throws IOException {
+        checkClosed();
         return containsIndex(index) && offsetIndex.contains(offset(index));
     }
 
     public Segment skip(long entries) {
+        checkClosed();
         this.skip += entries;
         return this;
     }
 
     public Segment truncate(long index) throws IOException {
+        checkClosed();
         int offset = offset(index);
         if (offset < offsetIndex.lastOffset()) {
             int diff = (int) (offsetIndex.lastOffset() - offset);
@@ -163,21 +174,32 @@ public class Segment implements Closeable {
     }
 
     @Deprecated
-    public void delete() throws IOException {
+    public synchronized void delete() throws IOException {
         close();
         assert file.delete();
         offsetIndex.delete();
     }
 
-    public Segment flush() throws IOException {
+    public synchronized Segment flush() throws IOException {
+        checkClosed();
         fileBuffer.flush();
         offsetIndex.flush();
         return this;
     }
 
+    private void checkClosed() {
+        if (closed) {
+            throw new IllegalStateException("Segment is closed " + descriptor.index() + ":" + descriptor.version());
+        }
+    }
+
     @Override
-    public void close() throws IOException {
-        fileBuffer.close();
-        offsetIndex.close();
+    public synchronized void close() throws IOException {
+        if (!closed) {
+            flush();
+            closed = true;
+            fileBuffer.close();
+            offsetIndex.close();
+        }
     }
 }

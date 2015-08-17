@@ -67,6 +67,7 @@ public class MemoryMappedFileBuffer implements Closeable {
             }
             closed = true;
             MappedByteBufferCleaner.clean(mappedByteBuffer);
+            randomAccessFile.close();
         }
     }
 }

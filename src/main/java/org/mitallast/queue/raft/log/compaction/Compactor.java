@@ -41,7 +41,7 @@ public class Compactor extends AbstractLifecycleComponent {
         this.compact = index;
     }
 
-    synchronized CompletableFuture<Void> compact() {
+    public synchronized CompletableFuture<Void> compact() {
         if (compactFuture != null) {
             return compactFuture;
         }

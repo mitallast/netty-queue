@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -406,8 +407,16 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         }
     }
 
-    protected CompletableFuture<Void> asyncStart() {
-        return register().thenRun(this::startKeepAliveTimer);
+    @Override
+    protected void doStart() throws IOException {
+        try {
+            register().thenRun(this::startKeepAliveTimer).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        }
     }
 
     @Override

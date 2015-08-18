@@ -339,23 +339,14 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     @Override
     protected void doStart() throws IOException {
         try {
-            CompletableFuture<Void> future = Futures.future();
-            executionContext.submit(() -> {
-                if (settings.getAsBoolean("raft.passive", false)) {
-                    transition(PassiveState.class);
-                    join().whenComplete((aVoid, error) -> {
-                        if (error == null) {
-                            future.complete(null);
-                        } else {
-                            future.completeExceptionally(error);
-                        }
-                    });
-                } else {
-                    transition(FollowerState.class);
-                    future.complete(null);
-                }
-            });
-            future.thenCompose(aVoid -> asyncStart()).get();
+            if (settings.getAsBoolean("raft.passive", false)) {
+                executionContext.submit(() -> transition(PassiveState.class)).get();
+                join().get();
+                super.doStart();
+            } else {
+                executionContext.submit(() -> transition(FollowerState.class)).get();
+                super.doStart();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);

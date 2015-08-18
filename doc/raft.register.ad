@@ -65,8 +65,8 @@ group handle RegisterRequest
     RegisterAction -> LeaderState: RegisterRequest
     activate LeaderState
         LeaderState -> RaftLog: append RegisterEntry
-        LeaderState -> RaftLog: commit
-        LeaderState <-- RaftLog
+        LeaderState -> Replicator: commit
+        LeaderState <-- Replicator
         LeaderState -> StateMachine: apply RegisterEntry
         activate StateMachine
             StateMachine -> RaftState: apply RegisterEntry

@@ -1,42 +1,51 @@
 = Raft Command
 
-
-Server sequence diagram:
+Leader sequence diagram:
 
 [plantuml, raft-command-server, svg]
 ....
 skinparam monochrome true
 skinparam shadowing false
 
-CommandAction --> LeaderState: command()
-Command --> LeaderState: command()
-LeaderState --> Log: appendEntry(Command)
-LeaderState --> Replicator: commit(Command)
-Replicator --> Replicator: replicate(Command)
-Replicator --> LeaderState: whenComplete(Command)
-LeaderState --> RaftState: apply(Command)
-RaftState --> ResourceStateMachine: apply(Command)
-ResourceStateMachine --> ResourceStateMachine: execute command
-ResourceStateMachine --> RaftState: future.complete();
-RaftState --> RaftSession: sessions.put(request, result)
-RaftState --> LeaderState: future.complete()
-CommandAction --> Transport: future.complete();
+CommandAction -> LeaderState: command()
+activate LeaderState
+    LeaderState -> RaftLog: appendEntry(Command)
+    LeaderState -> Replicator: commit(Command)
+    LeaderState <-- Replicator
+    LeaderState -> StateMachine: apply(Command)
+    activate StateMachine
+        StateMachine -> RaftState: apply(Command)
+        alt no session or session timeout
+            StateMachine <-- RaftState: unknown session
+        else session has response
+            StateMachine <-- RaftState: response
+        else execute command
+            RaftState -> ResourceStateMachine: apply(Command)
+            RaftState <-- ResourceStateMachine: command result
+            RaftState -> session: put result
+            StateMachine <-- RaftState: response
+        end
+        LeaderState <-- StateMachine
+    deactivate StateMachine
+    CommandAction <-- LeaderState
+deactivate LeaderState
 ....
 
 Client sequence diagram:
-
 
 [plantuml, raft-command-client, svg]
 ....
 skinparam monochrome true
 skinparam shadowing false
 
-Client --> Node: get resource service
-Node --> Client: return ResourceService
-Client --> ResourceService: create(path)
-ResourceService --> RaftStateClient: submit(PathExists(path))
-RaftStateClient --> RaftStateClient: selectMember()
-RaftStateClient --> Transport: send(CommandRequest)
-Transport --> RaftStateClient: future.complete()
-RaftStateClient --> Client: future.complete()
+Client -> Node: get resource service
+Client <-- Node: ResourceService
+Client -> ResourceService: create path
+ResourceService -> RaftStateClient: submit PathExists(path)
+activate RaftStateClient
+    RaftStateClient -> RaftStateClient: select member
+    RaftStateClient -> Transport: send CommandRequest
+    RaftStateClient <-- Transport: CommandResponse
+    Client <-- RaftStateClient
+deactivate RaftStateClient
 ....

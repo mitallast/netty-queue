@@ -6,6 +6,7 @@ Server sequence diagram:
 [plantuml, raft-command-server, svg]
 ....
 skinparam monochrome true
+skinparam shadowing false
 
 CommandAction --> LeaderState: command()
 Command --> LeaderState: command()
@@ -28,6 +29,7 @@ Client sequence diagram:
 [plantuml, raft-command-client, svg]
 ....
 skinparam monochrome true
+skinparam shadowing false
 
 Client --> Node: get resource service
 Node --> Client: return ResourceService

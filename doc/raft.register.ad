@@ -1,0 +1,83 @@
+= Raft Register
+
+Follower sequence diagram:
+
+[plantuml, raft-register-client, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+RaftStateContext -> RaftStateContext: start
+activate RaftStateContext
+RaftStateContext -> FollowerState: transition
+
+activate FollowerState
+    FollowerState --> HeartbeatTimer: start
+deactivate FollowerState
+
+RaftStateContext -> RaftStateContext.register:
+activate RaftStateContext.register
+    RaftStateContext.register -> ClusterService: get members
+    RaftStateContext.register <-- ClusterService: node[]
+    group loop
+        RaftStateContext.register -> RaftStateContext.register: select next node
+        RaftStateContext.register -> TransportService: send(RegisterRequest)
+        RaftStateContext.register <-- TransportService: RegisterResponse
+        alt success
+            RaftStateContext.register -> RaftStateContext: set leader
+            RaftStateContext.register -> RaftStateContext: set session
+        else error
+            RaftStateContext.register -> RaftStateContext: set no leader
+            RaftStateContext.register -> RaftStateContext.register: continue loop
+        else no leader
+            RaftStateContext.register -> RaftStateContext.register: schedule next loop
+        end
+    end
+    RaftStateContext <-- RaftStateContext.register:
+deactivate RaftStateContext.register
+
+RaftStateContext -> KeepAliveTimer: start
+
+deactivate RaftStateContext
+....
+
+
+Leader sequence diagram:
+
+[plantuml, raft-register-server, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+participant RaftStateContext
+participant RegisterAction
+
+RaftStateContext -> LeaderState: transition
+activate LeaderState
+LeaderState -> LeaderState: open
+LeaderState -> RaftStateContext: set leader local node
+RaftStateContext <-- LeaderState: transition
+deactivate LeaderState
+...
+
+
+group handle RegisterRequest
+    RegisterAction -> LeaderState: RegisterRequest
+    activate LeaderState
+        LeaderState -> RaftLog: append RegisterEntry
+        LeaderState -> RaftLog: commit
+        LeaderState <-- RaftLog
+        LeaderState -> StateMachine: apply RegisterEntry
+        activate StateMachine
+            StateMachine -> RaftState: apply RegisterEntry
+            activate RaftState
+                RaftState -> sessions: put new RaftSession
+                StateMachine <-- RaftState
+            deactivate RaftState
+            LeaderState <-- StateMachine
+        deactivate StateMachine
+        RegisterAction <-- LeaderState
+    deactivate LeaderState
+end
+
+....

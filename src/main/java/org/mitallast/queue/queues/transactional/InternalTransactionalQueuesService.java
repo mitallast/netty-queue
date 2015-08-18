@@ -40,21 +40,27 @@ public class InternalTransactionalQueuesService extends AbstractLifecycleCompone
         if (queues.isEmpty()) {
             loadState();
         } else {
-            queues.values().forEach(TransactionalQueueService::start);
+            for (TransactionalQueueService queueService : queues.values()) {
+                queueService.start();
+            }
         }
         flushState();
     }
 
     @Override
     protected void doStop() throws IOException {
-        queues.values().forEach(TransactionalQueueService::stop);
+        for (TransactionalQueueService queueService : queues.values()) {
+            queueService.stop();
+        }
         flushState();
     }
 
     @Override
     protected void doClose() throws IOException {
         flushState();
-        queues.values().forEach(TransactionalQueueService::close);
+        for (TransactionalQueueService queueService : queues.values()) {
+            queueService.close();
+        }
         queues.clear();
     }
 

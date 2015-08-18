@@ -17,6 +17,7 @@ import org.mitallast.queue.raft.resource.result.BooleanResult;
 import org.mitallast.queue.raft.resource.result.LongResult;
 import org.mitallast.queue.raft.resource.result.StringListResult;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -211,7 +212,7 @@ public class ResourceStateMachine extends StateMachine {
     }
 
     @Apply(DeleteResource.class)
-    protected BooleanResult deleteResource(Commit<DeleteResource> commit) {
+    protected BooleanResult deleteResource(Commit<DeleteResource> commit) throws IOException {
         init(commit);
 
         NodeHolder node = nodes.remove(commit.operation().resource());

@@ -129,9 +129,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
     @Override
     public void connectToNode(HostAndPort address) {
-        if (!lifecycle.started()) {
-            throw new IllegalStateException("can't add nodes to stopped transport");
-        }
+        checkIsStarted();
         if (address == null) {
             throw new TransportException("can't connect to null address");
         }

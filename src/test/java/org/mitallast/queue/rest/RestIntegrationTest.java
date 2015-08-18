@@ -31,7 +31,10 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     @After
     public void tearDownClient() throws Exception {
-        clients.forEach(RestClient::stop);
+        for (RestClient restClient : clients) {
+            restClient.stop();
+            restClient.close();
+        }
     }
 
     private synchronized RestClient restClient() {

@@ -1,13 +1,12 @@
 package org.mitallast.queue.common.component;
 
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
 
 public abstract class AbstractLifecycleComponent extends AbstractComponent implements LifecycleComponent {
 
-    protected final Lifecycle lifecycle = new Lifecycle();
+    private final Lifecycle lifecycle = new Lifecycle();
 
     protected AbstractLifecycleComponent(Settings settings) {
         super(settings);
@@ -34,65 +33,71 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
     }
 
     @Override
-    public Lifecycle.State lifecycleState() {
-        return this.lifecycle.state();
+    public Lifecycle lifecycle() {
+        return lifecycle;
     }
 
     @Override
-    public void start() throws QueueException {
+    public void checkIsStarted() {
+        if (!lifecycle.started()) {
+            throw new IllegalStateException(logger.getName() + " is not started");
+        }
+    }
+
+    @Override
+    public void checkIsStopped() {
+        if (!lifecycle.started()) {
+            throw new IllegalStateException(logger.getName() + " is not started");
+        }
+    }
+
+    @Override
+    public void checkIsClosed() {
+        if (!lifecycle.started()) {
+            throw new IllegalStateException(logger.getName() + " is not started");
+        }
+    }
+
+    @Override
+    public void start() throws IOException {
         if (!lifecycle.canMoveToStarted()) {
-            logger.warn("Can't move to started, " + lifecycleState());
+            logger.warn("Can't move to started, " + lifecycle.state());
             return;
         }
         if (!lifecycle.moveToStarted()) {
-            logger.warn("Don't moved to started, " + lifecycleState());
+            logger.warn("Don't moved to started, " + lifecycle.state());
         }
-        try {
-            doStart();
-        } catch (IOException e) {
-            logger.info("error start", e);
-            throw new QueueException(e);
-        }
+        doStart();
         logger.info("started");
     }
 
     protected abstract void doStart() throws IOException;
 
     @Override
-    public void stop() throws QueueException {
+    public void stop() throws IOException {
         logger.debug("stopping");
         if (!lifecycle.canMoveToStopped()) {
-            logger.warn("Can't move to stopped, it's a " + lifecycleState());
+            logger.warn("Can't move to stopped, it's a " + lifecycle.state());
             return;
         }
         lifecycle.moveToStopped();
-        try {
-            doStop();
-        } catch (IOException e) {
-            logger.info("error stop", e);
-            throw new QueueException(e);
-        }
+        doStop();
         logger.debug("stopped");
     }
 
     protected abstract void doStop() throws IOException;
 
     @Override
-    public void close() throws QueueException {
+    public void close() throws IOException {
         if (lifecycle.started()) {
             stop();
         }
         if (!lifecycle.canMoveToClosed()) {
-            logger.warn("Can't move to closed, it's a " + lifecycleState().name());
+            logger.warn("Can't move to closed, it's a " + lifecycle.state());
             return;
         }
         lifecycle.moveToClosed();
-        try {
-            doClose();
-        } catch (IOException e) {
-            logger.info("error close", e);
-            throw new QueueException(e);
-        }
+        doClose();
         logger.info("closed");
     }
 

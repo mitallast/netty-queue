@@ -3,7 +3,6 @@ package org.mitallast.queue.common;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.After;
 import org.junit.Before;
-import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
@@ -34,13 +33,16 @@ public class BaseIntegrationTest extends BaseTest {
 
     @After
     public void tearDownNodes() throws Exception {
-        nodes.stream()
-            .filter(node -> node.lifecycleState() == Lifecycle.State.STARTED)
-            .forEach(InternalNode::stop);
-
-        nodes.stream()
-            .filter(node -> node.lifecycleState() == Lifecycle.State.STOPPED)
-            .forEach(InternalNode::close);
+        for (InternalNode node : nodes) {
+            if (node.lifecycle().started()) {
+                node.stop();
+            }
+        }
+        for (InternalNode node : nodes) {
+            if (node.lifecycle().stopped()) {
+                node.close();
+            }
+        }
     }
 
     protected Settings settings() throws Exception {

@@ -128,7 +128,7 @@ public class Lifecycle {
         return state.toString();
     }
 
-    public static enum State {
+    public enum State {
         INITIALIZED,
         STOPPED,
         STARTED,

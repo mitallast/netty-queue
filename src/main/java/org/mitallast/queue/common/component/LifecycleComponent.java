@@ -1,14 +1,20 @@
 package org.mitallast.queue.common.component;
 
-import org.mitallast.queue.QueueException;
+import java.io.IOException;
 
 public interface LifecycleComponent {
 
-    Lifecycle.State lifecycleState();
+    Lifecycle lifecycle();
 
-    void start() throws QueueException;
+    void checkIsStarted() throws IllegalStateException;
 
-    void stop() throws QueueException;
+    void checkIsStopped() throws IllegalStateException;
 
-    void close() throws QueueException;
+    void checkIsClosed() throws IllegalStateException;
+
+    void start() throws IOException;
+
+    void stop() throws IOException;
+
+    void close() throws IOException;
 }

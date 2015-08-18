@@ -18,7 +18,11 @@ public class Main {
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-                node.close();
+                try {
+                    node.close();
+                } catch (IOException e) {
+                    e.printStackTrace(System.err);
+                }
             }
         });
     }

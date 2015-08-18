@@ -173,13 +173,6 @@ public class Segment implements Closeable {
         return this;
     }
 
-    @Deprecated
-    public synchronized void delete() throws IOException {
-        close();
-        assert file.delete();
-        offsetIndex.delete();
-    }
-
     public synchronized Segment flush() throws IOException {
         checkClosed();
         fileBuffer.flush();

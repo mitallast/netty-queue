@@ -57,8 +57,8 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.stateMachine = raftState;
         this.compactor = compactor;
         this.stateFactory = stateFactory;
-        this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueSeconds(1)).millis();
-        this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueSeconds(1)).millis();
+        this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueMillis(100)).millis();
+        this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(heartbeatInterval * 2)).millis();
         executionContext.submit(() -> {
             transition(StartState.class);
         }).get();
@@ -338,16 +338,24 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     @Override
     protected void doStart() throws IOException {
-        super.doStart();
         try {
+            CompletableFuture<Void> future = Futures.future();
             executionContext.submit(() -> {
                 if (settings.getAsBoolean("raft.passive", false)) {
                     transition(PassiveState.class);
-                    join();
+                    join().whenComplete((aVoid, error) -> {
+                        if (error == null) {
+                            future.complete(null);
+                        } else {
+                            future.completeExceptionally(error);
+                        }
+                    });
                 } else {
                     transition(FollowerState.class);
+                    future.complete(null);
                 }
-            }).get();
+            });
+            future.thenCompose(aVoid -> asyncStart()).get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);

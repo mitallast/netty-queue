@@ -10,7 +10,6 @@ import org.mitallast.queue.raft.state.RaftStateType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 public class BaseRaftTest extends BaseIntegrationTest {
 
@@ -53,7 +52,7 @@ public class BaseRaftTest extends BaseIntegrationTest {
 
         // await for leader election
         do {
-            Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+            Thread.sleep(10);
             for (InternalNode node : nodes) {
                 if (node.injector().getInstance(RaftStateContext.class).getState() == RaftStateType.LEADER) {
                     leader = node;

@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -49,7 +48,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     private volatile long response;
     private volatile long version;
 
-    private volatile ScheduledFuture<?> currentTimer;
+    private volatile ScheduledFuture<?> keepAliveTimer;
     private volatile ScheduledFuture<?> registerTimer;
 
     public RaftStateClient(Settings settings, TransportService transportService, ClusterService clusterService, ExecutionContext executionContext) {
@@ -269,8 +268,9 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     }
 
     private CompletableFuture<Void> register() {
-        executionContext.checkThread();
-        return register(100, Futures.future());
+        CompletableFuture<Void> future = Futures.future();
+        executionContext.execute(() -> register(100, future));
+        return future;
     }
 
     private CompletableFuture<Void> register(long interval, CompletableFuture<Void> future) {
@@ -334,7 +334,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     private void startKeepAliveTimer() {
         executionContext.checkThread();
         logger.info("starting keep alive timer");
-        currentTimer = executionContext.scheduleAtFixedRate(this::keepAlive, 1, keepAliveInterval, TimeUnit.MILLISECONDS);
+        keepAliveTimer = executionContext.scheduleAtFixedRate(this::keepAlive, 1, keepAliveInterval, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -406,46 +406,19 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         }
     }
 
-    private void cancelRegisterTimer() {
-        executionContext.checkThread();
-        if (registerTimer != null) {
-            logger.info("cancelling register timer");
-            registerTimer.cancel(false);
-        }
-    }
-
-    private void cancelKeepAliveTimer() {
-        executionContext.checkThread();
-        if (currentTimer != null) {
-            logger.info("cancelling keep alive timer");
-            currentTimer.cancel(false);
-        }
-    }
-
-    @Override
-    protected void doStart() throws IOException {
-        try {
-            executionContext.submit(() -> register().thenRun(this::startKeepAliveTimer)).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e.getCause());
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e.getCause());
-        }
+    protected CompletableFuture<Void> asyncStart() {
+        return register().thenRun(this::startKeepAliveTimer);
     }
 
     @Override
     protected void doStop() throws IOException {
-        try {
-            executionContext.submit(() -> {
-                cancelRegisterTimer();
-                cancelKeepAliveTimer();
-            }).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
-        } catch (ExecutionException e) {
-            throw new IOException(e);
+        if (registerTimer != null) {
+            logger.info("cancelling register timer");
+            registerTimer.cancel(false);
+        }
+        if (keepAliveTimer != null) {
+            logger.info("cancelling keep alive timer");
+            keepAliveTimer.cancel(false);
         }
     }
 

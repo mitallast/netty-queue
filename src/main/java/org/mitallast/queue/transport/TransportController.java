@@ -5,6 +5,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.action.AbstractAction;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.concurrent.Futures;
@@ -24,10 +25,7 @@ public class TransportController<Request extends ActionRequest, Response extends
     }
 
     public synchronized void registerHandler(Class requestClass, AbstractAction<Request, Response> action) {
-        actionMap = ImmutableMap.<Class, AbstractAction<Request, Response>>builder()
-            .putAll(actionMap)
-            .put(requestClass, action)
-            .build();
+        actionMap = Immutable.compose(actionMap, requestClass, action);
     }
 
     public void dispatchRequest(TransportChannel channel, StreamableTransportFrame requestFrame) {

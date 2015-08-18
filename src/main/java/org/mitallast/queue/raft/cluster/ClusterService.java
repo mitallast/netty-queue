@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.mitallast.queue.Version;
+import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.state.MemberState;
@@ -34,27 +35,18 @@ public class ClusterService extends AbstractLifecycleComponent {
 
     public synchronized void addMember(MemberState member) {
         if (!membersMap.containsKey(member.getNode())) {
-            membersMap = ImmutableMap.<DiscoveryNode, MemberState>builder()
-                .putAll(membersMap)
-                .put(member.getNode(), member)
-                .build();
+            membersMap = Immutable.compose(membersMap, member.getNode(), member);
             members = ImmutableList.copyOf(membersMap.values());
             nodes = ImmutableList.copyOf(members.stream().map(MemberState::getNode).iterator());
 
             if (member.getType() == MemberState.Type.ACTIVE) {
                 logger.info("add active member {}", member.getNode());
-                activeMembers = ImmutableList.<MemberState>builder()
-                    .addAll(activeMembers)
-                    .add(member)
-                    .build();
+                activeMembers = Immutable.compose(activeMembers, member);
                 activeNodes = ImmutableList.copyOf(activeMembers.stream().map(MemberState::getNode).iterator());
                 logger.info("active members: {}", activeNodes);
             } else {
                 logger.info("add passive member {}", member.getNode());
-                passiveMembers = ImmutableList.<MemberState>builder()
-                    .addAll(passiveMembers)
-                    .add(member)
-                    .build();
+                passiveMembers = Immutable.compose(passiveMembers, member);
                 passiveNodes = ImmutableList.copyOf(passiveMembers.stream().map(MemberState::getNode).iterator());
                 logger.info("passive members: {}", passiveNodes);
             }
@@ -63,26 +55,18 @@ public class ClusterService extends AbstractLifecycleComponent {
 
     public synchronized void removeMember(MemberState member) {
         if (membersMap.containsKey(member.getNode())) {
-            ImmutableMap.Builder<DiscoveryNode, MemberState> builder = ImmutableMap.builder();
-            membersMap.entrySet().stream()
-                .filter(entry -> !entry.getKey().equals(member.getNode()))
-                .forEach(builder::put);
-            membersMap = builder.build();
+            membersMap = Immutable.subtract(membersMap, member.getNode());
             members = ImmutableList.copyOf(membersMap.values());
             nodes = ImmutableList.copyOf(members.stream().map(MemberState::getNode).iterator());
 
             if (member.getType() == MemberState.Type.ACTIVE) {
                 logger.info("remove active member {}", member.getNode());
-                activeMembers = ImmutableList.copyOf(activeMembers.stream()
-                    .filter(memberItem -> !memberItem.getNode().equals(member.getNode()))
-                    .iterator());
+                activeMembers = Immutable.subtract(activeMembers, member);
                 activeNodes = ImmutableList.copyOf(activeMembers.stream().map(MemberState::getNode).iterator());
                 logger.info("active members: {}", activeNodes);
             } else {
                 logger.info("remove passive member {}", member.getNode());
-                passiveMembers = ImmutableList.copyOf(passiveMembers.stream()
-                    .filter(memberItem -> !memberItem.getNode().equals(member.getNode()))
-                    .iterator());
+                passiveMembers = Immutable.subtract(passiveMembers, member);
                 passiveNodes = ImmutableList.copyOf(passiveMembers.stream().map(MemberState::getNode).iterator());
                 logger.info("passive members: {}", passiveNodes);
             }

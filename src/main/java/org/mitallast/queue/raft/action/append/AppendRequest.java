@@ -31,10 +31,6 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
         this.entries = entries;
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public DiscoveryNode leader() {
         return leader;
     }
@@ -77,13 +73,17 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
             ", logTerm=" + logTerm +
             ", commitIndex=" + commitIndex +
             ", globalIndex=" + globalIndex +
-                ", entries=" + entries.size() +
+            ", entries=" + entries.size() +
             '}';
     }
 
     @Override
     public Builder toBuilder() {
         return new Builder().from(this);
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static class Builder implements EntryBuilder<AppendRequest> {
@@ -137,7 +137,7 @@ public class AppendRequest implements ActionRequest<AppendRequest> {
         }
 
         public Builder setEntries(Collection<RaftLogEntry> entries) {
-            this.entries = ImmutableList.<RaftLogEntry>builder().addAll(entries).build();
+            this.entries = ImmutableList.copyOf(entries);
             return this;
         }
 

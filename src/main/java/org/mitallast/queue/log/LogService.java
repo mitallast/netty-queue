@@ -2,6 +2,7 @@ package org.mitallast.queue.log;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
@@ -25,10 +26,7 @@ public class LogService extends AbstractLifecycleComponent {
         LogRegistry registry = registryMap.get(name);
         if (registry == null) {
             registry = new LogRegistry(name);
-            registryMap = ImmutableMap.<String, LogRegistry>builder()
-                .putAll(registryMap)
-                .put(name, registry)
-                .build();
+            registryMap = Immutable.compose(registryMap, name, registry);
         }
         return registry.log;
     }

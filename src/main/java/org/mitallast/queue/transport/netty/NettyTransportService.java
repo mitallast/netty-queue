@@ -7,6 +7,7 @@ import io.netty.channel.*;
 import io.netty.util.AttributeKey;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
+import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
@@ -144,10 +145,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 return;
             }
             NodeChannel nodeChannel = new NodeChannel(address);
-            connectedNodes = ImmutableMap.<HostAndPort, NodeChannel>builder()
-                .putAll(connectedNodes)
-                .put(address, nodeChannel)
-                .build();
+            connectedNodes = Immutable.compose(connectedNodes, address, nodeChannel);
             nodeChannel.open();
             connected = true;
             logger.info("connected to node {}", address);
@@ -176,13 +174,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
             logger.info("disconnect from node {}", address);
             nodeChannel.close();
-            ImmutableMap.Builder<HostAndPort, NodeChannel> builder = ImmutableMap.builder();
-            connectedNodes.forEach((nodeItem, nodeChannelItem) -> {
-                if (!nodeItem.equals(address)) {
-                    builder.put(nodeItem, nodeChannelItem);
-                }
-            });
-            connectedNodes = builder.build();
+            connectedNodes = Immutable.subtract(connectedNodes, address);
             disconnected = true;
         } finally {
             connectionLock.unlock();

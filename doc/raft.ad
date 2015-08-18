@@ -1,6 +1,64 @@
-= Raft Register
+= Raft
+:toc:
+:idprefix:
+:sectnums:
+:sectanchors:
 
-Follower sequence diagram:
+== Raft Command
+
+=== Leader sequence diagram
+
+[plantuml, raft-command-server, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+CommandAction -> LeaderState: command()
+activate LeaderState
+   LeaderState -> RaftLog: appendEntry(Command)
+   LeaderState -> Replicator: commit(Command)
+   LeaderState <-- Replicator
+   LeaderState -> StateMachine: apply(Command)
+   activate StateMachine
+       StateMachine -> RaftState: apply(Command)
+       alt no session or session timeout
+           StateMachine <-- RaftState: unknown session
+       else session has response
+           StateMachine <-- RaftState: response
+       else execute command
+           RaftState -> ResourceStateMachine: apply(Command)
+           RaftState <-- ResourceStateMachine: command result
+           RaftState -> session: put result
+           StateMachine <-- RaftState: response
+       end
+       LeaderState <-- StateMachine
+   deactivate StateMachine
+   CommandAction <-- LeaderState
+deactivate LeaderState
+....
+
+=== Client sequence diagram
+
+[plantuml, raft-command-client, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+Client -> Node: get resource service
+Client <-- Node: ResourceService
+Client -> ResourceService: create path
+ResourceService -> RaftStateClient: submit PathExists(path)
+activate RaftStateClient
+   RaftStateClient -> RaftStateClient: select member
+   RaftStateClient -> Transport: send CommandRequest
+   RaftStateClient <-- Transport: CommandResponse
+   Client <-- RaftStateClient
+deactivate RaftStateClient
+....
+
+== Raft Register
+
+=== Follower sequence diagram
 
 [plantuml, raft-register-client, svg]
 ....
@@ -41,8 +99,7 @@ RaftStateContext -> KeepAliveTimer: start
 deactivate RaftStateContext
 ....
 
-
-Leader sequence diagram:
+=== Leader sequence diagram
 
 [plantuml, raft-register-server, svg]
 ....

@@ -132,7 +132,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     public void connectToNode(HostAndPort address) {
         checkIsStarted();
         if (address == null) {
-            throw new TransportException("can't connect to null address");
+            throw new IllegalArgumentException("can't connect to null address");
         }
         if (address.equals(localAddress())) {
             logger.debug("connect to local node");
@@ -160,10 +160,10 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     @Override
     public void disconnectFromNode(HostAndPort address) {
         if (address == null) {
-            throw new TransportException("can't disconnect from null node");
+            throw new IllegalArgumentException("can't disconnect from null node");
         }
         if (address.equals(localAddress())) {
-            throw new TransportException("can't disconnect from local node");
+            throw new IllegalArgumentException("can't disconnect from local node");
         }
         boolean disconnected = false;
         connectionLock.lock();
@@ -196,7 +196,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         } else {
             NodeChannel nodeChannel = connectedNodes.get(address);
             if (nodeChannel == null) {
-                throw new TransportException("Not connected to node: " + address);
+                throw new IllegalArgumentException("Not connected to node: " + address);
             }
             return nodeChannel;
         }

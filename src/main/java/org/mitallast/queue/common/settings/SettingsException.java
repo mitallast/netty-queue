@@ -1,8 +1,6 @@
 package org.mitallast.queue.common.settings;
 
-import org.mitallast.queue.QueueConfigurationException;
-
-public class SettingsException extends QueueConfigurationException {
+public class SettingsException extends RuntimeException {
 
     public SettingsException(String message) {
         super(message);

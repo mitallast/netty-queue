@@ -3,7 +3,6 @@ package org.mitallast.queue.common.settings.loader;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import org.mitallast.queue.QueueParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +33,7 @@ public class JsonSettingsLoader implements SettingsLoader {
             return settings;
         }
         if (token != JsonToken.START_OBJECT) {
-            throw new QueueParseException("malformed, expected settings to start with 'object', instead was [" + token + "]");
+            throw new IllegalStateException("malformed, expected settings to start with 'object', instead was [" + token + "]");
         }
         serializeObject(settings, sb, path, parser, null);
         return settings;

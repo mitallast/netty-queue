@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.inject.Inject;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
@@ -127,7 +126,7 @@ public class InternalTransactionalQueuesService extends AbstractLifecycleCompone
         return queueService.stats();
     }
 
-    private synchronized void loadState() throws QueueException {
+    private synchronized void loadState() throws IOException {
         File stateFile = getStateFile();
         if (stateFile.exists()) {
             try (FileInputStream inputStream = new FileInputStream(stateFile)) {
@@ -165,29 +164,22 @@ public class InternalTransactionalQueuesService extends AbstractLifecycleCompone
                         }
                     }
                     if (queue == null) {
-                        throw new QueueException("Queue name cannot be null");
+                        throw new IOException("Queue name cannot be null");
                     }
                     createQueue(queue, builder.build());
                 }
                 assertEquals(JsonToken.END_OBJECT, parser.nextToken());
                 parser.close();
-            } catch (IOException e) {
-                logger.error("error read queues state", e);
-                throw new QueueException(e);
             }
         }
     }
 
-    private synchronized void flushState() throws QueueException {
+    private synchronized void flushState() throws IOException {
         logger.info("flush state {}", queues.keySet());
         File outputFile = getStateFile();
         if (!outputFile.exists()) {
-            try {
-                if (!outputFile.createNewFile()) {
-                    throw new IOException("Error create file " + outputFile);
-                }
-            } catch (IOException e) {
-                throw new QueueException(e);
+            if (!outputFile.createNewFile()) {
+                throw new IOException("Error create file " + outputFile);
             }
         }
         try (FileOutputStream outputStream = new FileOutputStream(outputFile)) {
@@ -210,8 +202,6 @@ public class InternalTransactionalQueuesService extends AbstractLifecycleCompone
             generator.writeEndArray();
             generator.writeEndObject();
             generator.close();
-        } catch (IOException e) {
-            throw new QueueException(e);
         }
     }
 

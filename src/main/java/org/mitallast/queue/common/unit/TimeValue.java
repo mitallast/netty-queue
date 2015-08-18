@@ -4,7 +4,6 @@ import org.joda.time.Period;
 import org.joda.time.PeriodType;
 import org.joda.time.format.PeriodFormat;
 import org.joda.time.format.PeriodFormatter;
-import org.mitallast.queue.QueueParseException;
 import org.mitallast.queue.common.strings.Strings;
 
 import java.util.concurrent.TimeUnit;
@@ -34,55 +33,6 @@ public class TimeValue {
     public TimeValue(long duration, TimeUnit timeUnit) {
         this.duration = duration;
         this.timeUnit = timeUnit;
-    }
-
-    public static TimeValue timeValueNanos(long nanos) {
-        return new TimeValue(nanos, TimeUnit.NANOSECONDS);
-    }
-
-    public static TimeValue timeValueMillis(long millis) {
-        return new TimeValue(millis, TimeUnit.MILLISECONDS);
-    }
-
-    public static TimeValue timeValueSeconds(long seconds) {
-        return new TimeValue(seconds, TimeUnit.SECONDS);
-    }
-
-    public static TimeValue timeValueMinutes(long minutes) {
-        return new TimeValue(minutes, TimeUnit.MINUTES);
-    }
-
-    public static TimeValue timeValueHours(long hours) {
-        return new TimeValue(hours, TimeUnit.HOURS);
-    }
-
-    public static TimeValue parseTimeValue(String sValue, TimeValue defaultValue) {
-        if (sValue == null) {
-            return defaultValue;
-        }
-        try {
-            long millis;
-            if (sValue.endsWith("S")) {
-                millis = Long.parseLong(sValue.substring(0, sValue.length() - 1));
-            } else if (sValue.endsWith("ms")) {
-                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 2)));
-            } else if (sValue.endsWith("s")) {
-                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 1000);
-            } else if (sValue.endsWith("m")) {
-                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 60 * 1000);
-            } else if (sValue.endsWith("H") || sValue.endsWith("h")) {
-                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 60 * 60 * 1000);
-            } else if (sValue.endsWith("d")) {
-                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 24 * 60 * 60 * 1000);
-            } else if (sValue.endsWith("w")) {
-                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 7 * 24 * 60 * 60 * 1000);
-            } else {
-                millis = Long.parseLong(sValue);
-            }
-            return new TimeValue(millis, TimeUnit.MILLISECONDS);
-        } catch (NumberFormatException e) {
-            throw new QueueParseException("Failed to parse [" + sValue + "]", e);
-        }
     }
 
     public long nanos() {
@@ -258,5 +208,54 @@ public class TimeValue {
         int result = (int) (duration ^ (duration >>> 32));
         result = 31 * result + (timeUnit != null ? timeUnit.hashCode() : 0);
         return result;
+    }
+
+    public static TimeValue timeValueNanos(long nanos) {
+        return new TimeValue(nanos, TimeUnit.NANOSECONDS);
+    }
+
+    public static TimeValue timeValueMillis(long millis) {
+        return new TimeValue(millis, TimeUnit.MILLISECONDS);
+    }
+
+    public static TimeValue timeValueSeconds(long seconds) {
+        return new TimeValue(seconds, TimeUnit.SECONDS);
+    }
+
+    public static TimeValue timeValueMinutes(long minutes) {
+        return new TimeValue(minutes, TimeUnit.MINUTES);
+    }
+
+    public static TimeValue timeValueHours(long hours) {
+        return new TimeValue(hours, TimeUnit.HOURS);
+    }
+
+    public static TimeValue parseTimeValue(String sValue, TimeValue defaultValue) {
+        if (sValue == null) {
+            return defaultValue;
+        }
+        try {
+            long millis;
+            if (sValue.endsWith("S")) {
+                millis = Long.parseLong(sValue.substring(0, sValue.length() - 1));
+            } else if (sValue.endsWith("ms")) {
+                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 2)));
+            } else if (sValue.endsWith("s")) {
+                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 1000);
+            } else if (sValue.endsWith("m")) {
+                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 60 * 1000);
+            } else if (sValue.endsWith("H") || sValue.endsWith("h")) {
+                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 60 * 60 * 1000);
+            } else if (sValue.endsWith("d")) {
+                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 24 * 60 * 60 * 1000);
+            } else if (sValue.endsWith("w")) {
+                millis = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * 7 * 24 * 60 * 60 * 1000);
+            } else {
+                millis = Long.parseLong(sValue);
+            }
+            return new TimeValue(millis, TimeUnit.MILLISECONDS);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Failed to parse [" + sValue + "]", e);
+        }
     }
 }

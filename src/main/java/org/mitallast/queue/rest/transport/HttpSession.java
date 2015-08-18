@@ -6,7 +6,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
-import org.mitallast.queue.QueueRuntimeException;
 import org.mitallast.queue.rest.RestResponse;
 import org.mitallast.queue.rest.RestSession;
 
@@ -58,7 +57,7 @@ public class HttpSession implements RestSession {
                 response.printStackTrace(printWriter);
             }
         } catch (IOException e) {
-            throw new QueueRuntimeException(e);
+            throw new RuntimeException(e);
         }
         DefaultFullHttpResponse httpResponse = new DefaultFullHttpResponse(
             HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR, buffer, false, true);

@@ -1,6 +1,5 @@
 package org.mitallast.queue.common.unit;
 
-import org.mitallast.queue.QueueParseException;
 import org.mitallast.queue.common.strings.Strings;
 
 public class SizeValue {
@@ -20,37 +19,6 @@ public class SizeValue {
     public SizeValue(long size, SizeUnit sizeUnit) {
         this.size = size;
         this.sizeUnit = sizeUnit;
-    }
-
-    public static SizeValue parseSizeValue(String sValue) throws QueueParseException {
-        return parseSizeValue(sValue, null);
-    }
-
-    public static SizeValue parseSizeValue(String sValue, SizeValue defaultValue) throws QueueParseException {
-        if (sValue == null) {
-            return defaultValue;
-        }
-        long singles;
-        try {
-            if (sValue.endsWith("b")) {
-                singles = Long.parseLong(sValue.substring(0, sValue.length() - 1));
-            } else if (sValue.endsWith("k") || sValue.endsWith("K")) {
-                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C1);
-            } else if (sValue.endsWith("m") || sValue.endsWith("M")) {
-                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C2);
-            } else if (sValue.endsWith("g") || sValue.endsWith("G")) {
-                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C3);
-            } else if (sValue.endsWith("t") || sValue.endsWith("T")) {
-                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C4);
-            } else if (sValue.endsWith("p") || sValue.endsWith("P")) {
-                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C5);
-            } else {
-                singles = Long.parseLong(sValue);
-            }
-        } catch (NumberFormatException e) {
-            throw new QueueParseException("Failed to parse [" + sValue + "]", e);
-        }
-        return new SizeValue(singles, SizeUnit.SINGLE);
     }
 
     public long singles() {
@@ -192,5 +160,36 @@ public class SizeValue {
         int result = (int) (size ^ (size >>> 32));
         result = 31 * result + (sizeUnit != null ? sizeUnit.hashCode() : 0);
         return result;
+    }
+
+    public static SizeValue parseSizeValue(String sValue) throws IllegalArgumentException {
+        return parseSizeValue(sValue, null);
+    }
+
+    public static SizeValue parseSizeValue(String sValue, SizeValue defaultValue) throws IllegalArgumentException {
+        if (sValue == null) {
+            return defaultValue;
+        }
+        long singles;
+        try {
+            if (sValue.endsWith("b")) {
+                singles = Long.parseLong(sValue.substring(0, sValue.length() - 1));
+            } else if (sValue.endsWith("k") || sValue.endsWith("K")) {
+                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C1);
+            } else if (sValue.endsWith("m") || sValue.endsWith("M")) {
+                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C2);
+            } else if (sValue.endsWith("g") || sValue.endsWith("G")) {
+                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C3);
+            } else if (sValue.endsWith("t") || sValue.endsWith("T")) {
+                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C4);
+            } else if (sValue.endsWith("p") || sValue.endsWith("P")) {
+                singles = (long) (Double.parseDouble(sValue.substring(0, sValue.length() - 1)) * SizeUnit.C5);
+            } else {
+                singles = Long.parseLong(sValue);
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Failed to parse [" + sValue + "]", e);
+        }
+        return new SizeValue(singles, SizeUnit.SINGLE);
     }
 }

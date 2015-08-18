@@ -9,7 +9,6 @@ import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.settings.Settings;
@@ -91,7 +90,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
                 .channel();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new QueueException(e);
+            throw new IOException(e);
         }
     }
 
@@ -105,7 +104,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new QueueException(e);
+            throw new IOException(e);
         }
         worker.shutdownGracefully();
         boss.shutdownGracefully();

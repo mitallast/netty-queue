@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.common.collect.ImmutableList;
-import org.mitallast.queue.QueueException;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.mmap.MemoryMappedFile;
 import org.mitallast.queue.common.mmap.MemoryMappedFileFactory;
@@ -95,10 +94,10 @@ public class MMapTransactionalQueueService extends AbstractQueueService implemen
                     }
                 }
                 if (appendFilePath == null) {
-                    throw new QueueException("Queue append file not found");
+                    throw new IOException("Queue append file not found");
                 }
                 if (metaFilePath == null) {
-                    throw new QueueException("Queue meta file not found");
+                    throw new IOException("Queue meta file not found");
                 }
                 MemoryMappedFile appendFile = mmapFileFactory.createFile(new File(appendFilePath));
                 MemoryMappedFile metaFile = mmapFileFactory.createFile(new File(metaFilePath));

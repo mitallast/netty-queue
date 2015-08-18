@@ -1,11 +1,9 @@
 package org.mitallast.queue.common.validation;
 
-import org.mitallast.queue.QueueException;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class ValidationException extends QueueException implements ValidationBuilder {
+public class ValidationException extends RuntimeException implements ValidationBuilder {
 
     private final List<String> validationErrors = new ArrayList<>();
 

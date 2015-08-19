@@ -12,4 +12,7 @@ public interface TransportClient {
 
     <Request extends ActionRequest, Response extends ActionResponse>
     CompletableFuture<Response> send(Request request);
+
+    <Request extends ActionRequest, Response extends ActionResponse>
+    CompletableFuture<Response> sendRaw(Request request);
 }

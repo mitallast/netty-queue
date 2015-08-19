@@ -75,12 +75,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                         } else {
                             if (frame instanceof StreamableTransportFrame) {
                                 EntryBuilder<ActionResponse> builder = ((StreamableTransportFrame) frame).message();
-                                ActionResponse response = builder.build();
-                                if (response.hasError()) {
-                                    future.completeExceptionally(response.error());
-                                } else {
-                                    future.complete(response);
-                                }
+                                future.complete(builder.build());
                             } else {
                                 future.complete(frame);
                             }
@@ -238,18 +233,23 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         @Override
         @SuppressWarnings("unchecked")
         public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
-            CompletableFuture<Response> future = transportController.dispatchRequest(request);
-            CompletableFuture<Response> responseFuture = Futures.future();
-            future.whenComplete((response, error) -> {
+            CompletableFuture<Response> future = Futures.future();
+            this.<Request, Response>sendRaw(request).whenComplete((response, error) -> {
                 if (error != null) {
-                    responseFuture.completeExceptionally(error);
+                    future.completeExceptionally(error);
                 } else if (response.hasError()) {
-                    responseFuture.completeExceptionally(response.error());
+                    future.completeExceptionally(response.error());
                 } else {
-                    responseFuture.complete(response);
+                    future.complete(response);
                 }
             });
-            return responseFuture;
+            return future;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> sendRaw(Request request) {
+            return transportController.dispatchRequest(request);
         }
     }
 
@@ -361,8 +361,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public <Request extends ActionRequest, Response extends ActionResponse>
-        CompletableFuture<Response> send(Request request) {
+        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> sendRaw(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             if (channel == null) {
@@ -379,6 +378,22 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     if (channel.isOpen()) {
                         channel.flush();
                     }
+                }
+            });
+            return future;
+        }
+
+        @Override
+        public <Request extends ActionRequest, Response extends ActionResponse>
+        CompletableFuture<Response> send(Request request) {
+            CompletableFuture<Response> future = Futures.future();
+            this.<Request, Response>sendRaw(request).whenComplete((response, error) -> {
+                if (error != null) {
+                    future.completeExceptionally(error);
+                } else if (response.hasError()) {
+                    future.completeExceptionally(response.error());
+                } else {
+                    future.complete(response);
                 }
             });
             return future;

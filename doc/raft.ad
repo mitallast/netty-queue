@@ -4,7 +4,9 @@
 :sectnums:
 :sectanchors:
 
+
 == Raft Command
+
 
 === Leader sequence diagram
 
@@ -37,6 +39,7 @@ activate LeaderState
 deactivate LeaderState
 ....
 
+
 === Client sequence diagram
 
 [plantuml, raft-command-client, svg]
@@ -56,7 +59,9 @@ activate RaftStateClient
 deactivate RaftStateClient
 ....
 
+
 == Raft Register
+
 
 === Follower sequence diagram
 
@@ -99,6 +104,7 @@ RaftStateContext -> KeepAliveTimer: start
 deactivate RaftStateContext
 ....
 
+
 === Leader sequence diagram
 
 [plantuml, raft-register-server, svg]
@@ -116,8 +122,6 @@ LeaderState -> RaftStateContext: set leader local node
 RaftStateContext <-- LeaderState: transition
 deactivate LeaderState
 ...
-
-
 group handle RegisterRequest
     RegisterAction -> LeaderState: RegisterRequest
     activate LeaderState
@@ -136,10 +140,11 @@ group handle RegisterRequest
         RegisterAction <-- LeaderState
     deactivate LeaderState
 end
-
 ....
 
+
 == Raft Empty Append Request
+
 
 === Leader sequence diagram
 
@@ -168,4 +173,68 @@ activate LeaderState
     HeartbeatTimer <-- LeaderState
 deactivate LeaderState
 
+....
+
+
+== Raft NoOpEntry
+
+
+=== Leader sequence diagram
+
+[plantuml, raft-no-op-entry-leader, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+LeaderState -> LeaderState: open
+group open
+    LeaderState -> LeaderState: commit entries
+    group commit entries
+        LeaderState -> RaftLog: append NoOpEntry
+        LeaderState -> Replicator: commit
+        LeaderState <-- Replicator
+    end
+    LeaderState -> HeartbeatTimer: start
+    LeaderState -> RaftStateContext: set leader local node
+end
+....
+
+
+=== Passive sequence diagram
+
+[plantuml, raft-no-op-entry-follower, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+AppendAction -> PassiveState: AppendRequest(NoOpEntry)
+activate PassiveState
+    PassiveState -> RaftStateContext: update term
+    PassiveState -> RaftStateContext: update leader
+    PassiveState -> PassiveState: doAppendEntries
+    alt loop
+        PassiveState -> RaftLog: append NoOpEntry
+    end
+    PassiveState -> ExecutionContext: schedule apply commits
+    PassiveState -> RaftStateContext: transition FollowerState
+    AppendAction <- PassiveState: AppendResponse
+deactivate PassiveState
+
+PassiveState <- ExecutionContext: apply commits
+activate PassiveState
+    group apply commits
+        PassiveState -> RaftStateContext: set commit index
+        PassiveState -> RaftLog: next entry:
+        PassiveState <-- RaftLog: NoOpEntry
+        PassiveState -> StateMachine: apply NoOpEntry
+        activate StateMachine
+            StateMachine -> RaftState: apply NoOpEntry
+            RaftState -> ExecutionContext: await
+            RaftState -> ExecutionContext: set last applied
+            StateMachine <-- RaftState
+            PassiveState <-- StateMachine
+        deactivate StateMachine
+    end
+    PassiveState <-- ExecutionContext
+deactivate PassiveState
 ....

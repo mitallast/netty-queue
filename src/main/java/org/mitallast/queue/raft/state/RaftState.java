@@ -304,22 +304,18 @@ public class RaftState extends AbstractComponent implements EntryFilter {
 
         private RaftSession(long id, long timestamp) {
             super(id);
-            executionContext.checkThread();
             this.timestamp = timestamp;
         }
 
         public void expire() {
-            executionContext.checkThread();
             super.expire();
         }
 
         public long timestamp() {
-            executionContext.checkThread();
             return timestamp;
         }
 
         private boolean expire(long timestamp) {
-            executionContext.checkThread();
             if (timestamp - sessionTimeout > this.timestamp) {
                 expire();
                 return false;
@@ -329,7 +325,6 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         }
 
         private boolean update(long index, long timestamp) {
-            executionContext.checkThread();
             if (timestamp - sessionTimeout > this.timestamp) {
                 expire();
                 return false;
@@ -340,7 +335,6 @@ public class RaftState extends AbstractComponent implements EntryFilter {
         }
 
         private void put(long request, Streamable response) {
-            executionContext.checkThread();
             responses.put(request, response);
         }
     }

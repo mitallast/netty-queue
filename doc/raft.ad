@@ -138,3 +138,34 @@ group handle RegisterRequest
 end
 
 ....
+
+== Raft Empty Append Request
+
+=== Leader sequence diagram
+
+[plantuml, raft-empty-append-request-leader, svg]
+....
+skinparam monochrome true
+skinparam shadowing false
+
+HeartbeatTimer -> LeaderState: heartbeat members
+activate LeaderState
+    LeaderState -> Replicator: commit
+    activate Replicator
+        group loop
+            Replicator -> Replica: commit
+            activate Replica
+                Replica -> Replica: empty commit
+                Replica -> TransportService: send AppendRequest
+                Replica <-- TransportService: AppendResponse
+                Replica -> MemberState: update state
+                Replica -> RaftLog: update state
+                Replicator <-- Replica
+            deactivate Replica
+        end
+        LeaderState <-- Replicator
+    deactivate Replicator
+    HeartbeatTimer <-- LeaderState
+deactivate LeaderState
+
+....

@@ -59,9 +59,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.stateFactory = stateFactory;
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueMillis(100)).millis();
         this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(heartbeatInterval * 2)).millis();
-        executionContext.submit(() -> {
-            transition(StartState.class);
-        }).get();
+        executionContext.submit(() -> transition(StartState.class)).get();
     }
 
 
@@ -217,7 +215,6 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     }
 
     private CompletableFuture<Void> join() {
-        executionContext.checkThread();
         CompletableFuture<Void> future = Futures.future();
         executionContext.execute(() -> join(future));
         return future;
@@ -267,17 +264,17 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     }
 
     private CompletableFuture<Void> leave() {
-        executionContext.checkThread();
-        return leave(new ArrayList<>(clusterService.nodes()), Futures.future());
+        CompletableFuture<Void> future = Futures.future();
+        executionContext.execute(() -> leave(new ArrayList<>(clusterService.nodes()), future));
+        return future;
     }
 
-    private CompletableFuture<Void> leave(List<DiscoveryNode> members, CompletableFuture<Void> future) {
+    private void leave(List<DiscoveryNode> members, CompletableFuture<Void> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
             future.completeExceptionally(new NoLeaderException("no leader found"));
-            return future;
         }
-        return leave(selectMember(members), members, future);
+        leave(selectMember(members), members, future);
     }
 
     private CompletableFuture<Void> leave(DiscoveryNode member, List<DiscoveryNode> members, CompletableFuture<Void> future) {
@@ -299,14 +296,6 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         return future;
     }
 
-    private void cancelJoinTimer() {
-        executionContext.checkThread();
-        if (joinTimer != null) {
-            logger.info("cancelling join timer");
-            joinTimer.cancel(false);
-        }
-    }
-
     @Override
     public void delete() {
         executionContext.checkThread();
@@ -320,38 +309,42 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     }
 
     @Override
-    protected void doStop() throws IOException {
-        try {
-            executionContext.submit(() -> {
-                cancelJoinTimer();
-                transition(StartState.class);
-                leave();
-            }).get();
-            super.doStop();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(e);
-        } catch (ExecutionException e) {
-            throw new IOException(e);
-        }
-    }
-
-    @Override
     protected void doStart() throws IOException {
         try {
             if (settings.getAsBoolean("raft.passive", false)) {
                 executionContext.submit(() -> transition(PassiveState.class)).get();
                 join().get();
-                super.doStart();
             } else {
                 executionContext.submit(() -> transition(FollowerState.class)).get();
-                super.doStart();
+            }
+            super.doStart();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        } catch (ExecutionException e) {
+            throw new IOException(e.getCause());
+        }
+    }
+
+    @Override
+    protected void doStop() throws IOException {
+        try {
+            if (joinTimer != null) {
+                logger.info("cancelling join timer");
+                joinTimer.cancel(false);
+            }
+            executionContext.submit(() -> transition(StartState.class)).get();
+            super.doStop();
+            try {
+                leave().get();
+            } catch (ExecutionException e) {
+                logger.warn("error leave {}", e.getMessage());
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);
         } catch (ExecutionException e) {
-            throw new IOException(e);
+            throw new IOException(e.getCause());
         }
     }
 }

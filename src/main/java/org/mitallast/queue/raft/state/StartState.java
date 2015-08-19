@@ -3,6 +3,7 @@ package org.mitallast.queue.raft.state;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.raft.IllegalMemberStateException;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
 import org.mitallast.queue.raft.action.command.CommandRequest;
@@ -36,42 +37,58 @@ class StartState extends AbstractState {
 
     @Override
     public CompletableFuture<JoinResponse> join(JoinRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(JoinResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<LeaveResponse> leave(LeaveRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(LeaveResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<RegisterResponse> register(RegisterRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(RegisterResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<KeepAliveResponse> keepAlive(KeepAliveRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(KeepAliveResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<AppendResponse> append(AppendRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(AppendResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<VoteResponse> vote(VoteRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(VoteResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<CommandResponse> command(CommandRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(CommandResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override
     public CompletableFuture<QueryResponse> query(QueryRequest request) {
-        return Futures.completeExceptionally(new IllegalStateException("inactive state"));
+        return Futures.complete(QueryResponse.builder()
+            .setError(new IllegalMemberStateException("inactive state"))
+            .build());
     }
 
     @Override

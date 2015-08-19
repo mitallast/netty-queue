@@ -238,7 +238,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportService.client(context.getLeader().address()).send(request);
+            return transportService.client(context.getLeader().address()).sendRaw(request);
         }
     }
 
@@ -250,7 +250,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportService.client(context.getLeader().address()).send(request);
+            return transportService.client(context.getLeader().address()).sendRaw(request);
         }
     }
 
@@ -272,7 +272,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportService.client(context.getLeader().address()).send(request);
+            return transportService.client(context.getLeader().address()).sendRaw(request);
         }
     }
 
@@ -284,7 +284,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportService.client(context.getLeader().address()).send(request);
+            return transportService.client(context.getLeader().address()).sendRaw(request);
         }
     }
 
@@ -296,7 +296,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportService.client(context.getLeader().address()).send(request);
+            return transportService.client(context.getLeader().address()).sendRaw(request);
         }
     }
 
@@ -308,7 +308,7 @@ public class PassiveState extends AbstractState {
                 .setError(new NoLeaderException())
                 .build());
         } else {
-            return transportService.client(context.getLeader().address()).send(request);
+            return transportService.client(context.getLeader().address()).sendRaw(request);
         }
     }
 }

@@ -182,7 +182,7 @@ abstract class ActiveState extends PassiveState {
                 .setError(new NoLeaderException())
                 .build());
         }
-        return transportService.client(context.getLeader().address()).send(request);
+        return transportService.client(context.getLeader().address()).sendRaw(request);
     }
 
     private CompletableFuture<QueryResponse> querySequential(QueryRequest request) {

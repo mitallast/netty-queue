@@ -95,6 +95,7 @@ class CandidateState extends ActiveState {
         final Quorum quorum = new Quorum((int) Math.floor(votingMembers.size() / 2.0) + 1, (elected) -> {
             complete.set(true);
             if (elected) {
+                logger.info("local node elected as leader");
                 transition(RaftStateType.LEADER);
             }
         });
@@ -123,7 +124,7 @@ class CandidateState extends ActiveState {
                         logger.warn(error.getMessage());
                         quorum.fail();
                     } else if (response.term() > context.getTerm()) {
-                        logger.info("received greater term from {}", member);
+                        logger.info("received greater term from {}, transitioning to follower", member);
                         context.setTerm(response.term());
                         complete.set(true);
                         transition(RaftStateType.FOLLOWER);
@@ -150,6 +151,7 @@ class CandidateState extends ActiveState {
         // assign that term and leader to the current context and step down as a candidate.
         if (request.term() >= context.getTerm()) {
             context.setTerm(request.term());
+            logger.info("received append request, transitioning to follower");
             transition(RaftStateType.FOLLOWER);
         }
         return super.append(request);
@@ -162,6 +164,7 @@ class CandidateState extends ActiveState {
         // If the request indicates a term that is greater than the current term then
         // assign that term and leader to the current context and step down as a candidate.
         if (request.term() > context.getTerm()) {
+            logger.info("received vote request, transitioning to follower");
             context.setTerm(request.term());
             transition(RaftStateType.FOLLOWER);
             return super.vote(request);

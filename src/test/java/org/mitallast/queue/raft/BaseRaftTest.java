@@ -7,9 +7,11 @@ import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.raft.state.RaftStateContext;
 import org.mitallast.queue.raft.state.RaftStateType;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class BaseRaftTest extends BaseIntegrationTest {
 
@@ -35,19 +37,22 @@ public class BaseRaftTest extends BaseIntegrationTest {
         }
         String nodesString = buffer.toString();
 
-        List<Future<InternalNode>> futures = new ArrayList<>(ports.length);
-        for (int i = 0; i < nodes.length; i++) {
-            final int node = i;
-            Future<InternalNode> future = submit(() -> nodes[node] = createNode(ImmutableSettings.builder()
-                .put(settings())
-                .put("transport.port", ports[node])
-                .put("raft.cluster.nodes", nodesString)
-                .build()));
-            futures.add(future);
-        }
-
-        for (Future<InternalNode> future : futures) {
-            future.get();
+        List<Future> futures = IntStream.range(0, nodeCount())
+            .mapToObj(node -> submit(() -> {
+                logger.info("starting node {}", node);
+                try {
+                    nodes[node] = createNode(ImmutableSettings.builder()
+                        .put(settings())
+                        .put("transport.port", ports[node])
+                        .put("raft.cluster.nodes", nodesString)
+                        .build());
+                } catch (Throwable e) {
+                    logger.error("error start node", e);
+                    assert false : e;
+                }
+            })).collect(Collectors.toList());
+        for (Future future : futures) {
+            future.get(1, TimeUnit.MINUTES);
         }
 
         // await for leader election

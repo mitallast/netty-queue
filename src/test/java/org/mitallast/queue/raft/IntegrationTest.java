@@ -12,11 +12,6 @@ import org.mitallast.queue.raft.util.StringValue;
 
 public class IntegrationTest extends BaseRaftTest {
 
-    @Override
-    protected int nodeCount() {
-        return 3;
-    }
-
     @Test
     @SuppressWarnings("unchecked")
     public void test() throws Exception {

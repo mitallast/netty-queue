@@ -12,11 +12,12 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class BaseIntegrationTest extends BaseTest {
 
-    private static int nodeCounter = 0;
+    private final static AtomicInteger nodeCounter = new AtomicInteger(0);
     private List<InternalNode> nodes = new CopyOnWriteArrayList<>();
 
     protected InternalNode createNode() throws Exception {
@@ -53,9 +54,9 @@ public class BaseIntegrationTest extends BaseTest {
     }
 
     protected Settings settings() throws Exception {
-        nodeCounter++;
+        int nodeId = nodeCounter.incrementAndGet();
         return ImmutableSettings.builder()
-            .put("node.name", "node" + nodeCounter)
+            .put("node.name", "node" + nodeId)
             .put("work_dir", testFolder.newFolder().getAbsolutePath())
             .put("rest.transport.host", "127.0.0.1")
             .put("rest.transport.port", 18000 + random.nextInt(500))

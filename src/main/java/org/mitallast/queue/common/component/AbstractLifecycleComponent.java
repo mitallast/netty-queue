@@ -67,6 +67,7 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
         if (!lifecycle.moveToStarted()) {
             logger.warn("Don't moved to started, " + lifecycle.state());
         }
+        logger.info("starting");
         doStart();
         logger.info("started");
     }
@@ -75,12 +76,12 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
 
     @Override
     public void stop() throws IOException {
-        logger.debug("stopping");
         if (!lifecycle.canMoveToStopped()) {
             logger.warn("Can't move to stopped, it's a " + lifecycle.state());
             return;
         }
         lifecycle.moveToStopped();
+        logger.info("stopping");
         doStop();
         logger.debug("stopped");
     }
@@ -97,6 +98,7 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
             return;
         }
         lifecycle.moveToClosed();
+        logger.info("closing");
         doClose();
         logger.info("closed");
     }

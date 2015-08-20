@@ -7,8 +7,12 @@ import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class BaseIntegrationTest extends BaseTest {
 
@@ -33,15 +37,18 @@ public class BaseIntegrationTest extends BaseTest {
 
     @After
     public void tearDownNodes() throws Exception {
-        for (InternalNode node : nodes) {
-            if (node.lifecycle().started()) {
-                node.stop();
-            }
-        }
-        for (InternalNode node : nodes) {
-            if (node.lifecycle().stopped()) {
-                node.close();
-            }
+        List<Future<Void>> futures = nodes.stream()
+            .map(node -> submit(() -> {
+                try {
+                    node.stop();
+                    node.close();
+                } catch (IOException e) {
+                    assert false : e;
+                }
+            }))
+            .collect(Collectors.toList());
+        for (Future<Void> future : futures) {
+            future.get(1, TimeUnit.MINUTES);
         }
     }
 

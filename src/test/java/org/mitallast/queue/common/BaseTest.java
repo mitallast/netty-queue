@@ -88,7 +88,7 @@ public class BaseTest {
         }
     }
 
-    protected <T> Future<T> submit(Callable<T> callable) throws Exception {
+    protected <T> Future<T> submit(Callable<T> callable) {
         return executorService.submit(() -> {
             try {
                 return callable.call();
@@ -97,6 +97,10 @@ public class BaseTest {
                 throw e;
             }
         });
+    }
+
+    protected Future<Void> submit(Runnable runnable) {
+        return executorService.submit(runnable::run, null);
     }
 
     protected void printQps(String metric, long total, long start, long end) {
@@ -146,11 +150,11 @@ public class BaseTest {
         return XStreamFactory.jsonStream().createGenerator(buffer);
     }
 
-    public static interface Task {
-        public void execute() throws Exception;
+    public interface Task {
+        void execute() throws Exception;
     }
 
-    public static interface ThreadTask {
-        public void execute(int thread, int concurrency) throws Exception;
+    public interface ThreadTask {
+        void execute(int thread, int concurrency) throws Exception;
     }
 }

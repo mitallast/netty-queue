@@ -65,6 +65,7 @@ public class PassiveState extends AbstractState {
         // If a transition is required then transition back to the follower state.
         // If the node is already a follower then the transition will be ignored.
         if (transition) {
+            logger.info("received append request, transitioning to follower");
             transition(RaftStateType.FOLLOWER);
             transition = false;
         }

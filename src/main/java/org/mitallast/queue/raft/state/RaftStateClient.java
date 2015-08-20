@@ -40,6 +40,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     private final AtomicBoolean keepAlive = new AtomicBoolean();
     private final Random random = new Random();
     private final long keepAliveInterval;
+    private final long registerDelay;
 
     protected volatile DiscoveryNode leader;
     protected volatile long term;
@@ -57,7 +58,8 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         this.transportService = transportService;
         this.clusterService = clusterService;
         this.executionContext = executionContext;
-        this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueMinutes(1)).millis();
+        this.keepAliveInterval = componentSettings.getAsTime("keep_alive", TimeValue.timeValueMinutes(3)).millis();
+        this.registerDelay = componentSettings.getAsTime("register_delay", TimeValue.timeValueMillis(100)).millis();
     }
 
     public DiscoveryNode getLeader() {
@@ -67,6 +69,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
 
     RaftStateClient setLeader(DiscoveryNode leader) {
         executionContext.checkThread();
+        logger.info("new leader {}", leader);
         this.leader = leader;
         return this;
     }
@@ -146,6 +149,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             }
 
             if (member == null) {
+                logger.info("no member found, set no leader");
                 setLeader(null);
                 future.completeExceptionally(new IllegalStateException("unknown leader"));
             } else {
@@ -172,6 +176,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             return;
         }
         if (member == null) {
+            logger.info("no member found, set no leader");
             setLeader(null);
             future.completeExceptionally(new IllegalStateException("unknown leader"));
         } else {
@@ -221,6 +226,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             }
 
             if (member == null) {
+                logger.info("no member found, set no leader");
                 setLeader(null);
                 future.completeExceptionally(new IllegalStateException("unknown leader"));
             } else {
@@ -270,26 +276,30 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
 
     private CompletableFuture<Void> register() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> register(100, future));
+        executionContext.execute(() -> register(future));
         return future;
     }
 
-    private CompletableFuture<Void> register(long interval, CompletableFuture<Void> future) {
+    private void register(CompletableFuture<Void> future) {
+        logger.info("register start");
         executionContext.checkThread();
         register(new ArrayList<>(clusterService.nodes())).whenComplete((result, error) -> {
             if (error == null) {
+                logger.info("register success");
                 future.complete(null);
             } else {
-                long nextInterval = Math.min(interval * 2, 5000);
-                registerTimer = executionContext.schedule(() -> register(nextInterval, future), nextInterval, TimeUnit.MILLISECONDS);
+                logger.error("register error, schedule next try: {}", error.getMessage());
+                registerTimer = executionContext.schedule(() -> register(future), registerDelay, TimeUnit.MILLISECONDS);
             }
         });
-        return future;
     }
 
     protected CompletableFuture<Void> register(List<DiscoveryNode> members) {
         executionContext.checkThread();
-        return register(members, Futures.future()).thenCompose(response -> {
+        CompletableFuture<RegisterResponse> future = Futures.future();
+        register(members, future);
+        return future.thenCompose(response -> {
+            logger.info("register send success, compose");
             setTerm(response.term());
             setLeader(response.leader());
             setSession(response.session());
@@ -300,40 +310,37 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     /**
      * Registers the client by contacting a random member.
      */
-    protected CompletableFuture<RegisterResponse> register(List<DiscoveryNode> members, CompletableFuture<RegisterResponse> future) {
+    protected void register(List<DiscoveryNode> members, CompletableFuture<RegisterResponse> future) {
         executionContext.checkThread();
         if (members.isEmpty()) {
+            logger.error("register send error, not leader found");
             future.completeExceptionally(new NoLeaderException("no leader found"));
-            return future;
+            return;
         }
 
         DiscoveryNode member = selectMember(members);
 
-        logger.info("registering session via {}", member);
+        logger.info("register send to {}", member);
         RegisterRequest request = RegisterRequest.builder()
-            .setMember(member)
+            .setMember(transportService.localNode())
             .build();
 
         transportService.connectToNode(member.address());
         transportService.client(member.address()).<RegisterRequest, RegisterResponse>send(request).whenCompleteAsync((response, error) -> {
             if (error == null) {
+                logger.info("register send success,  new session: {}", getSession());
                 future.complete(response);
-                logger.info("registered new session: {}", getSession());
             } else {
-                logger.warn("session registration failed, retrying {}", error.getMessage());
-                logger.debug("session registration failed error", error);
-                setLeader(null);
+                logger.warn("register send error, retrying: {}", error.getMessage());
                 register(members, future);
             }
         }, executionContext.executor());
-        return future;
     }
 
     /**
      * Starts the keep alive timer.
      */
     private void startKeepAliveTimer() {
-        executionContext.checkThread();
         logger.info("starting keep alive timer");
         keepAliveTimer = executionContext.scheduleAtFixedRate(this::keepAlive, 1, keepAliveInterval, TimeUnit.MILLISECONDS);
     }
@@ -395,11 +402,16 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     protected DiscoveryNode selectMember(List<DiscoveryNode> members) {
         executionContext.checkThread();
         if (leader != null) {
+            if (leader.equals(transportService.localNode())) {
+                logger.info("local node is leader, ignore members");
+                return leader;
+            }
             for (int i = 0; i < members.size(); i++) {
                 if (leader.equals(members.get(i))) {
                     return members.remove(i);
                 }
             }
+            logger.info("set no leader on selecting member");
             setLeader(null);
             return members.remove(random.nextInt(members.size()));
         } else {
@@ -410,7 +422,8 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     @Override
     protected void doStart() throws IOException {
         try {
-            register().thenRun(this::startKeepAliveTimer).get();
+            register().get();
+            startKeepAliveTimer();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException(e);

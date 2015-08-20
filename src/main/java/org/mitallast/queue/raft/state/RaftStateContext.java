@@ -11,6 +11,7 @@ import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
+import org.mitallast.queue.raft.action.register.RegisterResponse;
 import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.RaftLog;
 import org.mitallast.queue.raft.log.compaction.Compactor;
@@ -89,6 +90,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
                 logger.info("found leader {}", leader);
             }
         } else {
+            logger.info("set no leader");
             this.leader = null;
         }
         return this;
@@ -98,6 +100,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         executionContext.checkThread();
         if (term > this.term) {
             this.term = term;
+            logger.info("set no leader");
             this.leader = null;
             this.lastVotedFor = null;
             logger.info("incremented term {}", term);
@@ -187,8 +190,13 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     @Override
     protected CompletableFuture<Void> register(List<DiscoveryNode> members) {
         executionContext.checkThread();
-        return register(members, Futures.future())
-            .thenAcceptAsync(response -> setSession(response.session()), executionContext.executor());
+        CompletableFuture<RegisterResponse> future = Futures.future();
+        register(members, future);
+        return future.thenComposeAsync(response -> {
+            logger.info("register success, session {}", response.session());
+            setSession(response.session());
+            return Futures.complete(null);
+        }, executionContext.executor());
     }
 
     @Override
@@ -255,7 +263,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
                 future.complete(null);
                 logger.info("joined cluster");
             } else {
-                logger.info("cluster join failed, retrying");
+                logger.info("cluster join failed, set no leader, retrying");
                 setLeader(null);
                 join(members, future);
             }
@@ -265,7 +273,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> leave() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> leave(new ArrayList<>(clusterService.nodes()), future));
+        executionContext.execute(() -> leave(new ArrayList<>(clusterService.activeNodes()), future));
         return future;
     }
 
@@ -288,7 +296,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
                 future.complete(null);
                 logger.info("left cluster");
             } else {
-                logger.info("cluster leave failed, retrying");
+                logger.info("cluster leave failed, set no leader, retrying");
                 setLeader(null);
                 leave(members, future);
             }

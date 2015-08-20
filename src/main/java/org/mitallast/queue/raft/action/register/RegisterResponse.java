@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.action.register;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
@@ -109,6 +110,10 @@ public class RegisterResponse implements ActionResponse<RegisterResponse> {
         }
 
         public RegisterResponse build() {
+            if (error == null) {
+                Preconditions.checkNotNull(leader);
+                Preconditions.checkNotNull(members);
+            }
             return new RegisterResponse(error, term, session, leader, members);
         }
 

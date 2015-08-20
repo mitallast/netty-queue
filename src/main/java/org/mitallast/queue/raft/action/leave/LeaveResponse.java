@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.action.leave;
 
+import com.google.common.base.Preconditions;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -65,6 +66,9 @@ public class LeaveResponse implements ActionResponse<LeaveResponse> {
 
         @Override
         public LeaveResponse build() {
+            if (error == null) {
+                Preconditions.checkNotNull(member);
+            }
             return new LeaveResponse(error, member);
         }
 

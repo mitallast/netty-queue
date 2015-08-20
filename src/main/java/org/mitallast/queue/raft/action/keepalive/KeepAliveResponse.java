@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.action.keepalive;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.builder.EntryBuilder;
@@ -110,6 +111,10 @@ public class KeepAliveResponse implements ActionResponse<KeepAliveResponse> {
 
         @Override
         public KeepAliveResponse build() {
+            if (error == null) {
+                Preconditions.checkNotNull(leader);
+                Preconditions.checkNotNull(members);
+            }
             return new KeepAliveResponse(error, version, term, leader, members);
         }
 

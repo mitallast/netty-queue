@@ -69,7 +69,7 @@ class FollowerState extends ActiveState {
         heartbeatTimer = executionContext.schedule(() -> {
             heartbeatTimer = null;
             if (context.getLastVotedFor() == null) {
-                logger.warn("heartbeat timed out in {} milliseconds", delay);
+                logger.warn("heartbeat timed out in {} milliseconds, transitioning to candidate", delay);
                 transition(RaftStateType.CANDIDATE);
             } else {
                 // If the node voted for a candidate then reset the election timer.

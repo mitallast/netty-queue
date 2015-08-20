@@ -10,6 +10,7 @@ import org.mitallast.queue.raft.state.RaftStateType;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -19,7 +20,7 @@ public class BaseRaftTest extends BaseIntegrationTest {
     protected InternalNode leader;
 
     protected int nodeCount() {
-        return 2;
+        return 3;
     }
 
     @Before
@@ -47,12 +48,18 @@ public class BaseRaftTest extends BaseIntegrationTest {
                         .put("raft.cluster.nodes", nodesString)
                         .build());
                 } catch (Throwable e) {
-                    logger.error("error start node", e);
+                    logger.error("error start node {}", node, e);
                     assert false : e;
+                } finally {
+                    logger.info("starting node {} done", node);
                 }
             })).collect(Collectors.toList());
         for (Future future : futures) {
-            future.get(1, TimeUnit.MINUTES);
+            try {
+                future.get(1, TimeUnit.MINUTES);
+            } catch (TimeoutException e) {
+                throw e;
+            }
         }
 
         // await for leader election

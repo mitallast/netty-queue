@@ -37,23 +37,19 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock;
     private final int channelCount;
     private final TransportServer transportServer;
-    private final TransportController transportController;
     private final StreamService streamService;
     private final List<TransportListener> listeners = new CopyOnWriteArrayList<>();
-    private final LocalNodeChannel localNodeChannel;
     private final ExecutorService executorService;
     private volatile ImmutableMap<HostAndPort, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings, TransportServer transportServer, TransportController transportController, StreamService streamService) {
+    public NettyTransportService(Settings settings, TransportServer transportServer, StreamService streamService) {
         super(settings, TransportService.class, TransportModule.class);
         this.transportServer = transportServer;
-        this.transportController = transportController;
         this.streamService = streamService;
         channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
-        localNodeChannel = new LocalNodeChannel();
         executorService = NamedExecutors.newSingleThreadPool("reconnect");
     }
 
@@ -181,13 +177,13 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
     @Override
     public TransportClient client() {
-        return localNodeChannel;
+        return transportServer.localClient();
     }
 
     @Override
     public TransportClient client(HostAndPort address) {
         if (address.equals(localAddress())) {
-            return localNodeChannel;
+            return transportServer.localClient();
         } else {
             NodeChannel nodeChannel = connectedNodes.get(address);
             if (nodeChannel == null) {
@@ -205,52 +201,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     @Override
     public void removeListener(TransportListener listener) {
         listeners.remove(listener);
-    }
-
-    private class LocalNodeChannel implements TransportClient {
-
-        @Override
-        public CompletableFuture<TransportFrame> send(TransportFrame frame) {
-            CompletableFuture<TransportFrame> future = Futures.future();
-            if (frame instanceof StreamableTransportFrame) {
-                transportController.dispatchRequest(new TransportChannel() {
-                    @Override
-                    public void send(TransportFrame response) {
-                        future.complete(response);
-                    }
-
-                    @Override
-                    public void close() {
-                        future.completeExceptionally(new IOException("closed"));
-                    }
-                }, (StreamableTransportFrame) frame);
-            } else {
-                future.complete(TransportFrame.of(frame.request()));
-            }
-            return future;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
-            CompletableFuture<Response> future = Futures.future();
-            this.<Request, Response>sendRaw(request).whenComplete((response, error) -> {
-                if (error != null) {
-                    future.completeExceptionally(error);
-                } else if (response.hasError()) {
-                    future.completeExceptionally(response.error());
-                } else {
-                    future.complete(response);
-                }
-            });
-            return future;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> sendRaw(Request request) {
-            return transportController.dispatchRequest(request);
-        }
     }
 
     private class NodeChannel implements TransportClient, Closeable {

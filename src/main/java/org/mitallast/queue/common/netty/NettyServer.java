@@ -28,10 +28,10 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final int wbLow;
     private final int wbHigh;
     private final int threads;
+    protected NioEventLoopGroup worker;
+    protected Channel channel;
     private ServerBootstrap bootstrap;
     private NioEventLoopGroup boss;
-    private NioEventLoopGroup worker;
-    private Channel channel;
 
     public NettyServer(Settings settings, Class loggerClass, Class componentClass) {
         super(settings, loggerClass, componentClass);

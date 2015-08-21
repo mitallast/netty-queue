@@ -6,7 +6,7 @@ import org.mitallast.queue.raft.log.compaction.Compactor;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
 
-public class CompactionTest extends BaseRaftTest {
+public class RaftCompactionTest extends BaseRaftTest {
 
     @Test
     public void testCompaction() throws Exception {

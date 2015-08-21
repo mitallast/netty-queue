@@ -10,7 +10,7 @@ import org.mitallast.queue.raft.resource.structures.AsyncMap;
 import org.mitallast.queue.raft.resource.structures.LogResource;
 import org.mitallast.queue.raft.util.StringValue;
 
-public class IntegrationTest extends BaseRaftTest {
+public class RaftIntegrationTest extends BaseRaftTest {
 
     @Test
     @SuppressWarnings("unchecked")

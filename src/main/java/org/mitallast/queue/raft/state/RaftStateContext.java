@@ -59,7 +59,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.compactor = compactor;
         this.stateFactory = stateFactory;
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueMillis(100)).millis();
-        this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(heartbeatInterval * 2)).millis();
+        this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(300)).millis();
         executionContext.submit(() -> transition(StartState.class)).get();
     }
 
@@ -212,7 +212,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             return;
         }
 
-        logger.info("transitioning to {}", state.getSimpleName());
+        logger.debug("transitioning to {}", state.getSimpleName());
 
         // Force state transitions to occur synchronously in order to prevent race conditions.
         if (this.state != null) {

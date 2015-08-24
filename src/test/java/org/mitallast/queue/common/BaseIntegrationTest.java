@@ -49,7 +49,7 @@ public class BaseIntegrationTest extends BaseTest {
             }))
             .collect(Collectors.toList());
         for (Future<Void> future : futures) {
-            future.get(1, TimeUnit.MINUTES);
+            future.get(10, TimeUnit.SECONDS);
         }
     }
 

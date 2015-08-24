@@ -1,14 +1,28 @@
 <configuration>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <!-- encoders are assigned the type
-             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%-12thread] %-5level %-45logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <root level="info">
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>target/test.log</file>
+        <append>false</append>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>DEBUG</level>
+        </filter>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%-12thread] %-5level %-45logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root>
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
     </root>
+
 </configuration>

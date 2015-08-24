@@ -28,8 +28,8 @@ public class SegmentDescriptorService extends AbstractComponent {
         this.fileService = fileService;
         this.streamService = streamService;
 
-        maxEntrySize = componentSettings.getAsBytesSize("max_entry_size", new ByteSizeValue(100, ByteSizeUnit.MB)).bytes();
-        maxSegmentSize = componentSettings.getAsBytesSize("max_segment_size", new ByteSizeValue(100, ByteSizeUnit.MB)).bytes();
+        maxEntrySize = componentSettings.getAsBytesSize("max_entry_size", new ByteSizeValue(10, ByteSizeUnit.MB)).bytes();
+        maxSegmentSize = componentSettings.getAsBytesSize("max_segment_size", new ByteSizeValue(10, ByteSizeUnit.MB)).bytes();
         maxEntries = componentSettings.getAsLong("max_entries_per_segment", 1000000l);
     }
 

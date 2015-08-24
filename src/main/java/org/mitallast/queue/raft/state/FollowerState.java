@@ -58,6 +58,8 @@ class FollowerState extends ActiveState {
      */
     private void resetHeartbeatTimeout() {
         executionContext.checkThread();
+        if (!lifecycle().started()) return;
+
         // If a timer is already set, cancel the timer.
         if (heartbeatTimer != null) {
             logger.debug("reset heartbeat timeout");
@@ -69,12 +71,14 @@ class FollowerState extends ActiveState {
         long delay = context.getElectionTimeout() + (random.nextInt((int) context.getElectionTimeout()) % context.getElectionTimeout());
         heartbeatTimer = executionContext.schedule("heartbeat timeout", () -> {
             heartbeatTimer = null;
-            if (context.getLastVotedFor() == null) {
-                logger.warn("heartbeat timed out in {} milliseconds, transitioning to candidate", delay);
-                transition(RaftStateType.CANDIDATE);
-            } else {
-                // If the node voted for a candidate then reset the election timer.
-                resetHeartbeatTimeout();
+            if (lifecycle().started()) {
+                if (context.getLastVotedFor() == null) {
+                    logger.warn("heartbeat timed out in {} milliseconds, transitioning to candidate", delay);
+                    transition(RaftStateType.CANDIDATE);
+                } else {
+                    // If the node voted for a candidate then reset the election timer.
+                    resetHeartbeatTimeout();
+                }
             }
 
         }, delay, TimeUnit.MILLISECONDS);
@@ -192,36 +196,38 @@ class FollowerState extends ActiveState {
 
         transportService.client(member.getNode().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
             committing.remove(member.getNode());
-            if (error == null) {
-                logger.debug("received {} from {}", response, member);
-                // If replication succeeded then trigger commit futures.
-                if (response.succeeded()) {
-                    updateMatchIndex(member, response);
-                    updateNextIndex(member);
+            if (lifecycle().started()) {
+                if (error == null) {
+                    logger.debug("received {} from {}", response, member);
+                    // If replication succeeded then trigger commit futures.
+                    if (response.succeeded()) {
+                        updateMatchIndex(member, response);
+                        updateNextIndex(member);
 
-                    // If there are more entries to send then attempt to send another commit.
-                    if (hasMoreEntries(member)) {
-                        try {
-                            commit(member);
-                        } catch (IOException e) {
-                            logger.error("error commit", e);
+                        // If there are more entries to send then attempt to send another commit.
+                        if (hasMoreEntries(member)) {
+                            try {
+                                commit(member);
+                            } catch (IOException e) {
+                                logger.error("error commit", e);
+                            }
+                        }
+                    } else {
+                        resetMatchIndex(member, response);
+                        resetNextIndex(member);
+
+                        // If there are more entries to send then attempt to send another commit.
+                        if (hasMoreEntries(member)) {
+                            try {
+                                commit(member);
+                            } catch (IOException e) {
+                                logger.error("error commit", e);
+                            }
                         }
                     }
                 } else {
-                    resetMatchIndex(member, response);
-                    resetNextIndex(member);
-
-                    // If there are more entries to send then attempt to send another commit.
-                    if (hasMoreEntries(member)) {
-                        try {
-                            commit(member);
-                        } catch (IOException e) {
-                            logger.error("error commit", e);
-                        }
-                    }
+                    logger.warn(error.getMessage());
                 }
-            } else {
-                logger.warn(error.getMessage());
             }
         }, executionContext.executor("replica append response"));
     }

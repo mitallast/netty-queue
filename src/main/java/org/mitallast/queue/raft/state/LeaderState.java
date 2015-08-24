@@ -773,7 +773,7 @@ public class LeaderState extends ActiveState {
             private void commit() throws IOException {
                 logger.debug("[replica {}] commit", state.getNode());
                 executionContext.checkThread();
-                if (!committing) {
+                if (!committing && lifecycle().started()) {
                     // If the log is empty then send an empty commit.
                     // If the next index hasn't yet been set then we send an empty commit first.
                     // If the next index is greater than the last index then send an empty commit.

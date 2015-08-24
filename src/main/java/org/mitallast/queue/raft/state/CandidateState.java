@@ -60,6 +60,11 @@ class CandidateState extends ActiveState {
 
     private void sendVoteRequests() throws IOException {
         executionContext.checkThread();
+
+        // Because of asynchronous execution, the candidate state could have already been closed. In that case,
+        // simply skip the election.
+        if (!lifecycle().started()) return;
+
         // Cancel the current timer task and purge the election timer of cancelled tasks.
         if (currentTimer != null) {
             currentTimer.cancel(false);
@@ -120,7 +125,7 @@ class CandidateState extends ActiveState {
                 .build();
 
             transportService.client(member.address()).<VoteRequest, VoteResponse>send(request).whenCompleteAsync((response, error) -> {
-                if (!complete.get()) {
+                if (!complete.get() && lifecycle().started()) {
                     if (error != null) {
                         logger.warn(error.getMessage());
                         quorum.fail();

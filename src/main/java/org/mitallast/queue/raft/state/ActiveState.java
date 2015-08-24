@@ -207,17 +207,19 @@ abstract class ActiveState extends PassiveState {
         long version = Math.max(context.getStateMachine().getLastApplied(), request.version());
         context.getStateMachine().apply(entry).whenComplete((result, error) -> {
             executionContext.checkThread();
-            if (error == null) {
-                future.complete(QueryResponse.builder()
-                    .setVersion(version)
-                    .setResult(result)
-                    .build());
-            } else {
-                logger.error("application error", error);
-                future.complete(QueryResponse.builder()
-                    .setError(new ApplicationException())
-                    .build());
-            }
+            if (lifecycle().started()) {
+                if (error == null) {
+                    future.complete(QueryResponse.builder()
+                        .setVersion(version)
+                        .setResult(result)
+                        .build());
+                } else {
+                    logger.error("application error", error);
+                    future.complete(QueryResponse.builder()
+                        .setError(new ApplicationException())
+                        .build());
+                }
+            } // ignore future completion, session stores future
         });
         return future;
     }
@@ -244,17 +246,19 @@ abstract class ActiveState extends PassiveState {
         long version = context.getStateMachine().getLastApplied();
         context.getStateMachine().apply(entry).whenComplete((result, error) -> {
             executionContext.checkThread();
-            if (error == null) {
-                future.complete(QueryResponse.builder()
-                    .setVersion(version)
-                    .setResult(result)
-                    .build());
-            } else {
-                logger.error("application error", error);
-                future.complete(QueryResponse.builder()
-                    .setError(new ApplicationException())
-                    .build());
-            }
+            if (lifecycle().started()) {
+                if (error == null) {
+                    future.complete(QueryResponse.builder()
+                        .setVersion(version)
+                        .setResult(result)
+                        .build());
+                } else {
+                    logger.error("application error", error);
+                    future.complete(QueryResponse.builder()
+                        .setError(new ApplicationException())
+                        .build());
+                }
+            } // ignore future completion, session stores future
         });
         return future;
     }

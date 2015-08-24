@@ -198,7 +198,7 @@ public class PassiveState extends AbstractState {
                 if (entry != null) {
                     applyEntry(entry).whenComplete((result, error) -> {
                         executionContext.checkThread();
-                        if (error != null) {
+                        if (error != null && lifecycle().started()) {
                             logger.debug("application error occurred", error);
                         }
                         if (counter.incrementAndGet() == entriesToApply) {

@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
+    private final long maxEntries;
     private volatile ScheduledFuture<?> currentTimer;
 
     @Inject
@@ -42,6 +43,7 @@ public class LeaderState extends ActiveState {
         ClusterService clusterService
     ) {
         super(settings, context, executionContext, transportService, clusterService);
+        maxEntries = componentSettings.getAsInt("max_entries", 10000);
     }
 
     @Override
@@ -56,14 +58,14 @@ public class LeaderState extends ActiveState {
         // What is critical about this logic is that the heartbeat timer not be started until a NOOP entry has been committed.
         try {
             logger.info("await commit entries");
-            commitEntries().whenComplete((result, error) -> {
+            commitEntries().whenCompleteAsync((result, error) -> {
                 if (error == null) {
                     logger.info("await commit entries done");
                     startHeartbeatTimer();
                 } else {
                     logger.warn("error commit entries", error);
                 }
-            });
+            }, executionContext.executor());
         } catch (IOException e) {
             logger.error("error commit", e);
         }
@@ -92,7 +94,7 @@ public class LeaderState extends ActiveState {
         index = context.getLog().appendEntry(entry);
 
         CompletableFuture<Void> future = Futures.future();
-        replicator.commit(index).whenComplete((resultIndex, error) -> {
+        replicator.commit(index).whenCompleteAsync((resultIndex, error) -> {
             if (error == null) {
                 try {
                     applyEntries(resultIndex);
@@ -104,7 +106,7 @@ public class LeaderState extends ActiveState {
                 logger.info("error commit, transitioning to follower", error);
                 transition(RaftStateType.FOLLOWER);
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -116,12 +118,12 @@ public class LeaderState extends ActiveState {
         for (long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex()); lastApplied <= index; lastApplied++) {
             RaftLogEntry entry = context.getLog().getEntry(lastApplied);
             if (entry != null) {
-                context.getStateMachine().apply(entry).whenComplete((result, error) -> {
+                context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
                     executionContext.checkThread();
                     if (error != null) {
                         logger.warn("application error occurred: {}", error);
                     }
-                });
+                }, executionContext.executor());
             }
         }
     }
@@ -133,7 +135,7 @@ public class LeaderState extends ActiveState {
         // Set a timer that will be used to periodically synchronize with other nodes
         // in the cluster. This timer acts as a heartbeat to ensure this node remains
         // the leader.
-        logger.info("starting heartbeat timer");
+        logger.info("start heartbeat timer");
         currentTimer = executionContext.scheduleAtFixedRate(this::heartbeatMembers, 0, context.getHeartbeatInterval(), TimeUnit.MILLISECONDS);
     }
 
@@ -194,11 +196,11 @@ public class LeaderState extends ActiveState {
         }
 
         CompletableFuture<CommandResponse> future = Futures.future();
-        replicator.commit(index).whenComplete((commitIndex, commitError) -> {
+        replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
 
             if (commitError == null) {
                 if (entry != null) {
-                    context.getStateMachine().apply(entry).whenComplete((result, error) -> {
+                    context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
                         executionContext.checkThread();
                         if (error == null) {
                             future.complete(CommandResponse.builder()
@@ -210,7 +212,7 @@ public class LeaderState extends ActiveState {
                                 .setError(new InternalException())
                                 .build());
                         }
-                    });
+                    }, executionContext.executor());
                 } else {
                     future.complete(CommandResponse.builder()
                         .setResult(null)
@@ -222,7 +224,7 @@ public class LeaderState extends ActiveState {
                     .setError(new WriteException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -286,7 +288,7 @@ public class LeaderState extends ActiveState {
     private CompletableFuture<QueryResponse> submitQueryLinearizableStrict(QueryEntry entry) {
         executionContext.checkThread();
         CompletableFuture<QueryResponse> future = Futures.future();
-        replicator.commit().whenComplete((commitIndex, commitError) -> {
+        replicator.commit().whenCompleteAsync((commitIndex, commitError) -> {
             if (commitError == null) {
                 applyQuery(entry, future);
             } else {
@@ -295,7 +297,7 @@ public class LeaderState extends ActiveState {
                     .setError(new ReadException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -305,7 +307,7 @@ public class LeaderState extends ActiveState {
     private CompletableFuture<QueryResponse> applyQuery(QueryEntry entry, CompletableFuture<QueryResponse> future) {
         executionContext.checkThread();
         long version = context.getStateMachine().getLastApplied();
-        context.getStateMachine().apply(entry).whenComplete((result, error) -> {
+        context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
             if (error == null) {
                 future.complete(QueryResponse.builder()
                     .setVersion(version)
@@ -322,7 +324,7 @@ public class LeaderState extends ActiveState {
                     .setError(new InternalException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -346,10 +348,10 @@ public class LeaderState extends ActiveState {
         }
 
         CompletableFuture<RegisterResponse> future = Futures.future();
-        replicator.commit(index).whenComplete((commitIndex, commitError) -> {
+        replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
             if (commitError == null) {
                 logger.info("register entry apply {}", entry);
-                context.getStateMachine().apply(entry).whenComplete((sessionId, sessionError) -> {
+                context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
                     executionContext.checkThread();
                     logger.info("register entry {} session id {} error {}", entry, sessionId, sessionError);
                     if (sessionError == null) {
@@ -376,14 +378,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                });
+                }, executionContext.executor());
             } else {
                 logger.error("commit error", commitError);
                 future.complete(RegisterResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -408,10 +410,10 @@ public class LeaderState extends ActiveState {
         }
 
         CompletableFuture<KeepAliveResponse> future = Futures.future();
-        replicator.commit(index).whenComplete((commitIndex, commitError) -> {
+        replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
             if (commitError == null) {
                 long version = context.getStateMachine().getLastApplied();
-                context.getStateMachine().apply(entry).whenComplete((sessionResult, sessionError) -> {
+                context.getStateMachine().apply(entry).whenCompleteAsync((sessionResult, sessionError) -> {
                     executionContext.checkThread();
                     if (sessionError == null) {
                         try {
@@ -435,14 +437,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                });
+                }, executionContext.executor());
             } else {
                 logger.error("commit error", commitError);
                 future.complete(KeepAliveResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -464,9 +466,9 @@ public class LeaderState extends ActiveState {
         }
 
         CompletableFuture<JoinResponse> future = Futures.future();
-        replicator.commit(index).whenComplete((commitIndex, commitError) -> {
+        replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
             if (commitError == null) {
-                context.getStateMachine().apply(entry).whenComplete((sessionId, sessionError) -> {
+                context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
                     executionContext.checkThread();
                     if (sessionError == null) {
                         try {
@@ -483,14 +485,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                });
+                }, executionContext.executor());
             } else {
                 logger.error("commit error", commitError);
                 future.complete(JoinResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -513,9 +515,9 @@ public class LeaderState extends ActiveState {
         }
 
         CompletableFuture<LeaveResponse> future = Futures.future();
-        replicator.commit(index).whenComplete((commitIndex, commitError) -> {
+        replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
             if (commitError == null) {
-                context.getStateMachine().apply(entry).whenComplete((sessionId, sessionError) -> {
+                context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
                     executionContext.checkThread();
                     if (sessionError == null) {
                         future.complete(LeaveResponse.builder()
@@ -526,14 +528,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                });
+                }, executionContext.executor());
             } else {
                 logger.error("commit error", commitError);
                 future.complete(LeaveResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        });
+        }, executionContext.executor());
         return future;
     }
 
@@ -572,8 +574,10 @@ public class LeaderState extends ActiveState {
          */
         private CompletableFuture<Long> commit() {
             executionContext.checkThread();
-            if (replicas.isEmpty())
+            if (replicas.isEmpty()) {
+                logger.debug("no replicas found, return completed future");
                 return Futures.complete(null);
+            }
 
             if (commitFuture == null) {
                 commitFuture = Futures.future();
@@ -602,7 +606,7 @@ public class LeaderState extends ActiveState {
          */
         private CompletableFuture<Long> commit(long index) {
             executionContext.checkThread();
-            logger.info("commit {}", index);
+            logger.debug("commit {}", index);
             if (index == 0)
                 return commit();
 
@@ -708,6 +712,7 @@ public class LeaderState extends ActiveState {
              * Triggers a commit for the replica.
              */
             private void commit() throws IOException {
+                logger.debug("[replica {}] commit", state.getNode());
                 executionContext.checkThread();
                 if (!committing) {
                     // If the log is empty then send an empty commit.
@@ -719,6 +724,7 @@ public class LeaderState extends ActiveState {
                         entriesCommit();
                     }
                 }
+                logger.debug("[replica {}] commit done", state.getNode());
             }
 
             /**
@@ -748,7 +754,7 @@ public class LeaderState extends ActiveState {
                 long index = Math.max(context.getLog().firstIndex(), prevIndex + 1);
 
                 List<RaftLogEntry> entries = new ArrayList<>();
-                while (index <= context.getLog().lastIndex()) {
+                while (index <= context.getLog().lastIndex() && entries.size() < maxEntries) {
                     RaftLogEntry entry = context.getLog().getEntry(index);
                     if (entry != null) {
                         entries.add(entry);
@@ -762,6 +768,7 @@ public class LeaderState extends ActiveState {
              * Performs an empty commit.
              */
             private void emptyCommit() throws IOException {
+                logger.debug("[replica {}] empty commit", state.getNode());
                 executionContext.checkThread();
                 long prevIndex = getPrevIndex();
                 RaftLogEntry prevEntry = getPrevEntry(prevIndex);
@@ -773,7 +780,7 @@ public class LeaderState extends ActiveState {
              */
             private void entriesCommit() throws IOException {
                 executionContext.checkThread();
-                logger.debug("entries commit for {}", state.getNode());
+                logger.debug("[replica {}] entries commit", state.getNode());
                 long prevIndex = getPrevIndex();
                 RaftLogEntry prevEntry = getPrevEntry(prevIndex);
                 List<RaftLogEntry> entries = getEntries(prevIndex);
@@ -796,13 +803,13 @@ public class LeaderState extends ActiveState {
                     .build();
 
                 committing = true;
-                logger.debug("send {} to {}", request, state.getNode());
+                logger.debug("[replica {}] replicate {}", state.getNode(), request);
                 transportService.client(state.getNode().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
                     committing = false;
                     if (error == null) {
-                        logger.debug("received {} from {}", response, state.getNode());
+                        logger.debug("[replica {}] received {}", state.getNode(), response);
                         if (response.term() > context.getTerm()) {
-                            logger.info("received higher term from {}, transitioning to follower", state.getNode());
+                            logger.info("[replica {}] received higher term from {}, transitioning to follower", state.getNode());
                             transition(RaftStateType.FOLLOWER);
                         } else {
                             // Update the commit time for the replica. This will cause heartbeat futures to be triggered.
@@ -823,11 +830,11 @@ public class LeaderState extends ActiveState {
                                     try {
                                         commit();
                                     } catch (IOException e) {
-                                        logger.error("error commit", e);
+                                        logger.error("[replica {}] error commit", state.getNode(), e);
                                     }
                                 }
                             } else if (response.term() > context.getTerm()) {
-                                logger.info("received greater term append response, transitioning to follower");
+                                logger.info("[replica {}] received greater term append response, transitioning to follower", state.getNode());
                                 transition(RaftStateType.FOLLOWER);
                             } else {
                                 resetMatchIndex(response);
@@ -838,13 +845,13 @@ public class LeaderState extends ActiveState {
                                     try {
                                         commit();
                                     } catch (IOException e) {
-                                        logger.error("error commit", e);
+                                        logger.error("[replica {}] error commit", state.getNode(), e);
                                     }
                                 }
                             }
                         }
                     } else {
-                        logger.warn("error send to {}: {}", state.getNode(), error.getMessage());
+                        logger.warn("[replica {}] error send {}", state.getNode(), error.getMessage());
                     }
                 }, executionContext.executor());
             }
@@ -876,7 +883,7 @@ public class LeaderState extends ActiveState {
                 } else if (response.logIndex() != 0) {
                     state.setMatchIndex(Math.max(state.getMatchIndex(), response.logIndex()));
                 }
-                logger.debug("reset match index for {} to {}", state.getNode(), state.getMatchIndex());
+                logger.debug("[replica {}] reset match index to {}", state.getNode(), state.getMatchIndex());
             }
 
             private void resetNextIndex() {
@@ -886,7 +893,7 @@ public class LeaderState extends ActiveState {
                 } else {
                     state.setNextIndex(context.getLog().firstIndex());
                 }
-                logger.debug("reset next index for {} to {}", state.getNode(), state.getNextIndex());
+                logger.debug("[replica {}] reset next index to {}", state.getNode(), state.getNextIndex());
             }
 
         }

@@ -311,7 +311,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> sendRaw(Request request) {
+        public <Request extends ActionRequest, Response extends ActionResponse>
+        CompletableFuture<Response> sendRaw(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             if (channel == null) {

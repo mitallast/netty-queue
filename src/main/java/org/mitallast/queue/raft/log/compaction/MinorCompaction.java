@@ -47,7 +47,7 @@ public class MinorCompaction extends Compaction {
     @Override
     CompletableFuture<Void> run() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> {
+        executionContext.execute("compact log", () -> {
             logger.info("Compacting the log");
             setRunning(true);
             compactLevels(getCompactSegments().iterator(), future)
@@ -106,7 +106,7 @@ public class MinorCompaction extends Compaction {
                 } else {
                     future.completeExceptionally(error);
                 }
-            }, executionContext.executor());
+            }, executionContext.executor("compact levels"));
         } else {
             future.complete(null);
         }
@@ -152,7 +152,7 @@ public class MinorCompaction extends Compaction {
                 } else {
                     future.completeExceptionally(error);
                 }
-            }, executionContext.executor());
+            }, executionContext.executor("update segment"));
         return future;
     }
 

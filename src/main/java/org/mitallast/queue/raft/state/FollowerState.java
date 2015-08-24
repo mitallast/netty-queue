@@ -66,7 +66,7 @@ class FollowerState extends ActiveState {
         // Set the election timeout in a semi-random fashion with the random range
         // being election timeout and 2 * election timeout.
         long delay = context.getElectionTimeout() + (random.nextInt((int) context.getElectionTimeout()) % context.getElectionTimeout());
-        heartbeatTimer = executionContext.schedule(() -> {
+        heartbeatTimer = executionContext.schedule("heartbeat timeout", () -> {
             heartbeatTimer = null;
             if (context.getLastVotedFor() == null) {
                 logger.warn("heartbeat timed out in {} milliseconds, transitioning to candidate", delay);
@@ -222,7 +222,7 @@ class FollowerState extends ActiveState {
             } else {
                 logger.warn(error.getMessage());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("replica append response"));
     }
 
     /**

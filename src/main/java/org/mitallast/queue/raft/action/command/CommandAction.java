@@ -23,7 +23,7 @@ public class CommandAction extends AbstractAction<CommandRequest, CommandRespons
 
     @Override
     protected void executeInternal(CommandRequest request, CompletableFuture<CommandResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("command request handler", () -> {
             context.raftState().command(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

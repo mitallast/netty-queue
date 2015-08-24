@@ -45,7 +45,7 @@ public class MajorCompaction extends Compaction {
     @Override
     CompletableFuture<Void> run() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> {
+        executionContext.execute("compact log", () -> {
             logger.info("Compacting the log");
             setRunning(true);
             compactSegments(getActiveSegments().iterator(), future)
@@ -71,7 +71,7 @@ public class MajorCompaction extends Compaction {
                 } else {
                     future.completeExceptionally(error);
                 }
-            }, executionContext.executor());
+            }, executionContext.executor("compact segment"));
         } else {
             future.complete(null);
         }
@@ -96,7 +96,7 @@ public class MajorCompaction extends Compaction {
                         } catch (IOException e) {
                             logger.error("error replace", e);
                         }
-                    }, executionContext.executor());
+                    }, executionContext.executor("replace segment"));
             } else {
                 return org.mitallast.queue.common.concurrent.Futures.complete(null);
             }
@@ -125,7 +125,7 @@ public class MajorCompaction extends Compaction {
                 if (index == segment.lastIndex()) {
                     future.complete(compactSegment);
                 } else {
-                    executionContext.execute(() -> compactSegment(segment, index + 1, compactSegment, future));
+                    executionContext.execute("compact segment", () -> compactSegment(segment, index + 1, compactSegment, future));
                 }
             }
             return future;
@@ -153,7 +153,7 @@ public class MajorCompaction extends Compaction {
             } else if (index == segment.lastIndex()) {
                 future.complete(false);
             } else {
-                executionContext.execute(() -> shouldCompactSegment(segment, index + 1, future));
+                executionContext.execute("should compact segment", () -> shouldCompactSegment(segment, index + 1, future));
             }
             return future;
         } catch (IOException e) {

@@ -22,7 +22,7 @@ public class QueryAction extends AbstractAction<QueryRequest, QueryResponse> {
 
     @Override
     protected void executeInternal(QueryRequest request, CompletableFuture<QueryResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("query request handler", () -> {
             context.raftState().query(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

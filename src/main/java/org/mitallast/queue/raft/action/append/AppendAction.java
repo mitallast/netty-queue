@@ -23,7 +23,7 @@ public class AppendAction extends AbstractAction<AppendRequest, AppendResponse> 
 
     @Override
     protected void executeInternal(AppendRequest request, CompletableFuture<AppendResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("append request handler", () -> {
             context.raftState().append(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

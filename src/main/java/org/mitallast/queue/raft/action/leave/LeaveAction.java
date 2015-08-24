@@ -22,7 +22,7 @@ public class LeaveAction extends AbstractAction<LeaveRequest, LeaveResponse> {
 
     @Override
     protected void executeInternal(LeaveRequest request, CompletableFuture<LeaveResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("leave request handler", () -> {
             context.raftState().leave(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

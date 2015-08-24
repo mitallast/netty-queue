@@ -18,7 +18,7 @@ public class RaftCompactionTest extends BaseRaftTest {
 
     private void printLog() throws Exception {
         ExecutionContext executionContext = leader.injector().getInstance(ExecutionContext.class);
-        executionContext.submit(() -> {
+        executionContext.submit("print log", () -> {
             try {
                 RaftLog raftLog = leader.injector().getInstance(RaftLog.class);
                 long firstIndex = raftLog.firstIndex();

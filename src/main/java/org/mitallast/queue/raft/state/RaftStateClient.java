@@ -136,7 +136,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     @SuppressWarnings("unchecked")
     public <R extends Streamable> CompletableFuture<R> submit(Command<R> command) {
         CompletableFuture<R> future = Futures.future();
-        executionContext.execute(() -> {
+        executionContext.execute("submit command", () -> {
             if (session == 0)
                 future.completeExceptionally(new IllegalStateException("session not open"));
 
@@ -182,7 +182,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
         } else {
             CompletableFuture<CommandResponse> transportFuture = transportService.client(member.address()).<CommandRequest, CommandResponse>send(request);
             // retry
-            ScheduledFuture<?> scheduledFuture = executionContext.schedule(() -> {
+            ScheduledFuture<?> scheduledFuture = executionContext.schedule("raft transport timeout", () -> {
                 transportFuture.cancel(false);
                 if (!future.isCancelled()) {
                     submit(request, future);
@@ -197,7 +197,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
                 } else {
                     future.completeExceptionally(error);
                 }
-            }, executionContext.executor());
+            }, executionContext.executor("command response"));
         }
     }
 
@@ -211,7 +211,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     @SuppressWarnings("unchecked")
     public <R extends Streamable> CompletableFuture<R> submit(Query<R> query) {
         CompletableFuture<R> future = Futures.future();
-        executionContext.execute(() -> {
+        executionContext.execute("submit query", () -> {
             if (leader == null)
                 future.completeExceptionally(new IllegalStateException("unknown leader"));
             if (session == 0)
@@ -240,7 +240,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
                     } else {
                         future.completeExceptionally(error);
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("query response"));
             }
         });
         return future;
@@ -276,7 +276,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
 
     private CompletableFuture<Void> register() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> register(future));
+        executionContext.execute("register", () -> register(future));
         return future;
     }
 
@@ -289,7 +289,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
                 future.complete(null);
             } else {
                 logger.error("register error, schedule next try: {}", error.getMessage());
-                registerTimer = executionContext.schedule(() -> register(future), registerDelay, TimeUnit.MILLISECONDS);
+                registerTimer = executionContext.schedule("register retry", () -> register(future), registerDelay, TimeUnit.MILLISECONDS);
             }
         });
     }
@@ -334,7 +334,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
                 logger.warn("register send error, retrying: {}", error.getMessage());
                 register(members, future);
             }
-        }, executionContext.executor());
+        }, executionContext.executor("register response"));
     }
 
     /**
@@ -342,7 +342,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
      */
     private void startKeepAliveTimer() {
         logger.info("starting keep alive timer");
-        keepAliveTimer = executionContext.scheduleAtFixedRate(this::keepAlive, 1, keepAliveInterval, TimeUnit.MILLISECONDS);
+        keepAliveTimer = executionContext.scheduleAtFixedRate("keep alive timer", this::keepAlive, 1, keepAliveInterval, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -392,7 +392,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
             } else {
                 keepAlive(members, future);
             }
-        }, executionContext.executor());
+        }, executionContext.executor("keep alive response"));
         return future;
     }
 

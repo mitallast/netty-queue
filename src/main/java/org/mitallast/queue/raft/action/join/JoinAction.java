@@ -23,7 +23,7 @@ public class JoinAction extends AbstractAction<JoinRequest, JoinResponse> {
 
     @Override
     protected void executeInternal(JoinRequest request, CompletableFuture<JoinResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("join request handler", () -> {
             context.raftState().join(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

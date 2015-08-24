@@ -57,7 +57,7 @@ public class Compactor extends AbstractLifecycleComponent {
                 return compaction;
             }
             return null;
-        }, context.executor()).thenCompose(c -> {
+        }, context.executor("compact")).thenCompose(c -> {
             if (compaction != null) {
                 return compaction.run().thenRun(() -> {
                     synchronized (this) {
@@ -73,7 +73,7 @@ public class Compactor extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() throws IOException {
-        scheduledFuture = context.scheduleAtFixedRate(this::compact, compactionInterval, compactionInterval, TimeUnit.MILLISECONDS);
+        scheduledFuture = context.scheduleAtFixedRate("compaction timer", this::compact, compactionInterval, compactionInterval, TimeUnit.MILLISECONDS);
     }
 
     @Override

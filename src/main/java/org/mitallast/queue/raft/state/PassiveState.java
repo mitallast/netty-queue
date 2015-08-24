@@ -158,7 +158,7 @@ public class PassiveState extends AbstractState {
         }
 
         // If we've made it this far, apply commits and send a successful response.
-        executionContext.execute(() -> {
+        executionContext.execute("apply commits", () -> {
             try {
                 applyCommits(request.commitIndex()).thenRun(() -> applyIndex(request.globalIndex()));
             } catch (IOException e) {

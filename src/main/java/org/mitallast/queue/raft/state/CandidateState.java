@@ -69,7 +69,7 @@ class CandidateState extends ActiveState {
         context.setTerm(context.getTerm() + 1);
 
         long delay = context.getElectionTimeout() + (random.nextInt((int) context.getElectionTimeout()) % context.getElectionTimeout());
-        currentTimer = executionContext.schedule(() -> {
+        currentTimer = executionContext.schedule("election timeout", () -> {
             // When the election times out, clear the previous majority vote
             // check and restart the election.
             logger.info("election timed out");
@@ -139,7 +139,7 @@ class CandidateState extends ActiveState {
                         quorum.succeed();
                     }
                 }
-            }, executionContext.executor());
+            }, executionContext.executor("vote response"));
         }
     }
 

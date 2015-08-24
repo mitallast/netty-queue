@@ -23,7 +23,7 @@ public class RegisterAction extends AbstractAction<RegisterRequest, RegisterResp
 
     @Override
     protected void executeInternal(RegisterRequest request, CompletableFuture<RegisterResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("register request handler", () -> {
             AbstractState state = context.raftState();
             state.register(request).whenComplete((response, error) -> {
                 if (error == null) {

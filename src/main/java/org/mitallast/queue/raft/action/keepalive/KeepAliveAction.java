@@ -23,7 +23,7 @@ public class KeepAliveAction extends AbstractAction<KeepAliveRequest, KeepAliveR
 
     @Override
     protected void executeInternal(KeepAliveRequest request, CompletableFuture<KeepAliveResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("keep alive request handler", () -> {
             context.raftState().keepAlive(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

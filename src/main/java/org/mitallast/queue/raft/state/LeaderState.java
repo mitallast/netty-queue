@@ -65,7 +65,7 @@ public class LeaderState extends ActiveState {
                 } else {
                     logger.warn("error commit entries", error);
                 }
-            }, executionContext.executor());
+            }, executionContext.executor("commit entries"));
         } catch (IOException e) {
             logger.error("error commit", e);
         }
@@ -106,7 +106,7 @@ public class LeaderState extends ActiveState {
                 logger.info("error commit, transitioning to follower", error);
                 transition(RaftStateType.FOLLOWER);
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit complete"));
         return future;
     }
 
@@ -123,7 +123,7 @@ public class LeaderState extends ActiveState {
                     if (error != null) {
                         logger.warn("application error occurred: {}", error);
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("apply entry complete"));
             }
         }
     }
@@ -136,7 +136,7 @@ public class LeaderState extends ActiveState {
         // in the cluster. This timer acts as a heartbeat to ensure this node remains
         // the leader.
         logger.info("start heartbeat timer");
-        currentTimer = executionContext.scheduleAtFixedRate(this::heartbeatMembers, 0, context.getHeartbeatInterval(), TimeUnit.MILLISECONDS);
+        currentTimer = executionContext.scheduleAtFixedRate("heartbeat timer", this::heartbeatMembers, 0, context.getHeartbeatInterval(), TimeUnit.MILLISECONDS);
     }
 
     private void stopHeartbeatTimer() {
@@ -212,7 +212,7 @@ public class LeaderState extends ActiveState {
                                 .setError(new InternalException())
                                 .build());
                         }
-                    }, executionContext.executor());
+                    }, executionContext.executor("apply command entry"));
                 } else {
                     future.complete(CommandResponse.builder()
                         .setResult(null)
@@ -224,7 +224,7 @@ public class LeaderState extends ActiveState {
                     .setError(new WriteException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit command entry"));
         return future;
     }
 
@@ -297,7 +297,7 @@ public class LeaderState extends ActiveState {
                     .setError(new ReadException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit query entry"));
         return future;
     }
 
@@ -324,7 +324,7 @@ public class LeaderState extends ActiveState {
                     .setError(new InternalException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("apply query entry"));
         return future;
     }
 
@@ -378,14 +378,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("apply register entry"));
             } else {
                 logger.error("commit error", commitError);
                 future.complete(RegisterResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit register entry"));
         return future;
     }
 
@@ -437,14 +437,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("apply keep alive entry"));
             } else {
                 logger.error("commit error", commitError);
                 future.complete(KeepAliveResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit keep alive entry"));
         return future;
     }
 
@@ -485,14 +485,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("apply join entry"));
             } else {
                 logger.error("commit error", commitError);
                 future.complete(JoinResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit join entry"));
         return future;
     }
 
@@ -528,14 +528,14 @@ public class LeaderState extends ActiveState {
                             .setError(new InternalException())
                             .build());
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("apply leave entry"));
             } else {
                 logger.error("commit error", commitError);
                 future.complete(LeaveResponse.builder()
                     .setError(new ProtocolException())
                     .build());
             }
-        }, executionContext.executor());
+        }, executionContext.executor("commit join entry"));
         return future;
     }
 
@@ -853,7 +853,7 @@ public class LeaderState extends ActiveState {
                     } else {
                         logger.warn("[replica {}] error send {}", state.getNode(), error.getMessage());
                     }
-                }, executionContext.executor());
+                }, executionContext.executor("replica append response"));
             }
 
             private boolean hasMoreEntries() {

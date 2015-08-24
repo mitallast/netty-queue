@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.unit.TimeValue;
 
 import java.io.IOException;
 import java.util.List;
@@ -11,81 +12,37 @@ import java.util.concurrent.*;
 
 public class ExecutionContext extends AbstractLifecycleComponent {
     private final ScheduledExecutorService executorService;
-    private final Executor executor;
     private final Thread executorThread;
+    private final long errorThreshold;
+    private final long warningThreshold;
 
     @Inject
     public ExecutionContext(Settings settings) throws ExecutionException, InterruptedException {
         super(settings);
         executorService = NamedExecutors.newScheduledSingleThreadPool("raft");
         executorThread = executorService.submit(Thread::currentThread).get();
-        executor = command -> executorService.execute(() -> {
-            try {
-                command.run();
-            } catch (Throwable e) {
-                logger.error("unexpected error", e);
-                throw new RuntimeException(e);
-            }
-        });
+        errorThreshold = componentSettings.getAsTime("error_threshold", TimeValue.timeValueMillis(200)).millis();
+        warningThreshold = componentSettings.getAsTime("warning_threshold", TimeValue.timeValueMillis(100)).millis();
     }
 
-    public Executor executor() {
-        return executor;
+    public Executor executor(String context) {
+        return runnable -> executorService.execute(new Task(context, runnable));
     }
 
-    public void execute(Runnable runnable) {
-        executorService.execute(() -> {
-            try {
-                runnable.run();
-            } catch (Throwable e) {
-                logger.error("unexpected error", e);
-                throw new RuntimeException(e);
-            }
-        });
+    public void execute(String context, Runnable runnable) {
+        executorService.execute(new Task(context, runnable));
     }
 
-    public <T> Future<T> submit(Callable<T> callable) {
-        return executorService.submit(() -> {
-            try {
-                return callable.call();
-            } catch (Throwable e) {
-                logger.error("unexpected error", e);
-                throw new RuntimeException(e);
-            }
-        });
+    public Future submit(String context, Runnable runnable) {
+        return executorService.submit(new Task(context, runnable));
     }
 
-    public Future submit(Runnable runnable) {
-        return executorService.submit(() -> {
-            try {
-                runnable.run();
-            } catch (Throwable e) {
-                logger.error("unexpected error", e);
-                throw new RuntimeException(e);
-            }
-        });
+    public ScheduledFuture<?> schedule(String context, Runnable runnable, long delay, TimeUnit unit) {
+        return executorService.schedule(new Task(context, runnable), delay, unit);
     }
 
-    public ScheduledFuture<?> schedule(Runnable runnable, long delay, TimeUnit unit) {
-        return executorService.schedule(() -> {
-            try {
-                runnable.run();
-            } catch (Throwable e) {
-                logger.error("unexpected error", e);
-                throw new RuntimeException(e);
-            }
-        }, delay, unit);
-    }
-
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
-        return executorService.scheduleAtFixedRate(() -> {
-            try {
-                runnable.run();
-            } catch (Throwable e) {
-                logger.error("unexpected error", e);
-                throw new RuntimeException(e);
-            }
-        }, initialDelay, period, unit);
+    public ScheduledFuture<?> scheduleAtFixedRate(String context, Runnable runnable, long initialDelay, long period, TimeUnit unit) {
+        return executorService.scheduleAtFixedRate(new Task(context, runnable), initialDelay, period, unit);
     }
 
     public void checkThread() {
@@ -117,6 +74,38 @@ public class ExecutionContext extends AbstractLifecycleComponent {
         List<Runnable> failed = executorService.shutdownNow();
         if (!failed.isEmpty()) {
             logger.warn("failed to execute {}", failed);
+        }
+    }
+
+    private class Task implements Runnable {
+
+        private final String context;
+        private final Runnable runnable;
+
+        public Task(String context, Runnable runnable) {
+            this.context = context;
+            this.runnable = runnable;
+        }
+
+        @Override
+        public void run() {
+            final long start = System.currentTimeMillis();
+            try {
+                logger.trace("[{}] run", context);
+                runnable.run();
+            } catch (Throwable e) {
+                logger.error("[{}] unexpected error", context, e);
+                throw new RuntimeException(e);
+            } finally {
+                final long totalTime = System.currentTimeMillis() - start;
+                if (totalTime > errorThreshold) {
+                    logger.error("[{}] complete at {}", context, totalTime);
+                } else if (totalTime > warningThreshold) {
+                    logger.warn("[{}] complete at {}", context, totalTime);
+                } else {
+                    logger.trace("[{}] complete at {}", context, totalTime);
+                }
+            }
         }
     }
 }

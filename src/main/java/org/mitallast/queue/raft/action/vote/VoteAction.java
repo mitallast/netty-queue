@@ -22,7 +22,7 @@ public class VoteAction extends AbstractAction<VoteRequest, VoteResponse> {
 
     @Override
     protected void executeInternal(VoteRequest request, CompletableFuture<VoteResponse> listener) {
-        executionContext.execute(() -> {
+        executionContext.execute("vote request handler", () -> {
             context.raftState().vote(request).whenComplete((response, error) -> {
                 if (error == null) {
                     listener.complete(response);

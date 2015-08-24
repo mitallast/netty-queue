@@ -60,7 +60,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.stateFactory = stateFactory;
         this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueMillis(100)).millis();
         this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(300)).millis();
-        executionContext.submit(() -> transition(StartState.class)).get();
+        executionContext.submit("transition to start", () -> transition(StartState.class)).get();
     }
 
 
@@ -196,14 +196,14 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             logger.info("register success, session {}", response.session());
             setSession(response.session());
             return Futures.complete(null);
-        }, executionContext.executor());
+        }, executionContext.executor("register response"));
     }
 
     @Override
     protected CompletableFuture<Void> keepAlive(List<DiscoveryNode> members) {
         executionContext.checkThread();
         return keepAlive(members, Futures.future())
-            .thenAcceptAsync(response -> setVersion(response.version()), executionContext.executor());
+            .thenAcceptAsync(response -> setVersion(response.version()), executionContext.executor("update version"));
     }
 
     public synchronized void transition(Class<? extends AbstractState> state) {
@@ -224,7 +224,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
     private CompletableFuture<Void> join() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> join(future));
+        executionContext.execute("join", () -> join(future));
         return future;
     }
 
@@ -235,7 +235,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
             if (error == null) {
                 future.complete(null);
             } else {
-                joinTimer = executionContext.schedule(() -> join(future), heartbeatInterval, TimeUnit.MILLISECONDS);
+                joinTimer = executionContext.schedule("join retry", () -> join(future), heartbeatInterval, TimeUnit.MILLISECONDS);
             }
         });
         return future;
@@ -267,13 +267,13 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
                 setLeader(null);
                 join(members, future);
             }
-        }, executionContext.executor());
+        }, executionContext.executor("join response"));
         return future;
     }
 
     private CompletableFuture<Void> leave() {
         CompletableFuture<Void> future = Futures.future();
-        executionContext.execute(() -> leave(new ArrayList<>(clusterService.activeNodes()), future));
+        executionContext.execute("leave", () -> leave(new ArrayList<>(clusterService.activeNodes()), future));
         return future;
     }
 
@@ -300,7 +300,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
                 setLeader(null);
                 leave(members, future);
             }
-        }, executionContext.executor());
+        }, executionContext.executor("leave response"));
         return future;
     }
 
@@ -320,10 +320,10 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     protected void doStart() throws IOException {
         try {
             if (settings.getAsBoolean("raft.passive", false)) {
-                executionContext.submit(() -> transition(PassiveState.class)).get();
+                executionContext.submit("transition to passive", () -> transition(PassiveState.class)).get();
                 join().get();
             } else {
-                executionContext.submit(() -> transition(FollowerState.class)).get();
+                executionContext.submit("transition to follower", () -> transition(FollowerState.class)).get();
             }
             super.doStart();
         } catch (InterruptedException e) {
@@ -341,7 +341,7 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
                 logger.info("cancelling join timer");
                 joinTimer.cancel(false);
             }
-            executionContext.submit(() -> transition(StartState.class)).get();
+            executionContext.submit("transition to start", () -> transition(StartState.class)).get();
             super.doStop();
             try {
                 leave().get();

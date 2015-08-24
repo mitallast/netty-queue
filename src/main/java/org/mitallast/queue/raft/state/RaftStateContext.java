@@ -216,10 +216,10 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
 
         // Force state transitions to occur synchronously in order to prevent race conditions.
         if (this.state != null) {
-            this.state.close();
+            this.state.stop();
         }
         this.state = stateFactory.create(state);
-        this.state.open();
+        this.state.start();
     }
 
     private CompletableFuture<Void> join() {

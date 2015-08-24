@@ -39,7 +39,8 @@ class FollowerState extends ActiveState {
         return RaftStateType.FOLLOWER;
     }
 
-    public synchronized void open() {
+    @Override
+    protected void startInternal() {
         startHeartbeatTimeout();
     }
 
@@ -302,7 +303,8 @@ class FollowerState extends ActiveState {
         }
     }
 
-    public synchronized void close() {
+    @Override
+    protected void stopInternal() {
         executionContext.checkThread();
         cancelHeartbeatTimeout();
     }

@@ -51,7 +51,8 @@ public class LeaderState extends ActiveState {
         return RaftStateType.LEADER;
     }
 
-    public synchronized void open() {
+    @Override
+    protected void startInternal() {
         executionContext.checkThread();
         // Schedule the initial entries commit to occur after the state is opened. Attempting any communication
         // within the open() method will result in a deadlock since RaftProtocol calls this method synchronously.
@@ -95,16 +96,18 @@ public class LeaderState extends ActiveState {
 
         CompletableFuture<Void> future = Futures.future();
         replicator.commit(index).whenCompleteAsync((resultIndex, error) -> {
-            if (error == null) {
-                try {
-                    applyEntries(resultIndex);
-                    future.complete(null);
-                } catch (IOException e) {
-                    future.completeExceptionally(e);
+            if (lifecycle().started()) {
+                if (error == null) {
+                    try {
+                        applyEntries(resultIndex);
+                        future.complete(null);
+                    } catch (IOException e) {
+                        future.completeExceptionally(e);
+                    }
+                } else {
+                    logger.info("error commit, transitioning to follower", error);
+                    transition(RaftStateType.FOLLOWER);
                 }
-            } else {
-                logger.info("error commit, transitioning to follower", error);
-                transition(RaftStateType.FOLLOWER);
             }
         }, executionContext.executor("commit complete"));
         return future;
@@ -118,12 +121,11 @@ public class LeaderState extends ActiveState {
         for (long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex()); lastApplied <= index; lastApplied++) {
             RaftLogEntry entry = context.getLog().getEntry(lastApplied);
             if (entry != null) {
-                context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
-                    executionContext.checkThread();
+                context.getStateMachine().apply(entry).whenComplete((result, error) -> {
                     if (error != null) {
                         logger.warn("application error occurred: {}", error);
                     }
-                }, executionContext.executor("apply entry complete"));
+                });
             }
         }
     }
@@ -197,31 +199,41 @@ public class LeaderState extends ActiveState {
 
         CompletableFuture<CommandResponse> future = Futures.future();
         replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
-
-            if (commitError == null) {
-                if (entry != null) {
-                    context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
-                        executionContext.checkThread();
-                        if (error == null) {
-                            future.complete(CommandResponse.builder()
-                                .setResult(result)
-                                .build());
-                        } else {
-                            logger.error("command error", error);
-                            future.complete(CommandResponse.builder()
-                                .setError(new InternalException())
-                                .build());
-                        }
-                    }, executionContext.executor("apply command entry"));
+            if (lifecycle().started()) {
+                if (commitError == null) {
+                    if (entry != null) {
+                        context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
+                            if (lifecycle().started()) {
+                                if (error == null) {
+                                    future.complete(CommandResponse.builder()
+                                        .setResult(result)
+                                        .build());
+                                } else {
+                                    logger.error("command error", error);
+                                    future.complete(CommandResponse.builder()
+                                        .setError(new InternalException())
+                                        .build());
+                                }
+                            } else {
+                                future.complete(CommandResponse.builder()
+                                    .setError(new IllegalMemberStateException("Not a leader"))
+                                    .build());
+                            }
+                        }, executionContext.executor("apply command entry"));
+                    } else {
+                        future.complete(CommandResponse.builder()
+                            .setResult(null)
+                            .build());
+                    }
                 } else {
+                    logger.error("error apply entry", commitError);
                     future.complete(CommandResponse.builder()
-                        .setResult(null)
+                        .setError(new WriteException())
                         .build());
                 }
             } else {
-                logger.error("error apply entry", commitError);
                 future.complete(CommandResponse.builder()
-                    .setError(new WriteException())
+                    .setError(new IllegalMemberStateException("Not a leader"))
                     .build());
             }
         }, executionContext.executor("commit command entry"));
@@ -289,12 +301,18 @@ public class LeaderState extends ActiveState {
         executionContext.checkThread();
         CompletableFuture<QueryResponse> future = Futures.future();
         replicator.commit().whenCompleteAsync((commitIndex, commitError) -> {
-            if (commitError == null) {
-                applyQuery(entry, future);
+            if (lifecycle().started()) {
+                if (commitError == null) {
+                    applyQuery(entry, future);
+                } else {
+                    logger.error("commitError error", commitError);
+                    future.complete(QueryResponse.builder()
+                        .setError(new ReadException())
+                        .build());
+                }
             } else {
-                logger.error("commitError error", commitError);
                 future.complete(QueryResponse.builder()
-                    .setError(new ReadException())
+                    .setError(new IllegalMemberStateException("Not a leader"))
                     .build());
             }
         }, executionContext.executor("commit query entry"));
@@ -308,7 +326,11 @@ public class LeaderState extends ActiveState {
         executionContext.checkThread();
         long version = context.getStateMachine().getLastApplied();
         context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
-            if (error == null) {
+            if (!lifecycle().started()) {
+                future.complete(QueryResponse.builder()
+                    .setError(new IllegalMemberStateException("Not a leader"))
+                    .build());
+            } else if (error == null) {
                 future.complete(QueryResponse.builder()
                     .setVersion(version)
                     .setResult(result)
@@ -349,40 +371,49 @@ public class LeaderState extends ActiveState {
 
         CompletableFuture<RegisterResponse> future = Futures.future();
         replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
-            if (commitError == null) {
-                logger.info("register entry apply {}", entry);
-                context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
-                    executionContext.checkThread();
-                    logger.info("register entry {} session id {} error {}", entry, sessionId, sessionError);
-                    if (sessionError == null) {
-                        try {
+            if (lifecycle().started()) {
+                if (commitError == null) {
+                    logger.info("register entry apply {}", entry);
+                    context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
+                        logger.info("register entry {} session id {} error {}", entry, sessionId, sessionError);
+                        if (!lifecycle().started()) {
                             future.complete(RegisterResponse.builder()
-                                .setLeader(transportService.localNode())
-                                .setTerm(context.getTerm())
-                                .setSession(sessionId)
-                                .setMembers(clusterService.nodes())
+                                .setError(new IllegalMemberStateException("Not a leader"))
                                 .build());
-                            logger.info("register entry response: {}", future);
-                        } catch (Throwable e) {
-                            logger.info("register entry error", e);
-                            future.completeExceptionally(e);
+                        } else if (sessionError == null) {
+                            try {
+                                future.complete(RegisterResponse.builder()
+                                    .setLeader(transportService.localNode())
+                                    .setTerm(context.getTerm())
+                                    .setSession(sessionId)
+                                    .setMembers(clusterService.nodes())
+                                    .build());
+                                logger.info("register entry response: {}", future);
+                            } catch (Throwable e) {
+                                logger.info("register entry error", e);
+                                future.completeExceptionally(e);
+                            }
+                        } else if (sessionError instanceof ApplicationException) {
+                            logger.error("application error", sessionError);
+                            future.complete(RegisterResponse.builder()
+                                .setError(new ApplicationException())
+                                .build());
+                        } else {
+                            logger.error("session error", sessionError);
+                            future.complete(RegisterResponse.builder()
+                                .setError(new InternalException())
+                                .build());
                         }
-                    } else if (sessionError instanceof ApplicationException) {
-                        logger.error("application error", sessionError);
-                        future.complete(RegisterResponse.builder()
-                            .setError(new ApplicationException())
-                            .build());
-                    } else {
-                        logger.error("session error", sessionError);
-                        future.complete(RegisterResponse.builder()
-                            .setError(new InternalException())
-                            .build());
-                    }
-                }, executionContext.executor("apply register entry"));
+                    }, executionContext.executor("apply register entry"));
+                } else {
+                    logger.error("commit error", commitError);
+                    future.complete(RegisterResponse.builder()
+                        .setError(new ProtocolException())
+                        .build());
+                }
             } else {
-                logger.error("commit error", commitError);
                 future.complete(RegisterResponse.builder()
-                    .setError(new ProtocolException())
+                    .setError(new IllegalMemberStateException("Not a leader"))
                     .build());
             }
         }, executionContext.executor("commit register entry"));
@@ -411,37 +442,46 @@ public class LeaderState extends ActiveState {
 
         CompletableFuture<KeepAliveResponse> future = Futures.future();
         replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
-            if (commitError == null) {
-                long version = context.getStateMachine().getLastApplied();
-                context.getStateMachine().apply(entry).whenCompleteAsync((sessionResult, sessionError) -> {
-                    executionContext.checkThread();
-                    if (sessionError == null) {
-                        try {
+            if (lifecycle().started()) {
+                if (commitError == null) {
+                    long version = context.getStateMachine().getLastApplied();
+                    context.getStateMachine().apply(entry).whenCompleteAsync((sessionResult, sessionError) -> {
+                        if (!lifecycle().started()) {
                             future.complete(KeepAliveResponse.builder()
-                                .setLeader(transportService.localNode())
-                                .setTerm(context.getTerm())
-                                .setVersion(version)
-                                .setMembers(clusterService.nodes())
+                                .setError(new IllegalMemberStateException("Not a leader"))
                                 .build());
-                        } catch (Throwable e) {
-                            future.completeExceptionally(e);
+                        } else if (sessionError == null) {
+                            try {
+                                future.complete(KeepAliveResponse.builder()
+                                    .setLeader(transportService.localNode())
+                                    .setTerm(context.getTerm())
+                                    .setVersion(version)
+                                    .setMembers(clusterService.nodes())
+                                    .build());
+                            } catch (Throwable e) {
+                                future.completeExceptionally(e);
+                            }
+                        } else if (sessionError instanceof ApplicationException) {
+                            logger.error("application error", sessionError);
+                            future.complete(KeepAliveResponse.builder()
+                                .setError(new ApplicationException())
+                                .build());
+                        } else {
+                            logger.error("session error", sessionError);
+                            future.complete(KeepAliveResponse.builder()
+                                .setError(new InternalException())
+                                .build());
                         }
-                    } else if (sessionError instanceof ApplicationException) {
-                        logger.error("application error", sessionError);
-                        future.complete(KeepAliveResponse.builder()
-                            .setError(new ApplicationException())
-                            .build());
-                    } else {
-                        logger.error("session error", sessionError);
-                        future.complete(KeepAliveResponse.builder()
-                            .setError(new InternalException())
-                            .build());
-                    }
-                }, executionContext.executor("apply keep alive entry"));
+                    }, executionContext.executor("apply keep alive entry"));
+                } else {
+                    logger.error("commit error", commitError);
+                    future.complete(KeepAliveResponse.builder()
+                        .setError(new ProtocolException())
+                        .build());
+                }
             } else {
-                logger.error("commit error", commitError);
                 future.complete(KeepAliveResponse.builder()
-                    .setError(new ProtocolException())
+                    .setError(new IllegalMemberStateException("Not a leader"))
                     .build());
             }
         }, executionContext.executor("commit keep alive entry"));
@@ -467,29 +507,38 @@ public class LeaderState extends ActiveState {
 
         CompletableFuture<JoinResponse> future = Futures.future();
         replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
-            if (commitError == null) {
-                context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
-                    executionContext.checkThread();
-                    if (sessionError == null) {
-                        try {
+            if (lifecycle().started()) {
+                if (commitError == null) {
+                    context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
+                        if (!lifecycle().started()) {
                             future.complete(JoinResponse.builder()
-                                .setLeader(transportService.localNode())
-                                .setTerm(context.getTerm())
+                                .setError(new IllegalMemberStateException("Not a leader"))
                                 .build());
-                        } catch (Throwable e) {
-                            future.completeExceptionally(e);
+                        } else if (sessionError == null) {
+                            try {
+                                future.complete(JoinResponse.builder()
+                                    .setLeader(transportService.localNode())
+                                    .setTerm(context.getTerm())
+                                    .build());
+                            } catch (Throwable e) {
+                                future.completeExceptionally(e);
+                            }
+                        } else {
+                            logger.error("session error", sessionError);
+                            future.complete(JoinResponse.builder()
+                                .setError(new InternalException())
+                                .build());
                         }
-                    } else {
-                        logger.error("session error", sessionError);
-                        future.complete(JoinResponse.builder()
-                            .setError(new InternalException())
-                            .build());
-                    }
-                }, executionContext.executor("apply join entry"));
+                    }, executionContext.executor("apply join entry"));
+                } else {
+                    logger.error("commit error", commitError);
+                    future.complete(JoinResponse.builder()
+                        .setError(new ProtocolException())
+                        .build());
+                }
             } else {
-                logger.error("commit error", commitError);
                 future.complete(JoinResponse.builder()
-                    .setError(new ProtocolException())
+                    .setError(new IllegalMemberStateException("Not a leader"))
                     .build());
             }
         }, executionContext.executor("commit join entry"));
@@ -516,30 +565,40 @@ public class LeaderState extends ActiveState {
 
         CompletableFuture<LeaveResponse> future = Futures.future();
         replicator.commit(index).whenCompleteAsync((commitIndex, commitError) -> {
-            if (commitError == null) {
-                context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
-                    executionContext.checkThread();
-                    if (sessionError == null) {
-                        future.complete(LeaveResponse.builder()
-                            .build());
-                    } else {
-                        logger.error("session error", sessionError);
-                        future.complete(LeaveResponse.builder()
-                            .setError(new InternalException())
-                            .build());
-                    }
-                }, executionContext.executor("apply leave entry"));
+            if (lifecycle().started()) {
+                if (commitError == null) {
+                    context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
+                        if (!lifecycle().started()) {
+                            future.complete(LeaveResponse.builder()
+                                .setError(new IllegalMemberStateException("Not a leader"))
+                                .build());
+                        } else if (sessionError == null) {
+                            future.complete(LeaveResponse.builder()
+                                .build());
+                        } else {
+                            logger.error("session error", sessionError);
+                            future.complete(LeaveResponse.builder()
+                                .setError(new InternalException())
+                                .build());
+                        }
+                    }, executionContext.executor("apply leave entry"));
+                } else {
+                    logger.error("commit error", commitError);
+                    future.complete(LeaveResponse.builder()
+                        .setError(new ProtocolException())
+                        .build());
+                }
             } else {
-                logger.error("commit error", commitError);
                 future.complete(LeaveResponse.builder()
-                    .setError(new ProtocolException())
+                    .setError(new IllegalMemberStateException("Not a leader"))
                     .build());
             }
         }, executionContext.executor("commit join entry"));
         return future;
     }
 
-    public synchronized void close() {
+    @Override
+    protected void stopInternal() {
         executionContext.checkThread();
         logger.debug("close leader state");
         stopHeartbeatTimer();
@@ -806,52 +865,54 @@ public class LeaderState extends ActiveState {
                 logger.debug("[replica {}] replicate {}", state.getNode(), request);
                 transportService.client(state.getNode().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
                     committing = false;
-                    if (error == null) {
-                        logger.debug("[replica {}] received {}", state.getNode(), response);
-                        if (response.term() > context.getTerm()) {
-                            logger.info("[replica {}] received higher term from {}, transitioning to follower", state.getNode());
-                            transition(RaftStateType.FOLLOWER);
-                        } else {
-                            // Update the commit time for the replica. This will cause heartbeat futures to be triggered.
-                            commitTime(id);
-
-                            // If replication succeeded then trigger commit futures.
-                            if (response.succeeded()) {
-                                updateMatchIndex(response);
-                                updateNextIndex();
-
-                                // If entries were committed to the replica then check commit indexes.
-                                if (!entries.isEmpty()) {
-                                    commitEntries();
-                                }
-
-                                // If there are more entries to send then attempt to send another commit.
-                                if (hasMoreEntries()) {
-                                    try {
-                                        commit();
-                                    } catch (IOException e) {
-                                        logger.error("[replica {}] error commit", state.getNode(), e);
-                                    }
-                                }
-                            } else if (response.term() > context.getTerm()) {
-                                logger.info("[replica {}] received greater term append response, transitioning to follower", state.getNode());
+                    if (lifecycle().started()) {
+                        if (error == null) {
+                            logger.debug("[replica {}] received {}", state.getNode(), response);
+                            if (response.term() > context.getTerm()) {
+                                logger.info("[replica {}] received higher term from {}, transitioning to follower", state.getNode());
                                 transition(RaftStateType.FOLLOWER);
                             } else {
-                                resetMatchIndex(response);
-                                resetNextIndex();
+                                // Update the commit time for the replica. This will cause heartbeat futures to be triggered.
+                                commitTime(id);
 
-                                // If there are more entries to send then attempt to send another commit.
-                                if (hasMoreEntries()) {
-                                    try {
-                                        commit();
-                                    } catch (IOException e) {
-                                        logger.error("[replica {}] error commit", state.getNode(), e);
+                                // If replication succeeded then trigger commit futures.
+                                if (response.succeeded()) {
+                                    updateMatchIndex(response);
+                                    updateNextIndex();
+
+                                    // If entries were committed to the replica then check commit indexes.
+                                    if (!entries.isEmpty()) {
+                                        commitEntries();
+                                    }
+
+                                    // If there are more entries to send then attempt to send another commit.
+                                    if (hasMoreEntries()) {
+                                        try {
+                                            commit();
+                                        } catch (IOException e) {
+                                            logger.error("[replica {}] error commit", state.getNode(), e);
+                                        }
+                                    }
+                                } else if (response.term() > context.getTerm()) {
+                                    logger.info("[replica {}] received greater term append response, transitioning to follower", state.getNode());
+                                    transition(RaftStateType.FOLLOWER);
+                                } else {
+                                    resetMatchIndex(response);
+                                    resetNextIndex();
+
+                                    // If there are more entries to send then attempt to send another commit.
+                                    if (hasMoreEntries()) {
+                                        try {
+                                            commit();
+                                        } catch (IOException e) {
+                                            logger.error("[replica {}] error commit", state.getNode(), e);
+                                        }
                                     }
                                 }
                             }
+                        } else {
+                            logger.warn("[replica {}] error send {}", state.getNode(), error.getMessage());
                         }
-                    } else {
-                        logger.warn("[replica {}] error send {}", state.getNode(), error.getMessage());
                     }
                 }, executionContext.executor("replica append response"));
             }

@@ -43,7 +43,8 @@ class CandidateState extends ActiveState {
         return RaftStateType.CANDIDATE;
     }
 
-    public synchronized void open() {
+    @Override
+    protected void startInternal() {
         startElection();
     }
 
@@ -196,7 +197,8 @@ class CandidateState extends ActiveState {
         }
     }
 
-    public synchronized void close() {
+    @Override
+    protected void stopInternal() {
         executionContext.checkThread();
         cancelElection();
     }

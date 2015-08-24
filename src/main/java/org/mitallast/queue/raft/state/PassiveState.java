@@ -256,12 +256,12 @@ public class PassiveState extends AbstractState {
     }
 
     @Override
-    public void open() {
+    protected void startInternal() {
         executionContext.checkThread();
     }
 
     @Override
-    public void close() {
+    protected void stopInternal() {
         executionContext.checkThread();
     }
 

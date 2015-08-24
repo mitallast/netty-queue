@@ -1,6 +1,7 @@
 package org.mitallast.queue.raft.state;
 
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.common.component.Lifecycle;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
@@ -22,6 +23,8 @@ import org.mitallast.queue.raft.action.vote.VoteResponse;
 import java.util.concurrent.CompletableFuture;
 
 public abstract class AbstractState extends AbstractComponent {
+
+    private final Lifecycle lifecycle = new Lifecycle();
 
     protected AbstractState(Settings settings) {
         super(settings);
@@ -45,7 +48,35 @@ public abstract class AbstractState extends AbstractComponent {
 
     public abstract CompletableFuture<QueryResponse> query(QueryRequest request);
 
-    public abstract void open();
+    public final Lifecycle lifecycle() {
+        return lifecycle;
+    }
 
-    public abstract void close();
+    public final void start() {
+        if (!lifecycle.canMoveToStarted()) {
+            logger.warn("Can't move to started, " + lifecycle.state());
+            return;
+        }
+        if (!lifecycle.moveToStarted()) {
+            logger.warn("Don't moved to started, " + lifecycle.state());
+        }
+        logger.info("starting");
+        startInternal();
+        logger.info("started");
+    }
+
+    protected abstract void startInternal();
+
+    public final void stop() {
+        if (!lifecycle.canMoveToStopped()) {
+            logger.warn("Can't move to stopped, it's a " + lifecycle.state());
+            return;
+        }
+        lifecycle.moveToStopped();
+        logger.info("stopping");
+        stopInternal();
+        logger.debug("stopped");
+    }
+
+    protected abstract void stopInternal();
 }

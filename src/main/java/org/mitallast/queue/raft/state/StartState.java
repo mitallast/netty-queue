@@ -92,10 +92,10 @@ class StartState extends AbstractState {
     }
 
     @Override
-    public void open() {
+    protected void startInternal() {
     }
 
     @Override
-    public void close() {
+    protected void stopInternal() {
     }
 }

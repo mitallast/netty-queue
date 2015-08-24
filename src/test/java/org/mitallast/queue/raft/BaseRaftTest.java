@@ -10,7 +10,6 @@ import org.mitallast.queue.raft.state.RaftStateType;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -55,11 +54,7 @@ public class BaseRaftTest extends BaseIntegrationTest {
                 }
             })).collect(Collectors.toList());
         for (Future future : futures) {
-            try {
-                future.get(1, TimeUnit.MINUTES);
-            } catch (TimeoutException e) {
-                throw e;
-            }
+            future.get(1, TimeUnit.MINUTES);
         }
 
         // await for leader election

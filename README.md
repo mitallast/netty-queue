@@ -95,16 +95,16 @@ Recommended java options
     -d64
     -Xms4g
     -Xmx4g
-    -XX:MaxPermSize=512m
-    -XX:ReservedCodeCacheSize=256m
-    -XX:+UseG1GC
+    -Djava.net.preferIPv4Stack=true
+    -XX:+UseParNewGC
+    -XX:+UseConcMarkSweepGC
+    -XX:CMSInitiatingOccupancyFraction=75
+    -XX:+UseCMSInitiatingOccupancyOnly
     -XX:MaxGCPauseMillis=150
     -XX:InitiatingHeapOccupancyPercent=70
     -XX:NewRatio=2
     -XX:SurvivorRatio=8
     -XX:MaxTenuringThreshold=15
-    -XX:G1ReservePercent=50
-    -XX:G1HeapRegionSize=32m
     -XX:+UseCompressedOops
     -XX:+AggressiveOpts
     -XX:+UseFastAccessorMethods

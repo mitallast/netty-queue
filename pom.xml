@@ -231,15 +231,16 @@
                         <argument>-d64</argument>
                         <argument>-Xms4g</argument>
                         <argument>-Xmx4g</argument>
-                        <argument>-XX:ReservedCodeCacheSize=256m</argument>
-                        <argument>-XX:+UseG1GC</argument>
+                        <argument>-Djava.net.preferIPv4Stack=true</argument>
+                        <argument>-XX:+UseParNewGC</argument>
+                        <argument>-XX:+UseConcMarkSweepGC</argument>
+                        <argument>-XX:CMSInitiatingOccupancyFraction=75</argument>
+                        <argument>-XX:+UseCMSInitiatingOccupancyOnly</argument>
                         <argument>-XX:MaxGCPauseMillis=150</argument>
                         <argument>-XX:InitiatingHeapOccupancyPercent=70</argument>
                         <argument>-XX:NewRatio=2</argument>
                         <argument>-XX:SurvivorRatio=8</argument>
                         <argument>-XX:MaxTenuringThreshold=15</argument>
-                        <argument>-XX:G1ReservePercent=50</argument>
-                        <argument>-XX:G1HeapRegionSize=32m</argument>
                         <argument>-XX:+UseCompressedOops</argument>
                         <argument>-XX:+AggressiveOpts</argument>
                         <argument>-XX:+UseFastAccessorMethods</argument>

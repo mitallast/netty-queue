@@ -214,11 +214,7 @@ public class LeaderState extends ActiveState {
                                         .setError(new InternalException())
                                         .build());
                                 }
-                            } else {
-                                future.complete(CommandResponse.builder()
-                                    .setError(new IllegalMemberStateException("Not a leader"))
-                                    .build());
-                            }
+                            } // ignore future completion, session future
                         }, executionContext.executor("apply command entry"));
                     } else {
                         future.complete(CommandResponse.builder()
@@ -231,11 +227,7 @@ public class LeaderState extends ActiveState {
                         .setError(new WriteException())
                         .build());
                 }
-            } else {
-                future.complete(CommandResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            }
+            } // ignore future completion, session future
         }, executionContext.executor("commit command entry"));
         return future;
     }
@@ -310,11 +302,7 @@ public class LeaderState extends ActiveState {
                         .setError(new ReadException())
                         .build());
                 }
-            } else {
-                future.complete(QueryResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            }
+            }// ignore future completion, session future
         }, executionContext.executor("commit query entry"));
         return future;
     }
@@ -326,26 +314,24 @@ public class LeaderState extends ActiveState {
         executionContext.checkThread();
         long version = context.getStateMachine().getLastApplied();
         context.getStateMachine().apply(entry).whenCompleteAsync((result, error) -> {
-            if (!lifecycle().started()) {
-                future.complete(QueryResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            } else if (error == null) {
-                future.complete(QueryResponse.builder()
-                    .setVersion(version)
-                    .setResult(result)
-                    .build());
-            } else if (error instanceof ApplicationException) {
-                logger.error("application error", error);
-                future.complete(QueryResponse.builder()
-                    .setError(new ApplicationException())
-                    .build());
-            } else {
-                logger.error("internal error", error);
-                future.complete(QueryResponse.builder()
-                    .setError(new InternalException())
-                    .build());
-            }
+            if (lifecycle().started()) {
+                if (error == null) {
+                    future.complete(QueryResponse.builder()
+                        .setVersion(version)
+                        .setResult(result)
+                        .build());
+                } else if (error instanceof ApplicationException) {
+                    logger.error("application error", error);
+                    future.complete(QueryResponse.builder()
+                        .setError(new ApplicationException())
+                        .build());
+                } else {
+                    logger.error("internal error", error);
+                    future.complete(QueryResponse.builder()
+                        .setError(new InternalException())
+                        .build());
+                }
+            } // ignore future completion, session future
         }, executionContext.executor("apply query entry"));
         return future;
     }
@@ -376,34 +362,32 @@ public class LeaderState extends ActiveState {
                     logger.info("register entry apply {}", entry);
                     context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
                         logger.info("register entry {} session id {} error {}", entry, sessionId, sessionError);
-                        if (!lifecycle().started()) {
-                            future.complete(RegisterResponse.builder()
-                                .setError(new IllegalMemberStateException("Not a leader"))
-                                .build());
-                        } else if (sessionError == null) {
-                            try {
+                        if (lifecycle().started()) {
+                            if (sessionError == null) {
+                                try {
+                                    future.complete(RegisterResponse.builder()
+                                        .setLeader(transportService.localNode())
+                                        .setTerm(context.getTerm())
+                                        .setSession(sessionId)
+                                        .setMembers(clusterService.nodes())
+                                        .build());
+                                    logger.info("register entry response: {}", future);
+                                } catch (Throwable e) {
+                                    logger.info("register entry error", e);
+                                    future.completeExceptionally(e);
+                                }
+                            } else if (sessionError instanceof ApplicationException) {
+                                logger.error("application error", sessionError);
                                 future.complete(RegisterResponse.builder()
-                                    .setLeader(transportService.localNode())
-                                    .setTerm(context.getTerm())
-                                    .setSession(sessionId)
-                                    .setMembers(clusterService.nodes())
+                                    .setError(new ApplicationException())
                                     .build());
-                                logger.info("register entry response: {}", future);
-                            } catch (Throwable e) {
-                                logger.info("register entry error", e);
-                                future.completeExceptionally(e);
+                            } else {
+                                logger.error("session error", sessionError);
+                                future.complete(RegisterResponse.builder()
+                                    .setError(new InternalException())
+                                    .build());
                             }
-                        } else if (sessionError instanceof ApplicationException) {
-                            logger.error("application error", sessionError);
-                            future.complete(RegisterResponse.builder()
-                                .setError(new ApplicationException())
-                                .build());
-                        } else {
-                            logger.error("session error", sessionError);
-                            future.complete(RegisterResponse.builder()
-                                .setError(new InternalException())
-                                .build());
-                        }
+                        } // ignore future completion, session future
                     }, executionContext.executor("apply register entry"));
                 } else {
                     logger.error("commit error", commitError);
@@ -411,11 +395,7 @@ public class LeaderState extends ActiveState {
                         .setError(new ProtocolException())
                         .build());
                 }
-            } else {
-                future.complete(RegisterResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            }
+            } // ignore future completion, session future
         }, executionContext.executor("commit register entry"));
         return future;
     }
@@ -446,32 +426,30 @@ public class LeaderState extends ActiveState {
                 if (commitError == null) {
                     long version = context.getStateMachine().getLastApplied();
                     context.getStateMachine().apply(entry).whenCompleteAsync((sessionResult, sessionError) -> {
-                        if (!lifecycle().started()) {
-                            future.complete(KeepAliveResponse.builder()
-                                .setError(new IllegalMemberStateException("Not a leader"))
-                                .build());
-                        } else if (sessionError == null) {
-                            try {
+                        if (lifecycle().started()) {
+                            if (sessionError == null) {
+                                try {
+                                    future.complete(KeepAliveResponse.builder()
+                                        .setLeader(transportService.localNode())
+                                        .setTerm(context.getTerm())
+                                        .setVersion(version)
+                                        .setMembers(clusterService.nodes())
+                                        .build());
+                                } catch (Throwable e) {
+                                    future.completeExceptionally(e);
+                                }
+                            } else if (sessionError instanceof ApplicationException) {
+                                logger.error("application error", sessionError);
                                 future.complete(KeepAliveResponse.builder()
-                                    .setLeader(transportService.localNode())
-                                    .setTerm(context.getTerm())
-                                    .setVersion(version)
-                                    .setMembers(clusterService.nodes())
+                                    .setError(new ApplicationException())
                                     .build());
-                            } catch (Throwable e) {
-                                future.completeExceptionally(e);
+                            } else {
+                                logger.error("session error", sessionError);
+                                future.complete(KeepAliveResponse.builder()
+                                    .setError(new InternalException())
+                                    .build());
                             }
-                        } else if (sessionError instanceof ApplicationException) {
-                            logger.error("application error", sessionError);
-                            future.complete(KeepAliveResponse.builder()
-                                .setError(new ApplicationException())
-                                .build());
-                        } else {
-                            logger.error("session error", sessionError);
-                            future.complete(KeepAliveResponse.builder()
-                                .setError(new InternalException())
-                                .build());
-                        }
+                        } // ignore future completion, session future
                     }, executionContext.executor("apply keep alive entry"));
                 } else {
                     logger.error("commit error", commitError);
@@ -479,11 +457,7 @@ public class LeaderState extends ActiveState {
                         .setError(new ProtocolException())
                         .build());
                 }
-            } else {
-                future.complete(KeepAliveResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            }
+            } // ignore future completion, session future
         }, executionContext.executor("commit keep alive entry"));
         return future;
     }
@@ -510,25 +484,23 @@ public class LeaderState extends ActiveState {
             if (lifecycle().started()) {
                 if (commitError == null) {
                     context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
-                        if (!lifecycle().started()) {
-                            future.complete(JoinResponse.builder()
-                                .setError(new IllegalMemberStateException("Not a leader"))
-                                .build());
-                        } else if (sessionError == null) {
-                            try {
+                        if (lifecycle().started()) {
+                            if (sessionError == null) {
+                                try {
+                                    future.complete(JoinResponse.builder()
+                                        .setLeader(transportService.localNode())
+                                        .setTerm(context.getTerm())
+                                        .build());
+                                } catch (Throwable e) {
+                                    future.completeExceptionally(e);
+                                }
+                            } else {
+                                logger.error("session error", sessionError);
                                 future.complete(JoinResponse.builder()
-                                    .setLeader(transportService.localNode())
-                                    .setTerm(context.getTerm())
+                                    .setError(new InternalException())
                                     .build());
-                            } catch (Throwable e) {
-                                future.completeExceptionally(e);
                             }
-                        } else {
-                            logger.error("session error", sessionError);
-                            future.complete(JoinResponse.builder()
-                                .setError(new InternalException())
-                                .build());
-                        }
+                        } // ignore future completion, session future
                     }, executionContext.executor("apply join entry"));
                 } else {
                     logger.error("commit error", commitError);
@@ -536,11 +508,7 @@ public class LeaderState extends ActiveState {
                         .setError(new ProtocolException())
                         .build());
                 }
-            } else {
-                future.complete(JoinResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            }
+            } // ignore future completion, session future
         }, executionContext.executor("commit join entry"));
         return future;
     }
@@ -568,19 +536,17 @@ public class LeaderState extends ActiveState {
             if (lifecycle().started()) {
                 if (commitError == null) {
                     context.getStateMachine().apply(entry).whenCompleteAsync((sessionId, sessionError) -> {
-                        if (!lifecycle().started()) {
-                            future.complete(LeaveResponse.builder()
-                                .setError(new IllegalMemberStateException("Not a leader"))
-                                .build());
-                        } else if (sessionError == null) {
-                            future.complete(LeaveResponse.builder()
-                                .build());
-                        } else {
-                            logger.error("session error", sessionError);
-                            future.complete(LeaveResponse.builder()
-                                .setError(new InternalException())
-                                .build());
-                        }
+                        if (lifecycle().started()) {
+                            if (sessionError == null) {
+                                future.complete(LeaveResponse.builder()
+                                    .build());
+                            } else {
+                                logger.error("session error", sessionError);
+                                future.complete(LeaveResponse.builder()
+                                    .setError(new InternalException())
+                                    .build());
+                            }
+                        } // ignore future completion, session future
                     }, executionContext.executor("apply leave entry"));
                 } else {
                     logger.error("commit error", commitError);
@@ -588,11 +554,7 @@ public class LeaderState extends ActiveState {
                         .setError(new ProtocolException())
                         .build());
                 }
-            } else {
-                future.complete(LeaveResponse.builder()
-                    .setError(new IllegalMemberStateException("Not a leader"))
-                    .build());
-            }
+            } // ignore future completion, session future
         }, executionContext.executor("commit join entry"));
         return future;
     }

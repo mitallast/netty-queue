@@ -237,15 +237,15 @@ public class SegmentIndex implements Closeable {
     }
 
     public MessageMeta meta(long offset) throws IOException {
-        long index = search(offset);
+        int index = search(offset);
         if (index == -1) {
             return null;
         }
         return new MessageMeta(
             offset,
-            buffer.getLong((int) (index + OFFSET_SIZE)),
-            buffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE)),
-            buffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE))
+            buffer.getLong(index + OFFSET_SIZE),
+            buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
+            buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE)
         );
     }
 
@@ -254,11 +254,11 @@ public class SegmentIndex implements Closeable {
             return -1;
         }
 
-        long index = search(offset);
+        int index = search(offset);
         if (index == -1) {
             return -1;
         }
-        return buffer.getLong((int) (index + OFFSET_SIZE));
+        return buffer.getLong(index + OFFSET_SIZE);
     }
 
     public int length(long offset) throws IOException {
@@ -266,11 +266,11 @@ public class SegmentIndex implements Closeable {
             return -1;
         }
 
-        long index = search(offset);
+        int index = search(offset);
         if (index == -1) {
             return -1;
         }
-        return buffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE));
+        return buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE);
     }
 
     public boolean isGarbage() throws IOException {
@@ -318,22 +318,25 @@ public class SegmentIndex implements Closeable {
         return -1;
     }
 
-    public void truncate(long offset) throws IOException {
+    public void truncate(final long offset) throws IOException {
         if (offset == lastOffset)
             return;
 
-        long index = search(offset + 1);
-
+        int index = search(offset + 1);
         if (index == -1)
             throw new IllegalStateException("unknown offset: " + offset);
 
-        long lastOffset = lastOffset();
-        for (long i = lastOffset; i > offset; i--) {
-            if (position(i) != -1) {
-                size--;
+        for (long i = offset + 1; i <= lastOffset; i++) {
+            int i_index = search(i);
+            if (i_index != -1) {
+                long i_position = buffer.getLong(i_index + OFFSET_SIZE);
+                if (i_position != -1) {
+                    size--;
+                }
+                // clear
+                buffer.setLong(i_index, -1);
             }
         }
-        fileBuffer.randomAccessFile().setLength(index);
         this.lastOffset = offset;
     }
 

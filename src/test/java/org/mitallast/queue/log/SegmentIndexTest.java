@@ -104,6 +104,23 @@ public class SegmentIndexTest extends BaseTest {
         }
     }
 
+    @Test
+    public void testTruncate() throws Exception {
+        LogEntry[] entries = generate(max() / 2);
+
+        for (LogEntry entry : entries) {
+            segmentIndex.index(entry.offset, entry.position, entry.length, MessageStatus.QUEUED);
+        }
+
+        segmentIndex.flush();
+        for (int i = entries.length - 1; i >= 0; i--) {
+            LogEntry entry = entries[i];
+            Assert.assertTrue(entry.toString(), segmentIndex.contains(entry.offset));
+            segmentIndex.truncate(entry.offset - 1);
+            Assert.assertFalse(entry.toString(), segmentIndex.contains(entry.offset));
+        }
+    }
+
     private LogEntry[] generate() {
         return generate(max());
     }

@@ -41,10 +41,6 @@ public class MemoryMappedFileBuffer implements Closeable {
         return randomAccessFile;
     }
 
-    public MappedByteBuffer mappedByteBuffer() {
-        return mappedByteBuffer;
-    }
-
     public ByteBuf buffer() {
         return buffer;
     }

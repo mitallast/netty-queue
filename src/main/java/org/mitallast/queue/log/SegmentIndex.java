@@ -1,12 +1,12 @@
 package org.mitallast.queue.log;
 
+import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.collection.HashFunctions;
 import org.mitallast.queue.common.mmap.MemoryMappedFileBuffer;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 import java.util.BitSet;
 
 
@@ -33,12 +33,12 @@ public class SegmentIndex implements Closeable {
     public static final int ENTRY_SIZE = OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE + STATUS_SIZE;
 
     private final File file;
-    private final MemoryMappedFileBuffer fileBuffer;
-    private final MappedByteBuffer mappedByteBuffer;
     private final BitSet bits;
     private final int maxSize;
     private final int bitsSize;
+    private final MemoryMappedFileBuffer fileBuffer;
 
+    private ByteBuf buffer;
     private int size = 0;
 
     private long firstOffset = -1;
@@ -50,7 +50,7 @@ public class SegmentIndex implements Closeable {
         this.file = file;
         this.maxSize = maxEntries * ENTRY_SIZE;
         this.fileBuffer = new MemoryMappedFileBuffer(file, maxSize);
-        this.mappedByteBuffer = fileBuffer.mappedByteBuffer();
+        this.buffer = fileBuffer.buffer();
         this.bitsSize = (int) HashFunctions.toPow2(maxEntries);
         this.bits = new BitSet(this.bitsSize);
 
@@ -61,7 +61,7 @@ public class SegmentIndex implements Closeable {
 
     private void init() throws IOException {
         for (int i = 0; i < maxSize; i += ENTRY_SIZE) {
-            long offset = mappedByteBuffer.getLong(i);
+            long offset = buffer.getLong(i);
             if (offset == -1) {
                 break;
             }
@@ -121,12 +121,12 @@ public class SegmentIndex implements Closeable {
 
         // seek to end of file
         int pos = size * ENTRY_SIZE;
-        mappedByteBuffer.putLong(pos, offset);
-        mappedByteBuffer.putLong(pos + OFFSET_SIZE, position);
-        mappedByteBuffer.putInt(pos + OFFSET_SIZE + POSITION_SIZE, length);
-        mappedByteBuffer.putInt(pos + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, status.ordinal());
+        buffer.setLong(pos, offset);
+        buffer.setLong(pos + OFFSET_SIZE, position);
+        buffer.setInt(pos + OFFSET_SIZE + POSITION_SIZE, length);
+        buffer.setInt(pos + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, status.ordinal());
         if (pos + ENTRY_SIZE < maxSize) {
-            mappedByteBuffer.putLong(pos + ENTRY_SIZE, -1);
+            buffer.setLong(pos + ENTRY_SIZE, -1);
         }
 
         bits.set((int) (offset % bitsSize));
@@ -141,16 +141,16 @@ public class SegmentIndex implements Closeable {
 
     public MessageMeta peek() throws IOException {
         for (int index = 0; index < maxSize; index += ENTRY_SIZE) {
-            long offset = mappedByteBuffer.getLong(index);
+            long offset = buffer.getLong(index);
             if (offset == -1) {
                 break;
             }
-            int status = mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
+            int status = buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
             if (status == MessageStatus.QUEUED.ordinal()) {
                 return new MessageMeta(
                     offset,
-                    mappedByteBuffer.getLong(index + OFFSET_SIZE),
-                    mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
+                    buffer.getLong(index + OFFSET_SIZE),
+                    buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
                     MessageStatus.QUEUED
                 );
             }
@@ -160,17 +160,17 @@ public class SegmentIndex implements Closeable {
 
     public MessageMeta lockAndPop() throws IOException {
         for (int index = 0; index < maxSize; index += ENTRY_SIZE) {
-            long offset = mappedByteBuffer.getLong(index);
+            long offset = buffer.getLong(index);
             if (offset == -1) {
                 break;
             }
-            int status = mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
+            int status = buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
             if (status == MessageStatus.QUEUED.ordinal()) {
-                mappedByteBuffer.putInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.LOCKED.ordinal());
+                buffer.setInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.LOCKED.ordinal());
                 return new MessageMeta(
                     offset,
-                    mappedByteBuffer.getLong(index + OFFSET_SIZE),
-                    mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
+                    buffer.getLong(index + OFFSET_SIZE),
+                    buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
                     MessageStatus.LOCKED
                 );
             }
@@ -180,16 +180,16 @@ public class SegmentIndex implements Closeable {
 
     public MessageMeta lock(long offset) throws IOException {
         int index = search(offset);
-        if (mappedByteBuffer.getLong(index) != offset) {
+        if (buffer.getLong(index) != offset) {
             return null;
         }
-        int status = mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
+        int status = buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
         if (status == MessageStatus.QUEUED.ordinal()) {
-            mappedByteBuffer.putInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.LOCKED.ordinal());
+            buffer.setInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.LOCKED.ordinal());
             return new MessageMeta(
                 offset,
-                mappedByteBuffer.getLong(index + OFFSET_SIZE),
-                mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
+                buffer.getLong(index + OFFSET_SIZE),
+                buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
                 MessageStatus.LOCKED
             );
         }
@@ -198,16 +198,16 @@ public class SegmentIndex implements Closeable {
 
     public MessageMeta unlockAndDelete(long offset) throws IOException {
         int index = search(offset);
-        if (mappedByteBuffer.getLong(index) != offset) {
+        if (buffer.getLong(index) != offset) {
             return null;
         }
-        int status = mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
+        int status = buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
         if (status == MessageStatus.LOCKED.ordinal()) {
-            mappedByteBuffer.putInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.DELETED.ordinal());
+            buffer.setInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.DELETED.ordinal());
             return new MessageMeta(
                 offset,
-                mappedByteBuffer.getLong(index + OFFSET_SIZE),
-                mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
+                buffer.getLong(index + OFFSET_SIZE),
+                buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
                 MessageStatus.LOCKED
             );
         }
@@ -216,16 +216,16 @@ public class SegmentIndex implements Closeable {
 
     public MessageMeta unlockAndQueue(long offset) throws IOException {
         int index = search(offset);
-        if (mappedByteBuffer.getLong(index) != offset) {
+        if (buffer.getLong(index) != offset) {
             return null;
         }
-        int status = mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
+        int status = buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
         if (status == MessageStatus.LOCKED.ordinal()) {
-            mappedByteBuffer.putInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.QUEUED.ordinal());
+            buffer.setInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE, MessageStatus.QUEUED.ordinal());
             return new MessageMeta(
                 offset,
-                mappedByteBuffer.getLong(index + OFFSET_SIZE),
-                mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
+                buffer.getLong(index + OFFSET_SIZE),
+                buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE),
                 MessageStatus.LOCKED
             );
         }
@@ -243,9 +243,9 @@ public class SegmentIndex implements Closeable {
         }
         return new MessageMeta(
             offset,
-            mappedByteBuffer.getLong((int) (index + OFFSET_SIZE)),
-            mappedByteBuffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE)),
-            mappedByteBuffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE))
+            buffer.getLong((int) (index + OFFSET_SIZE)),
+            buffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE)),
+            buffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE))
         );
     }
 
@@ -258,7 +258,7 @@ public class SegmentIndex implements Closeable {
         if (index == -1) {
             return -1;
         }
-        return mappedByteBuffer.getLong((int) (index + OFFSET_SIZE));
+        return buffer.getLong((int) (index + OFFSET_SIZE));
     }
 
     public int length(long offset) throws IOException {
@@ -270,16 +270,16 @@ public class SegmentIndex implements Closeable {
         if (index == -1) {
             return -1;
         }
-        return mappedByteBuffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE));
+        return buffer.getInt((int) (index + OFFSET_SIZE + POSITION_SIZE));
     }
 
     public boolean isGarbage() throws IOException {
         for (int index = 0; index < maxSize; index += ENTRY_SIZE) {
-            long offset = mappedByteBuffer.getLong(index);
+            long offset = buffer.getLong(index);
             if (offset == -1) {
                 return false;
             }
-            int status = mappedByteBuffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
+            int status = buffer.getInt(index + OFFSET_SIZE + POSITION_SIZE + LENGTH_SIZE);
             if (status != MessageStatus.DELETED.ordinal()) {
                 return false;
             }
@@ -297,11 +297,11 @@ public class SegmentIndex implements Closeable {
 
         while (lo < hi) {
             int mid = lo + (hi - lo) / 2;
-            int i = mappedByteBuffer.getInt(mid * ENTRY_SIZE);
+            long i = buffer.getLong(mid * ENTRY_SIZE);
             if (i == offset) {
                 return mid * ENTRY_SIZE;
             } else if (lo == mid) {
-                if (mappedByteBuffer.getInt(hi * ENTRY_SIZE) == offset) {
+                if (buffer.getLong(hi * ENTRY_SIZE) == offset) {
                     return hi * ENTRY_SIZE;
                 }
                 return -1;
@@ -312,7 +312,7 @@ public class SegmentIndex implements Closeable {
             }
         }
 
-        if (mappedByteBuffer.getInt(hi * ENTRY_SIZE) == offset) {
+        if (buffer.getLong(hi * ENTRY_SIZE) == offset) {
             return hi * ENTRY_SIZE;
         }
         return -1;
@@ -348,7 +348,7 @@ public class SegmentIndex implements Closeable {
 
     @Override
     public void close() throws IOException {
-        fileBuffer.flush();
         fileBuffer.close();
+        buffer = null;
     }
 }

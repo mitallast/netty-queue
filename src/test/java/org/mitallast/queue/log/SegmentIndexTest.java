@@ -1,5 +1,6 @@
 package org.mitallast.queue.log;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,6 +18,11 @@ public class SegmentIndexTest extends BaseTest {
     @Before
     public void setUp() throws Exception {
         segmentIndex = new SegmentIndex(testFolder.newFile(), max());
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        segmentIndex.close();
     }
 
     @Test
@@ -82,6 +88,7 @@ public class SegmentIndexTest extends BaseTest {
 
         try (SegmentIndex reopenSegmentIndex = new SegmentIndex(segmentIndex.file(), max())) {
             Assert.assertEquals(segmentIndex.size(), reopenSegmentIndex.size());
+            Assert.assertEquals(segmentIndex.size(), reopenSegmentIndex.size());
             Assert.assertEquals(segmentIndex.firstOffset(), reopenSegmentIndex.firstOffset());
             Assert.assertEquals(segmentIndex.lastOffset(), reopenSegmentIndex.lastOffset());
             Assert.assertEquals(segmentIndex.lastPosition(), reopenSegmentIndex.lastPosition());
@@ -89,10 +96,10 @@ public class SegmentIndexTest extends BaseTest {
             Assert.assertEquals(segmentIndex.nextPosition(), reopenSegmentIndex.nextPosition());
 
             for (LogEntry entry : entries) {
-                Assert.assertEquals(entry.offset * SegmentIndex.ENTRY_SIZE, segmentIndex.search(entry.offset));
-                Assert.assertTrue(reopenSegmentIndex.contains(entry.offset));
-                Assert.assertEquals(entry.position, segmentIndex.position(entry.offset));
-                Assert.assertEquals(entry.length, segmentIndex.length(entry.offset));
+                Assert.assertEquals(entry.toString(), entry.offset * SegmentIndex.ENTRY_SIZE, segmentIndex.search(entry.offset));
+                Assert.assertTrue(entry.toString(), reopenSegmentIndex.contains(entry.offset));
+                Assert.assertEquals(entry.toString(), entry.position, segmentIndex.position(entry.offset));
+                Assert.assertEquals(entry.toString(), entry.length, segmentIndex.length(entry.offset));
             }
         }
     }
@@ -122,6 +129,15 @@ public class SegmentIndexTest extends BaseTest {
             this.offset = offset;
             this.position = position;
             this.length = length;
+        }
+
+        @Override
+        public String toString() {
+            return "LogEntry{" +
+                "offset=" + offset +
+                ", position=" + position +
+                ", length=" + length +
+                '}';
         }
     }
 }

@@ -33,6 +33,7 @@ public class PassiveState extends AbstractState {
     protected final RaftStateContext context;
     protected final ExecutionContext executionContext;
     protected final TransportService transportService;
+    protected final long maxEntriesApply;
     protected volatile boolean transition;
 
     @Inject
@@ -41,6 +42,7 @@ public class PassiveState extends AbstractState {
         this.context = context;
         this.executionContext = executionContext;
         this.transportService = transportService;
+        this.maxEntriesApply = componentSettings.getAsInt("max_entries_apply", 1000);
     }
 
     @Override
@@ -193,10 +195,13 @@ public class PassiveState extends AbstractState {
             AtomicLong counter = new AtomicLong();
             CompletableFuture<Void> future = Futures.future();
 
-            for (long i = lastApplied + 1; i <= effectiveIndex; i++) {
+            long applied = 0;
+            long i = lastApplied + 1;
+            for (; i <= effectiveIndex && applied < maxEntriesApply; i++) {
                 RaftLogEntry entry = context.getLog().getEntry(i);
                 if (entry != null) {
-                    applyEntry(entry).whenComplete((result, error) -> {
+                    applied++;
+                    applyEntry(entry).whenCompleteAsync((result, error) -> {
                         executionContext.checkThread();
                         if (error != null && lifecycle().started()) {
                             logger.debug("application error occurred", error);
@@ -204,8 +209,23 @@ public class PassiveState extends AbstractState {
                         if (counter.incrementAndGet() == entriesToApply) {
                             future.complete(null);
                         }
-                    });
+                    }, executionContext.executor("complete apply"));
                 }
+            }
+            if (i < effectiveIndex) {
+                executionContext.execute("apply commits", () -> {
+                    try {
+                        applyCommits(commitIndex).whenComplete((aVoid, error) -> {
+                            if (error == null) {
+                                future.complete(null);
+                            } else {
+                                future.completeExceptionally(error);
+                            }
+                        });
+                    } catch (IOException e) {
+                        future.completeExceptionally(e);
+                    }
+                });
             }
         }
         return Futures.complete(null);

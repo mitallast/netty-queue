@@ -58,8 +58,8 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         this.stateMachine = raftState;
         this.compactor = compactor;
         this.stateFactory = stateFactory;
-        this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueMillis(100)).millis();
-        this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(300)).millis();
+        this.heartbeatInterval = componentSettings.getAsTime("heartbeat_interval", TimeValue.timeValueMillis(300)).millis();
+        this.electionTimeout = componentSettings.getAsTime("election_timeout", TimeValue.timeValueMillis(1000)).millis();
         executionContext.submit("transition to start", () -> transition(StartState.class)).get();
     }
 
@@ -77,20 +77,35 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
     @Override
     RaftStateContext setLeader(DiscoveryNode leader) {
         executionContext.checkThread();
+        if (RaftStateType.LEADER.equals(state.type())) {
+            logger.warn("try to change leader to {} with current state leader", leader);
+        }
         if (this.leader == null) {
             if (leader != null) {
                 this.leader = leader;
                 this.lastVotedFor = null;
-                logger.info("found leader {}", leader);
+                if (leader.equals(transportService.localNode())) {
+                    logger.info("found leader local node");
+                } else {
+                    logger.info("found leader {}", leader);
+                }
             }
         } else if (leader != null) {
             if (this.leader != leader) {
                 this.leader = leader;
                 this.lastVotedFor = null;
-                logger.info("found leader {}", leader);
+                if (leader.equals(transportService.localNode())) {
+                    logger.info("found leader local node");
+                } else {
+                    logger.info("found leader {}", leader);
+                }
             }
         } else {
-            logger.info("set no leader");
+            if (RaftStateType.LEADER.equals(state.type())) {
+                logger.warn("set no leader with current state leader");
+            } else {
+                logger.info("set no leader");
+            }
             this.leader = null;
         }
         return this;

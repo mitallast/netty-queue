@@ -11,6 +11,7 @@ import org.mitallast.queue.raft.resource.structures.LogResource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class RaftBenchmark extends BaseRaftTest {
 
@@ -19,7 +20,7 @@ public class RaftBenchmark extends BaseRaftTest {
 
     @Override
     protected int max() {
-        return 100000;
+        return 1000000;
     }
 
     @Before
@@ -49,18 +50,20 @@ public class RaftBenchmark extends BaseRaftTest {
 
     @Test
     public void benchAppend() throws Exception {
-        LogEntry[] entries = LogEntryGenerator.generate(max());
-        List<CompletableFuture<Long>> futures = new ArrayList<>(max());
-
         LogResource logResource = resourceService.create("log", LogResource.class).get();
 
         long start = System.currentTimeMillis();
-        for (LogEntry entry : entries) {
-            CompletableFuture<Long> future = logResource.appendEntry(entry);
-            futures.add(future);
-        }
-        for (CompletableFuture<Long> future : futures) {
-            future.get();
+        int batchSize = 1000;
+        for (int i = 0; i < max(); i += batchSize) {
+            LogEntry[] entries = LogEntryGenerator.generate(i, batchSize);
+            List<CompletableFuture<Long>> futures = new ArrayList<>(batchSize);
+            for (LogEntry entry : entries) {
+                CompletableFuture<Long> future = logResource.appendEntry(entry);
+                futures.add(future);
+            }
+            for (CompletableFuture<Long> future : futures) {
+                future.get(1, TimeUnit.MINUTES);
+            }
         }
         long end = System.currentTimeMillis();
         printQps("log append", max(), start, end);

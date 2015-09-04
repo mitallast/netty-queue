@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public class LeaderState extends ActiveState {
     private final Replicator replicator = new Replicator();
-    private final long maxEntries;
+    private final long maxEntriesReplicate;
     private volatile ScheduledFuture<?> currentTimer;
 
     @Inject
@@ -43,7 +43,7 @@ public class LeaderState extends ActiveState {
         ClusterService clusterService
     ) {
         super(settings, context, executionContext, transportService, clusterService);
-        maxEntries = componentSettings.getAsInt("max_entries", 10000);
+        maxEntriesReplicate = componentSettings.getAsInt("max_entries_replicate", 1000);
     }
 
     @Override
@@ -115,18 +115,31 @@ public class LeaderState extends ActiveState {
 
     /**
      * Applies all unapplied entries to the log.
+     * Asynchronous operation.
      */
     private void applyEntries(long index) throws IOException {
         executionContext.checkThread();
-        for (long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex()); lastApplied <= index; lastApplied++) {
+        long lastApplied = Math.max(context.getStateMachine().getLastApplied(), context.getLog().firstIndex());
+        long applied = 0;
+        for (; lastApplied <= index && applied < maxEntriesApply; lastApplied++) {
             RaftLogEntry entry = context.getLog().getEntry(lastApplied);
             if (entry != null) {
+                applied++;
                 context.getStateMachine().apply(entry).whenComplete((result, error) -> {
                     if (error != null) {
                         logger.warn("application error occurred: {}", error);
                     }
                 });
             }
+        }
+        if (lastApplied <= index) {
+            executionContext.execute("apply entries", () -> {
+                try {
+                    applyEntries(index);
+                } catch (IOException e) {
+                    logger.error("error apply entries", e);
+                }
+            });
         }
     }
 
@@ -601,6 +614,7 @@ public class LeaderState extends ActiveState {
             }
 
             if (commitFuture == null) {
+                logger.debug("commit members");
                 commitFuture = Futures.future();
                 commitTime = System.currentTimeMillis();
                 replicas.forEach((replica) -> {
@@ -612,6 +626,7 @@ public class LeaderState extends ActiveState {
                 });
                 return commitFuture;
             } else if (nextCommitFuture == null) {
+                logger.debug("next commit future");
                 nextCommitFuture = Futures.future();
                 return nextCommitFuture;
             } else {
@@ -627,7 +642,7 @@ public class LeaderState extends ActiveState {
          */
         private CompletableFuture<Long> commit(long index) {
             executionContext.checkThread();
-            logger.debug("commit {}", index);
+            logger.trace("commit {}", index);
             if (index == 0)
                 return commit();
 
@@ -733,9 +748,9 @@ public class LeaderState extends ActiveState {
              * Triggers a commit for the replica.
              */
             private void commit() throws IOException {
-                logger.debug("[replica {}] commit", state.getNode());
                 executionContext.checkThread();
                 if (!committing && lifecycle().started()) {
+                    logger.trace("[replica {}] commit", state.getNode());
                     // If the log is empty then send an empty commit.
                     // If the next index hasn't yet been set then we send an empty commit first.
                     // If the next index is greater than the last index then send an empty commit.
@@ -744,8 +759,8 @@ public class LeaderState extends ActiveState {
                     } else {
                         entriesCommit();
                     }
+                    logger.trace("[replica {}] commit done", state.getNode());
                 }
-                logger.debug("[replica {}] commit done", state.getNode());
             }
 
             /**
@@ -775,7 +790,7 @@ public class LeaderState extends ActiveState {
                 long index = Math.max(context.getLog().firstIndex(), prevIndex + 1);
 
                 List<RaftLogEntry> entries = new ArrayList<>();
-                while (index <= context.getLog().lastIndex() && entries.size() < maxEntries) {
+                while (index <= context.getLog().lastIndex() && entries.size() < maxEntriesReplicate) {
                     RaftLogEntry entry = context.getLog().getEntry(index);
                     if (entry != null) {
                         entries.add(entry);
@@ -824,7 +839,7 @@ public class LeaderState extends ActiveState {
                     .build();
 
                 committing = true;
-                logger.debug("[replica {}] replicate {}", state.getNode(), request);
+                logger.debug("[replica {}] replicate {} entries", state.getNode(), request.entries().size());
                 transportService.client(state.getNode().address()).<AppendRequest, AppendResponse>send(request).whenCompleteAsync((response, error) -> {
                     committing = false;
                     if (lifecycle().started()) {

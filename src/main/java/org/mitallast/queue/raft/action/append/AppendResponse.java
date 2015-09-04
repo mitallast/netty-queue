@@ -40,12 +40,17 @@ public class AppendResponse implements ActionResponse<AppendResponse> {
 
     @Override
     public String toString() {
-        return "AppendResponse{" +
-            ", error=" + error +
-            ", term=" + term +
-            ", logIndex=" + logIndex +
-            ", succeeded=" + succeeded +
-            '}';
+        if (error == null) {
+            return "AppendResponse{" +
+                "term=" + term +
+                ", logIndex=" + logIndex +
+                ", succeeded=" + succeeded +
+                '}';
+        } else {
+            return "AppendResponse{" +
+                "error=" + error +
+                '}';
+        }
     }
 
     @Override

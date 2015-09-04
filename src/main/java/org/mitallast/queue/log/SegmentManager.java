@@ -116,12 +116,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         currentSegment = null;
 
         ImmutableSortedMap<Long, Segment> removalSegments = segments.tailMap(removed.descriptor().index());
-
-        ImmutableSortedMap.Builder<Long, Segment> builder = ImmutableSortedMap.naturalOrder();
-        segments.entrySet().stream()
-            .filter(e -> !removalSegments.containsKey(e.getKey()))
-            .forEach(builder::put);
-        segments = builder.build();
+        segments = segments.headMap(removed.descriptor().index(), false);
 
         for (Segment segment : removalSegments.values()) {
             deleteSegment(segment);
@@ -145,7 +140,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
 
     public synchronized Segment createSegment(SegmentDescriptor descriptor) throws IOException {
         Segment segment = segmentService.createSegment(descriptor);
-        logger.info("created segment: {}", segment);
+        logger.info("created segment: {}:{}", segment.descriptor().id(), segment.descriptor().version());
         return segment;
     }
 

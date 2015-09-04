@@ -49,7 +49,7 @@ public class Segment implements Closeable {
 
     public boolean isFull() throws IOException {
         if (closed) {
-            throw new IllegalStateException("Segment is closed " + descriptor.index() + ":" + descriptor.version());
+            throw new IllegalStateException("Segment is closed " + descriptor.id() + ":" + descriptor.version());
         }
         return size() >= descriptor.maxSegmentSize()
             || offsetIndex.size() >= descriptor.maxEntries();
@@ -98,7 +98,7 @@ public class Segment implements Closeable {
     public long appendEntry(LogEntry entry) throws IOException {
         checkClosed();
         if (isFull()) {
-            throw new IllegalStateException("Segment is full " + descriptor.index() + ":" + descriptor.version());
+            throw new IllegalStateException("Segment is full " + descriptor.id() + ":" + descriptor.version());
         }
         long index = nextIndex();
         if (entry.index() != index) {
@@ -182,7 +182,7 @@ public class Segment implements Closeable {
 
     private void checkClosed() {
         if (closed) {
-            throw new IllegalStateException("Segment is closed " + descriptor.index() + ":" + descriptor.version());
+            throw new IllegalStateException("Segment is closed " + descriptor.id() + ":" + descriptor.version());
         }
     }
 

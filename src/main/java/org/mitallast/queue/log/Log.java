@@ -106,6 +106,7 @@ public class Log extends AbstractComponent {
                 segment.truncate(index);
             } else if (segment.descriptor().index() > index) {
                 segmentManager.remove(segment);
+                break; // next segments already removed
             }
         }
     }

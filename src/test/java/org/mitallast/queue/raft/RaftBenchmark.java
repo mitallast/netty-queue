@@ -20,7 +20,7 @@ public class RaftBenchmark extends BaseRaftTest {
 
     @Override
     protected int max() {
-        return 1000000;
+        return 100000;
     }
 
     @Before

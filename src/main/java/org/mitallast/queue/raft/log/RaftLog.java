@@ -24,7 +24,5 @@ public interface RaftLog {
 
     void truncate(long index) throws IOException;
 
-    void flush() throws IOException;
-
     void delete() throws IOException;
 }

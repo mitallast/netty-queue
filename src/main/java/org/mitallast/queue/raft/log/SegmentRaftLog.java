@@ -64,10 +64,6 @@ public class SegmentRaftLog extends AbstractComponent implements RaftLog {
         log.truncate(index);
     }
 
-    public void flush() throws IOException {
-        log.flush();
-    }
-
     public void delete() throws IOException {
         log.delete();
     }

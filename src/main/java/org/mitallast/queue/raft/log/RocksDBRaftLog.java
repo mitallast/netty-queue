@@ -2,7 +2,6 @@ package org.mitallast.queue.raft.log;
 
 import com.google.inject.Inject;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import org.mitallast.queue.common.Longs;
 import org.mitallast.queue.common.builder.EntryBuilder;
@@ -11,6 +10,7 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
+import org.mitallast.queue.common.unit.ByteSizeUnit;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.rocksdb.*;
 
@@ -19,7 +19,6 @@ import java.io.IOException;
 
 public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLog {
     private final StreamService streamService;
-
     private volatile RocksDBExtended rocksDB;
     private volatile Options options;
     private volatile long skip;
@@ -41,8 +40,47 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
                 throw new IOException("Error create directory: " + directory);
             }
         }
+
         RocksDB.loadLibrary();
-        options = new Options().setCreateIfMissing(true);
+        options = new Options();
+        options.setCreateIfMissing(true);
+
+        options.setAllowMmapReads(true);
+        options.setAllowMmapWrites(false);
+        options.setCompressionType(CompressionType.LZ4_COMPRESSION);
+        options.setCompactionStyle(CompactionStyle.FIFO);
+
+        options.setWriteBufferSize(ByteSizeUnit.MB.toBytes(64));
+        options.setMaxWriteBufferNumber(3);
+        options.setTargetFileSizeBase(ByteSizeUnit.MB.toBytes(64));
+        options.setMaxBackgroundCompactions(4);
+        options.setLevelZeroFileNumCompactionTrigger(8);
+        options.setLevelZeroSlowdownWritesTrigger(17);
+        options.setLevelZeroStopWritesTrigger(24);
+        options.setNumLevels(4);
+        options.setMaxBytesForLevelBase(ByteSizeUnit.MB.toBytes(512));
+        options.setMaxBytesForLevelMultiplier(8);
+
+        options.setLogger(new Logger(options) {
+            @Override
+            protected void log(InfoLogLevel infoLogLevel, String logMsg) {
+                switch (infoLogLevel) {
+                    case FATAL_LEVEL:
+                    case ERROR_LEVEL:
+                        logger.error("[rocksdb] {}", logMsg);
+                        break;
+                    case WARN_LEVEL:
+                        logger.warn("[rocksdb] {}", logMsg);
+                        break;
+                    case INFO_LEVEL:
+                    case NUM_INFO_LOG_LEVELS:
+                    case DEBUG_LEVEL:
+                        logger.debug("[rocksdb] {}", logMsg);
+                        break;
+                }
+            }
+        });
+
         try {
             rocksDB = RocksDBExtended.open(options, directory.toString());
         } catch (RocksDBException e) {
@@ -103,7 +141,7 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
     @Override
     public long lastIndex() {
         checkIsStarted();
-        return lastIndex;
+        return lastIndex + skip;
     }
 
     @Override
@@ -114,18 +152,12 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
             throw new IndexOutOfBoundsException("inconsistent index: " + entry.index() + " entry: " + entry);
         }
         EntryBuilder entryBuilder = entry.toBuilder();
-        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.heapBuffer();
-        buffer.readerIndex(0);
-        buffer.writerIndex(0);
+
+        final ByteBuf buffer = Unpooled.buffer(256);
         try (StreamOutput output = streamService.output(buffer)) {
             output.writeClass(entryBuilder.getClass());
             output.writeStreamable(entryBuilder);
-        }
-        int len = buffer.readableBytes();
-        byte[] bytes = new byte[len];
-        buffer.readBytes(bytes);
-        try {
-            rocksDB.put(Longs.toBytes(index), bytes);
+            rocksDB.put(Longs.toBytes(index), buffer.array(), buffer.readableBytes());
         } catch (RocksDBException e) {
             throw new IOException(e);
         }

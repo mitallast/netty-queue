@@ -16,7 +16,7 @@ public class RaftLogBenchmark extends BaseTest {
 
     @Override
     protected int max() {
-        return 100000;
+        return 400000;
     }
 
     @Before
@@ -48,5 +48,47 @@ public class RaftLogBenchmark extends BaseTest {
         }
         long end = System.currentTimeMillis();
         printQps("append", max(), start, end);
+    }
+
+    @Test
+    public void testGetEntry() throws Exception {
+        RaftLogEntry[] entries = generator.generate(max());
+        for (RaftLogEntry entry : entries) {
+            raftLog.appendEntry(entry);
+        }
+        long start = System.currentTimeMillis();
+        for (RaftLogEntry entry : entries) {
+            raftLog.getEntry(entry.index());
+        }
+        long end = System.currentTimeMillis();
+        printQps("get", max(), start, end);
+    }
+
+    @Test
+    public void testContainsIndex() throws Exception {
+        RaftLogEntry[] entries = generator.generate(max());
+        for (RaftLogEntry entry : entries) {
+            raftLog.appendEntry(entry);
+        }
+        long start = System.currentTimeMillis();
+        for (RaftLogEntry entry : entries) {
+            raftLog.containsIndex(entry.index());
+        }
+        long end = System.currentTimeMillis();
+        printQps("contains index", max(), start, end);
+    }
+
+    @Test
+    public void testContainsEntry() throws Exception {
+        RaftLogEntry[] entries = generator.generate(max());
+        for (RaftLogEntry entry : entries) {
+            raftLog.appendEntry(entry);
+        }
+        long start = System.currentTimeMillis();
+        for (RaftLogEntry entry : entries) {
+            raftLog.containsEntry(entry.index());
+        }
+        long end = System.currentTimeMillis();
+        printQps("contains entry", max(), start, end);
     }
 }

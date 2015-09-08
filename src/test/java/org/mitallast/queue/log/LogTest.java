@@ -11,9 +11,10 @@ import org.mitallast.queue.log.entry.LogEntry;
 import org.mitallast.queue.log.entry.TextLogEntry;
 import org.unitils.reflectionassert.ReflectionAssert;
 
-public class LogServiceTest extends BaseIntegrationTest {
+public class LogTest extends BaseIntegrationTest {
 
     private LogService logService;
+    private Log log;
 
     @Before
     public void setUp() throws Exception {
@@ -22,6 +23,7 @@ public class LogServiceTest extends BaseIntegrationTest {
         new LogStreamService(streamService);
         logService = new LogService(settings, streamService);
         logService.start();
+        log = logService.log("test log");
     }
 
     @After
@@ -32,8 +34,6 @@ public class LogServiceTest extends BaseIntegrationTest {
 
     @Test
     public void test() throws Exception {
-        Log log = logService.log("test log");
-
         long id1 = log.nextIndex();
         TextLogEntry entry1 = TextLogEntry.builder()
             .setIndex(id1)

@@ -72,9 +72,7 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
                     case WARN_LEVEL:
                         logger.warn("[rocksdb] {}", logMsg);
                         break;
-                    case INFO_LEVEL:
-                    case NUM_INFO_LOG_LEVELS:
-                    case DEBUG_LEVEL:
+                    default:
                         logger.debug("[rocksdb] {}", logMsg);
                         break;
                 }

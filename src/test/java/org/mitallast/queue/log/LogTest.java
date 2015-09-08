@@ -16,6 +16,11 @@ public class LogTest extends BaseIntegrationTest {
     private LogService logService;
     private Log log;
 
+    @Override
+    protected int max() {
+        return 10_000_000;
+    }
+
     @Before
     public void setUp() throws Exception {
         Settings settings = settings();
@@ -33,7 +38,7 @@ public class LogTest extends BaseIntegrationTest {
     }
 
     @Test
-    public void test() throws Exception {
+    public void testAppend() throws Exception {
         long id1 = log.nextIndex();
         TextLogEntry entry1 = TextLogEntry.builder()
             .setIndex(id1)
@@ -53,5 +58,38 @@ public class LogTest extends BaseIntegrationTest {
 
         ReflectionAssert.assertReflectionEquals(entry1, saved1);
         ReflectionAssert.assertReflectionEquals(entry2, saved2);
+    }
+
+    @Test
+    public void bench() throws Exception {
+        LogEntry[] entries = LogEntryGenerator.generate(max());
+
+        long start = System.currentTimeMillis();
+        for (LogEntry entry : entries) {
+            log.appendEntry(entry);
+        }
+        long end = System.currentTimeMillis();
+        printQps("append entry", max(), start, end);
+
+        start = System.currentTimeMillis();
+        for (LogEntry entry : entries) {
+            log.getEntry(entry.index());
+        }
+        end = System.currentTimeMillis();
+        printQps("get entry", max(), start, end);
+
+        start = System.currentTimeMillis();
+        for (LogEntry entry : entries) {
+            log.containsIndex(entry.index());
+        }
+        end = System.currentTimeMillis();
+        printQps("contains index", max(), start, end);
+
+        start = System.currentTimeMillis();
+        for (LogEntry entry : entries) {
+            log.containsEntry(entry.index());
+        }
+        end = System.currentTimeMillis();
+        printQps("contains entry", max(), start, end);
     }
 }

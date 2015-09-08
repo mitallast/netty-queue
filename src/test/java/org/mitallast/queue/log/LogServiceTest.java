@@ -1,34 +1,57 @@
 package org.mitallast.queue.log;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseIntegrationTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
+import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.stream.InternalStreamService;
+import org.mitallast.queue.common.stream.StreamService;
+import org.mitallast.queue.log.entry.LogEntry;
 import org.mitallast.queue.log.entry.TextLogEntry;
-import org.mitallast.queue.node.InternalNode;
+import org.unitils.reflectionassert.ReflectionAssert;
 
 public class LogServiceTest extends BaseIntegrationTest {
 
+    private LogService logService;
+
+    @Before
+    public void setUp() throws Exception {
+        Settings settings = settings();
+        StreamService streamService = new InternalStreamService(settings);
+        new LogStreamService(streamService);
+        logService = new LogService(settings, streamService);
+        logService.start();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        logService.stop();
+        logService.close();
+    }
+
     @Test
     public void test() throws Exception {
-        InternalNode node = createNode(ImmutableSettings.builder()
-            .put(settings())
-            .put("raft.enabled", false)
-            .put("rest.enabled", false)
-            .build());
-
-
-        LogService logService = node.injector().getInstance(LogService.class);
-
         Log log = logService.log("test log");
 
-        log.appendEntry(TextLogEntry.builder()
-            .setIndex(log.nextIndex())
+        long id1 = log.nextIndex();
+        TextLogEntry entry1 = TextLogEntry.builder()
+            .setIndex(id1)
             .setMessage("hello world")
-            .build());
+            .build();
+        log.appendEntry(entry1);
 
-        log.appendEntry(TextLogEntry.builder()
-            .setIndex(log.nextIndex())
+        long id2 = log.nextIndex();
+        TextLogEntry entry2 = TextLogEntry.builder()
+            .setIndex(id2)
             .setMessage("hello world")
-            .build());
+            .build();
+        log.appendEntry(entry2);
+
+        LogEntry saved1 = log.getEntry(id1);
+        LogEntry saved2 = log.getEntry(id2);
+
+        ReflectionAssert.assertReflectionEquals(entry1, saved1);
+        ReflectionAssert.assertReflectionEquals(entry2, saved2);
     }
 }

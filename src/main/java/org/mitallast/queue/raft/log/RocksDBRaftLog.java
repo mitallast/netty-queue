@@ -19,9 +19,17 @@ import java.io.IOException;
 
 public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLog {
     private final StreamService streamService;
-    private volatile RocksDBExtended rocksDB;
-    private volatile Options options;
-    private volatile long skip;
+
+    private final byte[] keyBuffer;
+    private final ByteBuf valueBuffer;
+    private final StreamOutput output;
+    private final StringBuffer existsBuffer;
+
+    private RocksDBExtended rocksDB;
+    private Options options;
+    private WriteOptions writeOptions;
+
+    private long skip;
     private long firstIndex;
     private long lastIndex;
 
@@ -29,6 +37,11 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
     public RocksDBRaftLog(Settings settings, StreamService streamService) {
         super(settings);
         this.streamService = streamService;
+
+        keyBuffer = new byte[Long.BYTES];
+        valueBuffer = Unpooled.buffer();
+        output = streamService.output(valueBuffer);
+        existsBuffer = new StringBuffer();
     }
 
     @Override
@@ -44,20 +57,35 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
         RocksDB.loadLibrary();
         options = new Options();
         options.setCreateIfMissing(true);
+        options.setParanoidChecks(false);
 
+        options.useFixedLengthPrefixExtractor(Long.BYTES);
+
+        BlockBasedTableConfig blockBasedTableConfig = new BlockBasedTableConfig();
+        blockBasedTableConfig.setChecksumType(ChecksumType.kCRC32c);
+        blockBasedTableConfig.setIndexType(IndexType.kBinarySearch);
+        blockBasedTableConfig.setBlockSize(ByteSizeUnit.MB.toBytes(4));
+        blockBasedTableConfig.setBlockCacheSize(ByteSizeUnit.GB.toBytes(1));
+        blockBasedTableConfig.setCacheNumShardBits(6);
+        options.setTableFormatConfig(blockBasedTableConfig);
+
+        options.useFixedLengthPrefixExtractor(Long.BYTES);
+
+        options.setIncreaseParallelism(8);
         options.setAllowMmapReads(true);
-        options.setAllowMmapWrites(false);
+        options.setAllowMmapWrites(true);
         options.setCompressionType(CompressionType.LZ4_COMPRESSION);
         options.setCompactionStyle(CompactionStyle.FIFO);
+        options.setVerifyChecksumsInCompaction(false);
 
         options.setWriteBufferSize(ByteSizeUnit.MB.toBytes(64));
-        options.setMaxWriteBufferNumber(3);
+        options.setMaxWriteBufferNumber(4);
         options.setTargetFileSizeBase(ByteSizeUnit.MB.toBytes(64));
         options.setMaxBackgroundCompactions(4);
         options.setLevelZeroFileNumCompactionTrigger(8);
         options.setLevelZeroSlowdownWritesTrigger(17);
         options.setLevelZeroStopWritesTrigger(24);
-        options.setNumLevels(4);
+        options.setNumLevels(6);
         options.setMaxBytesForLevelBase(ByteSizeUnit.MB.toBytes(512));
         options.setMaxBytesForLevelMultiplier(8);
 
@@ -85,6 +113,10 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
             throw new IOException(e);
         }
 
+        writeOptions = new WriteOptions();
+        writeOptions.setDisableWAL(true);
+        writeOptions.setSync(false);
+
         RocksIterator rocksIterator = null;
         try {
             rocksIterator = rocksDB.newIterator();
@@ -110,7 +142,6 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
 
     @Override
     protected void doStop() throws IOException {
-
     }
 
     @Override
@@ -123,11 +154,14 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
             options.dispose();
             options = null;
         }
+        if (writeOptions != null) {
+            writeOptions.dispose();
+            writeOptions = null;
+        }
     }
 
     @Override
     public long firstIndex() {
-        checkIsStarted();
         return firstIndex;
     }
 
@@ -138,7 +172,6 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
 
     @Override
     public long lastIndex() {
-        checkIsStarted();
         return lastIndex + skip;
     }
 
@@ -151,11 +184,12 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
         }
         EntryBuilder entryBuilder = entry.toBuilder();
 
-        final ByteBuf buffer = Unpooled.buffer(256);
-        try (StreamOutput output = streamService.output(buffer)) {
-            output.writeClass(entryBuilder.getClass());
-            output.writeStreamable(entryBuilder);
-            rocksDB.put(Longs.toBytes(index), buffer.array(), buffer.readableBytes());
+        valueBuffer.clear();
+        output.writeClass(entryBuilder.getClass());
+        output.writeStreamable(entryBuilder);
+        try {
+            Longs.toBytes(keyBuffer, index);
+            rocksDB.put(writeOptions, keyBuffer, valueBuffer.array(), valueBuffer.readableBytes());
         } catch (RocksDBException e) {
             throw new IOException(e);
         }
@@ -173,11 +207,14 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
     public <T extends RaftLogEntry> T getEntry(long index) throws IOException {
         checkIsStarted();
         try {
-            byte[] bytes = rocksDB.get(Longs.toBytes(index));
-            if (bytes == null || bytes.length == 0) {
+            Longs.toBytes(keyBuffer, index);
+            valueBuffer.clear();
+            int read = rocksDB.get(keyBuffer, valueBuffer.array());
+            valueBuffer.writerIndex(read);
+            if (read <= 0) {
                 return null;
             }
-            try (StreamInput input = streamService.input(Unpooled.wrappedBuffer(bytes))) {
+            try (StreamInput input = streamService.input(valueBuffer)) {
                 RaftLogEntry.Builder builder = input.readStreamable();
                 return (T) builder.build();
             }
@@ -189,13 +226,15 @@ public class RocksDBRaftLog extends AbstractLifecycleComponent implements RaftLo
     @Override
     public boolean containsIndex(long index) {
         checkIsStarted();
-        return rocksDB.keyMayExist(Longs.toBytes(index), new StringBuffer(0));
+        existsBuffer.delete(0, existsBuffer.length());
+        return rocksDB.keyMayExist(Longs.toBytes(index), existsBuffer);
     }
 
     @Override
     public boolean containsEntry(long index) throws IOException {
         checkIsStarted();
-        return rocksDB.keyMayExist(Longs.toBytes(index), new StringBuffer(0));
+        existsBuffer.delete(0, existsBuffer.length());
+        return rocksDB.keyMayExist(Longs.toBytes(index), existsBuffer);
     }
 
     @Override

@@ -16,7 +16,7 @@ public class RaftLogBenchmark extends BaseTest {
 
     @Override
     protected int max() {
-        return 400000;
+        return 600_000;
     }
 
     @Before
@@ -37,11 +37,11 @@ public class RaftLogBenchmark extends BaseTest {
 
     @Test
     public void testAppend() throws Exception {
-        RaftLogEntry[] entries = generator.generate(max());
+        RaftLogEntry[] entries = generator.generate(1000);
         for (RaftLogEntry entry : entries) {
             raftLog.appendEntry(entry);
         }
-        entries = generator.generate(max(), max());
+        entries = generator.generate(max(), 1000);
         long start = System.currentTimeMillis();
         for (RaftLogEntry entry : entries) {
             raftLog.appendEntry(entry);

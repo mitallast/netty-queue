@@ -10,6 +10,10 @@ public class RocksDBExtended extends RocksDB {
         put(nativeHandle_, key, key.length, value, valueLength);
     }
 
+    public void put(final WriteOptions writeOptions, final byte[] key, final byte[] value, final int valueLength) throws RocksDBException {
+        put(nativeHandle_, writeOptions.nativeHandle_, key, key.length, value, valueLength);
+    }
+
     public static RocksDBExtended open(final Options options, final String path) throws RocksDBException {
 
         RocksDBExtended db = new RocksDBExtended();

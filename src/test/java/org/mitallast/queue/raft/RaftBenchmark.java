@@ -32,16 +32,15 @@ public class RaftBenchmark extends BaseRaftTest {
     @Test
     public void benchAsyncBoolean() throws Exception {
         long start = System.currentTimeMillis();
-        ArrayList<CompletableFuture<Boolean>> futures = new ArrayList<>(max());
-        for (int i = 0; i < max(); i++) {
-            CompletableFuture<Boolean> future = asyncBoolean.getAndSet(i % 2 == 0);
-            futures.add(future);
-        }
-        for (CompletableFuture<Boolean> future : futures) {
-            try {
-                future.get();
-            } catch (Throwable e) {
-                logger.warn("error", e);
+        int batchSize = 1000;
+        for (int i = 0; i < max(); i += batchSize) {
+            List<CompletableFuture<Boolean>> futures = new ArrayList<>(batchSize);
+            for (int j = 0; j < batchSize; j++) {
+                CompletableFuture<Boolean> future = asyncBoolean.getAndSet(j % 2 == 0);
+                futures.add(future);
+            }
+            for (CompletableFuture<Boolean> future : futures) {
+                future.get(1, TimeUnit.MINUTES);
             }
         }
         long end = System.currentTimeMillis();

@@ -61,18 +61,6 @@ public class RaftLogTest extends BaseTest {
     }
 
     @Test
-    public void testContainsIndex() throws Exception {
-        RaftLogEntry[] entries = generator.generate(max());
-        for (RaftLogEntry entry : entries) {
-            raftLog.appendEntry(entry);
-        }
-
-        for (RaftLogEntry entry : entries) {
-            Assert.assertTrue(raftLog.containsIndex(entry.index()));
-        }
-    }
-
-    @Test
     public void testContainsEntry() throws Exception {
         RaftLogEntry[] entries = generator.generate(max());
         for (RaftLogEntry entry : entries) {

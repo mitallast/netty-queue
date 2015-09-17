@@ -16,8 +16,6 @@ public interface RaftLog {
 
     <T extends RaftLogEntry> T getEntry(long index) throws IOException;
 
-    boolean containsIndex(long index);
-
     boolean containsEntry(long index) throws IOException;
 
     void skip(long entries) throws IOException;

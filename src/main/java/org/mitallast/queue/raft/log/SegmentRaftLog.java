@@ -28,46 +28,52 @@ public class SegmentRaftLog extends AbstractComponent implements RaftLog {
         return log.segmentManager();
     }
 
+    @Override
     public long firstIndex() {
         return log.firstIndex();
     }
 
+    @Override
     public long nextIndex() {
         return log.nextIndex();
     }
 
+    @Override
     public long lastIndex() {
         return log.lastIndex();
     }
 
+    @Override
     public long appendEntry(RaftLogEntry entry) throws IOException {
         return log.appendEntry(entry);
     }
 
+    @Override
     public <T extends RaftLogEntry> T getEntry(long index) throws IOException {
         return log.getEntry(index);
     }
 
-    public boolean containsIndex(long index) {
-        return log.containsIndex(index);
-    }
-
+    @Override
     public boolean containsEntry(long index) throws IOException {
         return log.containsEntry(index);
     }
 
+    @Override
     public void skip(long entries) throws IOException {
         log.skip(entries);
     }
 
+    @Override
     public void truncate(long index) throws IOException {
         log.truncate(index);
     }
 
+    @Override
     public void flush() throws IOException {
         log.flush();
     }
 
+    @Override
     public void delete() throws IOException {
         log.delete();
     }

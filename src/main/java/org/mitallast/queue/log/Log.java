@@ -20,8 +20,9 @@ public class Log extends AbstractComponent {
     }
 
     private void checkIndex(long index) {
-        if (!containsIndex(index))
+        if (!(!isEmpty() && firstIndex() <= index && index <= lastIndex())) {
             throw new IndexOutOfBoundsException(index + " is not a valid log index");
+        }
     }
 
     public boolean isEmpty() {
@@ -67,20 +68,13 @@ public class Log extends AbstractComponent {
     }
 
     public <T extends LogEntry> T getEntry(long index) throws IOException {
-        checkIndex(index);
         Segment segment = segmentManager.segment(index);
         if (segment == null)
-            throw new IndexOutOfBoundsException("invalid index: " + index);
+            return null;
         return segment.getEntry(index);
     }
 
-    public boolean containsIndex(long index) {
-        return !isEmpty() && firstIndex() <= index && index <= lastIndex();
-    }
-
     public boolean containsEntry(long index) throws IOException {
-        if (!containsIndex(index))
-            return false;
         Segment segment = segmentManager.segment(index);
         return segment != null && segment.containsEntry(index);
     }

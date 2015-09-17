@@ -134,7 +134,8 @@ public class PassiveState extends AbstractState {
             // Iterate through request entries and append them to the log.
             for (RaftLogEntry entry : request.entries()) {
                 // If the entry index is greater than the last log index, skip missing entries.
-                if (!context.getLog().containsIndex(entry.index())) {
+                long lastIndex = context.getLog().lastIndex();
+                if (entry.index() > lastIndex) {
                     context.getLog().skip(entry.index() - context.getLog().lastIndex() - 1);
                     context.getLog().appendEntry(entry);
                     logger.trace("appended {} to log at index {}", entry, entry.index());

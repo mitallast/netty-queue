@@ -156,10 +156,7 @@ class FollowerState extends ActiveState {
 
     private RaftLogEntry getPrevEntry(long prevIndex) throws IOException {
         executionContext.checkThread();
-        if (context.getLog().containsIndex(prevIndex)) {
-            return context.getLog().getEntry(prevIndex);
-        }
-        return null;
+        return context.getLog().getEntry(prevIndex);
     }
 
     private List<RaftLogEntry> getEntries(long prevIndex) throws IOException {

@@ -80,13 +80,6 @@ public class LogTest extends BaseIntegrationTest {
 
         start = System.currentTimeMillis();
         for (LogEntry entry : entries) {
-            log.containsIndex(entry.index());
-        }
-        end = System.currentTimeMillis();
-        printQps("contains index", max(), start, end);
-
-        start = System.currentTimeMillis();
-        for (LogEntry entry : entries) {
             log.containsEntry(entry.index());
         }
         end = System.currentTimeMillis();

@@ -111,7 +111,8 @@ public class MajorCompaction extends Compaction {
                     compactSegment.appendEntry(entry);
                 } else {
                     logger.info("Filtered {} from segment {}", entry, segment.descriptor().id());
-                    compactSegment.skip(1);
+                    long skip = compactSegment.skip(1);
+                    assert skip == 1;
                 }
 
                 if (index == segment.lastIndex()) {
@@ -120,7 +121,8 @@ public class MajorCompaction extends Compaction {
                     compactSegment(segment, index + 1, compactSegment, future);
                 }
             } else {
-                compactSegment.skip(1);
+                long skip = compactSegment.skip(1);
+                assert skip == 1;
 
                 if (index == segment.lastIndex()) {
                     future.complete(compactSegment);

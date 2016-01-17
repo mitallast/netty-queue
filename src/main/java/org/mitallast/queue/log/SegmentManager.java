@@ -1,5 +1,6 @@
 package org.mitallast.queue.log;
 
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSortedMap;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.settings.Settings;
@@ -39,9 +40,9 @@ public class SegmentManager extends AbstractLifecycleComponent {
         if (!segments.isEmpty()) {
             currentSegment = segments.lastEntry().getValue();
         } else {
-            SegmentDescriptor descriptor = descriptorService.createDescriptor(1, 1, 1);
+            SegmentDescriptor descriptor = descriptorService.createDescriptor(0, 0, 0);
             currentSegment = segmentService.createSegment(descriptor);
-            segments = ImmutableSortedMap.of(1l, currentSegment);
+            segments = ImmutableSortedMap.of(descriptor.id(), currentSegment);
         }
     }
 
@@ -86,9 +87,9 @@ public class SegmentManager extends AbstractLifecycleComponent {
     public Segment nextSegment() throws IOException {
         Segment lastSegment = lastSegment();
         SegmentDescriptor descriptor = descriptorService.createDescriptor(
-            lastSegment != null ? lastSegment.descriptor().id() + 1 : 1,
+            lastSegment != null ? lastSegment.descriptor().id() + 1 : 0,
             currentSegment.lastIndex() + 1,
-            1
+            0
         );
         currentSegment = createSegment(descriptor);
         segments = ImmutableSortedMap.<Long, Segment>naturalOrder()
@@ -98,7 +99,7 @@ public class SegmentManager extends AbstractLifecycleComponent {
         return currentSegment;
     }
 
-    public Collection<Segment> segments() {
+    public ImmutableCollection<Segment> segments() {
         return segments.values();
     }
 

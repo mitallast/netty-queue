@@ -44,7 +44,7 @@ public class RaftLogTest extends BaseTest {
     @Test
     public void testInitialState() throws Exception {
         Assert.assertEquals(0, raftLog.firstIndex());
-        Assert.assertEquals(1, raftLog.nextIndex());
+        Assert.assertEquals(0, raftLog.nextIndex());
         Assert.assertEquals(0, raftLog.lastIndex());
     }
 

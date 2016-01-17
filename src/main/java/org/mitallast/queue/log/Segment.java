@@ -156,10 +156,19 @@ public class Segment implements Closeable {
         return containsIndex(index) && offsetIndex.contains(offset(index));
     }
 
-    public Segment skip(long entries) {
+    /**
+     * @return entries count skipped
+     */
+    public long skip(long entries) {
         checkClosed();
-        this.skip += entries;
-        return this;
+        if (length() + entries > Integer.MAX_VALUE) {
+            int skip = Integer.MAX_VALUE - length();
+            this.skip += skip;
+            return skip;
+        } else {
+            this.skip += entries;
+            return entries;
+        }
     }
 
     public Segment truncate(long index) throws IOException {

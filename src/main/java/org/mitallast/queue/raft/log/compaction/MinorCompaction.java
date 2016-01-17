@@ -176,7 +176,8 @@ public class MinorCompaction extends Compaction {
                     compactSegment.appendEntry(entry);
                 } else {
                     logger.info("Filtered {} from segment {}", entry, segment.descriptor().id());
-                    compactSegment.skip(1);
+                    long skip = compactSegment.skip(1);
+                    assert skip == 1;
                 }
 
                 if (index == segment.lastIndex()) {
@@ -192,7 +193,8 @@ public class MinorCompaction extends Compaction {
                     compactSegments(segment, index + 1, nextCompactSegment, segments, compactSegments, future);
                 }
             } else {
-                compactSegment.skip(1);
+                long skip = compactSegment.skip(1);
+                assert skip == 1;
             }
         } catch (IOException e) {
             future.completeExceptionally(e);

@@ -19,26 +19,28 @@ public class Log extends AbstractComponent {
         return segmentManager;
     }
 
-    private void checkIndex(long index) {
-        if (!(!isEmpty() && firstIndex() <= index && index <= lastIndex())) {
-            throw new IndexOutOfBoundsException(index + " is not a valid log index");
-        }
-    }
-
     public boolean isEmpty() {
         return segmentManager.firstSegment().isEmpty();
     }
 
     public long size() {
-        return segmentManager.segments().stream().mapToLong(Segment::size).sum();
+        long size = 0;
+        for (Segment segment : segmentManager.segments()) {
+            size += segment.size();
+        }
+        return size;
     }
 
     public long length() {
-        return segmentManager.segments().stream().mapToLong(Segment::length).sum();
+        long length = 0;
+        for (Segment segment : segmentManager.segments()) {
+            length += segment.length();
+        }
+        return length;
     }
 
     public long firstIndex() {
-        return !isEmpty() ? segmentManager.firstSegment().descriptor().index() : 0;
+        return segmentManager.firstSegment().descriptor().index();
     }
 
     public long nextIndex() {
@@ -46,17 +48,10 @@ public class Log extends AbstractComponent {
     }
 
     public long lastIndex() {
-        return !isEmpty() ? segmentManager.lastSegment().lastIndex() : 0;
-    }
-
-    private void checkRoll() throws IOException {
-        if (segmentManager.currentSegment().isFull()) {
-            segmentManager.nextSegment();
-        }
+        return segmentManager.lastSegment().lastIndex();
     }
 
     public long appendEntry(LogEntry entry) throws IOException {
-        checkRoll();
         while (true) {
             try {
                 return segmentManager.currentSegment().appendEntry(entry);
@@ -81,17 +76,16 @@ public class Log extends AbstractComponent {
 
     public void skip(long entries) throws IOException {
         Segment segment = segmentManager.currentSegment();
-        while (segment.length() + entries > Integer.MAX_VALUE) {
-            int skip = Integer.MAX_VALUE - segment.length();
-            segment.skip(skip);
-            entries -= skip;
+        while (entries > 0) {
+            entries -= segment.skip(entries);
             segment = segmentManager.nextSegment();
         }
-        segment.skip(entries);
     }
 
     public void truncate(long index) throws IOException {
-        checkIndex(index);
+        if (!(!isEmpty() && firstIndex() <= index && index <= lastIndex())) {
+            throw new IndexOutOfBoundsException(index + " is not a valid log index");
+        }
         if (lastIndex() == index)
             return;
 

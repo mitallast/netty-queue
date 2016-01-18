@@ -3,10 +3,13 @@ package org.mitallast.queue.raft.state;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.unit.TimeValue;
 import org.mitallast.queue.raft.NoLeaderException;
 import org.mitallast.queue.raft.Protocol;
 import org.mitallast.queue.raft.Query;
+import org.mitallast.queue.raft.action.command.CommandRequest;
+import org.mitallast.queue.raft.action.command.CommandResponse;
 import org.mitallast.queue.raft.action.join.JoinRequest;
 import org.mitallast.queue.raft.action.join.JoinResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
@@ -235,6 +238,51 @@ public class RaftStateContext extends RaftStateClient implements Protocol {
         }
         this.state = stateFactory.create(state);
         this.state.start();
+    }
+
+    @Override
+    protected <R extends Streamable> void submit(CommandRequest request, CompletableFuture<R> future) {
+        DiscoveryNode member;
+        try {
+            member = selectLeader();
+        } catch (IllegalStateException e) {
+            future.completeExceptionally(e);
+            return;
+        }
+        if (member == null) {
+            logger.info("no member found, set no leader");
+            setLeader(null);
+            future.completeExceptionally(new IllegalStateException("unknown leader"));
+        } else if (member.equals(transportService.localNode())) {
+            raftState().command(request).whenComplete((response, error) -> {
+                if (error == null) {
+                    //noinspection unchecked
+                    future.complete((R) response.result());
+                } else {
+                    future.completeExceptionally(error);
+                }
+            });
+        } else {
+            CompletableFuture<CommandResponse> transportFuture = transportService.client(member.address()).<CommandRequest, CommandResponse>send(request);
+            // retry
+            ScheduledFuture<?> scheduledFuture = executionContext.schedule("raft transport timeout", () -> {
+                transportFuture.cancel(false);
+                if (!future.isCancelled()) {
+                    submit(request, future);
+                }
+            }, 1, TimeUnit.MINUTES);
+            // response handler
+            transportFuture.whenCompleteAsync((response, error) -> {
+                scheduledFuture.cancel(false);
+                if (error == null) {
+                    //noinspection unchecked
+                    future.complete((R) response.result());
+                    setResponse(Math.max(getResponse(), request.request()));
+                } else {
+                    future.completeExceptionally(error);
+                }
+            }, executionContext.executor("command response"));
+        }
     }
 
     private CompletableFuture<Void> join() {

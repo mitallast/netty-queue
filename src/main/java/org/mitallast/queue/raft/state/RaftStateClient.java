@@ -167,7 +167,7 @@ public abstract class RaftStateClient extends AbstractLifecycleComponent {
     }
 
     @SuppressWarnings("unchecked")
-    private <R extends Streamable> void submit(CommandRequest request, CompletableFuture<R> future) {
+    protected <R extends Streamable> void submit(CommandRequest request, CompletableFuture<R> future) {
         DiscoveryNode member;
         try {
             member = selectLeader();

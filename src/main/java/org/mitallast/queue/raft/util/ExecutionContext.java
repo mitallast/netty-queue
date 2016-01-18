@@ -15,6 +15,7 @@ public class ExecutionContext extends AbstractLifecycleComponent {
     private final Thread executorThread;
     private final long errorThreshold;
     private final long warningThreshold;
+    private final ConcurrentMap<String, TaskStatistics> taskStatistics;
 
     @Inject
     public ExecutionContext(Settings settings) throws ExecutionException, InterruptedException {
@@ -23,6 +24,7 @@ public class ExecutionContext extends AbstractLifecycleComponent {
         executorThread = executorService.submit(Thread::currentThread).get();
         errorThreshold = componentSettings.getAsTime("error_threshold", TimeValue.timeValueMillis(200)).millis();
         warningThreshold = componentSettings.getAsTime("warning_threshold", TimeValue.timeValueMillis(100)).millis();
+        taskStatistics = new ConcurrentHashMap<>();
     }
 
     public Executor executor(String context) {
@@ -59,6 +61,7 @@ public class ExecutionContext extends AbstractLifecycleComponent {
 
     @Override
     protected void doStop() throws IOException {
+
     }
 
     @Override
@@ -74,6 +77,9 @@ public class ExecutionContext extends AbstractLifecycleComponent {
         List<Runnable> failed = executorService.shutdownNow();
         if (!failed.isEmpty()) {
             logger.warn("failed to execute {}", failed);
+        }
+        for (TaskStatistics statistics : taskStatistics.values()) {
+            logger.info("stats: {}", statistics);
         }
     }
 
@@ -105,7 +111,26 @@ public class ExecutionContext extends AbstractLifecycleComponent {
                 } else {
                     logger.trace("[{}] complete at {}", context, totalTime);
                 }
+                TaskStatistics taskStatistics = ExecutionContext.this.taskStatistics
+                    .computeIfAbsent(context, TaskStatistics::new);
+                taskStatistics.count++;
+                taskStatistics.totalTime += totalTime;
             }
+        }
+    }
+
+    private class TaskStatistics {
+        private final String task;
+        private long count;
+        private long totalTime;
+
+        private TaskStatistics(String task) {
+            this.task = task;
+        }
+
+        @Override
+        public String toString() {
+            return "[" + task + "] count: " + count + " total time: " + totalTime + "ms";
         }
     }
 }

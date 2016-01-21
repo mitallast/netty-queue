@@ -12,6 +12,8 @@ import org.mitallast.queue.raft.action.keepalive.KeepAliveRequest;
 import org.mitallast.queue.raft.action.keepalive.KeepAliveResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
+import org.mitallast.queue.raft.action.poll.PollRequest;
+import org.mitallast.queue.raft.action.poll.PollResponse;
 import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.register.RegisterRequest;
@@ -63,6 +65,8 @@ public class RaftStreamService {
         streamService.registerClass(RegisterResponse.Builder.class, RegisterResponse::builder, ++index);
         streamService.registerClass(VoteRequest.Builder.class, VoteRequest::builder, ++index);
         streamService.registerClass(VoteResponse.Builder.class, VoteResponse::builder, ++index);
+        streamService.registerClass(PollRequest.Builder.class, PollRequest::builder, ++index);
+        streamService.registerClass(PollResponse.Builder.class, PollResponse::builder, ++index);
     }
 
     private void registerLogEntry(StreamService streamService) {

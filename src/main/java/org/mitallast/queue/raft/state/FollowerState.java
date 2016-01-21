@@ -1,14 +1,18 @@
 package org.mitallast.queue.raft.state;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.action.append.AppendRequest;
 import org.mitallast.queue.raft.action.append.AppendResponse;
+import org.mitallast.queue.raft.action.poll.PollRequest;
+import org.mitallast.queue.raft.action.poll.PollResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
 import org.mitallast.queue.raft.action.vote.VoteResponse;
 import org.mitallast.queue.raft.cluster.ClusterService;
 import org.mitallast.queue.raft.log.entry.RaftLogEntry;
 import org.mitallast.queue.raft.util.ExecutionContext;
+import org.mitallast.queue.raft.util.Quorum;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
 
@@ -17,6 +21,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class FollowerState extends ActiveState {
     private final Set<DiscoveryNode> committing = new HashSet<>();
@@ -72,11 +77,12 @@ class FollowerState extends ActiveState {
         heartbeatTimer = executionContext.schedule("heartbeat timeout", () -> {
             heartbeatTimer = null;
             if (lifecycle().started()) {
-                if (context.getLastVotedFor() == null) {
-                    logger.warn("heartbeat timed out in {} milliseconds, transitioning to candidate", delay);
-                    transition(RaftStateType.CANDIDATE);
-                } else {
-                    // If the node voted for a candidate then reset the election timer.
+                context.setLeader(null);
+                logger.warn("heartbeat timed out in {} milliseconds, transitioning to candidate", delay);
+                try {
+                    sendPollRequests();
+                } catch (IOException e) {
+                    logger.error("error send poll requests");
                     resetHeartbeatTimeout();
                 }
             }
@@ -293,6 +299,80 @@ class FollowerState extends ActiveState {
             resetHeartbeatTimeout();
         }
         return response;
+    }
+
+    private void sendPollRequests() throws IOException {
+        // Set a new timer within which other nodes must respond in order for this node to transition to candidate.
+        heartbeatTimer = executionContext.schedule("heartbeat timer", () -> {
+            logger.debug("failed to poll a majority of the cluster in {}", context.getElectionTimeout());
+            resetHeartbeatTimeout();
+        }, context.getElectionTimeout(), TimeUnit.MILLISECONDS);
+
+        // Create a quorum that will track the number of nodes that have responded to the poll request.
+        final AtomicBoolean complete = new AtomicBoolean();
+        ImmutableList<DiscoveryNode> votingMembers = clusterService.activeNodes();
+
+        // If there are no other members in the cluster, immediately transition to leader.
+        if (votingMembers.isEmpty()) {
+            logger.debug("single member cluster, transitioning directly to leader");
+            context.transition(LeaderState.class);
+            return;
+        }
+
+        final Quorum quorum = new Quorum((int) Math.floor(votingMembers.size() / 2.0) + 1, (elected) -> {
+            // If a majority of the cluster indicated they would vote for us then transition to candidate.
+            complete.set(true);
+            if (elected) {
+                context.transition(CandidateState.class);
+            } else {
+                resetHeartbeatTimeout();
+            }
+        });
+
+        // First, load the last log entry to get its term. We load the entry
+        // by its index since the index is required by the protocol.
+        long lastIndex = context.getLog().lastIndex();
+        RaftLogEntry lastEntry = lastIndex != 0 ? context.getLog().getEntry(lastIndex) : null;
+
+        logger.info("polling members {}", votingMembers);
+        final long lastTerm = lastEntry != null ? lastEntry.term() : 0;
+
+        // Once we got the last log term, iterate through each current member
+        // of the cluster and vote each member for a vote.
+        for (DiscoveryNode member : votingMembers) {
+            logger.debug("polling {} for next term {}", member, context.getTerm() + 1);
+            PollRequest request = PollRequest.builder()
+                .setTerm(context.getTerm())
+                .setCandidate(transportService.localNode())
+                .setLogIndex(lastIndex)
+                .setLogTerm(lastTerm)
+                .build();
+
+            transportService.client(member.address()).<PollRequest, PollResponse>send(request).whenCompleteAsync((response, error) -> {
+                executionContext.checkThread();
+                if (!complete.get() && lifecycle().started()) {
+                    if (error != null) {
+                        logger.warn("error poll request {}", error.getMessage());
+                        quorum.fail();
+                    } else {
+                        if (response.term() > context.getTerm()) {
+                            context.setTerm(response.term());
+                        }
+
+                        if (!response.accepted()) {
+                            logger.debug("received rejected poll from {}", member);
+                            quorum.fail();
+                        } else if (response.term() != context.getTerm()) {
+                            logger.debug("received accepted poll for a different term from {}", member);
+                            quorum.fail();
+                        } else {
+                            logger.debug("received accepted poll from {}", member);
+                            quorum.succeed();
+                        }
+                    }
+                }
+            }, executionContext.executor("poll response handle"));
+        }
     }
 
     /**

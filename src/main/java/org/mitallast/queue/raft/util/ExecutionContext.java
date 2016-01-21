@@ -83,6 +83,21 @@ public class ExecutionContext extends AbstractLifecycleComponent {
         }
     }
 
+    private static class TaskStatistics {
+        private final String task;
+        private long count;
+        private long totalTime;
+
+        private TaskStatistics(String task) {
+            this.task = task;
+        }
+
+        @Override
+        public String toString() {
+            return "[" + task + "] count: " + count + " total time: " + totalTime + "ms";
+        }
+    }
+
     private class Task implements Runnable {
 
         private final String context;
@@ -116,21 +131,6 @@ public class ExecutionContext extends AbstractLifecycleComponent {
                 taskStatistics.count++;
                 taskStatistics.totalTime += totalTime;
             }
-        }
-    }
-
-    private class TaskStatistics {
-        private final String task;
-        private long count;
-        private long totalTime;
-
-        private TaskStatistics(String task) {
-            this.task = task;
-        }
-
-        @Override
-        public String toString() {
-            return "[" + task + "] count: " + count + " total time: " + totalTime + "ms";
         }
     }
 }

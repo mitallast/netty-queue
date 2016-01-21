@@ -7,6 +7,7 @@ import org.mitallast.queue.raft.action.command.CommandAction;
 import org.mitallast.queue.raft.action.join.JoinAction;
 import org.mitallast.queue.raft.action.keepalive.KeepAliveAction;
 import org.mitallast.queue.raft.action.leave.LeaveAction;
+import org.mitallast.queue.raft.action.poll.PollAction;
 import org.mitallast.queue.raft.action.query.QueryAction;
 import org.mitallast.queue.raft.action.register.RegisterAction;
 import org.mitallast.queue.raft.action.vote.VoteAction;
@@ -68,5 +69,6 @@ public class RaftModule extends AbstractModule {
         bind(QueryAction.class).asEagerSingleton();
         bind(RegisterAction.class).asEagerSingleton();
         bind(VoteAction.class).asEagerSingleton();
+        bind(PollAction.class).asEagerSingleton();
     }
 }

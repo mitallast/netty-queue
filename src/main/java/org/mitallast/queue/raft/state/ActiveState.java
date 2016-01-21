@@ -6,6 +6,8 @@ import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.ApplicationException;
 import org.mitallast.queue.raft.ConsistencyLevel;
 import org.mitallast.queue.raft.NoLeaderException;
+import org.mitallast.queue.raft.action.poll.PollRequest;
+import org.mitallast.queue.raft.action.poll.PollResponse;
 import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.vote.VoteRequest;
@@ -55,6 +57,47 @@ abstract class ActiveState extends PassiveState {
                 break;
             default:
                 throw new IllegalStateException();
+        }
+    }
+
+    @Override
+    public CompletableFuture<PollResponse> poll(PollRequest request) {
+        executionContext.checkThread();
+
+        if (request.term() > context.getTerm() || (request.term() == context.getTerm() && context.getLeader() == null && request.candidate() != null)) {
+            context.setTerm(request.term());
+            context.setLeader(request.candidate());
+        }
+
+        try {
+            return Futures.complete(handlePoll(request));
+        } catch (IOException e) {
+            return Futures.completeExceptionally(e);
+        }
+    }
+
+    private PollResponse handlePoll(PollRequest request) throws IOException {
+        executionContext.checkThread();
+
+        // If the request term is not as great as the current context term then don't
+        // vote for the candidate. We want to vote for candidates that are at least
+        // as up to date as us.
+        if (request.term() < context.getTerm()) {
+            logger.debug("{} - Rejected {}: candidate's term is less than the current term", request);
+            return PollResponse.builder()
+                .setTerm(context.getTerm())
+                .setAccepted(false)
+                .build();
+        } else if (logUpToDate(request.logIndex(), request.logTerm(), request)) {
+            return PollResponse.builder()
+                .setTerm(context.getTerm())
+                .setAccepted(true)
+                .build();
+        } else {
+            return PollResponse.builder()
+                .setTerm(context.getTerm())
+                .setAccepted(false)
+                .build();
         }
     }
 

@@ -13,6 +13,8 @@ import org.mitallast.queue.raft.action.keepalive.KeepAliveRequest;
 import org.mitallast.queue.raft.action.keepalive.KeepAliveResponse;
 import org.mitallast.queue.raft.action.leave.LeaveRequest;
 import org.mitallast.queue.raft.action.leave.LeaveResponse;
+import org.mitallast.queue.raft.action.poll.PollRequest;
+import org.mitallast.queue.raft.action.poll.PollResponse;
 import org.mitallast.queue.raft.action.query.QueryRequest;
 import org.mitallast.queue.raft.action.query.QueryResponse;
 import org.mitallast.queue.raft.action.register.RegisterRequest;
@@ -47,6 +49,8 @@ public abstract class AbstractState extends AbstractComponent {
     public abstract CompletableFuture<CommandResponse> command(CommandRequest request);
 
     public abstract CompletableFuture<QueryResponse> query(QueryRequest request);
+
+    public abstract CompletableFuture<PollResponse> poll(PollRequest request);
 
     public final Lifecycle lifecycle() {
         return lifecycle;

@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class NettyTransportService extends NettyClientBootstrap implements TransportService {
-    private final static AttributeKey<AtomicLong> flushCounterAttr = AttributeKey.valueOf("flushCounter");
     private final static AttributeKey<ConcurrentMap<Long, CompletableFuture>> responseMapAttr = AttributeKey.valueOf("responseMapAttr");
     private final ReentrantLock connectionLock;
     private final int channelCount;
@@ -61,11 +60,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(new TransportFrameDecoder(streamService));
                 pipeline.addLast(new TransportFrameEncoder(streamService));
-                pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>() {
+                pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>(false) {
                     @Override
                     @SuppressWarnings("unchecked")
                     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
-                        CompletableFuture future = ctx.attr(responseMapAttr).get().remove(frame.request());
+                        CompletableFuture future = ctx.channel().attr(responseMapAttr).get().remove(frame.request());
                         if (future == null) {
                             logger.warn("future not found");
                         } else {
@@ -259,7 +258,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
         private void initChannel(Channel newChannel) {
             newChannel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
-            newChannel.attr(flushCounterAttr).set(new AtomicLong());
             newChannel.closeFuture().addListener(future -> {
                 ConcurrentMap<Long, CompletableFuture> futures = newChannel.attr(responseMapAttr).get();
                 Iterator<Map.Entry<Long, CompletableFuture>> iterator = futures.entrySet().iterator();
@@ -297,22 +295,13 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
             CompletableFuture<TransportFrame> future = Futures.future();
             channel.attr(responseMapAttr).get().put(frame.request(), future);
-            AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
-            channelFlushCounter.incrementAndGet();
-            channel.write(frame, channel.voidPromise());
-            channel.pipeline().lastContext().executor().execute(() -> {
-                if (channelFlushCounter.decrementAndGet() == 0) {
-                    if (channel.isOpen()) {
-                        channel.flush();
-                    }
-                }
-            });
+            channel.writeAndFlush(frame);
             return future;
         }
 
         @Override
         public <Request extends ActionRequest, Response extends ActionResponse>
-        CompletableFuture<Response> sendRaw(Request request) {
+        CompletableFuture<Response> forward(Request request) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             if (channel == null) {
@@ -321,16 +310,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             CompletableFuture<Response> future = Futures.future();
             StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
             channel.attr(responseMapAttr).get().put(requestId, future);
-            AtomicLong channelFlushCounter = channel.attr(flushCounterAttr).get();
-            channelFlushCounter.incrementAndGet();
-            channel.write(frame, channel.voidPromise());
-            channel.pipeline().lastContext().executor().execute(() -> {
-                if (channelFlushCounter.decrementAndGet() == 0) {
-                    if (channel.isOpen()) {
-                        channel.flush();
-                    }
-                }
-            });
+            channel.write(frame);
             return future;
         }
 
@@ -338,7 +318,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         public <Request extends ActionRequest, Response extends ActionResponse>
         CompletableFuture<Response> send(Request request) {
             CompletableFuture<Response> future = Futures.future();
-            this.<Request, Response>sendRaw(request).whenComplete((response, error) -> {
+            this.<Request, Response>forward(request).whenComplete((response, error) -> {
                 if (error != null) {
                     future.completeExceptionally(error);
                 } else if (response.hasError()) {

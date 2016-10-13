@@ -94,6 +94,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         private final TransportController transportController;
 
         public TransportServerHandler(Logger logger, TransportController transportController) {
+            super(false);
             this.logger = logger;
             this.transportController = transportController;
         }
@@ -168,7 +169,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
         @SuppressWarnings("unchecked")
         @Override
-        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> sendRaw(Request request) {
+        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> forward(Request request) {
             CompletableFuture<Response> future = Futures.future();
             worker.execute(() -> {
                 CompletableFuture<Response> actionResponse = transportController.dispatchRequest(request);

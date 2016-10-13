@@ -31,8 +31,7 @@ public class RestPushAction extends BaseRestHandler {
 
     @Override
     public void handleRequest(RestRequest request, final RestSession session) {
-        PushRequest.Builder builder = PushRequest.builder()
-            .setQueue(request.param("queue").toString());
+        PushRequest.Builder builder = PushRequest.builder().setQueue(request.param("queue").toString());
 
         try (XStreamParser parser = createParser(request.content())) {
             QueueMessage message = new QueueMessage();
@@ -41,6 +40,8 @@ public class RestPushAction extends BaseRestHandler {
         } catch (IOException e) {
             session.sendResponse(e);
             return;
+        } finally {
+            request.content().release();
         }
 
         transportService.client().<PushRequest, PushResponse>send(builder.build())

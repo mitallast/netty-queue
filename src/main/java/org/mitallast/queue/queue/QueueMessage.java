@@ -14,6 +14,7 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.xstream.ToXStream;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 
+import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.UUID;
@@ -78,7 +79,7 @@ public class QueueMessage implements ToXStream, Streamable {
         }
         type = QueueMessageType.JSON;
         try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
-            JsonGenerator generator = jsonFactory.createGenerator(outputStream);
+            JsonGenerator generator = jsonFactory.createGenerator((DataOutput) outputStream);
             generator.setCodec(new ObjectMapper());
             generator.writeTree(tree);
             generator.close();

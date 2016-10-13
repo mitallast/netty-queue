@@ -1,8 +1,8 @@
 package org.mitallast.queue.rest.transport;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.*;
@@ -18,11 +18,18 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 public class HttpSession implements RestSession {
 
     private final ChannelHandlerContext ctx;
-    private final FullHttpRequest httpRequest;
+    private final boolean keepAliveDefault;
+    private final boolean keepAlive;
 
     public HttpSession(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
         this.ctx = ctx;
-        this.httpRequest = httpRequest;
+        this.keepAliveDefault = httpRequest.protocolVersion().isKeepAliveDefault();
+        this.keepAlive = KEEP_ALIVE.contentEqualsIgnoreCase(httpRequest.headers().get(HttpHeaderNames.CONNECTION));
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return ctx.alloc();
     }
 
     @Override
@@ -36,9 +43,8 @@ public class HttpSession implements RestSession {
             httpResponse.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes);
         }
         httpResponse.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-        if (!httpRequest.protocolVersion().isKeepAliveDefault()) {
-            boolean isKeepAlive = KEEP_ALIVE.equalsIgnoreCase(httpRequest.headers().get(HttpHeaderNames.CONNECTION));
-            if (isKeepAlive) {
+        if (!keepAliveDefault) {
+            if (keepAlive) {
                 httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             } else {
                 httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
@@ -46,12 +52,12 @@ public class HttpSession implements RestSession {
                 return;
             }
         }
-        ctx.writeAndFlush(httpResponse, ctx.voidPromise());
+        ctx.writeAndFlush(httpResponse);
     }
 
     @Override
     public void sendResponse(Throwable response) {
-        ByteBuf buffer = Unpooled.buffer();
+        ByteBuf buffer = ctx.alloc().buffer();
         try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
             try (PrintWriter printWriter = new PrintWriter(outputStream)) {
                 response.printStackTrace(printWriter);

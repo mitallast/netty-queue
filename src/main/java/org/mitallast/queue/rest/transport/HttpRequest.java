@@ -1,14 +1,12 @@
 package org.mitallast.queue.rest.transport;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import org.mitallast.queue.rest.RestRequest;
 
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -50,16 +48,6 @@ public class HttpRequest implements RestRequest {
     @Override
     public boolean hasParam(String param) {
         return paramMap.containsKey(param);
-    }
-
-    @Override
-    public HttpHeaders getHttpHeaders() {
-        return httpHeaders;
-    }
-
-    @Override
-    public InputStream getInputStream() {
-        return new ByteBufInputStream(httpRequest.content());
     }
 
     @Override

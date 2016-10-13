@@ -1,6 +1,8 @@
 package org.mitallast.queue.rest;
 
 import com.google.inject.Inject;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.common.component.AbstractComponent;
@@ -8,6 +10,8 @@ import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.response.StatusRestResponse;
 import org.mitallast.queue.rest.response.StringRestResponse;
+import org.mitallast.queue.rest.transport.HttpRequest;
+import org.mitallast.queue.rest.transport.HttpSession;
 
 public class RestController extends AbstractComponent {
 
@@ -23,15 +27,17 @@ public class RestController extends AbstractComponent {
         super(settings);
     }
 
-    public void dispatchRequest(RestRequest request, RestSession channel) {
+    public void dispatchRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {
+        HttpSession session = new HttpSession(ctx, httpRequest);
         try {
-            executeHandler(request, channel);
+            final HttpRequest request = new HttpRequest(httpRequest);
+            executeHandler(request, session);
         } catch (Throwable e) {
             try {
-                channel.sendResponse(e);
+                session.sendResponse(e);
             } catch (Throwable ex) {
                 logger.error("error send", e);
-                logger.error("Failed to send failure response for uri [" + request.getUri() + "]", ex);
+                logger.error("Failed to send failure response for uri [" + httpRequest.uri() + "]", ex);
             }
         }
     }
@@ -41,6 +47,7 @@ public class RestController extends AbstractComponent {
         if (handler != null) {
             handler.handleRequest(request, channel);
         } else {
+            request.content().release();
             if (request.getHttpMethod() == HttpMethod.OPTIONS) {
                 // when we have OPTIONS request, simply send OK by default (with the Access Control Origin header which gets automatically added)
                 channel.sendResponse(new StatusRestResponse(HttpResponseStatus.OK));

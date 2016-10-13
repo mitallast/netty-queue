@@ -1,17 +1,22 @@
 package org.mitallast.queue.rest;
 
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpVersion;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.strings.Strings;
+import org.mitallast.queue.common.settings.ImmutableSettings;
+import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 public class RestIntegrationTest extends BaseQueueTest {
 
@@ -39,6 +44,13 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     private synchronized RestClient restClient() {
         return clients.get(client++);
+    }
+
+    @Override
+    protected Settings settings() throws Exception {
+        return ImmutableSettings.builder()
+            .put(super.settings())
+            .build();
     }
 
     @Test
@@ -69,27 +81,26 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     private void send(int max) throws Exception {
         RestClient restClient = restClient();
-
         logger.info("send");
-        byte[] bytes = "{\"message\":\"hello world\"}".getBytes(Strings.UTF8);
         List<Future<FullHttpResponse>> futures = new ArrayList<>(max);
+        Consumer<FullHttpResponse> consumer = response -> response.content().release();
+
         for (int i = 0; i < max; i++) {
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1,
-                HttpMethod.PUT,
-                "/" + queueName() + "/message",
-                Unpooled.wrappedBuffer(bytes),
+                HttpMethod.GET,
+                "/",
                 false
             );
-            request.headers().set(HttpHeaderNames.CONTENT_LENGTH, bytes.length);
-            futures.add(restClient.send(request));
+            CompletableFuture<FullHttpResponse> future = restClient.send(request);
+            future.thenAccept(consumer);
+            futures.add(future);
         }
         logger.info("await");
         for (Future<FullHttpResponse> future : futures) {
             FullHttpResponse response = future.get();
             assert response.status().code() >= 200 : response.status();
             assert response.status().code() < 300 : response.status();
-            response.content().release();
         }
         logger.info("await done");
     }

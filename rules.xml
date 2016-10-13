@@ -6,7 +6,7 @@
     <rules>
         <rule groupId="io.netty">
             <ignoreVersions>
-                <!--<ignoreVersion type="regex">.*Beta.*</ignoreVersion>-->
+                <ignoreVersion type="regex">.*Beta.*</ignoreVersion>
                 <ignoreVersion type="regex">.*Alpha.*</ignoreVersion>
             </ignoreVersions>
         </rule>

@@ -1,7 +1,6 @@
 package org.mitallast.queue.common.xstream.json;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.base.GeneratorBase;
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.common.xstream.XStreamParser;
@@ -16,15 +15,9 @@ import java.io.OutputStream;
 public class JsonXStreamBuilder extends AbstractXStreamBuilder {
 
     private final JsonGenerator generator;
-    private final GeneratorBase base;
 
     public JsonXStreamBuilder(JsonGenerator generator) {
         this.generator = generator;
-        if (generator instanceof GeneratorBase) {
-            base = (GeneratorBase) generator;
-        } else {
-            base = null;
-        }
     }
 
     @Override
@@ -76,6 +69,12 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
 
     @Override
     public XStreamBuilder writeString(String text) throws IOException {
+        generator.writeString(text);
+        return this;
+    }
+
+    @Override
+    public XStreamBuilder writeString(XStreamString text) throws IOException {
         generator.writeString(text);
         return this;
     }
@@ -276,7 +275,6 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
         generator.writeRaw(':');
         flush();
         writeRaw(content, 0, content.length);
-        finishWriteRaw();
         return this;
     }
 
@@ -286,7 +284,6 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
         generator.writeRaw(':');
         flush();
         writeRaw(content, offset, length);
-        finishWriteRaw();
         return this;
     }
 
@@ -296,7 +293,6 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
         generator.writeRaw(':');
         flush();
         writeRaw(content);
-        finishWriteRaw();
         return this;
     }
 
@@ -306,7 +302,6 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
         generator.writeRaw(':');
         flush();
         writeRaw(content);
-        finishWriteRaw();
         return this;
     }
 
@@ -343,15 +338,6 @@ public class JsonXStreamBuilder extends AbstractXStreamBuilder {
         } else {
             generator.writeRawUTF8String(buffer, offset, length);
         }
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    private XStreamBuilder finishWriteRaw() {
-        assert base != null : "JsonGenerator should be of instance GeneratorBase but was: " + generator.getClass();
-        if (base != null) {
-            base.getOutputContext().writeValue();
-        }
-        return this;
     }
 
     @Override

@@ -23,6 +23,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     private final RestController restController;
 
     public HttpServerHandler(RestController restController) {
+        super(false);
         this.restController = restController;
     }
 
@@ -32,9 +33,7 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
             sendError(ctx, BAD_REQUEST);
             return;
         }
-
-        final HttpRequest request = new HttpRequest(httpRequest);
-        restController.dispatchRequest(request, new HttpSession(ctx, httpRequest));
+        restController.dispatchRequest(ctx, httpRequest);
     }
 
     @Override

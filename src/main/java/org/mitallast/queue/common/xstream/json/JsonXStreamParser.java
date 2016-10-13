@@ -3,7 +3,6 @@ package org.mitallast.queue.common.xstream.json;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.base.GeneratorBase;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
@@ -21,37 +20,6 @@ public class JsonXStreamParser extends AbstractXStreamParser {
 
     public JsonXStreamParser(JsonParser parser) {
         this.parser = parser;
-    }
-
-    private static Token convertToken(JsonToken token) {
-        if (token == null) {
-            return null;
-        }
-        switch (token) {
-            case FIELD_NAME:
-                return Token.FIELD_NAME;
-            case VALUE_FALSE:
-            case VALUE_TRUE:
-                return Token.VALUE_BOOLEAN;
-            case VALUE_STRING:
-                return Token.VALUE_STRING;
-            case VALUE_NUMBER_INT:
-            case VALUE_NUMBER_FLOAT:
-                return Token.VALUE_NUMBER;
-            case VALUE_NULL:
-                return Token.VALUE_NULL;
-            case START_OBJECT:
-                return Token.START_OBJECT;
-            case END_OBJECT:
-                return Token.END_OBJECT;
-            case START_ARRAY:
-                return Token.START_ARRAY;
-            case END_ARRAY:
-                return Token.END_ARRAY;
-            case VALUE_EMBEDDED_OBJECT:
-                return Token.VALUE_EMBEDDED_OBJECT;
-        }
-        throw new IllegalStateException("No matching token for json_token [" + token + "]");
     }
 
     @Override
@@ -196,7 +164,7 @@ public class JsonXStreamParser extends AbstractXStreamParser {
                     parser.getTextLength()
                 );
                 generator.writeRaw('"');
-                ((GeneratorBase) generator).getOutputContext().writeValue();
+//                generator.getOutputContext().writeValue();
                 break;
             case VALUE_NUMBER_INT:
             case VALUE_NUMBER_FLOAT:
@@ -214,7 +182,7 @@ public class JsonXStreamParser extends AbstractXStreamParser {
                     parser.getTextOffset(),
                     parser.getTextLength()
                 );
-                ((GeneratorBase) generator).getOutputContext().writeValue();
+//                generator.getOutputContext().writeValue();
                 break;
             default:
                 throw new IllegalStateException("Unexpected token: " + token);
@@ -308,5 +276,36 @@ public class JsonXStreamParser extends AbstractXStreamParser {
                 return NumberType.DOUBLE;
         }
         throw new IllegalStateException("No matching token for number_type [" + numberType + "]");
+    }
+
+    private static Token convertToken(JsonToken token) {
+        if (token == null) {
+            return null;
+        }
+        switch (token) {
+            case FIELD_NAME:
+                return Token.FIELD_NAME;
+            case VALUE_FALSE:
+            case VALUE_TRUE:
+                return Token.VALUE_BOOLEAN;
+            case VALUE_STRING:
+                return Token.VALUE_STRING;
+            case VALUE_NUMBER_INT:
+            case VALUE_NUMBER_FLOAT:
+                return Token.VALUE_NUMBER;
+            case VALUE_NULL:
+                return Token.VALUE_NULL;
+            case START_OBJECT:
+                return Token.START_OBJECT;
+            case END_OBJECT:
+                return Token.END_OBJECT;
+            case START_ARRAY:
+                return Token.START_ARRAY;
+            case END_ARRAY:
+                return Token.END_ARRAY;
+            case VALUE_EMBEDDED_OBJECT:
+                return Token.VALUE_EMBEDDED_OBJECT;
+        }
+        throw new IllegalStateException("No matching token for json_token [" + token + "]");
     }
 }

@@ -26,6 +26,8 @@ public interface XStreamBuilder extends Closeable {
 
     XStreamBuilder writeString(String text) throws IOException;
 
+    XStreamBuilder writeString(XStreamString text) throws IOException;
+
     XStreamBuilder writeString(char[] text, int offset, int len) throws IOException;
 
     XStreamBuilder writeUTF8String(byte[] text, int offset, int length) throws IOException;

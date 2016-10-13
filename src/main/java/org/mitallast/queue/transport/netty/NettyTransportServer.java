@@ -20,6 +20,7 @@ import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import org.slf4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class NettyTransportServer extends NettyServer implements TransportServer {
 
@@ -30,17 +31,17 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     @Inject
     public NettyTransportServer(
-        Settings settings,
-        TransportController transportController,
-        StreamService streamService
+            Settings settings,
+            TransportController transportController,
+            StreamService streamService
     ) {
         super(settings, NettyTransportServer.class, TransportModule.class);
         this.transportController = transportController;
         this.streamService = streamService;
         this.discoveryNode = new DiscoveryNode(
-            this.settings.get("node.name"),
-            HostAndPort.fromParts(host, port),
-            Version.CURRENT
+                this.settings.get("node.name"),
+                HostAndPort.fromParts(host, port),
+                Version.CURRENT
         );
         this.localClient = new TransportLocalClient();
     }
@@ -101,18 +102,13 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
-            if (request instanceof StreamableTransportFrame) {
+            if (request.streamable()) {
                 TransportChannel channel = new NettyTransportChannel(ctx);
                 transportController.dispatchRequest(channel, (StreamableTransportFrame) request);
             } else {
                 // ping request
                 ctx.writeAndFlush(TransportFrame.of(request.request()), ctx.voidPromise());
             }
-        }
-
-        @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
         }
 
         @Override
@@ -124,45 +120,24 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     private class TransportLocalClient implements TransportClient {
 
-        @SuppressWarnings("unchecked")
         @Override
-        public CompletableFuture<TransportFrame> send(TransportFrame request) {
-            if (request instanceof StreamableTransportFrame) {
-                CompletableFuture<TransportFrame> future = Futures.future();
-                worker.execute(() -> {
-                    EntryBuilder<ActionRequest> builder = ((StreamableTransportFrame) request).message();
-                    ActionRequest actionRequest = builder.build();
-                    CompletableFuture<ActionResponse> responseFuture = transportController.dispatchRequest(actionRequest);
-                    responseFuture.whenComplete((response, error) -> {
-                        if (error == null) {
-                            future.complete(StreamableTransportFrame.of(request.request(), response.toBuilder()));
-                        } else {
-                            future.completeExceptionally(error);
-                        }
-                    });
-                });
-                return future;
-            } else {
-                // ping request
-                return Futures.complete(TransportFrame.of(request.request()));
-            }
+        public CompletableFuture<TransportFrame> ping() {
+            return Futures.complete(TransportFrame.of());
         }
 
         @SuppressWarnings("unchecked")
         @Override
         public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
             CompletableFuture<Response> future = Futures.future();
-            worker.execute(() -> {
-                CompletableFuture<Response> actionResponse = transportController.dispatchRequest(request);
-                actionResponse.whenComplete((response, error) -> {
-                    if (error != null) {
-                        future.completeExceptionally(error);
-                    } else if (response.hasError()) {
-                        future.completeExceptionally(response.error());
-                    } else {
-                        future.complete(response);
-                    }
-                });
+            CompletableFuture<Response> actionResponse = transportController.dispatchRequest(request);
+            actionResponse.whenComplete((response, error) -> {
+                if (error != null) {
+                    future.completeExceptionally(error);
+                } else if (response.hasError()) {
+                    future.completeExceptionally(response.error());
+                } else {
+                    future.complete(response);
+                }
             });
             return future;
         }
@@ -170,18 +145,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         @SuppressWarnings("unchecked")
         @Override
         public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> forward(Request request) {
-            CompletableFuture<Response> future = Futures.future();
-            worker.execute(() -> {
-                CompletableFuture<Response> actionResponse = transportController.dispatchRequest(request);
-                actionResponse.whenComplete((response, error) -> {
-                    if (error != null) {
-                        future.completeExceptionally(error);
-                    } else {
-                        future.complete(response);
-                    }
-                });
-            });
-            return future;
+            return transportController.dispatchRequest(request);
         }
     }
 }

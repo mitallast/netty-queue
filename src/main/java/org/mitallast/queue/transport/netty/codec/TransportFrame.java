@@ -13,6 +13,10 @@ public class TransportFrame {
         this.request = request;
     }
 
+    public boolean streamable() {
+        return false;
+    }
+
     public Version version() {
         return version;
     }

@@ -42,9 +42,5 @@ public abstract class NettyClient extends NettyClientBootstrap {
         super.doStop();
     }
 
-    public final void flush() {
-        channel.flush();
-    }
-
     protected abstract ChannelInitializer channelInitializer();
 }

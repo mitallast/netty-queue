@@ -22,7 +22,7 @@ public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> 
         out.writeInt(frame.version().id);
         out.writeLong(frame.request());
 
-        if (frame instanceof StreamableTransportFrame) {
+        if (frame.streamable()) {
             // message request
             // skip size header
             int sizePos = out.writerIndex();

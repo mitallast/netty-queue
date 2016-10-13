@@ -37,11 +37,6 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-        ctx.flush();
-    }
-
-    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         if (ctx.channel().isActive()) {

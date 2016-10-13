@@ -68,7 +68,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                         if (future == null) {
                             logger.warn("future not found");
                         } else {
-                            if (frame instanceof StreamableTransportFrame) {
+                            if (frame.streamable()) {
                                 EntryBuilder<ActionResponse> builder = ((StreamableTransportFrame) frame).message();
                                 future.complete(builder.build());
                             } else {
@@ -224,8 +224,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             for (int i = 0; i < channelCount; i++) {
                 try {
                     channels[i] = channelFutures[i]
-                        .awaitUninterruptibly()
-                        .channel();
+                            .awaitUninterruptibly()
+                            .channel();
                     initChannel(channels[i]);
                 } catch (Throwable e) {
                     logger.error("error connect to {}", address, e);
@@ -245,8 +245,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 if (channels[i] == null || !channels[i].isOpen()) {
                     try {
                         channels[i] = connect(address)
-                            .awaitUninterruptibly()
-                            .channel();
+                                .awaitUninterruptibly()
+                                .channel();
                         initChannel(channels[i]);
                     } catch (Throwable e) {
                         logger.error("error reconnect to {}", address, e);
@@ -274,7 +274,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             List<ChannelFuture> closeFutures = new ArrayList<>(channels.length);
             for (Channel channel : channels) {
                 if (channel != null && channel.isOpen()) {
-                    channel.flush();
                     closeFutures.add(channel.close());
                 }
             }
@@ -288,13 +287,15 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public CompletableFuture<TransportFrame> send(TransportFrame frame) {
-            Channel channel = channel((int) frame.request());
+        public CompletableFuture<TransportFrame> ping() {
+            long requestId = channelRequestCounter.incrementAndGet();
+            Channel channel = channel((int) requestId);
             if (channel == null) {
                 return Futures.completeExceptionally(new IOException("channel is closed"));
             }
+            TransportFrame frame = TransportFrame.of(requestId);
             CompletableFuture<TransportFrame> future = Futures.future();
-            channel.attr(responseMapAttr).get().put(frame.request(), future);
+            channel.attr(responseMapAttr).get().put(requestId, future);
             channel.writeAndFlush(frame);
             return future;
         }
@@ -310,7 +311,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             CompletableFuture<Response> future = Futures.future();
             StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
             channel.attr(responseMapAttr).get().put(requestId, future);
-            channel.write(frame);
+            channel.writeAndFlush(frame);
             return future;
         }
 

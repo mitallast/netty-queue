@@ -43,14 +43,10 @@ public class TransportBenchmark extends BaseQueueTest {
     @Test
     public void test() throws Exception {
         List<CompletableFuture<TransportFrame>> futures = new ArrayList<>(max());
-        List<TransportFrame> frames = new ArrayList<>(max());
-        for (long i = 0; i < max(); i++) {
-            frames.add(TransportFrame.of(i));
-        }
 
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
-            futures.add(client.send(frames.get(i)));
+            futures.add(client.ping());
         }
         for (CompletableFuture<TransportFrame> future : futures) {
             future.get();
@@ -63,15 +59,10 @@ public class TransportBenchmark extends BaseQueueTest {
     @Test
     public void testConcurrent() throws Exception {
         List<CompletableFuture<TransportFrame>> futures = new ArrayList<>(total());
-        List<TransportFrame> frames = new ArrayList<>(total());
-        for (int i = 0; i < total(); i++) {
-            frames.add(TransportFrame.of(i));
-        }
-
         long start = System.currentTimeMillis();
         executeConcurrent((t, c) -> {
             for (int i = t; i < total(); i += c) {
-                futures.add(client.send(frames.get(i)));
+                futures.add(client.ping());
             }
             for (int i = t; i < max(); i += c) {
                 futures.get(i).get();

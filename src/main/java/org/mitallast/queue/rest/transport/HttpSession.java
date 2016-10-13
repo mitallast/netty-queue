@@ -48,7 +48,7 @@ public class HttpSession implements RestSession {
                 httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             } else {
                 httpResponse.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-                ctx.write(httpResponse).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(httpResponse).addListener(ChannelFutureListener.CLOSE);
                 return;
             }
         }

@@ -2,10 +2,7 @@ package org.mitallast.queue.common.netty;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -25,8 +22,6 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final boolean tcpNoDelay;
     private final int sndBuf;
     private final int rcvBuf;
-    private final int wbLow;
-    private final int wbHigh;
     private final int threads;
     protected NioEventLoopGroup worker;
     protected Channel channel;
@@ -37,14 +32,12 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         super(settings, loggerClass, componentClass);
         this.host = componentSettings.get("host", "127.0.0.1");
         this.port = componentSettings.getAsInt("port", defaultPort());
-        this.backlog = componentSettings.getAsInt("backlog", 128);
+        this.backlog = componentSettings.getAsInt("backlog", 1024);
         this.reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
         this.keepAlive = componentSettings.getAsBoolean("keep_alive", true);
         this.tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", true);
         this.sndBuf = componentSettings.getAsInt("snd_buf", 65536);
         this.rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
-        this.wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
-        this.wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
         this.threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors());
     }
 
@@ -71,20 +64,9 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
                 .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
                 .option(ChannelOption.SO_SNDBUF, sndBuf)
                 .option(ChannelOption.SO_RCVBUF, rcvBuf)
-                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
-                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf))
+                .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator());
 
-                .childOption(ChannelOption.SO_REUSEADDR, reuseAddress)
-                .childOption(ChannelOption.SO_KEEPALIVE, keepAlive)
-                .childOption(ChannelOption.TCP_NODELAY, tcpNoDelay)
-                .childOption(ChannelOption.SO_SNDBUF, sndBuf)
-                .childOption(ChannelOption.SO_RCVBUF, rcvBuf)
-                .childOption(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
-                .childOption(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
-                .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                .childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf));
             channel = bootstrap.bind(host, port)
                 .sync()
                 .channel();

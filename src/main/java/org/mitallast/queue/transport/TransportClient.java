@@ -8,7 +8,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface TransportClient {
 
-    CompletableFuture<TransportFrame> send(TransportFrame frame);
+    CompletableFuture<TransportFrame> ping();
 
     <Request extends ActionRequest, Response extends ActionResponse>
     CompletableFuture<Response> send(Request request);

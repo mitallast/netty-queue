@@ -13,6 +13,11 @@ public class StreamableTransportFrame extends TransportFrame {
         this.message = message;
     }
 
+    @Override
+    public boolean streamable() {
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     public <T extends Streamable> T message() {
         return (T) message;

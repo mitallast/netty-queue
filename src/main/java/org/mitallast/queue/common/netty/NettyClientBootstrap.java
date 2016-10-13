@@ -3,10 +3,7 @@ package org.mitallast.queue.common.netty;
 import com.google.common.net.HostAndPort;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.FixedRecvByteBufAllocator;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
@@ -24,8 +21,6 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     protected final boolean tcpNoDelay;
     protected final int sndBuf;
     protected final int rcvBuf;
-    protected final int wbLow;
-    protected final int wbHigh;
 
     private volatile Bootstrap bootstrap;
 
@@ -37,10 +32,8 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
         reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
         keepAlive = componentSettings.getAsBoolean("keep_alive", true);
         tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", true);
-        sndBuf = componentSettings.getAsInt("snd_buf", 1048576);
-        rcvBuf = componentSettings.getAsInt("rcv_buf", 1048576);
-        wbHigh = componentSettings.getAsInt("write_buffer_high_water_mark", 65536);
-        wbLow = componentSettings.getAsInt("write_buffer_low_water_mark", 1024);
+        sndBuf = componentSettings.getAsInt("snd_buf", 65536);
+        rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
     }
 
     private ThreadFactory threadFactory(String name) {
@@ -57,10 +50,8 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
             .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
             .option(ChannelOption.SO_SNDBUF, sndBuf)
             .option(ChannelOption.SO_RCVBUF, rcvBuf)
-            .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, wbHigh)
-            .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, wbLow)
             .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-            .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(rcvBuf))
+            .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator())
             .handler(channelInitializer());
     }
 
@@ -79,7 +70,6 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
         if (bootstrap != null) {
             bootstrap.group().shutdownGracefully();
         }
-        bootstrap = null;
     }
 
     @Override

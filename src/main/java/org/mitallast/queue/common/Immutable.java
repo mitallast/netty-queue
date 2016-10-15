@@ -13,10 +13,19 @@ public class Immutable {
     }
 
     public static <K, V> ImmutableMap<K, V> subtract(ImmutableMap<K, V> map, K k) {
-        ImmutableMap.Builder<K, V> builder = ImmutableMap.<K, V>builder();
+        ImmutableMap.Builder<K, V> builder = ImmutableMap.builder();
         map.entrySet().stream()
             .filter(kvEntry -> !kvEntry.getKey().equals(k))
             .forEach(builder::put);
+        return builder.build();
+    }
+
+    public static <K, V> ImmutableMap<K, V> replace(ImmutableMap<K, V> map, K k, V v) {
+        ImmutableMap.Builder<K, V> builder = ImmutableMap.builder();
+        map.entrySet().stream()
+                .filter(kvEntry -> !kvEntry.getKey().equals(k))
+                .forEach(builder::put);
+        builder.put(k, v);
         return builder.build();
     }
 
@@ -28,7 +37,7 @@ public class Immutable {
     }
 
     public static <V> ImmutableList<V> subtract(Iterable<V> list, V v) {
-        ImmutableList.Builder<V> builder = ImmutableList.<V>builder();
+        ImmutableList.Builder<V> builder = ImmutableList.builder();
         for (V item : list) {
             if (!item.equals(v)) {
                 builder.add(item);

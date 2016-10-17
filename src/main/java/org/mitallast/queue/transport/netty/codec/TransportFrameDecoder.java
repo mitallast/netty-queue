@@ -10,12 +10,13 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.List;
 
 public class TransportFrameDecoder extends ByteToMessageDecoder {
     private final static Logger logger = LoggerFactory.getLogger(TransportFrameDecoder.class);
-    private final static int HEADER_SIZE = 2 + 4 + 8 + 4;
+    private final static int HEADER_SIZE = 2;
+    private final static int REQUEST_HEADER_SIZE = HEADER_SIZE + Long.BYTES + Integer.BYTES;
+    private final static int MESSAGE_HEADER_SIZE = HEADER_SIZE + Integer.BYTES;
 
     private final StreamService streamService;
 
@@ -30,24 +31,24 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
                 break;
             }
             int readerIndex = buffer.readerIndex();
-            if (buffer.getByte(readerIndex) != 'E' && buffer.getByte(readerIndex + 1) != 'Q') {
-                throw new IOException("Invalid header");
-            }
 
-            final Version version = Version.fromId(buffer.getInt(readerIndex + 2));
-            final long request = buffer.getLong(readerIndex + 2 + 4);
-            final int size = buffer.getInt(readerIndex + 2 + 4 + 8);
+            final Version version = Version.fromId(buffer.getByte(readerIndex));
+            int type = buffer.getByte(readerIndex + 1);
 
-            if (size <= 0) {
-                // ping request
-                buffer.readerIndex(buffer.readerIndex() + HEADER_SIZE);
-                out.add(TransportFrame.of(version, request));
-            } else {
-                // standard request
-                if (buffer.readableBytes() < size + HEADER_SIZE) {
+            if (type == TransportFrameType.PING.ordinal()) {
+                out.add(new PingTransportFrame(version));
+            } else if (type == TransportFrameType.REQUEST.ordinal()) {
+                if (buffer.readableBytes() < REQUEST_HEADER_SIZE) {
                     break;
                 }
-                buffer.readerIndex(buffer.readerIndex() + HEADER_SIZE);
+
+                final long request = buffer.getLong(readerIndex + HEADER_SIZE);
+                final int size = buffer.getInt(readerIndex + HEADER_SIZE + Long.BYTES);
+
+                if (buffer.readableBytes() < size + REQUEST_HEADER_SIZE) {
+                    break;
+                }
+                buffer.readerIndex(buffer.readerIndex() + REQUEST_HEADER_SIZE);
                 int start = buffer.readerIndex();
                 final Streamable message;
                 try (StreamInput input = streamService.input(buffer)) {
@@ -61,8 +62,31 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
                     logger.warn("error reading message, expected {} read {}", size, readSize);
                 }
 
+                out.add(new RequestTransportFrame(version, request, message));
+            } else if (type == TransportFrameType.MESSAGE.ordinal()) {
+                if (buffer.readableBytes() < MESSAGE_HEADER_SIZE) {
+                    break;
+                }
 
-                out.add(StreamableTransportFrame.of(version, request, message));
+                final int size = buffer.getInt(readerIndex + HEADER_SIZE);
+
+                if (buffer.readableBytes() < size + MESSAGE_HEADER_SIZE) {
+                    break;
+                }
+                buffer.readerIndex(buffer.readerIndex() + MESSAGE_HEADER_SIZE);
+                int start = buffer.readerIndex();
+                final Streamable message;
+                try (StreamInput input = streamService.input(buffer)) {
+                    message = input.readStreamable();
+                }
+                int readSize = buffer.readerIndex() - start;
+                if (readSize < size) {
+                    logger.warn("error reading message, expected {} read {}, skip bytes", size, readSize);
+                    buffer.readerIndex(buffer.readerIndex() + size - readSize);
+                } else if (readSize > size) {
+                    logger.warn("error reading message, expected {} read {}", size, readSize);
+                }
+                out.add(new MessageTransportFrame(version, message));
             }
         }
     }

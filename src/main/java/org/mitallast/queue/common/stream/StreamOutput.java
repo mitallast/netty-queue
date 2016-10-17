@@ -8,6 +8,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public interface StreamOutput extends DataOutput, Closeable {
@@ -118,6 +119,16 @@ public interface StreamOutput extends DataOutput, Closeable {
     }
 
     default <T extends Streamable> void writeStreamableList(List<T> streamable) throws IOException {
+        int size = streamable.size();
+        writeInt(size);
+        if (size > 0) {
+            for (T t : streamable) {
+                t.writeTo(this);
+            }
+        }
+    }
+
+    default <T extends Streamable> void writeStreamableSet(Set<T> streamable) throws IOException {
         int size = streamable.size();
         writeInt(size);
         if (size > 0) {

@@ -17,26 +17,36 @@ public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> 
 
     @Override
     protected void encode(ChannelHandlerContext ctx, TransportFrame frame, ByteBuf out) throws Exception {
-        out.writeByte('E');
-        out.writeByte('Q');
-        out.writeInt(frame.version().id);
-        out.writeLong(frame.request());
+        out.writeByte(frame.version().id);
+        out.writeByte(frame.type().ordinal());
 
-        if (frame.streamable()) {
-            // message request
-            // skip size header
+        // ping does not have body
+
+        if (frame.type() == TransportFrameType.REQUEST) {
+            RequestTransportFrame request = (RequestTransportFrame) frame;
+            out.writeLong(request.request());
+
             int sizePos = out.writerIndex();
             out.writerIndex(out.writerIndex() + 4);
             try (StreamOutput output = streamService.output(out)) {
-                Streamable message = ((StreamableTransportFrame) frame).message();
+                Streamable message = request.message();
                 output.writeClass(message.getClass());
                 output.writeStreamable(message);
             }
             int size = out.writerIndex() - sizePos - 4;
             out.setInt(sizePos, size);
-        } else {
-            // ping request
-            out.writeInt(0);
+
+        } else if (frame.type() == TransportFrameType.MESSAGE) {
+            MessageTransportFrame request = (MessageTransportFrame) frame;
+            int sizePos = out.writerIndex();
+            out.writerIndex(out.writerIndex() + 4);
+            try (StreamOutput output = streamService.output(out)) {
+                Streamable message = request.message();
+                output.writeClass(message.getClass());
+                output.writeStreamable(message);
+            }
+            int size = out.writerIndex() - sizePos - 4;
+            out.setInt(sizePos, size);
         }
     }
 }

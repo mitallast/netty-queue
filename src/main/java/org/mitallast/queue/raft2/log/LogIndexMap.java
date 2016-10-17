@@ -1,9 +1,11 @@
-package org.mitallast.queue.raft2;
+package org.mitallast.queue.raft2.log;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.mitallast.queue.common.Immutable;
+import org.mitallast.queue.raft2.cluster.ClusterConfiguration;
+import org.mitallast.queue.raft2.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.List;
@@ -62,11 +64,11 @@ public class LogIndexMap {
             Optional<Long> oldQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getOldMembers());
             Optional<Long> newQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getNewMembers());
 
-            if(!oldQuorum.isPresent()) {
+            if (!oldQuorum.isPresent()) {
                 return newQuorum;
-            }else if(!newQuorum.isPresent()) {
+            } else if (!newQuorum.isPresent()) {
                 return oldQuorum;
-            }else {
+            } else {
                 return Optional.of(Math.min(oldQuorum.get(), newQuorum.get()));
             }
         } else { // stable
@@ -95,5 +97,9 @@ public class LogIndexMap {
         } else {
             return (numerator / divisor) + 1;
         }
+    }
+
+    public Optional<Long> indexFor(DiscoveryNode member) {
+        return Optional.ofNullable(backing.get(member));
     }
 }

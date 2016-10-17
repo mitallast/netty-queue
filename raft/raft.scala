@@ -179,7 +179,7 @@ case class JointConsensusClusterConfiguration(sequenceNumber: Long, oldMembers: 
   def transitionToStable = StableClusterConfiguration(sequenceNumber + 1, newMembers)
 }
 
-case class LogIndexMap private(private var backing: Map[ActorRef, Int]) {
+case class LogIndexMap(private var backing: Map[ActorRef, Int]) {
 
   def decrementFor(member: ActorRef): Int = {
     val value = backing(member) - 1
@@ -244,7 +244,27 @@ object LogIndexMap {
   }
 }
 
-case class ReplicatedLog(entries: List[LogEntry], committedIndex: Int, start: Int = 0) {
+case class ReplicatedLog(entries: List[LogEntry], committedIndex: Int, private val start: Int = 1) {
+  object log {
+
+    def offset = start - 1
+
+    def length = entries.size + offset
+
+    def take(n: Int) = entries.take(n - offset)
+
+    def slice(from: Int, until: Int) = entries.slice(from - offset, until - offset)
+
+    def exists(p: LogEntry ⇒ Boolean) = entries.exists(p)
+
+    def find(p: LogEntry ⇒ Boolean) = entries.find(p)
+
+    def filter(p: LogEntry ⇒ Boolean) = entries.filter(p)
+
+    def apply(index: Int) = entries(index - start)
+
+    def containsEntryAt(index: Int) = index >= start && index <= length && log(index).index == index
+  }
 
   import RaftProtocol._
 
@@ -267,17 +287,17 @@ case class ReplicatedLog(entries: List[LogEntry], committedIndex: Int, start: In
 
   def commit(n: Int): ReplicatedLog = copy(committedIndex = n)
 
-  def append(entry: LogEntry, take: Int = entries.length): ReplicatedLog =
+  def append(entry: LogEntry, take: Int = log.length): ReplicatedLog =
     append(List(entry), take)
 
   def append(entriesToAppend: Seq[LogEntry], take: Int): ReplicatedLog =
-    copy(entries = entries.take(take) ++ entriesToAppend)
+    copy(entries = log.take(take) ++ entriesToAppend)
 
   def +(entry: LogEntry): ReplicatedLog =
     append(entry)
 
   def entriesBatchFrom(fromIncluding: Int, howMany: Int = 5): List[LogEntry] = {
-    val toSend = entries.slice(fromIncluding, fromIncluding + howMany)
+    val toSend = log.slice(fromIncluding, fromIncluding + howMany)
     toSend.headOption match {
       case Some(head) =>
         val batchTerm = head.term
@@ -288,10 +308,9 @@ case class ReplicatedLog(entries: List[LogEntry], committedIndex: Int, start: In
     }
   }
 
-  def between(fromIndex: Int, toIndex: Int): List[LogEntry] =
-    entries.slice(fromIndex, toIndex)
+  def between(fromIndex: Int, toIndex: Int): List[LogEntry] = log.slice(fromIndex, toIndex)
 
-  def containsEntryAt(index: Int) = entries.exists(_.index == index)
+  def containsEntryAt(index: Int) = log.containsEntryAt(index)
 
   def termAt(index: Int): Term = {
     if (index <= 0) {
@@ -301,13 +320,13 @@ case class ReplicatedLog(entries: List[LogEntry], committedIndex: Int, start: In
       throw new IllegalArgumentException(s"Unable to find log entry at index $index.")
     }
     else {
-      entries.find(_.index == index).get.term
+      log.find(_.index == index).get.term
     }
   }
 
-  def committedEntries = entries.filter(_.index <= committedIndex)
+  def committedEntries = log.filter(_.index <= committedIndex)
 
-  def notCommittedEntries = entries.slice(committedIndex + 1, entries.length)
+  def notCommittedEntries = log.slice(committedIndex + 1, log.length)
 
   def compactedWith(snapshot: RaftSnapshot): ReplicatedLog = {
     val snapshotHasLaterTerm = snapshot.meta.lastIncludedTerm > lastTerm.getOrElse(Term(0))

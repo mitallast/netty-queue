@@ -1,7 +1,7 @@
 package org.mitallast.raft
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.{DefaultTimeout, ImplicitSender, TestActorRef, TestKit, TestProbe}
+import akka.testkit.{DefaultTimeout, ImplicitSender, TestActorRef, TestFSMRef, TestKit, TestProbe}
 import org.mitallast.raft.Raft.WordConcatProtocol
 import org.scalatest._
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -65,17 +65,17 @@ class RaftSpec extends TestKit(ActorSystem("RaftTest"))
     "return prev index 2 if contains entry 3" in {
       (log + entry1 + entry2 + entry3).prevIndex shouldEqual 2
     }
-    "return next entries inclusive lower bound 0" in {
+    "return next entries lower bound 0" in {
       (log + entry1 + entry2 + entry3).entriesBatchFrom(0) shouldEqual List(entry1, entry2, entry3)
     }
-    "return next entries inclusive lower bound 1" in {
-      (log + entry1 + entry2 + entry3).entriesBatchFrom(1) shouldEqual List(entry1, entry2, entry3)
+    "return next entries lower bound 1" in {
+      (log + entry1 + entry2 + entry3).entriesBatchFrom(1) shouldEqual List(entry2, entry3)
     }
-    "return next entries inclusive lower bound 2" in {
-      (log + entry1 + entry2 + entry3).entriesBatchFrom(2) shouldEqual List(entry2, entry3)
+    "return next entries lower bound 2" in {
+      (log + entry1 + entry2 + entry3).entriesBatchFrom(2) shouldEqual List(entry3)
     }
-    "return next entries inclusive lower bound 3" in {
-      (log + entry1 + entry2 + entry3).entriesBatchFrom(3) shouldEqual List(entry3)
+    "return next entries lower bound 3" in {
+      (log + entry1 + entry2 + entry3).entriesBatchFrom(3) shouldEqual List()
     }
     "return contains matching entry 0 if empty" in {
       log.containsMatchingEntry(Term(0), otherPrevIndex = 0) shouldBe true
@@ -93,13 +93,19 @@ class RaftSpec extends TestKit(ActorSystem("RaftTest"))
       (log + entry1 + entry2 + entry3).between(0, 1) shouldEqual List(entry1)
     }
     "return between 1, 2 entry2" in {
-      (log + entry1 + entry2 + entry3).between(1, 2) shouldEqual List(entry1, entry2)
+      (log + entry1 + entry2 + entry3).between(1, 2) shouldEqual List(entry2)
     }
-    "return between 1, 3 entry2" in {
-      (log + entry1 + entry2 + entry3).between(1, 3) shouldEqual List(entry1, entry2, entry3)
+    "return between 1, 3 entry3" in {
+      (log + entry1 + entry2 + entry3).between(1, 3) shouldEqual List(entry2, entry3)
     }
     "return commitIndex if empty" in {
       log.committedIndex shouldEqual 0
+    }
+    "return not contains entry 0 if empty" in {
+      log.containsEntryAt(0) shouldBe false
+    }
+    "return contains entry 0 if entry 1" in {
+      (log + entry1).containsEntryAt(1) shouldBe true
     }
     "compact log with" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot3)
@@ -121,19 +127,16 @@ class RaftSpec extends TestKit(ActorSystem("RaftTest"))
     }
     "return contains entry 1 after compaction 1" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot1)
-      compacted.start shouldBe 1
       compacted.entries.size shouldBe 3
       compacted.containsEntryAt(1) shouldBe true
     }
     "return contains entry 2 after compaction 1" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot1)
-      compacted.start shouldBe 1
       compacted.entries.size shouldBe 3
       compacted.containsEntryAt(2) shouldBe true
     }
     "return contains entry 3 after compaction 1" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot1)
-      compacted.start shouldBe 1
       compacted.entries.size shouldBe 3
       compacted.containsEntryAt(3) shouldBe true
     }
@@ -217,15 +220,15 @@ class RaftSpec extends TestKit(ActorSystem("RaftTest"))
     }
     "return entries batch 1 from after compaction 1" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot1)
-      compacted.entriesBatchFrom(1) shouldEqual List(snapshotEntry1, entry2, entry3)
+      compacted.entriesBatchFrom(1) shouldEqual List(entry2, entry3)
     }
     "return entries batch 2 from after compaction 1" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot1)
-      compacted.entriesBatchFrom(2) shouldEqual List(entry2, entry3)
+      compacted.entriesBatchFrom(2) shouldEqual List(entry3)
     }
     "return entries batch 3 from after compaction 1" in {
       val compacted = (log + entry1 + entry2 + entry3).compactedWith(snapshot1)
-      compacted.entriesBatchFrom(3) shouldEqual List(entry3)
+      compacted.entriesBatchFrom(3) shouldEqual List()
     }
   }
 

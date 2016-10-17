@@ -1,14 +1,21 @@
-package org.mitallast.queue.raft2;
+package org.mitallast.queue.raft2.cluster;
 
 import com.google.common.collect.ImmutableSet;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.transport.DiscoveryNode;
+
+import java.io.IOException;
 
 public class JointConsensusClusterConfiguration implements ClusterConfiguration {
 
-    private final long sequenceNumber;
-    private final ImmutableSet<DiscoveryNode> oldMembers;
-    private final ImmutableSet<DiscoveryNode> newMembers;
-    private final ImmutableSet<DiscoveryNode> members;
+    private long sequenceNumber;
+    private ImmutableSet<DiscoveryNode> oldMembers;
+    private ImmutableSet<DiscoveryNode> newMembers;
+    private ImmutableSet<DiscoveryNode> members;
+
+    protected JointConsensusClusterConfiguration() {
+    }
 
     public JointConsensusClusterConfiguration(long sequenceNumber, ImmutableSet<DiscoveryNode> oldMembers, ImmutableSet<DiscoveryNode> newMembers) {
         this.sequenceNumber = sequenceNumber;
@@ -53,7 +60,7 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
     @Override
     public ClusterConfiguration transitionTo(ClusterConfiguration state) {
         throw new IllegalStateException("Cannot start another configuration transition, already in progress! " +
-                "Migrating from [" + oldMembers.size() + "] " + oldMembers + " to [" + newMembers.size() + "] " + newMembers );
+                "Migrating from [" + oldMembers.size() + "] " + oldMembers + " to [" + newMembers.size() + "] " + newMembers);
     }
 
     @Override
@@ -64,5 +71,20 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
     @Override
     public boolean containsOnNewState(DiscoveryNode member) {
         return newMembers.contains(member);
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        sequenceNumber = stream.readLong();
+        oldMembers = stream.readStreamableSet(DiscoveryNode::new);
+        newMembers = stream.readStreamableSet(DiscoveryNode::new);
+        members = ImmutableSet.<DiscoveryNode>builder().addAll(oldMembers).addAll(newMembers).build();
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeLong(sequenceNumber);
+        stream.writeStreamableSet(oldMembers);
+        stream.writeStreamableSet(newMembers);
     }
 }

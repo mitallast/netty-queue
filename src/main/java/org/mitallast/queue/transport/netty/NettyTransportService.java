@@ -15,7 +15,7 @@ import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
+import org.mitallast.queue.transport.netty.codec.RequestTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
@@ -69,7 +69,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                             logger.warn("future not found");
                         } else {
                             if (frame.streamable()) {
-                                EntryBuilder<ActionResponse> builder = ((StreamableTransportFrame) frame).message();
+                                EntryBuilder<ActionResponse> builder = ((RequestTransportFrame) frame).message();
                                 future.complete(builder.build());
                             } else {
                                 future.complete(frame);
@@ -309,7 +309,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 return Futures.completeExceptionally(new IOException("channel is closed"));
             }
             CompletableFuture<Response> future = Futures.future();
-            StreamableTransportFrame frame = StreamableTransportFrame.of(requestId, request.toBuilder());
+            RequestTransportFrame frame = RequestTransportFrame.of(requestId, request.toBuilder());
             channel.attr(responseMapAttr).get().put(requestId, future);
             channel.writeAndFlush(frame);
             return future;

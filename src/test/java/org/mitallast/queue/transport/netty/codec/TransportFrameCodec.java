@@ -22,34 +22,53 @@ public class TransportFrameCodec extends BaseTest {
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
         ByteBuf buffer = Unpooled.buffer();
-        encoder.encode(null, TransportFrame.of(Version.CURRENT, 123), buffer);
+        encoder.encode(null, PingTransportFrame.CURRENT, buffer);
 
         ArrayList<Object> output = new ArrayList<>();
         decoder.decode(null, buffer, output);
         Assert.assertEquals(1, output.size());
 
-        TransportFrame decoded = (TransportFrame) output.get(0);
+        PingTransportFrame decoded = (PingTransportFrame) output.get(0);
         Assert.assertEquals(Version.CURRENT, decoded.version());
-        Assert.assertEquals(123, decoded.request());
     }
 
     @Test
-    public void testStreamable() throws Exception {
+    public void testRequest() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
         streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
         ByteBuf buffer = Unpooled.buffer();
-        encoder.encode(null, StreamableTransportFrame.of(Version.CURRENT, 123, new TestStreamable(123123)), buffer);
+        encoder.encode(null, new RequestTransportFrame(Version.CURRENT, 123, new TestStreamable(123123)), buffer);
 
         ArrayList<Object> output = new ArrayList<>();
         decoder.decode(null, buffer, output);
         Assert.assertEquals(1, output.size());
 
-        StreamableTransportFrame decoded = (StreamableTransportFrame) output.get(0);
+        RequestTransportFrame decoded = (RequestTransportFrame) output.get(0);
         Assert.assertEquals(Version.CURRENT, decoded.version());
         Assert.assertEquals(123, decoded.request());
+        TestStreamable message = decoded.message();
+        Assert.assertEquals(123123, message.value);
+    }
+
+    @Test
+    public void testMessage() throws Exception {
+        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
+        TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
+        TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
+
+        ByteBuf buffer = Unpooled.buffer();
+        encoder.encode(null, new MessageTransportFrame(Version.CURRENT, new TestStreamable(123123)), buffer);
+
+        ArrayList<Object> output = new ArrayList<>();
+        decoder.decode(null, buffer, output);
+        Assert.assertEquals(1, output.size());
+
+        MessageTransportFrame decoded = (MessageTransportFrame) output.get(0);
+        Assert.assertEquals(Version.CURRENT, decoded.version());
         TestStreamable message = decoded.message();
         Assert.assertEquals(123123, message.value);
     }

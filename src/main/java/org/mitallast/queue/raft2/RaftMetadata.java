@@ -1,33 +1,35 @@
 package org.mitallast.queue.raft2;
 
 import com.google.common.collect.ImmutableSet;
+import org.mitallast.queue.raft2.cluster.ClusterConfiguration;
+import org.mitallast.queue.raft2.cluster.StableClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.Optional;
 
-public class StateMetadata {
+public class RaftMetadata {
     private final Term currentTerm;
     private final ClusterConfiguration config;
     private final Optional<DiscoveryNode> votedFor;
     private final int votesReceived;
 
-    public StateMetadata() {
+    public RaftMetadata() {
         this(new Term(0));
     }
 
-    public StateMetadata(Term currentTerm) {
+    public RaftMetadata(Term currentTerm) {
         this(currentTerm, new StableClusterConfiguration(0, ImmutableSet.of()));
     }
 
-    public StateMetadata(Term currentTerm, ClusterConfiguration config) {
+    public RaftMetadata(Term currentTerm, ClusterConfiguration config) {
         this(currentTerm, config, Optional.empty());
     }
 
-    public StateMetadata(Term currentTerm, ClusterConfiguration config, Optional<DiscoveryNode> votedFor) {
+    public RaftMetadata(Term currentTerm, ClusterConfiguration config, Optional<DiscoveryNode> votedFor) {
         this(currentTerm, config, votedFor, 0);
     }
 
-    public StateMetadata(Term currentTerm, ClusterConfiguration config, Optional<DiscoveryNode> votedFor, int votesReceived) {
+    public RaftMetadata(Term currentTerm, ClusterConfiguration config, Optional<DiscoveryNode> votedFor, int votesReceived) {
         this.currentTerm = currentTerm;
         this.config = config;
         this.votedFor = votedFor;
@@ -72,43 +74,43 @@ public class StateMetadata {
         return term.less(currentTerm) || votedFor.isPresent();
     }
 
-    public StateMetadata forNewElection() {
-        return new StateMetadata(currentTerm.next(), config);
+    public RaftMetadata forNewElection() {
+        return new RaftMetadata(currentTerm.next(), config);
     }
 
-    public StateMetadata withTerm(Term term) {
-        return new StateMetadata(term, config, votedFor, votesReceived);
+    public RaftMetadata withTerm(Term term) {
+        return new RaftMetadata(term, config, votedFor, votesReceived);
     }
 
-    public StateMetadata incTerm() {
-        return new StateMetadata(currentTerm.next(), config, votedFor, votesReceived);
+    public RaftMetadata incTerm() {
+        return new RaftMetadata(currentTerm.next(), config, votedFor, votesReceived);
     }
 
-    public StateMetadata withVoteFor(DiscoveryNode candidate) {
-        return new StateMetadata(currentTerm, config, Optional.of(candidate), votesReceived);
+    public RaftMetadata withVoteFor(DiscoveryNode candidate) {
+        return new RaftMetadata(currentTerm, config, Optional.of(candidate), votesReceived);
     }
 
-    public StateMetadata withConfig(ClusterConfiguration config) {
-        return new StateMetadata(currentTerm, config, votedFor, votesReceived);
+    public RaftMetadata withConfig(ClusterConfiguration config) {
+        return new RaftMetadata(currentTerm, config, votedFor, votesReceived);
     }
 
     public boolean hasMajority() {
         return votesReceived > config.members().size() / 2;
     }
 
-    public StateMetadata incVote() {
-        return new StateMetadata(currentTerm, config, votedFor, votesReceived + 1);
+    public RaftMetadata incVote() {
+        return new RaftMetadata(currentTerm, config, votedFor, votesReceived + 1);
     }
 
-    public StateMetadata forLeader() {
-        return new StateMetadata(currentTerm, config);
+    public RaftMetadata forLeader() {
+        return new RaftMetadata(currentTerm, config);
     }
 
-    public StateMetadata forFollower() {
-        return new StateMetadata(currentTerm, config);
+    public RaftMetadata forFollower() {
+        return new RaftMetadata(currentTerm, config);
     }
 
-    public StateMetadata forFollower(Term term) {
-        return new StateMetadata(term, config);
+    public RaftMetadata forFollower(Term term) {
+        return new RaftMetadata(term, config);
     }
 }

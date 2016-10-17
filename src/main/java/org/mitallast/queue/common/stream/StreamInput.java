@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.stream;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
@@ -141,6 +142,21 @@ public interface StreamInput extends DataInput, Closeable {
             return ImmutableList.of(readStreamable(factory));
         } else {
             ImmutableList.Builder<T> builder = ImmutableList.builder();
+            for (int i = 0; i < size; i++) {
+                builder.add(readStreamable(factory));
+            }
+            return builder.build();
+        }
+    }
+
+    default <T extends Streamable> ImmutableSet<T> readStreamableSet(Supplier<T> factory) throws IOException {
+        int size = readInt();
+        if (size == 0) {
+            return ImmutableSet.of();
+        } else if (size == 1) {
+            return ImmutableSet.of(readStreamable(factory));
+        } else {
+            ImmutableSet.Builder<T> builder = ImmutableSet.builder();
             for (int i = 0; i < size; i++) {
                 builder.add(readStreamable(factory));
             }

@@ -1,12 +1,19 @@
-package org.mitallast.queue.raft2;
+package org.mitallast.queue.raft2.cluster;
 
 import com.google.common.collect.ImmutableSet;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.transport.DiscoveryNode;
+
+import java.io.IOException;
 
 public class StableClusterConfiguration implements ClusterConfiguration {
 
-    private final long sequenceNumber;
-    private final ImmutableSet<DiscoveryNode> members;
+    private long sequenceNumber;
+    private ImmutableSet<DiscoveryNode> members;
+
+    protected StableClusterConfiguration() {
+    }
 
     public StableClusterConfiguration(long sequenceNumber, ImmutableSet<DiscoveryNode> members) {
         this.sequenceNumber = sequenceNumber;
@@ -51,5 +58,17 @@ public class StableClusterConfiguration implements ClusterConfiguration {
     @Override
     public boolean containsOnNewState(DiscoveryNode member) {
         return members.contains(member);
+    }
+
+    @Override
+    public void readFrom(StreamInput stream) throws IOException {
+        sequenceNumber = stream.readLong();
+        members = stream.readStreamableSet(DiscoveryNode::new);
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeLong(sequenceNumber);
+        stream.writeStreamableSet(members);
     }
 }

@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft2;
 
-public enum State {
+public enum RaftState {
     Init,
     Follower,
     Candidate,

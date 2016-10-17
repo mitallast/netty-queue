@@ -1,9 +1,10 @@
-package org.mitallast.queue.raft2;
+package org.mitallast.queue.raft2.cluster;
 
 import com.google.common.collect.ImmutableSet;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public interface ClusterConfiguration {
+public interface ClusterConfiguration extends Streamable {
 
     long sequenceNumber();
 

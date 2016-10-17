@@ -4,25 +4,26 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.AttributeKey;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.action.ActionRequest;
 import org.mitallast.queue.action.ActionResponse;
-import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.StreamableTransportFrame;
+import org.mitallast.queue.transport.netty.codec.RequestTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 import org.slf4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 public class NettyTransportServer extends NettyServer implements TransportServer {
+
+    private final static AttributeKey<TransportChannel> responseMapAttr = AttributeKey.valueOf("transportChannel");
 
     private final DiscoveryNode discoveryNode;
     private final TransportController transportController;
@@ -104,7 +105,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
             if (request.streamable()) {
                 TransportChannel channel = new NettyTransportChannel(ctx);
-                transportController.dispatchRequest(channel, (StreamableTransportFrame) request);
+                transportController.dispatchRequest(channel, (RequestTransportFrame) request);
             } else {
                 // ping request
                 ctx.writeAndFlush(TransportFrame.of(request.request()), ctx.voidPromise());

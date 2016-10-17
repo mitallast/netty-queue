@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
+import org.mitallast.queue.transport.netty.codec.PingTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
 import java.util.ArrayList;
@@ -24,10 +25,10 @@ public class TransportBenchmark extends BaseQueueTest {
     @Override
     protected Settings settings() throws Exception {
         return ImmutableSettings.builder()
-            .put(super.settings())
-            .put("rest.enabled", false)
-            .put("raft.enabled", false)
-            .build();
+                .put(super.settings())
+                .put("rest.enabled", false)
+                .put("raft.enabled", false)
+                .build();
     }
 
     @Before
@@ -42,30 +43,20 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Test
     public void test() throws Exception {
-        List<CompletableFuture<TransportFrame>> futures = new ArrayList<>(max());
-
         long start = System.currentTimeMillis();
         for (int i = 0; i < max(); i++) {
-            futures.add(client.ping());
+            client.ping();
         }
-        for (CompletableFuture<TransportFrame> future : futures) {
-            future.get();
-        }
-
         long end = System.currentTimeMillis();
         printQps("send", max(), start, end);
     }
 
     @Test
     public void testConcurrent() throws Exception {
-        List<CompletableFuture<TransportFrame>> futures = new ArrayList<>(total());
         long start = System.currentTimeMillis();
         executeConcurrent((t, c) -> {
             for (int i = t; i < total(); i += c) {
-                futures.add(client.ping());
-            }
-            for (int i = t; i < max(); i += c) {
-                futures.get(i).get();
+                client.ping();
             }
         });
         long end = System.currentTimeMillis();

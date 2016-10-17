@@ -4,26 +4,15 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.util.AttributeKey;
 import org.mitallast.queue.Version;
-import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionResponse;
-import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.RequestTransportFrame;
-import org.mitallast.queue.transport.netty.codec.TransportFrame;
-import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
-import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
+import org.mitallast.queue.transport.netty.codec.*;
 import org.slf4j.Logger;
 
-import java.util.concurrent.CompletableFuture;
-
 public class NettyTransportServer extends NettyServer implements TransportServer {
-
-    private final static AttributeKey<TransportChannel> responseMapAttr = AttributeKey.valueOf("transportChannel");
 
     private final DiscoveryNode discoveryNode;
     private final TransportController transportController;
@@ -103,12 +92,11 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
-            if (request.streamable()) {
+            if (request.type() == TransportFrameType.PING) {
+                ctx.writeAndFlush(PingTransportFrame.CURRENT);
+            } else if (request.type() == TransportFrameType.MESSAGE) {
                 TransportChannel channel = new NettyTransportChannel(ctx);
-                transportController.dispatchRequest(channel, (RequestTransportFrame) request);
-            } else {
-                // ping request
-                ctx.writeAndFlush(TransportFrame.of(request.request()), ctx.voidPromise());
+                transportController.dispatchMessage(channel, (MessageTransportFrame) request);
             }
         }
 
@@ -122,31 +110,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     private class TransportLocalClient implements TransportClient {
 
         @Override
-        public CompletableFuture<TransportFrame> ping() {
-            return Futures.complete(TransportFrame.of());
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> send(Request request) {
-            CompletableFuture<Response> future = Futures.future();
-            CompletableFuture<Response> actionResponse = transportController.dispatchRequest(request);
-            actionResponse.whenComplete((response, error) -> {
-                if (error != null) {
-                    future.completeExceptionally(error);
-                } else if (response.hasError()) {
-                    future.completeExceptionally(response.error());
-                } else {
-                    future.complete(response);
-                }
-            });
-            return future;
-        }
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public <Request extends ActionRequest, Response extends ActionResponse> CompletableFuture<Response> forward(Request request) {
-            return transportController.dispatchRequest(request);
+        public void ping() {
         }
     }
 }

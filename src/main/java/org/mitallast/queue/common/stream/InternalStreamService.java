@@ -13,7 +13,7 @@ import java.io.*;
 import java.util.function.Supplier;
 
 public class InternalStreamService extends AbstractComponent implements StreamableClassRegistry, StreamService {
-    private final TIntObjectMap<Supplier<? extends Streamable>> idToSupplierMap = new TIntObjectHashMap<>(100, 0.5f, -1);
+    private final TIntObjectMap<StreamableReader<? extends Streamable>> idToReaderMap = new TIntObjectHashMap<>(100, 0.5f, -1);
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);
 
     @Inject
@@ -22,13 +22,12 @@ public class InternalStreamService extends AbstractComponent implements Streamab
     }
 
     @Override
-    public synchronized <T extends Streamable> void registerClass(Class<T> streamableClass, Supplier<T> supplier, int id) {
-        Supplier<? extends Streamable> current = idToSupplierMap.putIfAbsent(id, supplier);
+    public synchronized <T extends Streamable> void register(Class<T> streamableClass, StreamableReader<T> reader, int id) {
+        StreamableReader<? extends Streamable> current = idToReaderMap.putIfAbsent(id, reader);
         if (current != null) {
             throw new IllegalArgumentException("Class id already registered, class: " + streamableClass + " id: " + id);
         }
         classToIdMap.put(streamableClass, id);
-        idToSupplierMap.put(id, supplier);
     }
 
     @Override
@@ -42,9 +41,9 @@ public class InternalStreamService extends AbstractComponent implements Streamab
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Streamable> T readNewInstance(StreamInput stream) throws IOException {
+    public <T extends Streamable> T readStreamable(StreamInput stream) throws IOException {
         int id = stream.readInt();
-        return (T) idToSupplierMap.get(id).get();
+        return (T) idToReaderMap.get(id).read(stream);
     }
 
     @Override

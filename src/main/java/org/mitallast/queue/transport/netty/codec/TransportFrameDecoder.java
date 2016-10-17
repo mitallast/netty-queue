@@ -14,7 +14,7 @@ import java.util.List;
 
 public class TransportFrameDecoder extends ByteToMessageDecoder {
     private final static Logger logger = LoggerFactory.getLogger(TransportFrameDecoder.class);
-    private final static int HEADER_SIZE = 2;
+    private final static int HEADER_SIZE = 2 + 1;
     private final static int REQUEST_HEADER_SIZE = HEADER_SIZE + Long.BYTES + Integer.BYTES;
     private final static int MESSAGE_HEADER_SIZE = HEADER_SIZE + Integer.BYTES;
 
@@ -32,11 +32,16 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
             }
             int readerIndex = buffer.readerIndex();
 
-            final Version version = Version.fromId(buffer.getByte(readerIndex));
-            int type = buffer.getByte(readerIndex + 1);
+            final Version version = Version.fromId(buffer.getShort(readerIndex));
+            int type = buffer.getByte(readerIndex + 2);
 
             if (type == TransportFrameType.PING.ordinal()) {
-                out.add(new PingTransportFrame(version));
+                buffer.readerIndex(readerIndex + HEADER_SIZE);
+                if (version.equals(Version.CURRENT)) {
+                    out.add(PingTransportFrame.CURRENT);
+                }else {
+                    out.add(new PingTransportFrame(version));
+                }
             } else if (type == TransportFrameType.REQUEST.ordinal()) {
                 if (buffer.readableBytes() < REQUEST_HEADER_SIZE) {
                     break;

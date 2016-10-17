@@ -3,7 +3,6 @@ package org.mitallast.queue.common.stream;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.common.builder.EntryBuilder;
 import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.settings.Settings;
 
@@ -11,7 +10,6 @@ import java.io.Closeable;
 import java.io.DataInput;
 import java.io.IOException;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public interface StreamInput extends DataInput, Closeable {
 
@@ -118,54 +116,45 @@ public interface StreamInput extends DataInput, Closeable {
 
     <T extends Streamable> T readStreamable() throws IOException;
 
-    default <T extends Streamable> T readStreamable(Supplier<T> factory) throws IOException {
-        T streamable = factory.get();
-        streamable.readFrom(this);
-        return streamable;
+    default <T extends Streamable> T readStreamable(StreamableReader<T> reader) throws IOException {
+        return reader.read(this);
     }
 
-    default <T extends Streamable> T readStreamableOrNull(Supplier<T> factory) throws IOException {
+    default <T extends Streamable> T readStreamableOrNull(StreamableReader<T> reader) throws IOException {
         if (readBoolean()) {
-            T streamable = factory.get();
-            streamable.readFrom(this);
-            return streamable;
+            return reader.read(this);
         } else {
             return null;
         }
     }
 
-    default <T extends Streamable> ImmutableList<T> readStreamableList(Supplier<T> factory) throws IOException {
+    default <T extends Streamable> ImmutableList<T> readStreamableList(StreamableReader<T> reader) throws IOException {
         int size = readInt();
         if (size == 0) {
             return ImmutableList.of();
         } else if (size == 1) {
-            return ImmutableList.of(readStreamable(factory));
+            return ImmutableList.of(reader.read(this));
         } else {
             ImmutableList.Builder<T> builder = ImmutableList.builder();
             for (int i = 0; i < size; i++) {
-                builder.add(readStreamable(factory));
+                builder.add(reader.read(this));
             }
             return builder.build();
         }
     }
 
-    default <T extends Streamable> ImmutableSet<T> readStreamableSet(Supplier<T> factory) throws IOException {
+    default <T extends Streamable> ImmutableSet<T> readStreamableSet(StreamableReader<T> reader) throws IOException {
         int size = readInt();
         if (size == 0) {
             return ImmutableSet.of();
         } else if (size == 1) {
-            return ImmutableSet.of(readStreamable(factory));
+            return ImmutableSet.of(reader.read(this));
         } else {
             ImmutableSet.Builder<T> builder = ImmutableSet.builder();
             for (int i = 0; i < size; i++) {
-                builder.add(readStreamable(factory));
+                builder.add(reader.read(this));
             }
             return builder.build();
         }
-    }
-
-    default <T extends StreamableError> T readError() throws IOException {
-        EntryBuilder<T> streamable = readStreamable();
-        return streamable.build();
     }
 }

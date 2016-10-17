@@ -55,8 +55,6 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     @Test
     public void test() throws Exception {
-        createQueue();
-        assertQueueEmpty();
         warmUp();
         long start = System.currentTimeMillis();
         send(max());
@@ -66,8 +64,6 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     @Test
     public void testConcurrent() throws Exception {
-        createQueue();
-        assertQueueEmpty();
         warmUp();
         long start = System.currentTimeMillis();
         executeConcurrent(() -> send(max()));

@@ -23,7 +23,7 @@ public class StreamBenchmark extends BaseTest {
     @Before
     public void setUp() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, TestStreamable::new, 1);
+        streamService.register(TestStreamable.class, TestStreamable::new, 1);
         buffer = Unpooled.buffer();
         output = streamService.output(buffer);
         output.writeClass(TestStreamable.class);
@@ -72,9 +72,10 @@ public class StreamBenchmark extends BaseTest {
 
     public static class TestStreamable implements Streamable {
 
-        @Override
-        public void readFrom(StreamInput stream) throws IOException {
+        public TestStreamable() {
+        }
 
+        public TestStreamable(StreamInput stream) throws IOException {
         }
 
         @Override

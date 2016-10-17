@@ -116,9 +116,7 @@ public class DataStreamInput implements StreamInput {
 
     @Override
     public <T extends Streamable> T readStreamable() throws IOException {
-        T instance = classRegistry.readNewInstance(this);
-        instance.readFrom(this);
-        return instance;
+        return classRegistry.readStreamable(this);
     }
 
     @Override

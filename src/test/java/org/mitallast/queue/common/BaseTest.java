@@ -1,6 +1,5 @@
 package org.mitallast.queue.common;
 
-import com.google.common.collect.ImmutableList;
 import io.netty.buffer.ByteBuf;
 import org.junit.After;
 import org.junit.Rule;
@@ -8,7 +7,6 @@ import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.common.xstream.XStreamFactory;
-import org.mitallast.queue.queue.QueueMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,43 +105,6 @@ public class BaseTest {
         long qps = (long) (total / (double) (end - start) * 1000.);
         logger.info(metric + ": " + total + " at " + (end - start) + "ms");
         logger.info(metric + ": " + qps + " qps");
-    }
-
-    protected List<QueueMessage> createMessages() {
-        return createMessages(max());
-    }
-
-    protected ImmutableList<QueueMessage> createMessages(int messagesCount) {
-        ImmutableList.Builder<QueueMessage> builder = ImmutableList.builder();
-        for (int i = 0; i < messagesCount; i++) {
-            builder.add(createMessage());
-        }
-        return builder.build();
-    }
-
-    protected ImmutableList<QueueMessage> createMessagesWithUuid() {
-        return createMessagesWithUuid(max());
-    }
-
-    protected ImmutableList<QueueMessage> createMessagesWithUuid(int messagesCount) {
-        ImmutableList.Builder<QueueMessage> builder = ImmutableList.builder();
-        for (int i = 0; i < messagesCount; i++) {
-            builder.add(createMessageWithUuid());
-        }
-        return builder.build();
-    }
-
-    protected QueueMessage createMessage() {
-        QueueMessage message = new QueueMessage();
-        message.setSource(randomUUID().toString());
-        return message;
-    }
-
-    protected QueueMessage createMessageWithUuid() {
-        QueueMessage message = new QueueMessage();
-        message.setUuid(randomUUID());
-        message.setSource(randomUUID().toString());
-        return message;
     }
 
     protected XStreamBuilder jsonBuilder(ByteBuf buffer) throws IOException {

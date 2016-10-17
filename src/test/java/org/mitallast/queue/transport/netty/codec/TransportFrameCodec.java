@@ -17,7 +17,7 @@ public class TransportFrameCodec extends BaseTest {
     @Test
     public void testPing() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
+        streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
@@ -35,7 +35,7 @@ public class TransportFrameCodec extends BaseTest {
     @Test
     public void testRequest() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
+        streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
@@ -56,7 +56,7 @@ public class TransportFrameCodec extends BaseTest {
     @Test
     public void testMessage() throws Exception {
         StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, TestStreamable::new, 123);
+        streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
 
@@ -75,18 +75,14 @@ public class TransportFrameCodec extends BaseTest {
 
     public static class TestStreamable implements Streamable {
 
-        private long value;
+        private final long value;
 
-        public TestStreamable() {
+        public TestStreamable(StreamInput streamInput) throws IOException {
+            this.value = streamInput.readLong();
         }
 
         public TestStreamable(long value) {
             this.value = value;
-        }
-
-        @Override
-        public void readFrom(StreamInput stream) throws IOException {
-            value = stream.readLong();
         }
 
         @Override

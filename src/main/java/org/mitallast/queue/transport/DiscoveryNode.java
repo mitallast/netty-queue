@@ -10,11 +10,14 @@ import java.io.IOException;
 
 public class DiscoveryNode implements Streamable {
 
-    private String name;
-    private HostAndPort address;
-    private Version version = Version.CURRENT;
+    private final String name;
+    private final HostAndPort address;
+    private final Version version;
 
-    public DiscoveryNode() {
+    public DiscoveryNode(StreamInput stream) throws IOException {
+        name = stream.readText();
+        address = HostAndPort.fromParts(stream.readText(), stream.readInt());
+        version = Version.fromId(stream.readShort());
     }
 
     public DiscoveryNode(String name, HostAndPort address, Version version) {
@@ -53,18 +56,11 @@ public class DiscoveryNode implements Streamable {
     }
 
     @Override
-    public void readFrom(StreamInput stream) throws IOException {
-        name = stream.readText();
-        address = HostAndPort.fromParts(stream.readText(), stream.readInt());
-        version = Version.fromId(stream.readInt());
-    }
-
-    @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeText(name);
         stream.writeText(address.getHostText());
         stream.writeInt(address.getPort());
-        stream.writeInt(version.id);
+        stream.writeShort(version.id);
     }
 
     @Override

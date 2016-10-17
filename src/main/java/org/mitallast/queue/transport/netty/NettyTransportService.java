@@ -4,37 +4,29 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import io.netty.channel.*;
-import io.netty.util.AttributeKey;
-import org.mitallast.queue.action.ActionRequest;
-import org.mitallast.queue.action.ActionResponse;
 import org.mitallast.queue.common.Immutable;
-import org.mitallast.queue.common.builder.EntryBuilder;
-import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.RequestTransportFrame;
-import org.mitallast.queue.transport.netty.codec.TransportFrame;
-import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
-import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
+import org.mitallast.queue.transport.netty.codec.*;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class NettyTransportService extends NettyClientBootstrap implements TransportService {
-    private final static AttributeKey<ConcurrentMap<Long, CompletableFuture>> responseMapAttr = AttributeKey.valueOf("responseMapAttr");
     private final ReentrantLock connectionLock;
     private final int channelCount;
+    private final TransportController transportController;
     private final TransportServer transportServer;
     private final StreamService streamService;
     private final List<TransportListener> listeners = new CopyOnWriteArrayList<>();
@@ -42,8 +34,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private volatile ImmutableMap<HostAndPort, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings, TransportServer transportServer, StreamService streamService) {
+    public NettyTransportService(Settings settings, TransportController transportController, TransportServer transportServer, StreamService streamService) {
         super(settings, TransportService.class, TransportModule.class);
+        this.transportController = transportController;
         this.transportServer = transportServer;
         this.streamService = streamService;
         channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
@@ -64,16 +57,10 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     @Override
                     @SuppressWarnings("unchecked")
                     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
-                        CompletableFuture future = ctx.channel().attr(responseMapAttr).get().remove(frame.request());
-                        if (future == null) {
-                            logger.warn("future not found");
-                        } else {
-                            if (frame.streamable()) {
-                                EntryBuilder<ActionResponse> builder = ((RequestTransportFrame) frame).message();
-                                future.complete(builder.build());
-                            } else {
-                                future.complete(frame);
-                            }
+                        if (frame.type() == TransportFrameType.PING) {
+                            logger.trace("ping response");
+                        } else if (frame.type() == TransportFrameType.MESSAGE) {
+                            transportController.dispatchMessage(new NettyTransportChannel(ctx), (MessageTransportFrame) frame);
                         }
                     }
 
@@ -226,7 +213,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     channels[i] = channelFutures[i]
                             .awaitUninterruptibly()
                             .channel();
-                    initChannel(channels[i]);
                 } catch (Throwable e) {
                     logger.error("error connect to {}", address, e);
                     if (reconnectScheduled.compareAndSet(false, true)) {
@@ -247,25 +233,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                         channels[i] = connect(address)
                                 .awaitUninterruptibly()
                                 .channel();
-                        initChannel(channels[i]);
                     } catch (Throwable e) {
                         logger.error("error reconnect to {}", address, e);
                     }
                 }
             }
             reconnectScheduled.set(false);
-        }
-
-        private void initChannel(Channel newChannel) {
-            newChannel.attr(responseMapAttr).set(new ConcurrentHashMap<>());
-            newChannel.closeFuture().addListener(future -> {
-                ConcurrentMap<Long, CompletableFuture> futures = newChannel.attr(responseMapAttr).get();
-                Iterator<Map.Entry<Long, CompletableFuture>> iterator = futures.entrySet().iterator();
-                while (iterator.hasNext()) {
-                    iterator.next().getValue().completeExceptionally(new IOException("channel is closed"));
-                    iterator.remove();
-                }
-            });
         }
 
         @Override
@@ -287,48 +260,13 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public CompletableFuture<TransportFrame> ping() {
+        public void ping() {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             if (channel == null) {
-                return Futures.completeExceptionally(new IOException("channel is closed"));
+                return;
             }
-            TransportFrame frame = TransportFrame.of(requestId);
-            CompletableFuture<TransportFrame> future = Futures.future();
-            channel.attr(responseMapAttr).get().put(requestId, future);
-            channel.writeAndFlush(frame);
-            return future;
-        }
-
-        @Override
-        public <Request extends ActionRequest, Response extends ActionResponse>
-        CompletableFuture<Response> forward(Request request) {
-            long requestId = channelRequestCounter.incrementAndGet();
-            Channel channel = channel((int) requestId);
-            if (channel == null) {
-                return Futures.completeExceptionally(new IOException("channel is closed"));
-            }
-            CompletableFuture<Response> future = Futures.future();
-            RequestTransportFrame frame = RequestTransportFrame.of(requestId, request.toBuilder());
-            channel.attr(responseMapAttr).get().put(requestId, future);
-            channel.writeAndFlush(frame);
-            return future;
-        }
-
-        @Override
-        public <Request extends ActionRequest, Response extends ActionResponse>
-        CompletableFuture<Response> send(Request request) {
-            CompletableFuture<Response> future = Futures.future();
-            this.<Request, Response>forward(request).whenComplete((response, error) -> {
-                if (error != null) {
-                    future.completeExceptionally(error);
-                } else if (response.hasError()) {
-                    future.completeExceptionally(response.error());
-                } else {
-                    future.complete(response);
-                }
-            });
-            return future;
+            channel.writeAndFlush(PingTransportFrame.CURRENT);
         }
 
         private Channel channel(int request) {

@@ -17,7 +17,7 @@ public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> 
 
     @Override
     protected void encode(ChannelHandlerContext ctx, TransportFrame frame, ByteBuf out) throws Exception {
-        out.writeByte(frame.version().id);
+        out.writeShort(frame.version().id);
         out.writeByte(frame.type().ordinal());
 
         // ping does not have body

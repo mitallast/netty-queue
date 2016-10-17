@@ -8,70 +8,13 @@ Goals:
  - REST for simple integration
  - JSON for flexible message structures
  - Netty for fastest TCP/IP and HTTP server realization
- - Memory mapped files to access data as an transaction log
+ - Raft for safe cluster consensus 
 
 As result one instance allows:
- - send up to 165175 REST messages-at-request per second in concurrent mode
+ - send up to 160000 REST message-at-request per second in concurrent mode
+ - send up to 600000 binary protocol message-at-request per second in concurrent mode
 
 See integration test benchmarks for more details.
-
-How to run
-----------
-
-    mvn exec:exec -DskipTests
-    
-REST usage
-----------
-
-server info 
-
-    curl -i -s -XGET 'http://127.0.0.1:8080/?pretty'
-
-server stats 
-
-    curl -i -s -XGET 'http://127.0.0.1:8080/_stats?pretty'
-
-create queue 
-
-    curl -i -s -XPUT 'http://127.0.0.1:8080/my_queue?pretty'
-
-queue stats
-
-    curl -i -s -XGET 'http://127.0.0.1:8080/my_queue/_stats?pretty'
-
-push message as string
-
-    curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"message":"Hello world 1"}'
-
-push message as json
-
-    curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"message":{"Title":"Hello world"}}'
-
-push with uuid message
-
-    curl -i -s -XPOST 'http://127.0.0.1:8080/my_queue/message?pretty' -d '{"uuid":"a57586b7-3eed-4c7c-b257-8bf9021fffbd","message":"Hello world custom_uid"}'
-
-delete with uuid
-
-    curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue/message?uuid=a57586b7-3eed-4c7c-b257-8bf9021fffbd&pretty'
-    curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue/message/a57586b7-3eed-4c7c-b257-8bf9021fffbd?pretty'
-
-peek message with uuid
-
-    curl -i -s -XHEAD 'http://127.0.0.1:8080/my_queue/message?pretty'
-
-get message with uuid
-
-    curl -i -s -XHEAD 'http://127.0.0.1:8080/my_queue/message/a57586b7-3eed-4c7c-b256-8bf9021fffbd?pretty'
-
-pop message
-
-    curl -i -s -XGET 'http://127.0.0.1:8080/my_queue/message?pretty'
-
-
-delete queue
-
-    curl -i -s -XDELETE 'http://127.0.0.1:8080/my_queue?reason=test&pretty'
 
 See tests for communication example
 

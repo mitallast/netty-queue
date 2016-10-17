@@ -20,7 +20,7 @@ public class StreamTest extends BaseTest {
     @Before
     public void setUp() throws Exception {
         streamService = new InternalStreamService(ImmutableSettings.EMPTY);
-        streamService.registerClass(TestStreamable.class, TestStreamable::new, 1);
+        streamService.register(TestStreamable.class, TestStreamable::new, 1);
         buffer = Unpooled.buffer();
     }
 
@@ -43,9 +43,10 @@ public class StreamTest extends BaseTest {
 
     public static class TestStreamable implements Streamable {
 
-        @Override
-        public void readFrom(StreamInput stream) throws IOException {
+        public TestStreamable() {
+        }
 
+        public TestStreamable(StreamInput streamInput) throws IOException {
         }
 
         @Override

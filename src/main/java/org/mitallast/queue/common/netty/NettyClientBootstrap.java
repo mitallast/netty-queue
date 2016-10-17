@@ -67,9 +67,6 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     @Override
     protected void doStop() throws IOException {
-        if (bootstrap != null) {
-            bootstrap.group().shutdownGracefully();
-        }
     }
 
     @Override

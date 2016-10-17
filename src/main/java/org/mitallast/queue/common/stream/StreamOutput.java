@@ -137,10 +137,4 @@ public interface StreamOutput extends DataOutput, Closeable {
             }
         }
     }
-
-    default <T extends StreamableError> void writeError(T error) throws IOException {
-        StreamableError.Builder builder = error.toBuilder();
-        writeClass(builder.getClass());
-        writeStreamable(builder);
-    }
 }

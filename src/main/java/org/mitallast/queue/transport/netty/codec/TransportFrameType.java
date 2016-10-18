@@ -1,5 +1,5 @@
 package org.mitallast.queue.transport.netty.codec;
 
 public enum TransportFrameType {
-    PING, REQUEST, MESSAGE
+    PING, MESSAGE
 }

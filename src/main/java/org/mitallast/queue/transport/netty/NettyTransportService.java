@@ -9,14 +9,18 @@ import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.*;
+import org.mitallast.queue.transport.TransportChannel;
+import org.mitallast.queue.transport.TransportController;
+import org.mitallast.queue.transport.TransportModule;
+import org.mitallast.queue.transport.TransportService;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
+import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
+import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,17 +31,14 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock;
     private final int channelCount;
     private final TransportController transportController;
-    private final TransportServer transportServer;
     private final StreamService streamService;
-    private final List<TransportListener> listeners = new CopyOnWriteArrayList<>();
     private final ExecutorService executorService;
     private volatile ImmutableMap<HostAndPort, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings, TransportController transportController, TransportServer transportServer, StreamService streamService) {
+    public NettyTransportService(Settings settings, TransportController transportController, StreamService streamService) {
         super(settings, TransportService.class, TransportModule.class);
         this.transportController = transportController;
-        this.transportServer = transportServer;
         this.streamService = streamService;
         channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
         connectedNodes = ImmutableMap.of();
@@ -54,14 +55,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 pipeline.addLast(new TransportFrameDecoder(streamService));
                 pipeline.addLast(new TransportFrameEncoder(streamService));
                 pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>(false) {
+
                     @Override
-                    @SuppressWarnings("unchecked")
+                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                        ctx.channel().attr(NettyTransportChannel.channelAttr).set(new NettyTransportChannel(ctx));
+                    }
+
+                    @Override
                     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
-                        if (frame.type() == TransportFrameType.PING) {
-                            logger.trace("ping response");
-                        } else if (frame.type() == TransportFrameType.MESSAGE) {
-                            transportController.dispatchMessage(new NettyTransportChannel(ctx), (MessageTransportFrame) frame);
-                        }
+                        NettyTransportChannel transportChannel = ctx.channel().attr(NettyTransportChannel.channelAttr).get();
+                        transportController.dispatch(transportChannel, frame);
                     }
 
                     @Override
@@ -96,26 +99,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    public HostAndPort localAddress() {
-        return transportServer.localAddress();
-    }
-
-    @Override
-    public DiscoveryNode localNode() {
-        return transportServer.localNode();
-    }
-
-    @Override
     public void connectToNode(HostAndPort address) {
         checkIsStarted();
         if (address == null) {
             throw new IllegalArgumentException("can't connect to null address");
         }
-        if (address.equals(localAddress())) {
-            logger.debug("connect to local node");
-            return;
-        }
-        boolean connected = false;
         connectionLock.lock();
         try {
             if (connectedNodes.get(address) != null) {
@@ -124,13 +112,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             NodeChannel nodeChannel = new NodeChannel(address);
             connectedNodes = Immutable.compose(connectedNodes, address, nodeChannel);
             nodeChannel.open();
-            connected = true;
             logger.info("connected to node {}", address);
         } finally {
             connectionLock.unlock();
-            if (connected) {
-                listeners.forEach(listener -> listener.connected(address));
-            }
         }
     }
 
@@ -139,10 +123,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         if (address == null) {
             throw new IllegalArgumentException("can't disconnect from null node");
         }
-        if (address.equals(localAddress())) {
-            throw new IllegalArgumentException("can't disconnect from local node");
-        }
-        boolean disconnected = false;
         connectionLock.lock();
         try {
             NodeChannel nodeChannel = connectedNodes.get(address);
@@ -152,44 +132,21 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             logger.info("disconnect from node {}", address);
             nodeChannel.close();
             connectedNodes = Immutable.subtract(connectedNodes, address);
-            disconnected = true;
         } finally {
             connectionLock.unlock();
-            if (disconnected) {
-                listeners.forEach(listener -> listener.disconnected(address));
-            }
         }
     }
 
     @Override
-    public TransportClient client() {
-        return transportServer.localClient();
-    }
-
-    @Override
-    public TransportClient client(HostAndPort address) {
-        if (address.equals(localAddress())) {
-            return transportServer.localClient();
-        } else {
-            NodeChannel nodeChannel = connectedNodes.get(address);
-            if (nodeChannel == null) {
-                throw new IllegalArgumentException("Not connected to node: " + address);
-            }
-            return nodeChannel;
+    public TransportChannel channel(HostAndPort address) {
+        NodeChannel nodeChannel = connectedNodes.get(address);
+        if (nodeChannel == null) {
+            throw new IllegalArgumentException("Not connected to node: " + address);
         }
+        return nodeChannel;
     }
 
-    @Override
-    public void addListener(TransportListener listener) {
-        listeners.add(listener);
-    }
-
-    @Override
-    public void removeListener(TransportListener listener) {
-        listeners.remove(listener);
-    }
-
-    private class NodeChannel implements TransportClient, Closeable {
+    private class NodeChannel implements TransportChannel, Closeable {
         private final HostAndPort address;
         private final AtomicLong channelRequestCounter = new AtomicLong();
         private final AtomicBoolean reconnectScheduled = new AtomicBoolean();
@@ -242,6 +199,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
+        public void send(TransportFrame response) {
+            long requestId = channelRequestCounter.incrementAndGet();
+            Channel channel = channel((int) requestId);
+            if (channel == null) {
+                return;
+            }
+            channel.writeAndFlush(response);
+        }
+
+        @Override
         public synchronized void close() {
             closed.set(true);
             List<ChannelFuture> closeFutures = new ArrayList<>(channels.length);
@@ -257,16 +224,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     //ignore
                 }
             }
-        }
-
-        @Override
-        public void ping() {
-            long requestId = channelRequestCounter.incrementAndGet();
-            Channel channel = channel((int) requestId);
-            if (channel == null) {
-                return;
-            }
-            channel.writeAndFlush(PingTransportFrame.CURRENT);
         }
 
         private Channel channel(int request) {

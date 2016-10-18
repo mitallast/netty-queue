@@ -7,6 +7,4 @@ public interface TransportServer {
     HostAndPort localAddress();
 
     DiscoveryNode localNode();
-
-    TransportClient localClient();
 }

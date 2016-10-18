@@ -15,7 +15,6 @@ import java.util.List;
 public class TransportFrameDecoder extends ByteToMessageDecoder {
     private final static Logger logger = LoggerFactory.getLogger(TransportFrameDecoder.class);
     private final static int HEADER_SIZE = 2 + 1;
-    private final static int REQUEST_HEADER_SIZE = HEADER_SIZE + Long.BYTES + Integer.BYTES;
     private final static int MESSAGE_HEADER_SIZE = HEADER_SIZE + Integer.BYTES;
 
     private final StreamService streamService;
@@ -42,32 +41,6 @@ public class TransportFrameDecoder extends ByteToMessageDecoder {
                 }else {
                     out.add(new PingTransportFrame(version));
                 }
-            } else if (type == TransportFrameType.REQUEST.ordinal()) {
-                if (buffer.readableBytes() < REQUEST_HEADER_SIZE) {
-                    break;
-                }
-
-                final long request = buffer.getLong(readerIndex + HEADER_SIZE);
-                final int size = buffer.getInt(readerIndex + HEADER_SIZE + Long.BYTES);
-
-                if (buffer.readableBytes() < size + REQUEST_HEADER_SIZE) {
-                    break;
-                }
-                buffer.readerIndex(buffer.readerIndex() + REQUEST_HEADER_SIZE);
-                int start = buffer.readerIndex();
-                final Streamable message;
-                try (StreamInput input = streamService.input(buffer)) {
-                    message = input.readStreamable();
-                }
-                int readSize = buffer.readerIndex() - start;
-                if (readSize < size) {
-                    logger.warn("error reading message, expected {} read {}, skip bytes", size, readSize);
-                    buffer.readerIndex(buffer.readerIndex() + size - readSize);
-                } else if (readSize > size) {
-                    logger.warn("error reading message, expected {} read {}", size, readSize);
-                }
-
-                out.add(new RequestTransportFrame(version, request, message));
             } else if (type == TransportFrameType.MESSAGE.ordinal()) {
                 if (buffer.readableBytes() < MESSAGE_HEADER_SIZE) {
                     break;

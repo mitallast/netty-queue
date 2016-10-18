@@ -39,6 +39,7 @@ Recommended java options
     -Xms4g
     -Xmx4g
     -Djava.net.preferIPv4Stack=true
+    -XX:MaxDirectMemorySize=1g
     -XX:+UseParNewGC
     -XX:+UseConcMarkSweepGC
     -XX:CMSInitiatingOccupancyFraction=75

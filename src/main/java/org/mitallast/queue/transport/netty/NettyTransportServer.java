@@ -17,7 +17,6 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     private final DiscoveryNode discoveryNode;
     private final TransportController transportController;
     private final StreamService streamService;
-    private final TransportLocalClient localClient;
 
     @Inject
     public NettyTransportServer(
@@ -33,7 +32,6 @@ public class NettyTransportServer extends NettyServer implements TransportServer
                 HostAndPort.fromParts(host, port),
                 Version.CURRENT
         );
-        this.localClient = new TransportLocalClient();
     }
 
     @Override
@@ -47,13 +45,8 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     }
 
     @Override
-    public TransportClient localClient() {
-        return localClient;
-    }
-
-    @Override
     protected ChannelInitializer<SocketChannel> channelInitializer() {
-        return new TransportServerInitializer(new TransportServerHandler(logger, transportController));
+        return new TransportServerInitializer();
     }
 
     protected int defaultPort() {
@@ -62,55 +55,42 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     private class TransportServerInitializer extends ChannelInitializer<SocketChannel> {
 
-        private final TransportServerHandler transportServerHandler;
-
-        public TransportServerInitializer(TransportServerHandler transportServerHandler) {
-
-            this.transportServerHandler = transportServerHandler;
-        }
-
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {
             ChannelPipeline pipeline = ch.pipeline();
             pipeline.addLast(new TransportFrameDecoder(streamService));
             pipeline.addLast(new TransportFrameEncoder(streamService));
-            pipeline.addLast(transportServerHandler);
+            pipeline.addLast(new TransportServerHandler());
         }
     }
 
     @ChannelHandler.Sharable
     private class TransportServerHandler extends SimpleChannelInboundHandler<TransportFrame> {
 
-        private final Logger logger;
-        private final TransportController transportController;
-
-        public TransportServerHandler(Logger logger, TransportController transportController) {
+        public TransportServerHandler() {
             super(false);
-            this.logger = logger;
-            this.transportController = transportController;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            ctx.channel().attr(NettyTransportChannel.channelAttr).set(new NettyTransportChannel(ctx));
         }
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
-            if (request.type() == TransportFrameType.PING) {
-                ctx.writeAndFlush(PingTransportFrame.CURRENT);
-            } else if (request.type() == TransportFrameType.MESSAGE) {
-                TransportChannel channel = new NettyTransportChannel(ctx);
-                transportController.dispatchMessage(channel, (MessageTransportFrame) request);
-            }
+            NettyTransportChannel transportChannel = ctx.channel().attr(NettyTransportChannel.channelAttr).get();
+            transportController.dispatch(transportChannel, request);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             logger.error("unexpected channel error, close channel", cause);
             ctx.close();
-        }
-    }
-
-    private class TransportLocalClient implements TransportClient {
-
-        @Override
-        public void ping() {
         }
     }
 }

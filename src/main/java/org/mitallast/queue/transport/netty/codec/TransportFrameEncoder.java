@@ -8,7 +8,6 @@ import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
 
 public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> {
-
     private final StreamService streamService;
 
     public TransportFrameEncoder(StreamService streamService) {
@@ -22,21 +21,7 @@ public class TransportFrameEncoder extends MessageToByteEncoder<TransportFrame> 
 
         // ping does not have body
 
-        if (frame.type() == TransportFrameType.REQUEST) {
-            RequestTransportFrame request = (RequestTransportFrame) frame;
-            out.writeLong(request.request());
-
-            int sizePos = out.writerIndex();
-            out.writerIndex(out.writerIndex() + 4);
-            try (StreamOutput output = streamService.output(out)) {
-                Streamable message = request.message();
-                output.writeClass(message.getClass());
-                output.writeStreamable(message);
-            }
-            int size = out.writerIndex() - sizePos - 4;
-            out.setInt(sizePos, size);
-
-        } else if (frame.type() == TransportFrameType.MESSAGE) {
+        if (frame.type() == TransportFrameType.MESSAGE) {
             MessageTransportFrame request = (MessageTransportFrame) frame;
             int sizePos = out.writerIndex();
             out.writerIndex(out.writerIndex() + 4);

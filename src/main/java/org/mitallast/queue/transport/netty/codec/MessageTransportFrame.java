@@ -27,4 +27,12 @@ public class MessageTransportFrame implements TransportFrame {
     public <T extends Streamable> T message() {
         return (T) message;
     }
+
+    @Override
+    public String toString() {
+        return "MessageTransportFrame{" +
+                "version=" + version +
+                ", message=" + message +
+                '}';
+    }
 }

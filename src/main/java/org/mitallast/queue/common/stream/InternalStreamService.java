@@ -10,7 +10,6 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.settings.Settings;
 
 import java.io.*;
-import java.util.function.Supplier;
 
 public class InternalStreamService extends AbstractComponent implements StreamableClassRegistry, StreamService {
     private final TIntObjectMap<StreamableReader<? extends Streamable>> idToReaderMap = new TIntObjectHashMap<>(100, 0.5f, -1);

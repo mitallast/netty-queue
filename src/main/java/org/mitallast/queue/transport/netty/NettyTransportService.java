@@ -174,7 +174,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     Channel channel = channelFutures[i]
                             .awaitUninterruptibly()
                             .channel();
-                    // channel.attr(NettyFlushPromise.attr).set(new NettyFlushPromise(channel));
                     channels[i] = channel;
                 } catch (Throwable e) {
                     logger.error("error connect to {}", address, e);
@@ -196,7 +195,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                         Channel channel = connect(address)
                                 .awaitUninterruptibly()
                                 .channel();
-                        // channel.attr(NettyFlushPromise.attr).set(new NettyFlushPromise(channel));
                         channels[i] = channel;
                     } catch (Throwable e) {
                         logger.error("error reconnect to {}", address, e);
@@ -213,10 +211,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (channel == null) {
                 return;
             }
-            // NettyFlushPromise flushPromise = channel.attr(NettyFlushPromise.attr).get();
-            // flushPromise.increment();
             channel.writeAndFlush(message, channel.voidPromise());
-            // channel.eventLoop().execute(flushPromise);
         }
 
         @Override

@@ -15,10 +15,7 @@ public class NettyTransportChannel implements TransportChannel {
 
     @Override
     public void send(TransportFrame frame) {
-        // NettyFlushPromise flushPromise = ctx.channel().attr(NettyFlushPromise.attr).get();
-        // flushPromise.increment();
         ctx.writeAndFlush(frame, ctx.voidPromise());
-        // ctx.executor().submit(flushPromise);
     }
 
     @Override

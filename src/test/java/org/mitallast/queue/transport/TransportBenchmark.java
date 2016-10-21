@@ -24,7 +24,7 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Override
     protected int max() {
-        return 100000;
+        return 200000;
     }
 
     @Override
@@ -67,23 +67,6 @@ public class TransportBenchmark extends BaseQueueTest {
         countDownLatch.await();
         long end = System.currentTimeMillis();
         printQps("send", total(), start, end);
-    }
-
-    @Test
-    public void testConcurrent() throws Exception {
-        warmUp();
-        while (!Thread.interrupted()) {
-            countDownLatch = new CountDownLatch(total());
-            long start = System.currentTimeMillis();
-            executeConcurrent((t, c) -> {
-                for (int i = t; i < total(); i += c) {
-                    channel.send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
-                }
-            });
-            countDownLatch.await();
-            long end = System.currentTimeMillis();
-            printQps("send concurrent", total(), start, end);
-        }
     }
 
     private void warmUp() throws Exception {

@@ -1,7 +1,7 @@
 package org.mitallast.queue;
 
-import org.mitallast.queue.common.settings.ImmutableSettings;
-import org.mitallast.queue.common.settings.Settings;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.node.Node;
 
@@ -9,11 +9,8 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String... args) throws IOException, InterruptedException {
-
-        final Settings settings = ImmutableSettings.builder()
-            .put("work_dir", "data")
-            .build();
-        final Node node = new InternalNode(settings);
+        Config config = ConfigFactory.load();
+        final Node node = new InternalNode(config);
         node.start();
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override

@@ -1,20 +1,20 @@
 package org.mitallast.queue.common.component;
 
 import com.google.inject.AbstractModule;
-import org.mitallast.queue.common.settings.Settings;
+import com.typesafe.config.Config;
 
 public class ComponentModule extends AbstractModule {
 
-    private final Settings settings;
+    private final Config config;
 
-    public ComponentModule(Settings settings) {
-        this.settings = settings;
+    public ComponentModule(Config config) {
+        this.config = config;
     }
 
     @Override
     protected void configure() {
-        LifecycleService lifecycleService = new LifecycleService(settings);
-        bind(Settings.class).toInstance(settings);
+        LifecycleService lifecycleService = new LifecycleService(config);
+        bind(Config.class).toInstance(config);
         bind(LifecycleService.class).toInstance(lifecycleService);
         bindListener(new LifecycleMatcher(), lifecycleService);
     }

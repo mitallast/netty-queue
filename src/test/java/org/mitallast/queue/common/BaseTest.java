@@ -23,6 +23,8 @@ public class BaseTest {
 
     protected final Random random = new Random();
 
+    private final static int availableProcessors = Runtime.getRuntime().availableProcessors();
+
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
 
@@ -36,7 +38,7 @@ public class BaseTest {
     }
 
     protected int concurrency() {
-        return Runtime.getRuntime().availableProcessors();
+        return availableProcessors;
     }
 
     protected int max() {

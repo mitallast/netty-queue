@@ -1,8 +1,8 @@
 package org.mitallast.queue.raft;
 
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.raft.cluster.*;
 import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.transport.TransportController;
@@ -10,8 +10,8 @@ import org.mitallast.queue.transport.TransportController;
 public class RaftHandler extends AbstractComponent {
 
     @Inject
-    public RaftHandler(Settings settings, TransportController transportController, Raft raft) {
-        super(settings);
+    public RaftHandler(Config config, TransportController transportController, Raft raft) {
+        super(config.getConfig("raft"), RaftHandler.class);
 
         // cluster
         transportController.registerMessageHandler(RaftMemberAdded.class, raft::receive);

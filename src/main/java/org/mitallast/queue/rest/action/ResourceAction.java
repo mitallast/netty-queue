@@ -3,11 +3,11 @@ package org.mitallast.queue.rest.action;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.ClassPath;
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -21,8 +21,8 @@ import java.io.InputStream;
 public class ResourceAction extends BaseRestHandler {
 
     @Inject
-    public ResourceAction(Settings settings, RestController controller) throws IOException {
-        super(settings);
+    public ResourceAction(Config config, RestController controller) throws IOException {
+        super(config.getConfig("rest"), ResourceAction.class);
 
         ClassPath classPath = ClassPath.from(getClass().getClassLoader());
         ImmutableSet<ClassPath.ResourceInfo> resources = classPath.getResources();

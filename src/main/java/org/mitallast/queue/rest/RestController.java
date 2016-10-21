@@ -1,13 +1,13 @@
 package org.mitallast.queue.rest;
 
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.path.PathTrie;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.response.StatusRestResponse;
 import org.mitallast.queue.rest.response.StringRestResponse;
 import org.mitallast.queue.rest.transport.HttpRequest;
@@ -23,8 +23,8 @@ public class RestController extends AbstractComponent {
     private final PathTrie<RestHandler> optionsHandlers = new PathTrie<>();
 
     @Inject
-    public RestController(Settings settings) {
-        super(settings);
+    public RestController(Config config) {
+        super(config.getConfig("rest"), RestController.class);
     }
 
     public void dispatchRequest(ChannelHandlerContext ctx, FullHttpRequest httpRequest) {

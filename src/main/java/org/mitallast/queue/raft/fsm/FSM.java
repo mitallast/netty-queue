@@ -1,9 +1,9 @@
 package org.mitallast.queue.raft.fsm;
 
 import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
@@ -15,8 +15,8 @@ public class FSM<StateType, MetadataType> extends AbstractComponent {
     private State state;
     private ImmutableMap<StateType, StateFunction> stateMap = ImmutableMap.of();
 
-    public FSM(Settings settings) {
-        super(settings);
+    public FSM(Config config, Class loggerClass) {
+        super(config, loggerClass);
     }
 
     public void startWith(StateType initialState, MetadataType initialMetadata) {

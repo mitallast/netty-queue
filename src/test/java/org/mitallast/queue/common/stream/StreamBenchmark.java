@@ -1,12 +1,12 @@
 package org.mitallast.queue.common.stream;
 
+import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
 
 import java.io.IOException;
 
@@ -22,7 +22,7 @@ public class StreamBenchmark extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference());
         streamService.register(TestStreamable.class, TestStreamable::new, 1);
         buffer = Unpooled.buffer();
         output = streamService.output(buffer);

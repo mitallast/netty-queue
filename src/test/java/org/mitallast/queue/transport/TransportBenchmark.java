@@ -1,12 +1,13 @@
 package org.mitallast.queue.transport;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
@@ -23,16 +24,16 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Override
     protected int max() {
-        return super.max() * 10;
+        return 100000;
     }
 
     @Override
-    protected Settings settings() throws Exception {
-        return ImmutableSettings.builder()
-                .put(super.settings())
+    protected Config config() throws Exception {
+        ImmutableMap<String, Object> config = ImmutableMap.<String, Object>builder()
                 .put("rest.enabled", false)
                 .put("raft.enabled", false)
                 .build();
+        return ConfigFactory.parseMap(config).withFallback(super.config());
     }
 
     @Before
@@ -68,31 +69,34 @@ public class TransportBenchmark extends BaseQueueTest {
         printQps("send", total(), start, end);
     }
 
-    public void warmUp() throws Exception {
+    @Test
+    public void testConcurrent() throws Exception {
+        warmUp();
+        while (!Thread.interrupted()) {
+            countDownLatch = new CountDownLatch(total());
+            long start = System.currentTimeMillis();
+            executeConcurrent((t, c) -> {
+                for (int i = t; i < total(); i += c) {
+                    channel.send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
+                }
+            });
+            countDownLatch.await();
+            long end = System.currentTimeMillis();
+            printQps("send concurrent", total(), start, end);
+        }
+    }
+
+    private void warmUp() throws Exception {
         int warmUp = total();
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
             channel.send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
         }
         countDownLatch.await();
+        System.gc();
     }
 
-    @Test
-    public void testConcurrent() throws Exception {
-        warmUp();
-        countDownLatch = new CountDownLatch(total());
-        long start = System.currentTimeMillis();
-        executeConcurrent((t, c) -> {
-            for (int i = t; i < total(); i += c) {
-                channel.send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
-            }
-        });
-        countDownLatch.await();
-        long end = System.currentTimeMillis();
-        printQps("send concurrent", total(), start, end);
-    }
-
-    public static class TestStreamable implements Streamable {
+    private static class TestStreamable implements Streamable {
 
         private final long value;
 

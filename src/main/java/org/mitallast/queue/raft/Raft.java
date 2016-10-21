@@ -3,7 +3,7 @@ package org.mitallast.queue.raft;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import org.mitallast.queue.common.settings.Settings;
+import com.typesafe.config.Config;
 import org.mitallast.queue.raft.cluster.*;
 import org.mitallast.queue.raft.domain.*;
 import org.mitallast.queue.raft.fsm.FSM;
@@ -33,16 +33,16 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
     private LogIndexMap matchIndex = new LogIndexMap();
 
     @Inject
-    public Raft(Settings settings) {
-        super(settings);
+    public Raft(Config config) {
+        super(config.getConfig("raft"), Raft.class);
 
         startWith(Init, new RaftMetadata());
 
         StateFunction initialBehavior = match()
-                .event(ChangeConfiguration.class, (config, meta) -> {
+                .event(ChangeConfiguration.class, (conf, meta) -> {
                     logger.info("applying initial raft cluster configuration, consists of [{}] nodes: {}",
-                            config.getNewConf().members().size(),
-                            config.getNewConf().members());
+                            conf.getNewConf().members().size(),
+                            conf.getNewConf().members());
                     resetElectionDeadline();
                     logger.info("finished init of new raft member, becoming follower");
                     return goTo(Follower, apply(new WithNewConfigEvent(meta.getConfig()), meta));

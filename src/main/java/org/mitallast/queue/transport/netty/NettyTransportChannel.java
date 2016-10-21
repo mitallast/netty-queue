@@ -6,7 +6,7 @@ import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
 public class NettyTransportChannel implements TransportChannel {
-    public final static AttributeKey<NettyTransportChannel> channelAttr = AttributeKey.valueOf("tr.ch");
+    public final static AttributeKey<NettyTransportChannel> channelAttr = AttributeKey.valueOf("transport");
     private final ChannelHandlerContext ctx;
 
     public NettyTransportChannel(ChannelHandlerContext ctx) {
@@ -15,7 +15,10 @@ public class NettyTransportChannel implements TransportChannel {
 
     @Override
     public void send(TransportFrame frame) {
-        ctx.writeAndFlush(frame);
+        // NettyFlushPromise flushPromise = ctx.channel().attr(NettyFlushPromise.attr).get();
+        // flushPromise.increment();
+        ctx.writeAndFlush(frame, ctx.voidPromise());
+        // ctx.executor().submit(flushPromise);
     }
 
     @Override

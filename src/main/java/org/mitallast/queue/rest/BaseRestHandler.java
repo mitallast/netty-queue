@@ -1,8 +1,8 @@
 package org.mitallast.queue.rest;
 
+import com.typesafe.config.Config;
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.common.xstream.XStreamFactory;
 import org.mitallast.queue.common.xstream.XStreamParser;
@@ -12,8 +12,8 @@ import java.io.InputStream;
 
 public abstract class BaseRestHandler extends AbstractComponent implements RestHandler {
 
-    public BaseRestHandler(Settings settings) {
-        super(settings);
+    public BaseRestHandler(Config config, Class loggerClass) {
+        super(config, loggerClass);
     }
 
     protected XStreamParser createParser(InputStream inputStream) throws IOException {

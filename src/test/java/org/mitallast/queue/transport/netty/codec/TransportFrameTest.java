@@ -1,12 +1,12 @@
 package org.mitallast.queue.transport.netty.codec;
 
+import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
 import org.mitallast.queue.common.stream.*;
 
 import java.io.IOException;
@@ -16,7 +16,7 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testPing() throws Exception {
-        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference());
         streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
@@ -34,7 +34,7 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessage() throws Exception {
-        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference());
         streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);
@@ -54,7 +54,7 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessageEncodeBenchmark() throws Exception {
-        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference());
         streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
 
@@ -75,7 +75,7 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessageDecodeBenchmark() throws Exception {
-        StreamService streamService = new InternalStreamService(ImmutableSettings.EMPTY);
+        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference());
         streamService.register(TestStreamable.class, TestStreamable::new, 123);
         TransportFrameEncoder encoder = new TransportFrameEncoder(streamService);
         TransportFrameDecoder decoder = new TransportFrameDecoder(streamService);

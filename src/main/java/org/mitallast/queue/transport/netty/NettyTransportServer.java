@@ -2,15 +2,14 @@ package org.mitallast.queue.transport.netty;
 
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.netty.NettyServer;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.*;
 import org.mitallast.queue.transport.netty.codec.*;
-import org.slf4j.Logger;
 
 public class NettyTransportServer extends NettyServer implements TransportServer {
 
@@ -20,15 +19,15 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     @Inject
     public NettyTransportServer(
-            Settings settings,
+            Config config,
             TransportController transportController,
             StreamService streamService
     ) {
-        super(settings, NettyTransportServer.class, TransportModule.class);
+        super(config.getConfig("transport"), TransportServer.class);
         this.transportController = transportController;
         this.streamService = streamService;
         this.discoveryNode = new DiscoveryNode(
-                this.settings.get("node.name"),
+                config.getString("node.name"),
                 HostAndPort.fromParts(host, port),
                 Version.CURRENT
         );
@@ -47,10 +46,6 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     @Override
     protected ChannelInitializer<SocketChannel> channelInitializer() {
         return new TransportServerInitializer();
-    }
-
-    protected int defaultPort() {
-        return 10080;
     }
 
     private class TransportServerInitializer extends ChannelInitializer<SocketChannel> {
@@ -79,6 +74,12 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             ctx.channel().attr(NettyTransportChannel.channelAttr).set(new NettyTransportChannel(ctx));
+            // channel.attr(NettyFlushPromise.attr).set(new NettyFlushPromise(channel));
+        }
+
+        @Override
+        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+            ctx.flush();
         }
 
         @Override

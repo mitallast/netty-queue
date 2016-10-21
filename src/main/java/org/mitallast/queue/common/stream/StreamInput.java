@@ -3,8 +3,6 @@ package org.mitallast.queue.common.stream;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.common.settings.ImmutableSettings;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.Closeable;
 import java.io.DataInput;
@@ -97,22 +95,6 @@ public interface StreamInput extends DataInput, Closeable {
     ByteBuf readByteBuf() throws IOException;
 
     ByteBuf readByteBufOrNull() throws IOException;
-
-    default Settings readSettings() throws IOException {
-        int size = readInt();
-        if (size == 0) {
-            return ImmutableSettings.EMPTY;
-        } else {
-            ImmutableSettings.Builder builder = ImmutableSettings.builder();
-            for (int i = 0; i < size; i++) {
-                builder.put(
-                    readText(),
-                    readText()
-                );
-            }
-            return builder.build();
-        }
-    }
 
     <T extends Streamable> T readStreamable() throws IOException;
 

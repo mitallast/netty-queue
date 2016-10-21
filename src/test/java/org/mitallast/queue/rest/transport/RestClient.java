@@ -1,5 +1,6 @@
 package org.mitallast.queue.rest.transport;
 
+import com.typesafe.config.Config;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -11,7 +12,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import org.mitallast.queue.common.concurrent.Futures;
 import org.mitallast.queue.common.netty.NettyClient;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -20,8 +20,8 @@ public class RestClient extends NettyClient {
 
     private final ConcurrentLinkedDeque<CompletableFuture<FullHttpResponse>> queue = new ConcurrentLinkedDeque<>();
 
-    public RestClient(Settings settings) {
-        super(settings, RestClient.class, RestClient.class);
+    public RestClient(Config config) {
+        super(config.getConfig("rest"), RestClient.class);
     }
 
     public CompletableFuture<FullHttpResponse> send(HttpRequest request) {

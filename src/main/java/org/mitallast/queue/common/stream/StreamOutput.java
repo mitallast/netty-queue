@@ -1,13 +1,11 @@
 package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.Closeable;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -95,15 +93,6 @@ public interface StreamOutput extends DataOutput, Closeable {
     void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException;
 
     <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException;
-
-    default void writeSettings(Settings settings) throws IOException {
-        Map<String, String> asMap = settings.getAsMap();
-        writeInt(asMap.size());
-        for (Map.Entry<String, String> entry : asMap.entrySet()) {
-            writeUTF(entry.getKey());
-            writeUTF(entry.getValue());
-        }
-    }
 
     default <T extends Streamable> void writeStreamable(T streamable) throws IOException {
         streamable.writeTo(this);

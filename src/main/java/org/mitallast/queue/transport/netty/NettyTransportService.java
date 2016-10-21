@@ -3,15 +3,14 @@ package org.mitallast.queue.transport.netty;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import io.netty.channel.*;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
-import org.mitallast.queue.transport.TransportModule;
 import org.mitallast.queue.transport.TransportService;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
@@ -36,11 +35,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private volatile ImmutableMap<HostAndPort, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Settings settings, TransportController transportController, StreamService streamService) {
-        super(settings, TransportService.class, TransportModule.class);
+    public NettyTransportService(Config config, TransportController transportController, StreamService streamService) {
+        super(config.getConfig("transport"), TransportService.class);
         this.transportController = transportController;
         this.streamService = streamService;
-        channelCount = componentSettings.getAsInt("channel_count", Runtime.getRuntime().availableProcessors());
+        channelCount = this.config.getInt("channel_count");
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
         executorService = NamedExecutors.newSingleThreadPool("reconnect");
@@ -65,6 +64,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
                         NettyTransportChannel transportChannel = ctx.channel().attr(NettyTransportChannel.channelAttr).get();
                         transportController.dispatch(transportChannel, frame);
+                    }
+
+                    @Override
+                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+                        ctx.flush();
                     }
 
                     @Override
@@ -158,7 +162,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             this.channels = new Channel[channelCount];
         }
 
-        public synchronized void open() {
+        private synchronized void open() {
             logger.debug("connect to {}", address);
             ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
             for (int i = 0; i < channelCount; i++) {
@@ -167,9 +171,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             logger.debug("await channel open {}", address);
             for (int i = 0; i < channelCount; i++) {
                 try {
-                    channels[i] = channelFutures[i]
+                    Channel channel = channelFutures[i]
                             .awaitUninterruptibly()
                             .channel();
+                    // channel.attr(NettyFlushPromise.attr).set(new NettyFlushPromise(channel));
+                    channels[i] = channel;
                 } catch (Throwable e) {
                     logger.error("error connect to {}", address, e);
                     if (reconnectScheduled.compareAndSet(false, true)) {
@@ -179,7 +185,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
         }
 
-        public synchronized void reconnect() {
+        private synchronized void reconnect() {
             if (closed.get()) {
                 return;
             }
@@ -187,9 +193,11 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             for (int i = 0; i < channels.length; i++) {
                 if (channels[i] == null || !channels[i].isOpen()) {
                     try {
-                        channels[i] = connect(address)
+                        Channel channel = connect(address)
                                 .awaitUninterruptibly()
                                 .channel();
+                        // channel.attr(NettyFlushPromise.attr).set(new NettyFlushPromise(channel));
+                        channels[i] = channel;
                     } catch (Throwable e) {
                         logger.error("error reconnect to {}", address, e);
                     }
@@ -199,13 +207,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public void send(TransportFrame response) {
+        public void send(TransportFrame message) {
             long requestId = channelRequestCounter.incrementAndGet();
             Channel channel = channel((int) requestId);
             if (channel == null) {
                 return;
             }
-            channel.writeAndFlush(response);
+            // NettyFlushPromise flushPromise = channel.attr(NettyFlushPromise.attr).get();
+            // flushPromise.increment();
+            channel.writeAndFlush(message, channel.voidPromise());
+            // channel.eventLoop().execute(flushPromise);
         }
 
         @Override

@@ -1,10 +1,10 @@
 package org.mitallast.queue.rest.action;
 
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.common.xstream.XStreamString;
 import org.mitallast.queue.rest.BaseRestHandler;
@@ -21,8 +21,8 @@ public class RestIndexAction extends BaseRestHandler {
     private final static XStreamString MESSAGE_TEXT = new XStreamString("You now, for queue");
 
     @Inject
-    public RestIndexAction(Settings settings, RestController controller) {
-        super(settings);
+    public RestIndexAction(Config config, RestController controller) {
+        super(config.getConfig("rest"), RestIndexAction.class);
         controller.registerHandler(HttpMethod.GET, "/", this);
         controller.registerHandler(HttpMethod.HEAD, "/", this);
     }

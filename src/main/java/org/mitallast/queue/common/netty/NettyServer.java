@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.netty;
 
+import com.typesafe.config.Config;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -8,7 +9,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
 
@@ -28,21 +28,17 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private ServerBootstrap bootstrap;
     private NioEventLoopGroup boss;
 
-    public NettyServer(Settings settings, Class loggerClass, Class componentClass) {
-        super(settings, loggerClass, componentClass);
-        this.host = componentSettings.get("host", "127.0.0.1");
-        this.port = componentSettings.getAsInt("port", defaultPort());
-        this.backlog = componentSettings.getAsInt("backlog", 1024);
-        this.reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
-        this.keepAlive = componentSettings.getAsBoolean("keep_alive", true);
-        this.tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", true);
-        this.sndBuf = componentSettings.getAsInt("snd_buf", 65536);
-        this.rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
-        this.threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors());
-    }
-
-    protected int defaultPort() {
-        return 8080;
+    public NettyServer(Config config, Class loggerClass) {
+        super(config, loggerClass);
+        this.host = config.getString("host");
+        this.port = config.getInt("port");
+        this.backlog = config.getInt("backlog");
+        this.reuseAddress = config.getBoolean("reuse_address");
+        this.keepAlive = config.getBoolean("keep_alive");
+        this.tcpNoDelay = config.getBoolean("tcp_no_delay");
+        this.sndBuf = config.getInt("snd_buf");
+        this.rcvBuf = config.getInt("rcv_buf");
+        this.threads = config.getInt("threads");
     }
 
     private NioEventLoopGroup group(String name) {

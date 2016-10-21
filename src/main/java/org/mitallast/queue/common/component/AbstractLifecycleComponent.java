@@ -1,6 +1,6 @@
 package org.mitallast.queue.common.component;
 
-import org.mitallast.queue.common.settings.Settings;
+import com.typesafe.config.Config;
 
 import java.io.IOException;
 
@@ -8,28 +8,8 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
 
     private final Lifecycle lifecycle = new Lifecycle();
 
-    protected AbstractLifecycleComponent(Settings settings) {
-        super(settings);
-    }
-
-    protected AbstractLifecycleComponent(Settings settings, Class customClass) {
-        super(settings, customClass);
-    }
-
-    protected AbstractLifecycleComponent(Settings settings, Class loggerClass, Class componentClass) {
-        super(settings, loggerClass, componentClass);
-    }
-
-    protected AbstractLifecycleComponent(Settings settings, String prefixSettings) {
-        super(settings, prefixSettings);
-    }
-
-    protected AbstractLifecycleComponent(Settings settings, String prefixSettings, Class customClass) {
-        super(settings, prefixSettings, customClass);
-    }
-
-    protected AbstractLifecycleComponent(Settings settings, String prefixSettings, Class loggerClass, Class componentClass) {
-        super(settings, prefixSettings, loggerClass, componentClass);
+    protected AbstractLifecycleComponent(Config config, Class loggerClass) {
+        super(config, loggerClass);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package org.mitallast.queue.common.netty;
 
+import com.typesafe.config.Config;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
 
@@ -12,14 +12,10 @@ public abstract class NettyClient extends NettyClientBootstrap {
     protected final int port;
     protected volatile Channel channel;
 
-    public NettyClient(Settings settings, Class loggerClass, Class componentClass) {
-        super(settings, loggerClass, componentClass);
-        host = componentSettings.get("host", "127.0.0.1");
-        port = componentSettings.getAsInt("port", defaultPort());
-    }
-
-    protected int defaultPort() {
-        return 9080;
+    public NettyClient(Config config, Class loggerClass) {
+        super(config, loggerClass);
+        host = config.getString("host");
+        port = config.getInt("port");
     }
 
     @Override

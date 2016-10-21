@@ -8,8 +8,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.settings.ImmutableSettings;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
@@ -28,7 +26,7 @@ public class RestIntegrationTest extends BaseQueueTest {
         client = 0;
         clients = new ArrayList<>();
         for (int i = 0; i <= concurrency(); i++) {
-            RestClient restClient = new RestClient(node().settings());
+            RestClient restClient = new RestClient(node().config());
             restClient.start();
             clients.add(restClient);
         }
@@ -44,13 +42,6 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     private synchronized RestClient restClient() {
         return clients.get(client++);
-    }
-
-    @Override
-    protected Settings settings() throws Exception {
-        return ImmutableSettings.builder()
-            .put(super.settings())
-            .build();
     }
 
     @Test

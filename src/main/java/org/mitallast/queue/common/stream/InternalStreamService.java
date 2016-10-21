@@ -1,13 +1,13 @@
 package org.mitallast.queue.common.stream;
 
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.*;
 
@@ -16,8 +16,8 @@ public class InternalStreamService extends AbstractComponent implements Streamab
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);
 
     @Inject
-    public InternalStreamService(Settings settings) {
-        super(settings);
+    public InternalStreamService(Config config) {
+        super(config, StreamService.class);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.netty;
 
 import com.google.common.net.HostAndPort;
+import com.typesafe.config.Config;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -8,7 +9,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
-import org.mitallast.queue.common.settings.Settings;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
@@ -24,16 +24,16 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     private volatile Bootstrap bootstrap;
 
-    public NettyClientBootstrap(Settings settings, Class loggerClass, Class componentClass) {
-        super(settings, loggerClass, componentClass);
-        maxContentLength = componentSettings.getAsInt("max_content_length", 1048576);
-        threads = componentSettings.getAsInt("threads", Runtime.getRuntime().availableProcessors());
+    public NettyClientBootstrap(Config config, Class loggerClass) {
+        super(config, loggerClass);
+        maxContentLength = config.getInt("max_content_length");
+        threads = config.getInt("threads");
 
-        reuseAddress = componentSettings.getAsBoolean("reuse_address", false);
-        keepAlive = componentSettings.getAsBoolean("keep_alive", true);
-        tcpNoDelay = componentSettings.getAsBoolean("tcp_no_delay", true);
-        sndBuf = componentSettings.getAsInt("snd_buf", 65536);
-        rcvBuf = componentSettings.getAsInt("rcv_buf", 65536);
+        reuseAddress = config.getBoolean("reuse_address");
+        keepAlive = config.getBoolean("keep_alive");
+        tcpNoDelay = config.getBoolean("tcp_no_delay");
+        sndBuf = config.getInt("snd_buf");
+        rcvBuf = config.getInt("rcv_buf");
     }
 
     private ThreadFactory threadFactory(String name) {

@@ -2,9 +2,9 @@ package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
@@ -17,8 +17,8 @@ public class TransportController extends AbstractComponent {
     private volatile ImmutableMap<Class, BiConsumer> handlerMap = ImmutableMap.of();
 
     @Inject
-    public TransportController(Settings settings) {
-        super(settings);
+    public TransportController(Config config) {
+        super(config.getConfig("transport"), TransportController.class);
     }
 
     public synchronized <Message extends Streamable> void registerMessageHandler(Class requestClass, BiConsumer<TransportChannel, Message> handler) {

@@ -1,10 +1,11 @@
 package org.mitallast.queue.common;
 
+import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.After;
 import org.junit.Before;
-import org.mitallast.queue.common.settings.ImmutableSettings;
-import org.mitallast.queue.common.settings.Settings;
 import org.mitallast.queue.node.InternalNode;
 
 import java.io.IOException;
@@ -21,11 +22,11 @@ public class BaseIntegrationTest extends BaseTest {
     private List<InternalNode> nodes = new CopyOnWriteArrayList<>();
 
     protected InternalNode createNode() throws Exception {
-        return createNode(settings());
+        return createNode(config());
     }
 
-    protected InternalNode createNode(Settings settings) throws Exception {
-        InternalNode node = new InternalNode(settings);
+    protected InternalNode createNode(Config config) throws Exception {
+        InternalNode node = new InternalNode(config);
         node.start();
         nodes.add(node);
         return node;
@@ -53,15 +54,16 @@ public class BaseIntegrationTest extends BaseTest {
         }
     }
 
-    protected Settings settings() throws Exception {
+    protected Config config() throws Exception {
         int nodeId = nodeCounter.incrementAndGet();
-        return ImmutableSettings.builder()
-            .put("node.name", "node" + nodeId)
-            .put("work_dir", testFolder.newFolder().getAbsolutePath())
-            .put("rest.transport.host", "127.0.0.1")
-            .put("rest.transport.port", 18000 + random.nextInt(500))
-            .put("transport.host", "127.0.0.1")
-            .put("transport.port", 20000 + random.nextInt(500))
-            .build();
+        ImmutableMap<String, Object> config = ImmutableMap.<String, Object>builder()
+                .put("node.name", "node" + nodeId)
+                .put("work_dir", testFolder.newFolder().getAbsolutePath())
+                .put("rest.transport.host", "127.0.0.1")
+                .put("rest.transport.port", 18000 + random.nextInt(500))
+                .put("transport.host", "127.0.0.1")
+                .put("transport.port", 20000 + random.nextInt(500))
+                .build();
+        return ConfigFactory.parseMap(config).withFallback(ConfigFactory.defaultReference());
     }
 }

@@ -72,11 +72,11 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
         }
     }
 
-    public void setTimer(String timerName, Object event, long timeout, TimeUnit timeUnit) {
+    public void setTimer(String timerName, Streamable event, long timeout, TimeUnit timeUnit) {
         setTimer(timerName, event, timeout, timeUnit, false);
     }
 
-    public void setTimer(String timerName, Object event, long timeout, TimeUnit timeUnit, boolean repeat) {
+    public void setTimer(String timerName, Streamable event, long timeout, TimeUnit timeUnit, boolean repeat) {
         cancelTimer(timerName);
         final ScheduledFuture timer;
         if (repeat) {
@@ -87,15 +87,15 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
         timerMap.put(timerName, timer);
     }
 
-    public void receive(TransportChannel channel, Object event) {
+    public void receive(TransportChannel channel, Streamable event) {
         receive(new TransportSender(channel), event);
     }
 
-    public void receive(Object event) {
+    public void receive(Streamable event) {
         receive(new SelfSender(), event);
     }
 
-    public void receive(Sender sender, Object event) {
+    public void receive(Sender sender, Streamable event) {
         context.execute(() -> {
             try {
                 State prevState = state;
@@ -186,7 +186,7 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
 
     public abstract class StateFunction {
 
-        abstract public State receive(Object event, MetadataType metadata);
+        abstract public State receive(Streamable event, MetadataType metadata);
 
         public StateFunction orElse(StateFunction next) {
             return new Combined(this, next);
@@ -199,13 +199,13 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
 
     public class MatchStateFunctionBuilder {
 
-        private ImmutableMap<Class, BiFunction<Object, MetadataType, State>> matchers = ImmutableMap.of();
+        private ImmutableMap<Class, BiFunction<Streamable, MetadataType, State>> matchers = ImmutableMap.of();
 
         @SuppressWarnings("unchecked")
         public <Event> MatchStateFunctionBuilder event(Class<Event> eventClass, BiFunction<Event, MetadataType, State> consumer) {
-            matchers = ImmutableMap.<Class, BiFunction<Object, MetadataType, State>>builder()
+            matchers = ImmutableMap.<Class, BiFunction<Streamable, MetadataType, State>>builder()
                     .putAll(matchers)
-                    .put(eventClass, (BiFunction<Object, MetadataType, State>) consumer)
+                    .put(eventClass, (BiFunction<Streamable, MetadataType, State>) consumer)
                     .build();
             return this;
         }
@@ -217,14 +217,14 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
 
     private class MatchStateFunction extends StateFunction {
 
-        private final ImmutableMap<Class, BiFunction<Object, MetadataType, State>> matchers;
+        private final ImmutableMap<Class, BiFunction<Streamable, MetadataType, State>> matchers;
 
-        private MatchStateFunction(ImmutableMap<Class, BiFunction<Object, MetadataType, State>> matchers) {
+        private MatchStateFunction(ImmutableMap<Class, BiFunction<Streamable, MetadataType, State>> matchers) {
             this.matchers = matchers;
         }
 
         @Override
-        public State receive(Object event, MetadataType metadata) {
+        public State receive(Streamable event, MetadataType metadata) {
             if (matchers.containsKey(event.getClass())) {
                 return matchers.get(event.getClass()).apply(event, metadata);
             }
@@ -243,7 +243,7 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
         }
 
         @Override
-        public State receive(Object event, MetadataType metadata) {
+        public State receive(Streamable event, MetadataType metadata) {
             State state = first.receive(event, metadata);
             if (state == null) {
                 state = second.receive(event, metadata);

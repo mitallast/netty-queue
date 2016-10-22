@@ -588,7 +588,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                 .orElse(replicatedLog);
     }
 
-    private RaftMetadata maybeUpdateConfiguration(RaftMetadata meta, Object command) {
+    private RaftMetadata maybeUpdateConfiguration(RaftMetadata meta, Streamable command) {
         if (command instanceof ClusterConfiguration && ((ClusterConfiguration) command).isNewer(meta.getConfig())) {
             logger.info("appended new configuration, will start using it now: {}", command);
             return meta.withConfig((ClusterConfiguration) command);
@@ -683,7 +683,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         }
     }
 
-    public Streamable apply(Object message) {
+    public Streamable apply(Streamable message) {
         logger.info("apply: {}", message);
         return null;
     }
@@ -787,11 +787,11 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         return new AppendSuccessful(self(), meta.getCurrentTerm(), replicatedLog.lastIndex());
     }
 
-    private ClusterConfiguration maybeGetNewConfiguration(List<Object> entries, ClusterConfiguration config) {
+    private ClusterConfiguration maybeGetNewConfiguration(List<Streamable> entries, ClusterConfiguration config) {
         if (entries.isEmpty()) {
             return config;
         }
-        for (Object entry : entries) {
+        for (Streamable entry : entries) {
             if (entry instanceof ClusterConfiguration) {
                 ClusterConfiguration newConfig = (ClusterConfiguration) entry;
                 logger.info("appended new configuration (seq: {}), will start using it now: {}", newConfig.sequenceNumber(), newConfig);

@@ -3,6 +3,7 @@ package org.mitallast.queue.rest;
 import com.google.inject.AbstractModule;
 import org.mitallast.queue.rest.action.ResourceAction;
 import org.mitallast.queue.rest.action.RestIndexAction;
+import org.mitallast.queue.rest.action.raft.RaftStateAction;
 import org.mitallast.queue.rest.transport.HttpServer;
 
 public class RestModule extends AbstractModule {
@@ -12,5 +13,7 @@ public class RestModule extends AbstractModule {
         bind(RestController.class).asEagerSingleton();
         bind(RestIndexAction.class).asEagerSingleton();
         bind(ResourceAction.class).asEagerSingleton();
+
+        bind(RaftStateAction.class).asEagerSingleton();
     }
 }

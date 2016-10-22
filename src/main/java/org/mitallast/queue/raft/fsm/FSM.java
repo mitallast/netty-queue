@@ -102,7 +102,7 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
                 state = state.withSender(sender);
                 State newState = stateMap.get(state.currentState).receive(event, state.currentMetadata);
                 if (newState == null) {
-                    logger.warn("unhandled event: {}", event);
+                    logger.warn("unhandled event: {} in state {}", event, state.currentState);
                 } else {
                     state = newState;
                     if (!state.currentState.equals(prevState.currentState)) {
@@ -121,6 +121,10 @@ public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComp
 
     public StateType currentState() {
         return state.currentState;
+    }
+
+    public MetadataType currentMeta() {
+        return state.currentMetadata;
     }
 
     public State stay() {

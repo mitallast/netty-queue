@@ -12,9 +12,9 @@
 
     <link href="/resources/webjars/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
     <link href="dashboard.css" rel="stylesheet">
-    <script src=/resources/webjars/jquery/2.1.4/jquery.min.js"></script>
-    <script src=/resources/webjars/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-    <script src=/resources/webjars/handlebars/3.0.0-1/handlebars.min.js"></script>
+    <script src="/resources/webjars/jquery/2.1.4/jquery.min.js"></script>
+    <script src="/resources/webjars/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="/resources/webjars/handlebars/3.0.0-1/handlebars.min.js"></script>
     <script src="dashboard.js"></script>
 </head>
 
@@ -34,8 +34,9 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right visible-xs">
-                <li><a href="#resources-view" data-path="/">Resources</a></li>
-                <li><a href="#create-resource-view">Create queue</a></li>
+                <!--<li><a href="#resources-view" data-path="/">Resources</a></li>-->
+                <!--<li><a href="#create-resource-view">Create queue</a></li>-->
+                <li><a href="#raftState">Raft state</a></li>
             </ul>
         </div>
     </div>
@@ -46,53 +47,97 @@
         <div class="col-sm-3 col-md-2 hidden-xs sidebar">
             <ul class="nav nav-sidebar">
                 <!--<li class="active"><a href="#stats-view">Resources <span class="sr-only">(current)</span></a></li>-->
-                <li><a href="#resources-view" data-path="/">Resources</a></li>
-                <li><a href="#create-resource-view">Create queue</a></li>
+                <!--<li><a href="#resources-view" data-path="/">Resources</a></li>-->
+                <li><a href="#raftState">Raft state</a></li>
             </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"></div>
     </div>
 </div>
-<script id="create-resource-view" type="text/x-handlebars-template">
-    <h1 class="page-header">Create resource</h1>
+<script id="raftState" type="text/x-handlebars-template">
+    <h1 class="page-header">Raft state</h1>
 
-    <div class="row">
-        <form class="col-sm-9 col-md-5" id="create-resource-form">
-            <div class="form-group">
-                <label for="resource-path" class="control-label">Resource path</label>
-                <input type="text" class="form-control" id="resource-path" name="path" placeholder="path">
-            </div>
-            <button type="submit" class="btn btn-default">Submit</button>
-        </form>
-    </div>
-</script>
-<script id="resources-view" type="text/x-handlebars-template">
-    <h1 class="page-header">Raft resources {{@root.basepath}}</h1>
-    {{#if resources}}
+    <h3>Current term: {{currentTerm}}</h3>
+    <h3>Sequence number: {{config.sequenceNumber}}</h3>
+    <h3>Quorum: {{config.quorum}}</h3>
+    <h3>Is transitioning: {{config.isTransitioning}}</h3>
+
+    {{#if config.members}}
+    <h3>Members:</h3>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
             <tr>
-                <th>name</th>
-                <th>action</th>
+                <th>host</th>
+                <th>port</th>
             </tr>
             </thead>
             <tbody>
-            {{#each resources}}
+            {{#each config.members}}
             <tr>
-                <td>{{this}}</td>
-                <td>
-                    <a href="#resources-view" data-path="{{@root.basepath}}/{{this}}"
-                            class="btn btn-xs btn-default">view</a>
-                </td>
+                <td>{{host}}</td>
+                <td>{{port}}</td>
             </tr>
             {{/each}}
             </tbody>
         </table>
     </div>
     {{else}}
-    <p>No resources found</p>
+    <p>No members found</p>
     {{/if}}
+
+    {{#if config.oldMembers}}
+    <h3>Old members:</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>host</th>
+                <th>port</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each config.oldMembers}}
+            <tr>
+                <td>{{host}}</td>
+                <td>{{port}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </div>
+    {{/if}}
+
+    {{#if config.newMembers}}
+    <h3>Old members:</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>host</th>
+                <th>port</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each config.newMembers}}
+            <tr>
+                <td>{{host}}</td>
+                <td>{{port}}</td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </div>
+    {{/if}}
+
+    {{#if votedFor}}
+    <h3>Voted for</h3>
+    <p>host: {{votedFor.host}}</p>
+    <p>port: {{votedFor.port}}</p>
+    {{/if}}
+
+    <h3>Votes received: {{votesReceived}}</h3>
+
 </script>
 </body>
 </html>

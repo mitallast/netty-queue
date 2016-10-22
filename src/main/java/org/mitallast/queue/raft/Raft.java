@@ -622,7 +622,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
             }
         }
 
-        logger.info("send heartbeat to {} in term {}", follower, meta.getCurrentTerm());
+        logger.trace("send heartbeat to {} in term {}", follower, meta.getCurrentTerm());
         send(follower, appendEntries(
                 meta.getCurrentTerm(),
                 replicatedLog,
@@ -638,10 +638,9 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
             ImmutableList<LogEntry> entries = replicatedLog.entriesBatchFrom(lastIndex);
             long prevIndex = Math.max(0, lastIndex - 1);
             Term prevTerm = replicatedLog.termAt(prevIndex);
-            logger.info("send append entries[{}] term:{} from index:{}", entries.size(), term, lastIndex);
+            logger.trace("send append entries[{}] term:{} from index:{}", entries.size(), term, lastIndex);
             return new AppendEntries(self(), term, prevTerm, prevIndex, entries, leaderCommitIdx);
         }
-
     }
 
     private void initializeLeaderState() {
@@ -780,7 +779,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
             logger.debug("executing: replicatedLog = replicatedLog.append({}, {})", entries, atIndex - 1);
             replicatedLog = replicatedLog.append(entries, atIndex - 1);
         }
-        logger.info("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
+        logger.trace("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
         return new AppendSuccessful(self(), meta.getCurrentTerm(), replicatedLog.lastIndex());
     }
 

@@ -2,7 +2,6 @@ package org.mitallast.queue.raft;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.Version;
@@ -11,7 +10,6 @@ import org.mitallast.queue.raft.cluster.*;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.domain.*;
 import org.mitallast.queue.raft.fsm.FSM;
-import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.log.LogIndexMap;
 import org.mitallast.queue.raft.log.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
@@ -140,14 +138,13 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         StateFunction localClusterBehavior = match()
                 .event(RaftMembersDiscoveryTimeout.class, (event, meta) -> {
                     logger.info("discovery timeout");
-
-                    for (HostAndPort hostAndPort : clusterDiscovery.getDiscoveryNodes()) {
-                        if (!hostAndPort.equals(self().address())) {
+                    for (DiscoveryNode node : clusterDiscovery.getDiscoveryNodes()) {
+                        if (!node.equals(self())) {
                             try {
-                                transportService.connectToNode(hostAndPort);
-                                transportService.channel(hostAndPort).send(new MessageTransportFrame(Version.CURRENT, RaftMembersDiscoveryRequest.INSTANCE));
+                                transportService.connectToNode(node);
+                                transportService.channel(node).send(new MessageTransportFrame(Version.CURRENT, RaftMembersDiscoveryRequest.INSTANCE));
                             } catch (Exception e) {
-                                transportService.disconnectFromNode(hostAndPort);
+                                transportService.disconnectFromNode(node);
                             }
                         }
                     }
@@ -725,14 +722,14 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
     }
 
     public void forward(DiscoveryNode node, Streamable message) {
-        transportService.channel(node.address()).send(new MessageTransportFrame(Version.CURRENT, message));
+        transportService.channel(node).send(new MessageTransportFrame(Version.CURRENT, message));
     }
 
     public void send(DiscoveryNode node, Streamable message) {
-        if(node.equals(self())) {
+        if (node.equals(self())) {
             receive(message);
-        }else{
-            transportService.channel(node.address()).send(new MessageTransportFrame(Version.CURRENT, message));
+        } else {
+            transportService.channel(node).send(new MessageTransportFrame(Version.CURRENT, message));
         }
     }
 

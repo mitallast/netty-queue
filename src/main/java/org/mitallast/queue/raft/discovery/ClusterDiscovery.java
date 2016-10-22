@@ -1,18 +1,17 @@
 package org.mitallast.queue.raft.discovery;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
 
 public class ClusterDiscovery extends AbstractComponent {
-    private final ImmutableSet<HostAndPort> discoveryNodes;
+    private final ImmutableSet<DiscoveryNode> discoveryNodes;
 
     @Inject
     public ClusterDiscovery(Config config) {
@@ -20,13 +19,12 @@ public class ClusterDiscovery extends AbstractComponent {
         discoveryNodes = parseDiscovery();
     }
 
-    public ImmutableSet<HostAndPort> getDiscoveryNodes() {
+    public ImmutableSet<DiscoveryNode> getDiscoveryNodes() {
         return discoveryNodes;
     }
 
-    private ImmutableSet<HostAndPort> parseDiscovery() {
-        Set<HostAndPort> nodes = new HashSet<>();
-
+    private ImmutableSet<DiscoveryNode> parseDiscovery() {
+        Set<DiscoveryNode> nodes = new HashSet<>();
 
         List<Integer> portRange = config.getIntList("port-range");
 
@@ -36,14 +34,14 @@ public class ClusterDiscovery extends AbstractComponent {
             int to = portRange.get(1);
             logger.info("host {}, port range {}-{}", host, from, to);
             for (int port = from; port <= to; port++) {
-                nodes.add(HostAndPort.fromParts(host, port));
+                nodes.add(new DiscoveryNode(host, port));
             }
         }
 
         for (Config node : config.getConfigList("nodes")) {
             String host = node.getString("host");
             int port = node.getInt("port");
-            nodes.add(HostAndPort.fromParts(host, port));
+            nodes.add(new DiscoveryNode(host, port));
         }
 
         return ImmutableSet.copyOf(nodes);

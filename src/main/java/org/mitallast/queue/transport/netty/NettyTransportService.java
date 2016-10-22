@@ -1,7 +1,6 @@
 package org.mitallast.queue.transport.netty;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
@@ -9,6 +8,7 @@ import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.stream.StreamService;
+import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
@@ -32,7 +32,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final TransportController transportController;
     private final StreamService streamService;
     private final ExecutorService executorService;
-    private volatile ImmutableMap<HostAndPort, NodeChannel> connectedNodes;
+    private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
     public NettyTransportService(Config config, TransportController transportController, StreamService streamService) {
@@ -85,7 +85,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     protected void doStop() throws IOException {
         List<Runnable> tasks = executorService.shutdownNow();
         logger.warn("not executed tasks {}", tasks);
-        ImmutableMap<HostAndPort, NodeChannel> connectedNodes = this.connectedNodes;
+        ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         super.doStop();
     }
@@ -103,72 +103,72 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    public void connectToNode(HostAndPort address) {
+    public void connectToNode(DiscoveryNode node) {
         checkIsStarted();
-        if (address == null) {
-            throw new IllegalArgumentException("can't connect to null address");
+        if (node == null) {
+            throw new IllegalArgumentException("can't connect to null node");
         }
         connectionLock.lock();
         try {
-            if (connectedNodes.get(address) != null) {
+            if (connectedNodes.get(node) != null) {
                 return;
             }
-            NodeChannel nodeChannel = new NodeChannel(address);
-            connectedNodes = Immutable.compose(connectedNodes, address, nodeChannel);
+            NodeChannel nodeChannel = new NodeChannel(node);
+            connectedNodes = Immutable.compose(connectedNodes, node, nodeChannel);
             nodeChannel.open();
-            logger.info("connected to node {}", address);
+            logger.info("connected to node {}", node);
         } finally {
             connectionLock.unlock();
         }
     }
 
     @Override
-    public void disconnectFromNode(HostAndPort address) {
-        if (address == null) {
+    public void disconnectFromNode(DiscoveryNode node) {
+        if (node == null) {
             throw new IllegalArgumentException("can't disconnect from null node");
         }
         connectionLock.lock();
         try {
-            NodeChannel nodeChannel = connectedNodes.get(address);
+            NodeChannel nodeChannel = connectedNodes.get(node);
             if (nodeChannel == null) {
                 return;
             }
-            logger.info("disconnect from node {}", address);
+            logger.info("disconnect from node {}", node);
             nodeChannel.close();
-            connectedNodes = Immutable.subtract(connectedNodes, address);
+            connectedNodes = Immutable.subtract(connectedNodes, node);
         } finally {
             connectionLock.unlock();
         }
     }
 
     @Override
-    public TransportChannel channel(HostAndPort address) {
-        NodeChannel nodeChannel = connectedNodes.get(address);
+    public TransportChannel channel(DiscoveryNode node) {
+        NodeChannel nodeChannel = connectedNodes.get(node);
         if (nodeChannel == null) {
-            throw new IllegalArgumentException("Not connected to node: " + address);
+            throw new IllegalArgumentException("Not connected to node: " + node);
         }
         return nodeChannel;
     }
 
     private class NodeChannel implements TransportChannel, Closeable {
-        private final HostAndPort address;
+        private final DiscoveryNode node;
         private final AtomicLong channelRequestCounter = new AtomicLong();
         private final AtomicBoolean reconnectScheduled = new AtomicBoolean();
         private final AtomicBoolean closed = new AtomicBoolean(false);
         private final Channel[] channels;
 
-        private NodeChannel(HostAndPort address) {
-            this.address = address;
+        private NodeChannel(DiscoveryNode node) {
+            this.node = node;
             this.channels = new Channel[channelCount];
         }
 
         private synchronized void open() {
-            logger.debug("connect to {}", address);
+            logger.debug("connect to {}", node);
             ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
             for (int i = 0; i < channelCount; i++) {
-                channelFutures[i] = connect(address);
+                channelFutures[i] = connect(node);
             }
-            logger.debug("await channel open {}", address);
+            logger.debug("await channel open {}", node);
             for (int i = 0; i < channelCount; i++) {
                 try {
                     Channel channel = channelFutures[i]
@@ -176,7 +176,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                             .channel();
                     channels[i] = channel;
                 } catch (Throwable e) {
-                    logger.error("error connect to {}", address, e);
+                    logger.error("error connect to {}", node, e);
                     if (reconnectScheduled.compareAndSet(false, true)) {
                         executorService.execute(this::reconnect);
                     }
@@ -188,16 +188,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             if (closed.get()) {
                 return;
             }
-            logger.warn("reconnect to {}", address);
+            logger.warn("reconnect to {}", node);
             for (int i = 0; i < channels.length; i++) {
                 if (channels[i] == null || !channels[i].isOpen()) {
                     try {
-                        Channel channel = connect(address)
+                        Channel channel = connect(node)
                                 .awaitUninterruptibly()
                                 .channel();
                         channels[i] = channel;
                     } catch (Throwable e) {
-                        logger.error("error reconnect to {}", address, e);
+                        logger.error("error reconnect to {}", node, e);
                     }
                 }
             }

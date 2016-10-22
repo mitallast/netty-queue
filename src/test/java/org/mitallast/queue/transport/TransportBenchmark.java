@@ -1,7 +1,6 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.net.HostAndPort;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
@@ -47,9 +46,9 @@ public class TransportBenchmark extends BaseQueueTest {
         TransportController transportController = node().injector().getInstance(TransportController.class);
         transportController.registerMessageHandler(TestStreamable.class, this::handle);
 
-        HostAndPort address = transportServer.localAddress();
-        transportService.connectToNode(address);
-        channel = transportService.channel(address);
+        DiscoveryNode member = transportServer.localNode();
+        transportService.connectToNode(member);
+        channel = transportService.channel(member);
     }
 
     public void handle(TransportChannel channel, TestStreamable streamable) {

@@ -1,6 +1,5 @@
 package org.mitallast.queue.transport;
 
-import com.google.common.net.HostAndPort;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -8,18 +7,31 @@ import org.mitallast.queue.common.stream.Streamable;
 import java.io.IOException;
 
 public class DiscoveryNode implements Streamable {
-    private final HostAndPort address;
+    private final String host;
+    private final int port;
 
     public DiscoveryNode(StreamInput stream) throws IOException {
-        address = HostAndPort.fromParts(stream.readText(), stream.readInt());
+        host = stream.readText();
+        port = stream.readInt();
     }
 
-    public DiscoveryNode(HostAndPort address) {
-        this.address = address;
+    public DiscoveryNode(String host, int port) {
+        this.host = host;
+        this.port = port;
     }
 
-    public HostAndPort address() {
-        return address;
+    public String host() {
+        return host;
+    }
+
+    public int port() {
+        return port;
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeText(host);
+        stream.writeInt(port);
     }
 
     @Override
@@ -29,22 +41,18 @@ public class DiscoveryNode implements Streamable {
 
         DiscoveryNode that = (DiscoveryNode) o;
 
-        return address.equals(that.address);
+        return port == that.port && host.equals(that.host);
     }
 
     @Override
     public int hashCode() {
-        return address.hashCode();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeText(address.getHostText());
-        stream.writeInt(address.getPort());
+        int result = host.hashCode();
+        result = 31 * result + port;
+        return result;
     }
 
     @Override
     public String toString() {
-        return "DiscoveryNode{" + address + '}';
+        return "DiscoveryNode{host=" + host + ", port=" + port + '}';
     }
 }

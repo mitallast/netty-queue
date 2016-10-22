@@ -1,14 +1,17 @@
 package org.mitallast.queue.common.netty;
 
-import com.google.common.net.HostAndPort;
 import com.typesafe.config.Config;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
+import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
@@ -57,8 +60,8 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     protected abstract ChannelInitializer channelInitializer();
 
-    public final ChannelFuture connect(HostAndPort address) {
-        return bootstrap.connect(address.getHostText(), address.getPort());
+    public final ChannelFuture connect(DiscoveryNode node) {
+        return bootstrap.connect(node.host(), node.port());
     }
 
     public final ChannelFuture connect(String host, int port) {

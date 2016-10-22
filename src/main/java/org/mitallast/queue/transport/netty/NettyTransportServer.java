@@ -1,15 +1,17 @@
 package org.mitallast.queue.transport.netty;
 
-import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.*;
+import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportController;
+import org.mitallast.queue.transport.TransportServer;
+import org.mitallast.queue.transport.netty.codec.TransportFrame;
+import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
+import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 
 public class NettyTransportServer extends NettyServer implements TransportServer {
 
@@ -26,12 +28,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         super(config.getConfig("transport"), TransportServer.class);
         this.transportController = transportController;
         this.streamService = streamService;
-        this.discoveryNode = new DiscoveryNode(HostAndPort.fromParts(host, port));
-    }
-
-    @Override
-    public HostAndPort localAddress() {
-        return discoveryNode.address();
+        this.discoveryNode = new DiscoveryNode(host, port);
     }
 
     @Override

@@ -1,12 +1,10 @@
 package org.mitallast.queue.transport;
 
-import com.google.common.net.HostAndPort;
-
 public interface TransportService {
 
-    void connectToNode(HostAndPort address);
+    void connectToNode(DiscoveryNode node);
 
-    void disconnectFromNode(HostAndPort address);
+    void disconnectFromNode(DiscoveryNode node);
 
-    TransportChannel channel(HostAndPort address);
+    TransportChannel channel(DiscoveryNode node);
 }

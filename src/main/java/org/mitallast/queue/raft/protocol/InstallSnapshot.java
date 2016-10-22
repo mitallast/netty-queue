@@ -2,13 +2,13 @@ package org.mitallast.queue.raft.protocol;
 
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class InstallSnapshot implements RaftMessage {
+public class InstallSnapshot implements Streamable {
     private final DiscoveryNode leader;
     private final Term term;
     private final RaftSnapshot snapshot;

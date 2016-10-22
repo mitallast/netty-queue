@@ -3,12 +3,12 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 import java.util.Optional;
 
-public class RaftSnapshot implements RaftMessage {
+public class RaftSnapshot implements Streamable {
     private final RaftSnapshotMetadata meta;
     private final Streamable data;
 

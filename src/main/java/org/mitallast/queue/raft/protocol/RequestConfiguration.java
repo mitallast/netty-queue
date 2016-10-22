@@ -2,11 +2,11 @@ package org.mitallast.queue.raft.protocol;
 
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 
-public class RequestConfiguration implements RaftMessage {
+public class RequestConfiguration implements Streamable {
 
     public static final RequestConfiguration INSTANCE = new RequestConfiguration();
 

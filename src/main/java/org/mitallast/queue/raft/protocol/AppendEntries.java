@@ -3,13 +3,13 @@ package org.mitallast.queue.raft.protocol;
 import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class AppendEntries implements RaftMessage {
+public class AppendEntries implements Streamable {
     private final DiscoveryNode member;
     private final Term term;
     private final Term prevLogTerm;

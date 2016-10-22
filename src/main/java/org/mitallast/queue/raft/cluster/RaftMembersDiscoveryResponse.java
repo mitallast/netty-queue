@@ -2,12 +2,12 @@ package org.mitallast.queue.raft.cluster;
 
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class RaftMembersDiscoveryResponse implements RaftMessage {
+public class RaftMembersDiscoveryResponse implements Streamable {
 
     private final DiscoveryNode member;
 

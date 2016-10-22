@@ -2,12 +2,12 @@ package org.mitallast.queue.raft.protocol;
 
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 
 import java.io.IOException;
 
-public class ChangeConfiguration implements RaftMessage {
+public class ChangeConfiguration implements Streamable {
     private final ClusterConfiguration newConf;
 
     public ChangeConfiguration(StreamInput stream) throws IOException {

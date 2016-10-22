@@ -2,13 +2,13 @@ package org.mitallast.queue.raft.protocol;
 
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.raft.RaftMessage;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
-public class RequestVote implements RaftMessage {
+public class RequestVote implements Streamable {
     private final Term term;
     private final DiscoveryNode candidate;
     private final Term lastLogTerm;

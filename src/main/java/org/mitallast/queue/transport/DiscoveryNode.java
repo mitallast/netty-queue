@@ -1,7 +1,6 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.net.HostAndPort;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -9,33 +8,18 @@ import org.mitallast.queue.common.stream.Streamable;
 import java.io.IOException;
 
 public class DiscoveryNode implements Streamable {
-
-    private final String name;
     private final HostAndPort address;
-    private final Version version;
 
     public DiscoveryNode(StreamInput stream) throws IOException {
-        name = stream.readText();
         address = HostAndPort.fromParts(stream.readText(), stream.readInt());
-        version = Version.fromId(stream.readShort());
     }
 
-    public DiscoveryNode(String name, HostAndPort address, Version version) {
-        this.name = name;
+    public DiscoveryNode(HostAndPort address) {
         this.address = address;
-        this.version = version;
-    }
-
-    public String name() {
-        return name;
     }
 
     public HostAndPort address() {
         return address;
-    }
-
-    public Version version() {
-        return version;
     }
 
     @Override
@@ -45,22 +29,18 @@ public class DiscoveryNode implements Streamable {
 
         DiscoveryNode that = (DiscoveryNode) o;
 
-        return address.equals(that.address) && version.equals(that.version);
+        return address.equals(that.address);
     }
 
     @Override
     public int hashCode() {
-        int result = address.hashCode();
-        result = 31 * result + version.hashCode();
-        return result;
+        return address.hashCode();
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeText(name);
         stream.writeText(address.getHostText());
         stream.writeInt(address.getPort());
-        stream.writeShort(version.id);
     }
 
     @Override

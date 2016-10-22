@@ -26,11 +26,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         super(config.getConfig("transport"), TransportServer.class);
         this.transportController = transportController;
         this.streamService = streamService;
-        this.discoveryNode = new DiscoveryNode(
-                config.getString("node.name"),
-                HostAndPort.fromParts(host, port),
-                Version.CURRENT
-        );
+        this.discoveryNode = new DiscoveryNode(HostAndPort.fromParts(host, port));
     }
 
     @Override

@@ -2,9 +2,13 @@ package org.mitallast.queue.raft;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import org.mitallast.queue.Version;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.*;
+import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.domain.*;
 import org.mitallast.queue.raft.fsm.FSM;
 import org.mitallast.queue.raft.protocol.LogEntry;
@@ -12,6 +16,9 @@ import org.mitallast.queue.raft.log.LogIndexMap;
 import org.mitallast.queue.raft.log.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportServer;
+import org.mitallast.queue.transport.TransportService;
+import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,17 +31,41 @@ import static org.mitallast.queue.raft.RaftState.*;
 
 public class Raft extends FSM<RaftState, RaftMetadata> {
 
-    private Optional<DiscoveryNode> recentlyContactedByLeader = Optional.empty();
-    private int keepInitUntilFound = 3;
-    private ReplicatedLog replicatedLog = new ReplicatedLog();
+    private final TransportService transportService;
+    private final TransportServer transportServer;
+    private final ClusterDiscovery clusterDiscovery;
 
+    private Optional<DiscoveryNode> recentlyContactedByLeader;
+
+    private ReplicatedLog replicatedLog = new ReplicatedLog();
     private LogIndexMap nextIndex = new LogIndexMap();
-    private long nextIndexDefault = 0;
     private LogIndexMap matchIndex = new LogIndexMap();
 
+    private final int keepInitUntilFound;
+    private long nextIndexDefault = 0;
+
     @Inject
-    public Raft(Config config) {
+    public Raft(
+            Config config,
+            TransportService transportService,
+            TransportServer transportServer,
+            ClusterDiscovery clusterDiscovery
+    ) {
         super(config.getConfig("raft"), Raft.class);
+        this.transportService = transportService;
+        this.transportServer = transportServer;
+        this.clusterDiscovery = clusterDiscovery;
+
+        recentlyContactedByLeader = Optional.empty();
+        replicatedLog = new ReplicatedLog();
+        nextIndex = new LogIndexMap();
+        matchIndex = new LogIndexMap();
+
+        keepInitUntilFound = this.config.getInt("keep-init-until-found");
+        init();
+    }
+
+    private void init() {
 
         startWith(Init, new RaftMetadata());
 
@@ -47,12 +78,13 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     logger.info("finished init of new raft member, becoming follower");
                     return goTo(Follower, apply(new WithNewConfigEvent(meta.getConfig()), meta));
                 })
-                .event(AppendEntries.class, (appendEntries, meta) -> {
+                .event(AppendEntries.class, (request, meta) -> {
                     logger.info("cot append entries from a leader, but am in init state, will ask for it's configuration and join raft cluster");
-                    send(leader(), RequestConfiguration.INSTANCE);
+                    send(request.getMember(), RequestConfiguration.INSTANCE);
                     return goTo(Candidate);
                 })
                 .event(RaftMemberAdded.class, (added, meta) -> {
+                    logger.info("current members: {}, add: {}", meta.members(), added.getMember());
                     ImmutableSet<DiscoveryNode> newMembers = ImmutableSet.<DiscoveryNode>builder()
                             .addAll(meta.members())
                             .add(added.getMember())
@@ -100,17 +132,26 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                                 transitioningConfig
                         );
                     }
-                    send(self(), new ClientMessage(self(), transitioningConfig));
+                    receive(new ClientMessage(self(), transitioningConfig));
                     return stay();
                 })
                 .build();
 
         StateFunction localClusterBehavior = match()
                 .event(RaftMembersDiscoveryTimeout.class, (event, meta) -> {
-                    // todo add multicast
-                    // val memberSelection = context.actorSelection("/user/raft-node-*")
-                    // memberSelection ! RaftMembersDiscoveryRequest
-                    setTimer("raft-discovery-timeout", RaftMembersDiscoveryTimeout.INSTANCE, 10, TimeUnit.SECONDS);
+                    logger.info("discovery timeout");
+
+                    for (HostAndPort hostAndPort : clusterDiscovery.getDiscoveryNodes()) {
+                        if (!hostAndPort.equals(self().address())) {
+                            try {
+                                transportService.connectToNode(hostAndPort);
+                                transportService.channel(hostAndPort).send(new MessageTransportFrame(Version.CURRENT, RaftMembersDiscoveryRequest.INSTANCE));
+                            } catch (Exception e) {
+                                transportService.disconnectFromNode(hostAndPort);
+                            }
+                        }
+                    }
+                    setTimer("raft-discovery-timeout", RaftMembersDiscoveryTimeout.INSTANCE, 3, TimeUnit.SECONDS);
                     return stay();
                 })
                 .event(RaftMembersDiscoveryRequest.class, (event, meta) -> {
@@ -118,8 +159,8 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     return stay();
                 })
                 .event(RaftMembersDiscoveryResponse.class, (event, meta) -> {
-                    logger.info("adding actor {} to raft cluster", sender());
-                    send(self(), new RaftMemberAdded(event.getMember(), keepInitUntilFound));
+                    logger.info("adding actor {} to raft cluster", event.getMember());
+                    receive(new RaftMemberAdded(event.getMember(), keepInitUntilFound));
                     return stay();
                 })
                 .build();
@@ -168,7 +209,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                                     vote.getTerm(),
                                     vote.getLastLogTerm(),
                                     vote.getLastLogTerm());
-                            sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                            send(vote.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                             return stay();
                         } else if (replicatedLog.lastTerm().filter(term -> term.equals(vote.getLastLogTerm())).isPresent() &&
                                 vote.getLastLogIndex() < replicatedLog.lastIndex()) {
@@ -177,11 +218,11 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                                     vote.getTerm(),
                                     vote.getLastLogIndex(),
                                     replicatedLog.lastIndex());
-                            sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                            send(vote.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                             return stay();
                         } else {
                             logger.info("voting for {} in {}", vote.getCandidate(), vote.getTerm());
-                            sender().send(new VoteCandidate(meta.getCurrentTerm()));
+                            send(vote.getCandidate(), new VoteCandidate(self(), meta.getCurrentTerm()));
                             return stay(apply(new VoteForEvent(vote.getCandidate()), meta));
                         }
                     } else if (meta.canVoteIn(vote.getTerm())) {
@@ -189,17 +230,17 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                         if (replicatedLog.lastTerm().filter(term -> vote.getLastLogTerm().less(term)).isPresent()) {
                             logger.warn("rejecting vote for {}, and {}, candidate's lastLogTerm: {} < ours: {}",
                                     vote.getCandidate(), vote.getTerm(), vote.getLastLogTerm(), replicatedLog.lastTerm());
-                            sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                            send(vote.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                             return stay();
                         } else if (replicatedLog.lastTerm().filter(term -> term.equals(vote.getLastLogTerm())).isPresent() &&
                                 vote.getLastLogIndex() < replicatedLog.lastIndex()) {
                             logger.warn("rejecting vote for {}, and {}, candidate's lastLogIndex: {} < ours: {}",
                                     vote.getCandidate(), vote.getTerm(), vote.getLastLogIndex(), replicatedLog.lastIndex());
-                            sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                            send(vote.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                             return stay();
                         } else {
                             logger.info("voting for {} in {}", vote.getCandidate(), vote.getTerm());
-                            sender().send(new VoteCandidate(meta.getCurrentTerm()));
+                            send(vote.getCandidate(), new VoteCandidate(self(), meta.getCurrentTerm()));
                             return stay(apply(new VoteForEvent(vote.getCandidate()), meta));
                         }
                     } else if (meta.getVotedFor().isPresent()) {
@@ -208,13 +249,13 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                                 vote.getTerm(),
                                 meta.getCurrentTerm(),
                                 meta.getVotedFor());
-                        sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                        send(vote.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                         return stay();
                     } else {
                         logger.warn("rejecting vote for {}, and {}, currentTerm: {}, received stale term number {}",
                                 vote.getCandidate(), vote.getTerm(),
                                 meta.getCurrentTerm(), vote.getTerm());
-                        sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                        send(vote.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                         return stay();
                     }
                 })
@@ -225,7 +266,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     }
                     if (!replicatedLog.containsMatchingEntry(request.getPrevLogTerm(), request.getPrevLogIndex())) {
                         logger.warn("rejecting write (inconsistent log): {}:{} {} ", request.getPrevLogTerm(), request.getPrevLogIndex(), replicatedLog);
-                        send(leader(), new AppendRejected(meta.getCurrentTerm()));
+                        send(request.getMember(), new AppendRejected(self(), meta.getCurrentTerm()));
                         return stay();
                     } else {
                         return appendEntries(request, meta);
@@ -238,17 +279,17 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     }
                     if (request.getTerm().less(meta.getCurrentTerm())) {
                         logger.info("rejecting install snapshot {}, current term is {}", request.getTerm(), meta.getCurrentTerm());
-                        send(leader(), new InstallSnapshotRejected(meta.getCurrentTerm()));
+                        send(request.getLeader(), new InstallSnapshotRejected(self(), meta.getCurrentTerm()));
                         return stay();
                     } else {
                         resetElectionDeadline();
-                        logger.info("got snapshot from {}, is for: {}", leader(), request.getSnapshot().getMeta());
+                        logger.info("got snapshot from {}, is for: {}", request.getLeader(), request.getSnapshot().getMeta());
 
                         apply(request);
                         replicatedLog = replicatedLog.compactedWith(request.getSnapshot());
 
                         logger.info("response snapshot installed in {} last index {}", meta.getCurrentTerm(), replicatedLog.lastIndex());
-                        send(leader(), new InstallSnapshotSuccessful(meta.getCurrentTerm(), replicatedLog.lastIndex()));
+                        send(request.getLeader(), new InstallSnapshotSuccessful(self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
 
                         return stay();
                     }
@@ -279,30 +320,30 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                         return stay(apply(new VoteForSelfEvent(), meta));
                     }
                 })
-                .event(RequestVote.class, (msg, meta) -> {
-                    if (msg.getTerm().less(meta.getCurrentTerm())) {
-                        logger.info("rejecting request vote msg by {} in {}, received stale {}.", candidate(), meta.getCurrentTerm(), msg.getTerm());
-                        send(candidate(), new DeclineCandidate(meta.getCurrentTerm()));
+                .event(RequestVote.class, (request, meta) -> {
+                    if (request.getTerm().less(meta.getCurrentTerm())) {
+                        logger.info("rejecting request vote msg by {} in {}, received stale {}.", request.getCandidate(), meta.getCurrentTerm(), request.getTerm());
+                        send(request.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                         return stay();
                     }
-                    if (msg.getTerm().greater(meta.getCurrentTerm())) {
-                        logger.info("received newer {}, current term is {}, revert to follower state.", msg.getTerm(), meta.getCurrentTerm());
-                        return stepDown(meta, Optional.of(msg.getTerm()));
+                    if (request.getTerm().greater(meta.getCurrentTerm())) {
+                        logger.info("received newer {}, current term is {}, revert to follower state.", request.getTerm(), meta.getCurrentTerm());
+                        return stepDown(meta, Optional.of(request.getTerm()));
                     }
-                    if (meta.canVoteIn(msg.getTerm())) {
-                        logger.info("voting for {} in {}", candidate(), meta.getCurrentTerm());
-                        send(candidate(), new VoteCandidate(meta.getCurrentTerm()));
-                        return stay(apply(new VoteForEvent(candidate()), meta));
+                    if (meta.canVoteIn(request.getTerm())) {
+                        logger.info("voting for {} in {}", request.getCandidate(), meta.getCurrentTerm());
+                        send(request.getCandidate(), new VoteCandidate(self(), meta.getCurrentTerm()));
+                        return stay(apply(new VoteForEvent(request.getCandidate()), meta));
                     } else {
-                        logger.info("rejecting requestVote msg by {} in {}, already voted for {}", candidate(), meta.getCurrentTerm(), meta.getVotedFor());
-                        sender().send(new DeclineCandidate(meta.getCurrentTerm()));
+                        logger.info("rejecting requestVote msg by {} in {}, already voted for {}", request.getCandidate(), meta.getCurrentTerm(), meta.getVotedFor());
+                        send(request.getCandidate(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                         return stay();
                     }
                 })
                 .event(VoteCandidate.class, (vote, meta) -> {
                     if (vote.getTerm().less(meta.getCurrentTerm())) {
-                        logger.info("rejecting vote candidate msg by {} in {}, received stale {}.", voter(), meta.getCurrentTerm(), vote.getTerm());
-                        send(voter(), new DeclineCandidate(meta.getCurrentTerm()));
+                        logger.info("rejecting vote candidate msg by {} in {}, received stale {}.", vote.getMember(), meta.getCurrentTerm(), vote.getTerm());
+                        send(vote.getMember(), new DeclineCandidate(self(), meta.getCurrentTerm()));
                         return stay();
                     }
                     if (vote.getTerm().greater(meta.getCurrentTerm())) {
@@ -314,10 +355,10 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
 
                     boolean hasWonElection = votesReceived > meta.getConfig().members().size() / 2;
                     if (hasWonElection) {
-                        logger.info("received vote by {}, won election with {} of {} votes", voter(), votesReceived, meta.getConfig().members().size());
+                        logger.info("received vote by {}, won election with {} of {} votes", vote.getMember(), votesReceived, meta.getConfig().members().size());
                         return goTo(Leader, apply(new GoToLeaderEvent(), meta));
                     } else {
-                        logger.info("received vote by {}, have {} of {} votes", voter(), votesReceived, meta.getConfig().members().size());
+                        logger.info("received vote by {}, have {} of {} votes", vote.getMember(), votesReceived, meta.getConfig().members().size());
                         return stay(apply(new IncrementVoteEvent(), meta));
                     }
                 })
@@ -326,7 +367,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                         logger.info("received newer {}, current term is {}, revert to follower state.", msg.getTerm(), meta.getCurrentTerm());
                         return stepDown(meta, Optional.of(msg.getTerm()));
                     } else {
-                        logger.info("candidate is declined by {} in term {}", sender(), meta.getCurrentTerm());
+                        logger.info("candidate is declined by {} in term {}", msg.getMember(), meta.getCurrentTerm());
                         return stay();
                     }
                 })
@@ -343,7 +384,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                 .event(ElectionTimeout.class, (event, meta) -> {
                     if (meta.getConfig().members().size() > 1) {
                         logger.info("voting timeout, starting a new election (among {})", meta.getConfig().members().size());
-                        send(self(), BeginElection.INSTANCE);
+                        receive(BeginElection.INSTANCE);
                         return stay(apply(new StartElectionEvent(), meta));
                     } else {
                         logger.info("voting timeout, unable to start election, don't know enough nodes (members: {})...", meta.getConfig().members().size());
@@ -359,7 +400,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         StateFunction leaderBehavior = match()
                 .event(ElectedAsLeader.class, (event, meta) -> {
                     logger.info("became leader for {}", meta.getCurrentTerm());
-                    initializeLeaderState(meta.getConfig().members());
+                    initializeLeaderState();
                     startHeartbeat(meta);
                     return stay();
                 })
@@ -391,10 +432,10 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                 })
                 .event(AppendEntries.class, (append, meta) -> {
                     if (append.getTerm().greater(meta.getCurrentTerm())) {
-                        logger.info("leader ({}) got append entries from fresher leader ({}), will step down and the leader will keep being: {}", meta.getCurrentTerm(), append.getTerm(), sender());
+                        logger.info("leader ({}) got append entries from fresher leader ({}), will step down and the leader will keep being: {}", meta.getCurrentTerm(), append.getTerm(), append.getMember());
                         return stepDown(meta);
                     } else {
-                        logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, will send entries, to force it to step down.", meta.getCurrentTerm(), sender(), append.getTerm());
+                        logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, will send entries, to force it to step down.", meta.getCurrentTerm(), append.getMember(), append.getTerm());
                         sendEntries(append.getMember(), meta);
                         return stay();
                     }
@@ -404,13 +445,13 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                         return stepDown(meta, Optional.of(response.getTerm()));
                     }
                     if (response.getTerm().equals(meta.getCurrentTerm())) {
-                        logger.info("follower {} rejected write: {}, back out the first index in this term and retry", follower(), response.getTerm());
-                        if (nextIndex.indexFor(follower()).filter(index -> index > 1).isPresent()) {
-                            nextIndex.decrementFor(follower());
+                        logger.info("follower {} rejected write: {}, back out the first index in this term and retry", response.getMember(), response.getTerm());
+                        if (nextIndex.indexFor(response.getMember()).filter(index -> index > 1).isPresent()) {
+                            nextIndex.decrementFor(response.getMember());
                         }
                         return stay();
                     } else {
-                        logger.info("follower {} rejected write: {}, ignore", follower(), response.getTerm());
+                        logger.info("follower {} rejected write: {}, ignore", response.getMember(), response.getTerm());
                         return stay();
                     }
                 })
@@ -418,9 +459,9 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     if (response.getTerm().equals(meta.getCurrentTerm())) {
                         assert (response.getLastIndex() <= replicatedLog.lastIndex());
                         if (response.getLastIndex() > 0) {
-                            nextIndex.put(follower(), response.getLastIndex() + 1);
+                            nextIndex.put(response.getMember(), response.getLastIndex() + 1);
                         }
-                        matchIndex.putIfGreater(follower(), response.getLastIndex());
+                        matchIndex.putIfGreater(response.getMember(), response.getLastIndex());
                         replicatedLog = maybeCommitEntry(meta, matchIndex, replicatedLog);
                         return stay();
                     } else {
@@ -431,7 +472,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                 .event(InstallSnapshot.class, (request, meta) -> {
                     if (request.getTerm().greater(meta.getCurrentTerm())) {
                         logger.info("leader ({}) got install snapshot from fresher leader ({}), will step down and the leader will keep being: {}",
-                                meta.getCurrentTerm(), request.getTerm(), sender());
+                                meta.getCurrentTerm(), request.getTerm(), request.getLeader());
                         forward(self(), request);
                         return stepDown(meta, Optional.of(request.getTerm()));
                     } else {
@@ -439,7 +480,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                                 request.getTerm(), meta.getCurrentTerm());
                         logger.warn("leader ({}) got install snapshot from rogue leader ({} @ {}), " +
                                         "it's not fresher than self, will send entries, to force it to step down.",
-                                meta.getCurrentTerm(), sender(), request.getTerm());
+                                meta.getCurrentTerm(), request.getLeader(), request.getTerm());
                         sendEntries(request.getLeader(), meta);
                         return stay();
                     }
@@ -448,9 +489,9 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     if (response.getTerm().equals(meta.getCurrentTerm())) {
                         assert (response.getLastIndex() <= replicatedLog.lastIndex());
                         if (response.getLastIndex() > 0) {
-                            nextIndex.put(follower(), response.getLastIndex() + 1);
+                            nextIndex.put(response.getMember(), response.getLastIndex() + 1);
                         }
-                        matchIndex.putIfGreater(follower(), response.getLastIndex());
+                        matchIndex.putIfGreater(response.getMember(), response.getLastIndex());
                         replicatedLog = maybeCommitEntry(meta, matchIndex, replicatedLog);
                         return stay();
                     } else {
@@ -463,9 +504,9 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                         // since there seems to be another leader!
                         return stepDown(meta, Optional.of(response.getTerm()));
                     } else if (response.getTerm().equals(meta.getCurrentTerm())) {
-                        logger.info("follower {} rejected write: {}, back out the first index in this term and retry", follower(), response.getTerm());
-                        if (nextIndex.indexFor(follower()).filter(index -> index > 1).isPresent()) {
-                            nextIndex.decrementFor(follower());
+                        logger.info("follower {} rejected write: {}, back out the first index in this term and retry", response.getMember(), response.getTerm());
+                        if (nextIndex.indexFor(response.getMember()).filter(index -> index > 1).isPresent()) {
+                            nextIndex.decrementFor(response.getMember());
                         }
                         return stay();
                     } else {
@@ -487,8 +528,35 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         when(Follower, followerBehavior.orElse(snapshotBehavior).orElse(clusterManagementBehavior).orElse(localClusterBehavior));
         when(Candidate, candidateBehavior.orElse(snapshotBehavior).orElse(clusterManagementBehavior).orElse(localClusterBehavior));
         when(Leader, leaderBehavior.orElse(snapshotBehavior).orElse(clusterManagementBehavior).orElse(localClusterBehavior));
+    }
 
-        initialize();
+    @Override
+    public void onStart() {
+        receive(RaftMembersDiscoveryTimeout.INSTANCE);
+        receive(new RaftMemberAdded(self(), keepInitUntilFound));
+    }
+
+    @Override
+    public void onTransition(RaftState prevState, RaftState newState) {
+        if (prevState == Init && newState == Follower) {
+            cancelTimer("raft-discovery-timeout");
+            resetElectionDeadline();
+        } else if (prevState == Follower && newState == Candidate) {
+            receive(BeginElection.INSTANCE);
+            resetElectionDeadline();
+        } else if (prevState == Candidate && newState == Leader) {
+            receive(ElectedAsLeader.INSTANCE);
+            cancelElectionDeadline();
+        } else if (prevState == Leader) {
+            stopHeartbeat();
+        } else if (newState == Follower) {
+            resetElectionDeadline();
+        }
+    }
+
+    @Override
+    public void onTermination() {
+        stopHeartbeat();
     }
 
     private ReplicatedLog maybeCommitEntry(RaftMetadata meta, LogIndexMap matchIndex, ReplicatedLog replicatedLog) {
@@ -500,16 +568,18 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
                     for (LogEntry entry : entries) {
                         if (entry.getCommand() instanceof JointConsensusClusterConfiguration) {
                             JointConsensusClusterConfiguration config = (JointConsensusClusterConfiguration) entry.getCommand();
-                            send(self(), new ClientMessage(self(), config.transitionToStable()));
+                            receive(new ClientMessage(self(), config.transitionToStable()));
                         } else if (entry.getCommand() instanceof StableClusterConfiguration) {
                             logger.info("now on stable configuration");
                         } else {
                             logger.info("committing log at index: {}", entry.getIndex());
                             logger.info("applying command[index={}]: {}, will send result to client: {}", entry.getIndex(), entry.getCommand(), entry.getClient());
-                            Object result = apply(entry.getCommand());
-                            Optional<DiscoveryNode> client = entry.getClient();
-                            if (client.isPresent()) {
-                                send(client.get(), result);
+                            Streamable result = apply(entry.getCommand());
+                            if (result != null) {
+                                Optional<DiscoveryNode> client = entry.getClient();
+                                if (client.isPresent()) {
+                                    send(client.get(), result);
+                                }
                             }
                         }
                     }
@@ -525,6 +595,10 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         } else {
             return meta;
         }
+    }
+
+    private void stopHeartbeat() {
+        cancelTimer("raft-heartbeat");
     }
 
     private void startHeartbeat(RaftMetadata meta) {
@@ -573,7 +647,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
 
     }
 
-    private void initializeLeaderState(ImmutableSet<DiscoveryNode> members) {
+    private void initializeLeaderState() {
         nextIndex = new LogIndexMap();
         nextIndexDefault = replicatedLog.lastIndex();
         matchIndex = new LogIndexMap();
@@ -609,8 +683,8 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         }
     }
 
-    public Object apply(Object message) {
-        // @todo
+    public Streamable apply(Object message) {
+        logger.info("apply: {}", message);
         return null;
     }
 
@@ -647,31 +721,22 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
     }
 
     public DiscoveryNode self() {
-        return null;
+        return transportServer.localNode();
     }
 
-    public DiscoveryNode follower() {
-        return null;
+    public void forward(DiscoveryNode node, Streamable message) {
+        transportService.channel(node.address()).send(new MessageTransportFrame(Version.CURRENT, message));
     }
 
-    public DiscoveryNode candidate() {
-        return null;
+    public void send(DiscoveryNode node, Streamable message) {
+        if(node.equals(self())) {
+            receive(message);
+        }else{
+            transportService.channel(node.address()).send(new MessageTransportFrame(Version.CURRENT, message));
+        }
     }
 
-    public DiscoveryNode leader() {
-        return null;
-    }
-
-    public DiscoveryNode voter() {
-        return null;
-    }
-
-    public void forward(DiscoveryNode node, Object event) {
-    }
-
-    public void send(DiscoveryNode node, Object event) {
-    }
-
+    @SuppressWarnings("UnusedParameters")
     public CompletableFuture<Optional<RaftSnapshot>> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
         return CompletableFuture.completedFuture(Optional.empty());
     }
@@ -679,12 +744,12 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
     public State appendEntries(AppendEntries msg, RaftMetadata meta) {
         if (leaderIsLagging(msg, meta)) {
             logger.info("rejecting write (Leader is lagging) of: {} {}", msg, replicatedLog);
-            send(leader(), new AppendRejected(meta.getCurrentTerm()));
+            send(msg.getMember(), new AppendRejected(self(), meta.getCurrentTerm()));
             return stay();
         }
 
         senderIsCurrentLeader(msg.getMember());
-        send(leader(), append(msg.getEntries(), meta));
+        send(msg.getMember(), append(msg.getEntries(), meta));
         replicatedLog = commitUntilLeadersIndex(meta, msg);
 
         ClusterConfiguration config = maybeGetNewConfiguration(msg.getEntries().stream().map(LogEntry::getCommand).collect(Collectors.toList()), meta.getConfig());
@@ -692,6 +757,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         return acceptHeartbeat().stay(apply(new WithNewConfigEvent(replicatedLog.lastTerm(), config), meta));
     }
 
+    @SuppressWarnings({"StatementWithEmptyBody", "UnusedParameters"})
     private ReplicatedLog commitUntilLeadersIndex(RaftMetadata meta, AppendEntries msg) {
         ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex(), msg.getLeaderCommit());
 
@@ -699,7 +765,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
         for (LogEntry entry : entries) {
             logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
             if (entry.getCommand() instanceof ClusterConfiguration) {
-                // @todo
+                // ignore
             } else {
                 apply(entry);
             }
@@ -718,7 +784,7 @@ public class Raft extends FSM<RaftState, RaftMetadata> {
             replicatedLog = replicatedLog.append(entries, atIndex - 1);
         }
         logger.info("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
-        return new AppendSuccessful(meta.getCurrentTerm(), replicatedLog.lastIndex());
+        return new AppendSuccessful(self(), meta.getCurrentTerm(), replicatedLog.lastIndex());
     }
 
     private ClusterConfiguration maybeGetNewConfiguration(List<Object> entries, ClusterConfiguration config) {

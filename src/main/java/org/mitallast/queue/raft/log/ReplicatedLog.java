@@ -1,6 +1,7 @@
 package org.mitallast.queue.raft.log;
 
 import com.google.common.collect.ImmutableList;
+import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
@@ -14,17 +15,21 @@ public class ReplicatedLog {
     private final long start;
 
     public ReplicatedLog() {
-        this(ImmutableList.of(), 0);
+        this(ImmutableList.of(), 1);
     }
 
     public ReplicatedLog(ImmutableList<LogEntry> entries, long committedIndex) {
-        this(entries, committedIndex, 0);
+        this(entries, committedIndex, 1);
     }
 
     public ReplicatedLog(ImmutableList<LogEntry> entries, long committedIndex, long start) {
         this.entries = entries;
         this.committedIndex = committedIndex;
         this.start = start;
+    }
+
+    public ImmutableList<LogEntry> entries() {
+        return entries;
     }
 
     public long committedIndex() {
@@ -60,7 +65,7 @@ public class ReplicatedLog {
     }
 
     private LogEntry last() {
-        return entries.get(entries.size());
+        return entries.get(entries.size() - 1);
     }
 
     public boolean containsMatchingEntry(Term otherPrevTerm, long otherPrevIndex) {
@@ -97,7 +102,9 @@ public class ReplicatedLog {
     }
 
     public ReplicatedLog append(ImmutableList<LogEntry> entries) {
-        return new ReplicatedLog(ImmutableList.<LogEntry>builder().addAll(entries).addAll(entries).build(), committedIndex, start);
+        return new ReplicatedLog(ImmutableList.<LogEntry>builder()
+                .addAll(this.entries)
+                .addAll(entries).build(), committedIndex, start);
     }
 
     public ReplicatedLog append(ImmutableList<LogEntry> entries, long take) {
@@ -127,7 +134,12 @@ public class ReplicatedLog {
     }
 
     public ImmutableList<LogEntry> slice(long from, long until) {
-        return entries.subList((int) (from - offset()), (int) (until - offset()));
+        int fromIndex = (int) (from - offset());
+        int toIndex = (int) (until - offset());
+        if (fromIndex >= entries.size()) {
+            return ImmutableList.of();
+        }
+        return entries.subList(fromIndex, Math.min(toIndex, entries.size()));
     }
 
     public boolean containsEntryAt(long index) {
@@ -158,7 +170,7 @@ public class ReplicatedLog {
 
         if (snapshotHasLaterTerm && snapshotHasLaterIndex) {
             return new ReplicatedLog(ImmutableList.of(snapshot.toEntry()), committedIndex, snapshot.getMeta().getLastIncludedIndex());
-        }else {
+        } else {
             return new ReplicatedLog(ImmutableList.<LogEntry>builder()
                     .add(snapshot.toEntry())
                     .addAll(take(snapshot.getMeta().getLastIncludedIndex()))

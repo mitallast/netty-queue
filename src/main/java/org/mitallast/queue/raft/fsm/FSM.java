@@ -4,27 +4,55 @@ import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.common.component.AbstractLifecycleComponent;
+import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 
-import java.util.concurrent.TimeUnit;
+import java.io.IOException;
+import java.util.concurrent.*;
 import java.util.function.BiFunction;
+import java.util.jar.Attributes;
 
-public class FSM<StateType, MetadataType> extends AbstractComponent {
+public abstract class FSM<StateType, MetadataType> extends AbstractLifecycleComponent {
+
+    private final ScheduledExecutorService context;
+    private final ConcurrentMap<String, ScheduledFuture> timerMap = new ConcurrentHashMap<>();
+
     private State state;
     private ImmutableMap<StateType, StateFunction> stateMap = ImmutableMap.of();
 
     public FSM(Config config, Class loggerClass) {
         super(config, loggerClass);
+        context = Executors.newScheduledThreadPool(1, NamedExecutors.newThreadFactory("raft"));
+    }
+
+    @Override
+    protected void doStart() throws IOException {
+        onStart();
+    }
+
+    @Override
+    protected void doStop() throws IOException {
+        onTermination();
+    }
+
+    @Override
+    protected void doClose() throws IOException {
+        try {
+            context.awaitTermination(10, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            context.shutdownNow();
+        }
     }
 
     public void startWith(StateType initialState, MetadataType initialMetadata) {
         state = new State(initialState, initialMetadata, new SelfSender());
     }
 
-    public void onStart() {
-    }
+    public abstract void onStart();
 
     public void when(StateType state, StateFunction function) {
         stateMap = ImmutableMap.<StateType, StateFunction>builder()
@@ -33,22 +61,30 @@ public class FSM<StateType, MetadataType> extends AbstractComponent {
                 .build();
     }
 
-    public void onTransition(StateType prevState, StateType newState) {
-    }
+    public abstract void onTransition(StateType prevState, StateType newState);
 
-    public void onTermination() {
-    }
-
-    public void initialize() {
-    }
+    public abstract void onTermination();
 
     public void cancelTimer(String timerName) {
+        ScheduledFuture timer = timerMap.remove(timerName);
+        if (timer != null) {
+            timer.cancel(false);
+        }
     }
 
-    public void setTimer(String timeName, Object event, long timeout, TimeUnit timeUnit) {
+    public void setTimer(String timerName, Object event, long timeout, TimeUnit timeUnit) {
+        setTimer(timerName, event, timeout, timeUnit, false);
     }
 
-    public void setTimer(String timeName, Object event, long timeout, TimeUnit timeUnit, boolean repeat) {
+    public void setTimer(String timerName, Object event, long timeout, TimeUnit timeUnit, boolean repeat) {
+        cancelTimer(timerName);
+        final ScheduledFuture timer;
+        if (repeat) {
+            timer = context.scheduleAtFixedRate(() -> receive(event), timeout, timeout, timeUnit);
+        } else {
+            timer = context.schedule(() -> receive(event), timeout, timeUnit);
+        }
+        timerMap.put(timerName, timer);
     }
 
     public void receive(TransportChannel channel, Object event) {
@@ -60,8 +96,23 @@ public class FSM<StateType, MetadataType> extends AbstractComponent {
     }
 
     public void receive(Sender sender, Object event) {
-        state = state.withSender(sender);
-        state = stateMap.get(state.currentState).receive(event, state.currentMetadata);
+        context.execute(() -> {
+            try {
+                State prevState = state;
+                state = state.withSender(sender);
+                State newState = stateMap.get(state.currentState).receive(event, state.currentMetadata);
+                if (newState == null) {
+                    logger.warn("unhandled event: {}", event);
+                } else {
+                    state = newState;
+                    if (!state.currentState.equals(prevState.currentState)) {
+                        onTransition(prevState.currentState, state.currentState);
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("unexpected error in fsm", e);
+            }
+        });
     }
 
     public Sender sender() {
@@ -121,6 +172,15 @@ public class FSM<StateType, MetadataType> extends AbstractComponent {
 
         public State goTo(StateType newState, MetadataType newMetadata) {
             return new State(newState, newMetadata, sender);
+        }
+
+        @Override
+        public String toString() {
+            return "State{" +
+                    "currentState=" + currentState +
+                    ", currentMetadata=" + currentMetadata +
+                    ", sender=" + sender +
+                    '}';
         }
     }
 

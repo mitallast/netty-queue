@@ -22,6 +22,10 @@ public class LogEntry implements Streamable {
         client = Optional.ofNullable(stream.readStreamableOrNull(DiscoveryNode::new));
     }
 
+    public LogEntry(Streamable command, Term term, long index) {
+        this(command, term, index, Optional.empty());
+    }
+
     public LogEntry(Streamable command, Term term, long index, Optional<DiscoveryNode> client) {
         this.command = command;
         this.term = term;
@@ -52,5 +56,28 @@ public class LogEntry implements Streamable {
         stream.writeClass(command.getClass());
         stream.writeStreamable(command);
         stream.writeStreamableOrNull(client.orElse(null));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        LogEntry logEntry = (LogEntry) o;
+
+        if (index != logEntry.index) return false;
+        if (!term.equals(logEntry.term)) return false;
+        if (!command.equals(logEntry.command)) return false;
+        return client.equals(logEntry.client);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = term.hashCode();
+        result = 31 * result + (int) (index ^ (index >>> 32));
+        result = 31 * result + command.hashCode();
+        result = 31 * result + client.hashCode();
+        return result;
     }
 }

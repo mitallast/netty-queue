@@ -54,7 +54,7 @@ public class RaftMetadata {
 
     public ImmutableSet<DiscoveryNode> membersWithout(DiscoveryNode member) {
         return ImmutableSet.<DiscoveryNode>builder()
-                .addAll(config.members().stream().filter(node -> node.equals(member)).iterator())
+                .addAll(config.members().stream().filter(node -> !node.equals(member)).iterator())
                 .build();
     }
 

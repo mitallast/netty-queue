@@ -87,7 +87,11 @@ public class LogIndexMap {
                     .map(Map.Entry::getValue)
                     .sorted()
                     .collect(Collectors.toList());
-            return Optional.of(sorted.get(index));
+            if (sorted.size() <= index) {
+                return Optional.empty();
+            } else {
+                return Optional.of(sorted.get(index));
+            }
         }
     }
 

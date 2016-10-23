@@ -25,7 +25,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     protected final int sndBuf;
     protected final int rcvBuf;
 
-    private volatile Bootstrap bootstrap;
+    protected volatile Bootstrap bootstrap;
 
     public NettyClientBootstrap(Config config, Class loggerClass) {
         super(config, loggerClass);

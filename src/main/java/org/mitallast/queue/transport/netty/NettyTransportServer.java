@@ -70,11 +70,6 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         }
 
         @Override
-        public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-            ctx.flush();
-        }
-
-        @Override
         protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
             NettyTransportChannel transportChannel = ctx.channel().attr(NettyTransportChannel.channelAttr).get();
             transportController.dispatch(transportChannel, request);

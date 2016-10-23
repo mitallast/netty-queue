@@ -23,7 +23,6 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final int sndBuf;
     private final int rcvBuf;
     private final int threads;
-    protected NioEventLoopGroup worker;
     protected Channel channel;
     private ServerBootstrap bootstrap;
     private NioEventLoopGroup boss;
@@ -49,9 +48,8 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     protected void doStart() throws IOException {
         try {
             boss = group("boss");
-            worker = group("worker");
             bootstrap = new ServerBootstrap();
-            bootstrap.group(boss, worker)
+            bootstrap.group(boss)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)
@@ -84,7 +82,6 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
             Thread.currentThread().interrupt();
             throw new IOException(e);
         }
-        worker.shutdownGracefully();
         boss.shutdownGracefully();
         channel = null;
         bootstrap = null;

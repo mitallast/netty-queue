@@ -28,7 +28,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class NettyTransportService extends NettyClientBootstrap implements TransportService {
     private final ReentrantLock connectionLock;
-    private final int channelCount;
+    private final int maxConnections;
     private final TransportController transportController;
     private final StreamService streamService;
     private final ExecutorService executorService;
@@ -39,7 +39,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         super(config.getConfig("transport"), TransportService.class);
         this.transportController = transportController;
         this.streamService = streamService;
-        channelCount = this.config.getInt("channel_count");
+        maxConnections = this.config.getInt("max_connections");
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
         executorService = NamedExecutors.newSingleThreadPool("reconnect");
@@ -159,17 +159,17 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
 
         private NodeChannel(DiscoveryNode node) {
             this.node = node;
-            this.channels = new Channel[channelCount];
+            this.channels = new Channel[maxConnections];
         }
 
         private synchronized void open() {
             logger.debug("connect to {}", node);
-            ChannelFuture[] channelFutures = new ChannelFuture[channelCount];
-            for (int i = 0; i < channelCount; i++) {
+            ChannelFuture[] channelFutures = new ChannelFuture[maxConnections];
+            for (int i = 0; i < maxConnections; i++) {
                 channelFutures[i] = connect(node);
             }
             logger.debug("await channel open {}", node);
-            for (int i = 0; i < channelCount; i++) {
+            for (int i = 0; i < maxConnections; i++) {
                 try {
                     Channel channel = channelFutures[i]
                             .awaitUninterruptibly()

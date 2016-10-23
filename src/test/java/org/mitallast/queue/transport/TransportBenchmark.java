@@ -18,7 +18,8 @@ import java.util.concurrent.CountDownLatch;
 
 public class TransportBenchmark extends BaseQueueTest {
 
-    private TransportChannel channel;
+    private TransportService transportService;
+    private DiscoveryNode member;
     private CountDownLatch countDownLatch;
 
     @Override
@@ -29,9 +30,9 @@ public class TransportBenchmark extends BaseQueueTest {
     @Override
     protected Config config() throws Exception {
         ImmutableMap<String, Object> config = ImmutableMap.<String, Object>builder()
-                .put("rest.enabled", false)
-                .put("raft.enabled", false)
-                .build();
+            .put("rest.enabled", false)
+            .put("raft.enabled", false)
+            .build();
         return ConfigFactory.parseMap(config).withFallback(super.config());
     }
 
@@ -40,15 +41,14 @@ public class TransportBenchmark extends BaseQueueTest {
         StreamService streamService = node().injector().getInstance(StreamService.class);
         streamService.register(TestStreamable.class, TestStreamable::new, 1000000);
 
-        TransportService transportService = node().injector().getInstance(TransportService.class);
+        transportService = node().injector().getInstance(TransportService.class);
         TransportServer transportServer = node().injector().getInstance(TransportServer.class);
 
         TransportController transportController = node().injector().getInstance(TransportController.class);
         transportController.registerMessageHandler(TestStreamable.class, this::handle);
 
-        DiscoveryNode member = transportServer.localNode();
+        member = transportServer.localNode();
         transportService.connectToNode(member);
-        channel = transportService.channel(member);
     }
 
     public void handle(TransportChannel channel, TestStreamable streamable) {
@@ -58,11 +58,26 @@ public class TransportBenchmark extends BaseQueueTest {
     @Test
     public void test() throws Exception {
         warmUp();
-        countDownLatch = new CountDownLatch(max());
+        countDownLatch = new CountDownLatch(total());
         long start = System.currentTimeMillis();
         for (int i = 0; i < total(); i++) {
-            channel.send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
+            transportService.channel(member).send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
         }
+        countDownLatch.await();
+        long end = System.currentTimeMillis();
+        printQps("send", total(), start, end);
+    }
+
+    @Test
+    public void testConcurrent() throws Exception {
+        warmUp();
+        countDownLatch = new CountDownLatch(total());
+        long start = System.currentTimeMillis();
+        executeConcurrent((thread, concurrency) -> {
+            for (int i = thread; i < total(); i += concurrency) {
+                transportService.channel(member).send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
+            }
+        });
         countDownLatch.await();
         long end = System.currentTimeMillis();
         printQps("send", total(), start, end);
@@ -72,7 +87,7 @@ public class TransportBenchmark extends BaseQueueTest {
         int warmUp = total();
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
-            channel.send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
+            transportService.channel(member).send(new MessageTransportFrame(Version.CURRENT, new TestStreamable(i)));
         }
         countDownLatch.await();
         System.gc();
@@ -98,8 +113,8 @@ public class TransportBenchmark extends BaseQueueTest {
         @Override
         public String toString() {
             return "TestStreamable{" +
-                    "value=" + value +
-                    '}';
+                "value=" + value +
+                '}';
         }
     }
 }

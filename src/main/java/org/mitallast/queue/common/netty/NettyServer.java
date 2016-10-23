@@ -3,12 +3,15 @@ package org.mitallast.queue.common.netty;
 import com.typesafe.config.Config;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
-import org.mitallast.queue.common.concurrent.NamedExecutors;
 
 import java.io.IOException;
 
@@ -41,7 +44,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     }
 
     private NioEventLoopGroup group(String name) {
-        return new NioEventLoopGroup(threads, NamedExecutors.newThreadFactory(name));
+        return new NioEventLoopGroup(threads, new DefaultThreadFactory(name));
     }
 
     @Override

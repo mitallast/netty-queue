@@ -9,8 +9,8 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
-import org.mitallast.queue.common.concurrent.NamedExecutors;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
@@ -40,7 +40,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     private ThreadFactory threadFactory(String name) {
-        return NamedExecutors.newThreadFactory(name);
+        return new DefaultThreadFactory(name);
     }
 
     @Override

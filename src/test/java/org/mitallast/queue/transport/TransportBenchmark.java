@@ -75,6 +75,7 @@ public class TransportBenchmark extends BaseQueueTest {
     public void testConcurrent() throws Exception {
         warmUp();
         while (!Thread.interrupted()) {
+            System.gc();
             countDownLatch = new CountDownLatch(total());
             long start = System.currentTimeMillis();
             executeConcurrent((thread, concurrency) -> {

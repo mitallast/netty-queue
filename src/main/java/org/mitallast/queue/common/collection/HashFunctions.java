@@ -7,6 +7,7 @@ import static gnu.trove.impl.HashFunctions.fastCeil;
 public class HashFunctions {
 
     public static int emptyKey = -1;
+    public static int emptyValue = -1;
 
     public static long toPow2(long size) {
         if ((size & (size - 1)) == 0)
@@ -152,6 +153,66 @@ public class HashFunctions {
 
             if (keys[index] == emptyKey) {
                 return -1;
+            } else if (keys[index] == key) {
+                return index;
+            }
+            // Detect loop
+        } while (index != loopIndex);
+        return -1;
+    }
+
+    public static int index(Class type, Class[] keys) {
+        final int hash = type.hashCode() & 0x7fffffff;
+        int size = keys.length;
+        int index = hash % size;
+
+        if (keys[index] == null) {
+            return -1;
+        } else if (keys[index] == type) {
+            return index;
+        }
+
+        final int loopIndex = index;
+        final int probe = 1 + (hash % (size - 2));
+        do {
+            index = index - probe;
+            if (index < 0) {
+                index += size;
+            }
+
+            if (keys[index] == null) {
+                return -1;
+            } else if (keys[index] == type) {
+                return index;
+            }
+            // Detect loop
+        } while (index != loopIndex);
+        return -1;
+    }
+
+    public static int insert(Class key, Class[] keys) {
+        final int hash = key.hashCode() & 0x7fffffff;
+        int size = keys.length;
+        int index = hash % size;
+
+        if (keys[index] == null) {
+            keys[index] = key;
+            return index;
+        } else if (keys[index] == key) {
+            return index;
+        }
+
+        final int loopIndex = index;
+        final int probe = 1 + (hash % (size - 2));
+        do {
+            index = index - probe;
+            if (index < 0) {
+                index += size;
+            }
+
+            if (keys[index] == null) {
+                keys[index] = key;
+                return index;
             } else if (keys[index] == key) {
                 return index;
             }

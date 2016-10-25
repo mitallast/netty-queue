@@ -26,7 +26,7 @@ public class ImmutableLongOpenMap<V> implements ImmutableLongMap<V> {
 
     @Override
     public boolean isEmpty() {
-        return size > 0;
+        return size == 0;
     }
 
     @Override

@@ -26,7 +26,7 @@ public class ImmutableIntOpenMap<V> implements ImmutableIntMap<V> {
 
     @Override
     public boolean isEmpty() {
-        return size > 0;
+        return size == 0;
     }
 
     @Override

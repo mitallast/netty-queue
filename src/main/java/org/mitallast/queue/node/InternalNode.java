@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import org.mitallast.queue.blob.BlobModule;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
@@ -36,6 +37,9 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         }
         if (config.getBoolean("raft.enabled")) {
             modules.add(new RaftModule());
+        }
+        if(config.getBoolean("blob.enabled")) {
+            modules.add(new BlobModule());
         }
         injector = modules.createInjector();
 

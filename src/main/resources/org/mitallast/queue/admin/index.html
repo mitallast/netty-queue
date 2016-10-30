@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
     <meta name="description" content="">
     <meta name="author" content="">
 
@@ -17,9 +16,7 @@
     <script src="/resources/webjars/handlebars/3.0.0-1/handlebars.min.js"></script>
     <script src="dashboard.js"></script>
 </head>
-
 <body>
-
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -34,21 +31,20 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav navbar-right visible-xs">
-                <!--<li><a href="#resources-view" data-path="/">Resources</a></li>-->
-                <!--<li><a href="#create-resource-view">Create queue</a></li>-->
                 <li><a href="#raftState">Raft state</a></li>
+                <li><a href="#raftLog">Raft log</a></li>
+                <li><a href="#blobList">Blob resources</a></li>
             </ul>
         </div>
     </div>
 </nav>
-
 <div class="container-fluid">
     <div class="row">
         <div class="col-sm-3 col-md-2 hidden-xs sidebar">
             <ul class="nav nav-sidebar">
-                <!--<li class="active"><a href="#stats-view">Resources <span class="sr-only">(current)</span></a></li>-->
-                <!--<li><a href="#resources-view" data-path="/">Resources</a></li>-->
                 <li><a href="#raftState">Raft state</a></li>
+                <li><a href="#raftLog">Raft log</a></li>
+                <li><a href="#blobList">Blob resources</a></li>
             </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"></div>
@@ -57,13 +53,13 @@
 <script id="raftState" type="text/x-handlebars-template">
     <h1 class="page-header">Raft state</h1>
 
-    <h3>Current term: {{currentTerm}}</h3>
-    <h3>Sequence number: {{config.sequenceNumber}}</h3>
-    <h3>Quorum: {{config.quorum}}</h3>
-    <h3>Is transitioning: {{config.isTransitioning}}</h3>
+    <p>current term: {{currentTerm}}</p>
+    <p>sequence number: {{config.sequenceNumber}}</p>
+    <p>quorum: {{config.quorum}}</p>
+    <p>is transitioning: {{config.isTransitioning}}</p>
 
     {{#if config.members}}
-    <h3>Members:</h3>
+    <h3 class="sub-header">Members:</h3>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
@@ -87,7 +83,7 @@
     {{/if}}
 
     {{#if config.oldMembers}}
-    <h3>Old members:</h3>
+    <h5>Old members:</h5>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
@@ -109,7 +105,7 @@
     {{/if}}
 
     {{#if config.newMembers}}
-    <h3>Old members:</h3>
+    <h5>Old members:</h5>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
@@ -131,13 +127,80 @@
     {{/if}}
 
     {{#if votedFor}}
-    <h3>Voted for</h3>
-    <p>host: {{votedFor.host}}</p>
-    <p>port: {{votedFor.port}}</p>
+    <p>voted for: {{votedFor.host}}:{{votedFor.port}}</p>
     {{/if}}
 
-    <h3>Votes received: {{votesReceived}}</h3>
+    <p>votes received: {{votesReceived}}</>
 
+</script>
+<script id="raftLog" type="text/x-handlebars-template">
+    <h1 class="page-header">Raft state</h1>
+
+    <p>committed index: {{committedIndex}}</p>
+
+    {{#if entries}}
+    <h3 class="sub-header">Entries:</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>term</th>
+                <th>index</th>
+                <th>command</th>
+                <th>client</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each entries}}
+            <tr>
+                <td>{{term}}</td>
+                <td>{{index}}</td>
+                <td>{{command}}</td>
+                <td>
+                    {{#if client}}
+                    {{client.host}}:{{client.port}}
+                    {{/if}}
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <p>No members found</p>
+    {{/if}}
+
+</script>
+<script id="blobList" type="text/x-handlebars-template">
+    <h2 class="page-header">Blob resources</h2>
+
+    {{#if resources}}
+    <h3 class="sub-header">Entries:</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>key</th>
+                <th>nodes</th>
+            </tr>
+            </thead>
+            <tbody>
+            {{#each resources}}
+            <tr>
+                <td>{{key}}</td>
+                <td>
+                    {{#each nodes}}
+                    <p>{{host}}:{{port}}</p>
+                    {{/each}}
+                </td>
+            </tr>
+            {{/each}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <p>No resources found</p>
+    {{/if}}
 </script>
 </body>
 </html>

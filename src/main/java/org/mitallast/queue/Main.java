@@ -27,18 +27,27 @@ public class Main {
 
     public static void main(String... args) throws Exception {
 
-        Config config1 = ConfigFactory.parseMap(ImmutableMap.of("transport.port", 8900, "rest.port", 8800)).withFallback(ConfigFactory.load());
-//        System.out.println(config1.root().render());
+        Config config1 = ConfigFactory.parseMap(ImmutableMap.of(
+            "transport.port", 8900,
+            "rest.port", 8800,
+            "node.name", "node_0"
+        )).withFallback(ConfigFactory.load());
         final Node node1 = new InternalNode(config1);
         node1.start();
 
-        Config config2 = ConfigFactory.parseMap(ImmutableMap.of("transport.port", 8901, "rest.port", 8801)).withFallback(ConfigFactory.load());
-//        System.out.println(config2.root().render());
+        Config config2 = ConfigFactory.parseMap(ImmutableMap.of(
+            "transport.port", 8901,
+            "rest.port", 8801,
+            "node.name", "node_1"
+        )).withFallback(ConfigFactory.load());
         final Node node2 = new InternalNode(config2);
         node2.start();
 
-        Config config3 = ConfigFactory.parseMap(ImmutableMap.of("transport.port", 8902, "rest.port", 8802)).withFallback(ConfigFactory.load());
-//        System.out.println(config3.root().render());
+        Config config3 = ConfigFactory.parseMap(ImmutableMap.of(
+            "transport.port", 8902,
+            "rest.port", 8802,
+            "node.name", "node_2"
+        )).withFallback(ConfigFactory.load());
         final Node node3 = new InternalNode(config3);
         node3.start();
 

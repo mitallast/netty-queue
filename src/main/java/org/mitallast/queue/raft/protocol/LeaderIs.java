@@ -3,18 +3,17 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.Optional;
 
 public class LeaderIs implements Streamable {
-    private final Optional<DiscoveryNode> ref;
+    private final Optional<DiscoveryNode> leader;
     private final Optional<Streamable> msg;
 
     public LeaderIs(StreamInput stream) throws IOException {
-        ref = Optional.ofNullable(stream.readStreamableOrNull(DiscoveryNode::new));
+        leader = Optional.ofNullable(stream.readStreamableOrNull(DiscoveryNode::new));
         if (stream.readBoolean()) {
             msg = Optional.of(stream.readStreamable());
         } else {
@@ -22,13 +21,13 @@ public class LeaderIs implements Streamable {
         }
     }
 
-    public LeaderIs(Optional<DiscoveryNode> ref, Optional<Streamable> msg) {
-        this.ref = ref;
+    public LeaderIs(Optional<DiscoveryNode> leader, Optional<Streamable> msg) {
+        this.leader = leader;
         this.msg = msg;
     }
 
-    public Optional<DiscoveryNode> getRef() {
-        return ref;
+    public Optional<DiscoveryNode> getLeader() {
+        return leader;
     }
 
     public Optional<Streamable> getMsg() {
@@ -37,7 +36,7 @@ public class LeaderIs implements Streamable {
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamableOrNull(ref.orElse(null));
+        stream.writeStreamableOrNull(leader.orElse(null));
         if (msg.isPresent()) {
             stream.writeBoolean(true);
             stream.writeClass(msg.get().getClass());

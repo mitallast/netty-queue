@@ -24,19 +24,16 @@ public class RaftHandler extends AbstractComponent {
         transportController.registerMessageHandler(AppendEntries.class, raft::receive);
         transportController.registerMessageHandler(AppendRejected.class, raft::receive);
         transportController.registerMessageHandler(AppendSuccessful.class, raft::receive);
-        transportController.registerMessageHandler(AskForState.class, raft::receive);
         transportController.registerMessageHandler(BeginElection.class, raft::receive);
         transportController.registerMessageHandler(ChangeConfiguration.class, raft::receive);
         transportController.registerMessageHandler(ClientMessage.class, raft::receive);
         transportController.registerMessageHandler(DeclineCandidate.class, raft::receive);
         transportController.registerMessageHandler(ElectedAsLeader.class, raft::receive);
         transportController.registerMessageHandler(ElectionTimeout.class, raft::receive);
-        transportController.registerMessageHandler(IAmInState.class, raft::receive);
         transportController.registerMessageHandler(InitLogSnapshot.class, raft::receive);
         transportController.registerMessageHandler(InstallSnapshot.class, raft::receive);
         transportController.registerMessageHandler(InstallSnapshotRejected.class, raft::receive);
         transportController.registerMessageHandler(InstallSnapshotSuccessful.class, raft::receive);
-        transportController.registerMessageHandler(LeaderIs.class, raft::receive);
         transportController.registerMessageHandler(LogEntry.class, raft::receive);
         transportController.registerMessageHandler(RaftSnapshot.class, raft::receive);
         transportController.registerMessageHandler(RaftSnapshotMetadata.class, raft::receive);
@@ -44,6 +41,5 @@ public class RaftHandler extends AbstractComponent {
         transportController.registerMessageHandler(RequestVote.class, raft::receive);
         transportController.registerMessageHandler(SendHeartbeat.class, raft::receive);
         transportController.registerMessageHandler(VoteCandidate.class, raft::receive);
-        transportController.registerMessageHandler(WhoIsTheLeader.class, raft::receive);
     }
 }

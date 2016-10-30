@@ -21,19 +21,16 @@ public class RaftStreamService {
         streamService.register(AppendEntries.class, AppendEntries::new, 200);
         streamService.register(AppendRejected.class, AppendRejected::new, 201);
         streamService.register(AppendSuccessful.class, AppendSuccessful::new, 202);
-        streamService.register(AskForState.class, AskForState::read, 203);
         streamService.register(BeginElection.class, BeginElection::read, 204);
         streamService.register(ChangeConfiguration.class, ChangeConfiguration::new, 205);
         streamService.register(ClientMessage.class, ClientMessage::new, 206);
         streamService.register(DeclineCandidate.class, DeclineCandidate::new, 207);
         streamService.register(ElectedAsLeader.class, ElectedAsLeader::read, 208);
         streamService.register(ElectionTimeout.class, ElectionTimeout::read, 209);
-        streamService.register(IAmInState.class, IAmInState::new, 210);
         streamService.register(InitLogSnapshot.class, InitLogSnapshot::read, 211);
         streamService.register(InstallSnapshot.class, InstallSnapshot::new, 212);
         streamService.register(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 213);
         streamService.register(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 214);
-        streamService.register(LeaderIs.class, LeaderIs::new, 215);
         streamService.register(LogEntry.class, LogEntry::new, 216);
         streamService.register(RaftSnapshot.class, RaftSnapshot::new, 217);
         streamService.register(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 218);
@@ -41,6 +38,5 @@ public class RaftStreamService {
         streamService.register(RequestVote.class, RequestVote::new, 220);
         streamService.register(SendHeartbeat.class, SendHeartbeat::read, 221);
         streamService.register(VoteCandidate.class, VoteCandidate::new, 222);
-        streamService.register(WhoIsTheLeader.class, WhoIsTheLeader::read, 223);
     }
 }

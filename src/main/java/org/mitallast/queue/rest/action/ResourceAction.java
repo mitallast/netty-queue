@@ -61,7 +61,7 @@ public class ResourceAction extends BaseRestHandler {
             session.sendResponse(new StatusRestResponse(HttpResponseStatus.NOT_FOUND));
         } else {
             try {
-                ByteBuf buffer = Unpooled.buffer();
+                ByteBuf buffer = session.alloc().buffer();
                 byte[] bytes = new byte[1024];
                 int read;
                 do {

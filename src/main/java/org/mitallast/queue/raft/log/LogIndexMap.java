@@ -40,7 +40,6 @@ public class LogIndexMap {
     }
 
     public void put(DiscoveryNode member, long value) {
-        Preconditions.checkArgument(backing.containsKey(member), "Member [" + member + "] not found");
         backing = Immutable.replace(backing, member, value);
     }
 

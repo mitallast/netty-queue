@@ -40,7 +40,7 @@ public class TransportController extends AbstractComponent {
         if (handler != null) {
             handler.accept(channel, message);
         } else {
-            logger.error("handler not found, close channel");
+            logger.error("handler not found for {}, close channel", message.getClass());
             channel.close();
         }
     }

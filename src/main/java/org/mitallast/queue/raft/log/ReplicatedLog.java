@@ -15,7 +15,7 @@ public class ReplicatedLog {
     private final long start;
 
     public ReplicatedLog() {
-        this(ImmutableList.of(), 1);
+        this(ImmutableList.of(), 0);
     }
 
     public ReplicatedLog(ImmutableList<LogEntry> entries, long committedIndex) {
@@ -173,7 +173,7 @@ public class ReplicatedLog {
         } else {
             return new ReplicatedLog(ImmutableList.<LogEntry>builder()
                     .add(snapshot.toEntry())
-                    .addAll(take(snapshot.getMeta().getLastIncludedIndex()))
+                    .addAll(entries.stream().filter(entry -> entry.getIndex() > snapshot.getMeta().getLastIncludedIndex()).iterator())
                     .build(), committedIndex, snapshot.getMeta().getLastIncludedIndex());
         }
     }

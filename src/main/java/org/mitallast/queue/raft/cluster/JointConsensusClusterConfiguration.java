@@ -83,4 +83,27 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
         stream.writeStreamableSet(oldMembers);
         stream.writeStreamableSet(newMembers);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        JointConsensusClusterConfiguration that = (JointConsensusClusterConfiguration) o;
+
+        if (sequenceNumber != that.sequenceNumber) return false;
+        if (!oldMembers.equals(that.oldMembers)) return false;
+        if (!newMembers.equals(that.newMembers)) return false;
+        return members.equals(that.members);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (sequenceNumber ^ (sequenceNumber >>> 32));
+        result = 31 * result + oldMembers.hashCode();
+        result = 31 * result + newMembers.hashCode();
+        result = 31 * result + members.hashCode();
+        return result;
+    }
 }

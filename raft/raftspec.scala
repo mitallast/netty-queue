@@ -101,10 +101,10 @@ class RaftSpec extends TestKit(ActorSystem("RaftTest"))
     "return commitIndex if empty" in {
       log.committedIndex shouldEqual 0
     }
-    "return not contains entry 0 if empty" in {
-      log.containsEntryAt(0) shouldBe false
+    "return not contains entry 1 if empty" in {
+      log.containsEntryAt(1) shouldBe false
     }
-    "return contains entry 0 if entry 1" in {
+    "return contains entry 1 if entry 1" in {
       (log + entry1).containsEntryAt(1) shouldBe true
     }
     "compact log with" in {

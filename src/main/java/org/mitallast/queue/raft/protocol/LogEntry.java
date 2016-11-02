@@ -80,4 +80,13 @@ public class LogEntry implements Streamable {
         result = 31 * result + client.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "LogEntry{" +
+                "term=" + term +
+                ", index=" + index +
+                ", command=" + command +
+                '}';
+    }
 }

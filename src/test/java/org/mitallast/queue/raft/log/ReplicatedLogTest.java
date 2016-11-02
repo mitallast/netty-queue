@@ -16,10 +16,13 @@ import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class ReplicatedLogTest extends BaseTest {
 
-    private final Term term = new Term(1);
+    private final Term term0 = new Term(0);
+    private final Term term1 = new Term(1);
+    private final Term term = term1;
     private final ReplicatedLog log = new ReplicatedLog();
     private final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1);
     private final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2);
@@ -29,8 +32,8 @@ public class ReplicatedLogTest extends BaseTest {
     private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
     private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
     private final LogEntry snapshotEntry1 = new LogEntry(snapshot1, term, 1);
-    private final LogEntry snapshotEntry2 = new LogEntry(snapshot1, term, 2);
-    private final LogEntry snapshotEntry3 = new LogEntry(snapshot1, term, 3);
+    private final LogEntry snapshotEntry2 = new LogEntry(snapshot2, term, 2);
+    private final LogEntry snapshotEntry3 = new LogEntry(snapshot3, term, 3);
 
     @Test
     public void testAddFirstEntry() throws Exception {
@@ -90,6 +93,178 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testNextEntriesLowerBound0() throws Exception {
         Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(0));
+    }
+
+    @Test
+    public void testNextEntriesLowerBound1() throws Exception {
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(1));
+    }
+
+    @Test
+    public void testNextEntriesLowerBound2() throws Exception {
+        Assert.assertEquals(ImmutableList.of(entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(2));
+    }
+
+    @Test
+    public void testNextEntriesLowerBound3() throws Exception {
+        Assert.assertEquals(ImmutableList.of(), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(3));
+    }
+
+    @Test
+    public void testContrainsMatchingEntry0IfEmpty() throws Exception {
+        Assert.assertTrue(log.containsMatchingEntry(term0, 0));
+    }
+
+    @Test
+    public void testContrainsMatchingEntry1IfEmpty() throws Exception {
+        Assert.assertFalse(log.containsMatchingEntry(term0, 1));
+    }
+
+    @Test
+    public void testContrainsMatchingEntry1IfNotEmpty() throws Exception {
+        Assert.assertTrue(log.append(entry1).append(entry2).containsMatchingEntry(term, 2));
+    }
+
+    @Test
+    public void testBetween0and0empty() throws Exception {
+        Assert.assertEquals(ImmutableList.of(), log.append(entry1).append(entry2).append(entry3).slice(0, 0));
+    }
+
+    @Test
+    public void testBetween0and1entry1() throws Exception {
+        Assert.assertEquals(ImmutableList.of(entry1), log.append(entry1).append(entry2).append(entry3).slice(0, 1));
+    }
+
+    @Test
+    public void testBetween1and2entry2() throws Exception {
+        Assert.assertEquals(ImmutableList.of(entry2), log.append(entry1).append(entry2).append(entry3).slice(1, 2));
+    }
+
+    @Test
+    public void testBetween1and3entry3() throws Exception {
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), log.append(entry1).append(entry2).append(entry3).slice(1, 3));
+    }
+
+    @Test
+    public void testCommitIndexIfEmpty() throws Exception {
+        Assert.assertEquals(0, log.committedIndex());
+    }
+
+    @Test
+    public void testNotContainsEntry1ifEmpty() throws Exception {
+        Assert.assertFalse(log.containsEntryAt(1));
+    }
+
+    @Test
+    public void testContainsEntry1ifEntry1() throws Exception {
+        Assert.assertTrue(log.append(entry1).containsEntryAt(1));
+    }
+
+    @Test
+    public void testCompactLog() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot3);
+        Assert.assertEquals(ImmutableList.of(snapshotEntry3), compacted.entries());
+        Assert.assertTrue(compacted.hasSnapshot());
+        Assert.assertEquals(snapshot3, compacted.snapshot());
+    }
+
+    @Test
+    public void testContainsMatchingEntryAfterCompaction1() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).compactedWith(snapshot1);
+        Assert.assertTrue(compacted.containsMatchingEntry(term, 1));
+    }
+
+    @Test
+    public void testContainsMatchingEntryAfterCompaction2() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).compactedWith(snapshot2);
+        Assert.assertTrue(compacted.containsMatchingEntry(term, 2));
+    }
+
+    @Test
+    public void testContainsMatchingEntryAfterCompaction3() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot3);
+        Assert.assertTrue(compacted.containsMatchingEntry(term, 3));
+    }
+
+    @Test
+    public void testContainsEntry1AfterCompaction1() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
+        Assert.assertEquals(ImmutableList.of(snapshotEntry1, entry2, entry3), compacted.entries());
+        Assert.assertTrue(compacted.containsEntryAt(1));
+        Assert.assertTrue(compacted.containsEntryAt(2));
+        Assert.assertTrue(compacted.containsEntryAt(3));
+    }
+
+    @Test
+    public void testContainsEntry1AfterCompaction2() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot2);
+        Assert.assertEquals(ImmutableList.of(snapshotEntry2, entry3), compacted.entries());
+        Assert.assertFalse(compacted.containsEntryAt(1));
+        Assert.assertTrue(compacted.containsEntryAt(2));
+        Assert.assertTrue(compacted.containsEntryAt(3));
+    }
+
+    @Test
+    public void testContainsEntry1AfterCompaction3() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot3);
+        Assert.assertEquals(ImmutableList.of(snapshotEntry3), compacted.entries());
+        Assert.assertFalse(compacted.containsEntryAt(1));
+        Assert.assertFalse(compacted.containsEntryAt(2));
+        Assert.assertTrue(compacted.containsEntryAt(3));
+    }
+
+    @Test
+    public void testLastTermAfterCompaction1() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).compactedWith(snapshot1);
+        Assert.assertEquals(Optional.of(term), compacted.lastTerm());
+    }
+
+    @Test
+    public void testLastTermAfterCompaction2() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).compactedWith(snapshot1);
+        Assert.assertEquals(Optional.of(term), compacted.lastTerm());
+    }
+
+    @Test
+    public void testLastTermAfterCompaction3() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
+        Assert.assertEquals(Optional.of(term), compacted.lastTerm());
+    }
+
+    @Test
+    public void testLastIndexAfterCompaction1() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).compactedWith(snapshot1);
+        Assert.assertEquals(1, compacted.lastIndex());
+    }
+
+    @Test
+    public void testLastIndexAfterCompaction2() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).compactedWith(snapshot2);
+        Assert.assertEquals(2, compacted.lastIndex());
+    }
+
+    @Test
+    public void testLastIndexAfterCompaction3() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot3);
+        Assert.assertEquals(3, compacted.lastIndex());
+    }
+
+    @Test
+    public void testEntriesBatchFrom1AfterCompaction1() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(1));
+    }
+
+    @Test
+    public void testEntriesBatchFrom1AfterCompaction2() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
+        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(2));
+    }
+
+    @Test
+    public void testEntriesBatchFrom1AfterCompaction3() throws Exception {
+        ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
+        Assert.assertEquals(ImmutableList.of(), compacted.entriesBatchFrom(3));
     }
 
     private class AppendWord implements Streamable {

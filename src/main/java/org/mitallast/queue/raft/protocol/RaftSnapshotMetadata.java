@@ -44,4 +44,34 @@ public class RaftSnapshotMetadata implements Streamable {
         stream.writeClass(config.getClass());
         stream.writeStreamable(config);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RaftSnapshotMetadata that = (RaftSnapshotMetadata) o;
+
+        if (lastIncludedIndex != that.lastIncludedIndex) return false;
+        if (!lastIncludedTerm.equals(that.lastIncludedTerm)) return false;
+        return config.equals(that.config);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = lastIncludedTerm.hashCode();
+        result = 31 * result + (int) (lastIncludedIndex ^ (lastIncludedIndex >>> 32));
+        result = 31 * result + config.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RaftSnapshotMetadata{" +
+                "lastIncludedTerm=" + lastIncludedTerm +
+                ", lastIncludedIndex=" + lastIncludedIndex +
+                ", config=" + config +
+                '}';
+    }
 }

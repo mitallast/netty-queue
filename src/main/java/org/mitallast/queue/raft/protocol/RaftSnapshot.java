@@ -40,4 +40,31 @@ public class RaftSnapshot implements Streamable {
         stream.writeClass(data.getClass());
         stream.writeStreamable(data);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RaftSnapshot that = (RaftSnapshot) o;
+
+        if (!meta.equals(that.meta)) return false;
+        return data != null ? data.equals(that.data) : that.data == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = meta.hashCode();
+        result = 31 * result + (data != null ? data.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RaftSnapshot{" +
+                "meta=" + meta +
+                ", data=" + data +
+                '}';
+    }
 }

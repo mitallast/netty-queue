@@ -67,4 +67,23 @@ public class StableClusterConfiguration implements ClusterConfiguration {
         stream.writeLong(sequenceNumber);
         stream.writeStreamableSet(members);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        StableClusterConfiguration that = (StableClusterConfiguration) o;
+
+        if (sequenceNumber != that.sequenceNumber) return false;
+        return members.equals(that.members);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (sequenceNumber ^ (sequenceNumber >>> 32));
+        result = 31 * result + members.hashCode();
+        return result;
+    }
 }

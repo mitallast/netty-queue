@@ -6,7 +6,7 @@ import java.io.*;
 
 public interface StreamService {
 
-    <T extends Streamable> void register(Class<T> streamableClass, StreamableReader<T> reader, int id);
+    // <T extends Streamable> void register(Class<T> streamableClass, StreamableReader<T> reader, int id);
 
     StreamInput input(ByteBuf buffer);
 
@@ -16,13 +16,13 @@ public interface StreamService {
 
     StreamInput input(InputStream inputStream) throws IOException;
 
-    StreamInput input(DataInput dataInput) throws IOException;
-
     StreamOutput output(ByteBuf buffer);
 
     StreamOutput output(File file) throws IOException;
 
+    StreamOutput output(File file, boolean append) throws IOException;
+
     StreamOutput output(OutputStream outputStream) throws IOException;
 
-    StreamOutput output(DataOutput dataOutput) throws IOException;
+    StreamOutput output(DataOutputStream dataOutput) throws IOException;
 }

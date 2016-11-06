@@ -23,10 +23,6 @@ public class LocalBlobStorageService extends AbstractComponent implements BlobSt
     @Override
     public void putObject(String key, InputStream input) throws IOException {
         File objectFile = fileService.resource("blob", key);
-        if (!objectFile.exists()) {
-            objectFile.getParentFile().mkdirs();
-            objectFile.createNewFile();
-        }
         try (FileOutputStream output = new FileOutputStream(objectFile)) {
             byte[] buffer = new byte[4096];
             int read;

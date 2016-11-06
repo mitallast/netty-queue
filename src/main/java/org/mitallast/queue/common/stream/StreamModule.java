@@ -7,5 +7,8 @@ public class StreamModule extends AbstractModule {
     protected void configure() {
         bind(StreamService.class).to(InternalStreamService.class);
         bind(InternalStreamService.class).asEagerSingleton();
+
+        // Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
+        // streamableBinder.addBinding()
     }
 }

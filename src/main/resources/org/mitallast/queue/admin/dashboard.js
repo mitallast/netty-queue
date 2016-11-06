@@ -3,6 +3,8 @@ $(function () {
     initActions(window.document);
     createRaftClusterView();
 
+    var refresh= null;
+
     function initActions(context) {
         $('a[href="#raftState"]', context).click(function (e) {
             e.preventDefault();
@@ -32,6 +34,10 @@ $(function () {
     }
 
     function renderMain(html) {
+        if(refresh != null){
+            clearTimeout(refresh);
+            refresh = null;
+        }
         $main.html(html);
         initActions($main);
     }
@@ -46,7 +52,11 @@ $(function () {
     function createRaftLogView() {
         var template = Handlebars.compile($("#raftLog").html());
         $.getJSON("/_raft/log", function (data) {
+            $.each(data.entries, function(key, value) {
+                value.committed = value.index <= data.committedIndex;
+            });
             renderMain(template(data));
+            refresh = setTimeout(createRaftLogView, 100);
         });
     }
 

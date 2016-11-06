@@ -11,6 +11,8 @@ import java.util.UUID;
 
 public interface StreamInput extends DataInput, Closeable {
 
+    int available() throws IOException;
+
     @Override
     void readFully(byte[] b) throws IOException;
 

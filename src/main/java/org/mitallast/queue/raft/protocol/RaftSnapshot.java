@@ -3,7 +3,6 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -14,7 +13,11 @@ public class RaftSnapshot implements Streamable {
 
     public RaftSnapshot(StreamInput stream) throws IOException {
         meta = stream.readStreamable(RaftSnapshotMetadata::new);
-        data = stream.readStreamable();
+        if (stream.readBoolean()) {
+            data = stream.readStreamable();
+        } else {
+            data = null;
+        }
     }
 
     public RaftSnapshot(RaftSnapshotMetadata meta, Streamable data) {
@@ -37,8 +40,13 @@ public class RaftSnapshot implements Streamable {
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeStreamable(meta);
-        stream.writeClass(data.getClass());
-        stream.writeStreamable(data);
+        if (data != null) {
+            stream.writeBoolean(true);
+            stream.writeClass(data.getClass());
+            stream.writeStreamable(data);
+        } else {
+            stream.writeBoolean(false);
+        }
     }
 
     @Override

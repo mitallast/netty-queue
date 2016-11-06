@@ -154,7 +154,7 @@
             </thead>
             <tbody>
             {{#each entries}}
-            <tr>
+            <tr class="{{#if committed}}success{{/if}}">
                 <td>{{term}}</td>
                 <td>{{index}}</td>
                 <td>{{command}}</td>

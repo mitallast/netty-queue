@@ -12,4 +12,11 @@ public class UpdateTermEvent implements DomainEvent {
     public Term getTerm() {
         return term;
     }
+
+    @Override
+    public String toString() {
+        return "UpdateTermEvent{" +
+                "term=" + term +
+                '}';
+    }
 }

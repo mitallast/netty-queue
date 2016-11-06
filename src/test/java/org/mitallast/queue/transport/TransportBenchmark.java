@@ -1,16 +1,14 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 
 import java.io.IOException;
@@ -38,8 +36,7 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Before
     public void setUp() throws Exception {
-        StreamService streamService = node().injector().getInstance(StreamService.class);
-        streamService.register(TestStreamable.class, TestStreamable::new, 1000000);
+        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference(), ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
 
         transportService = node().injector().getInstance(TransportService.class);
         TransportServer transportServer = node().injector().getInstance(TransportServer.class);
@@ -53,9 +50,6 @@ public class TransportBenchmark extends BaseQueueTest {
 
     public void handle(TransportChannel channel, TestStreamable streamable) {
         countDownLatch.countDown();
-//        if(countDownLatch.getCount() % 1000 == 0) {
-//            System.out.println("await " + countDownLatch.getCount());
-//        }
     }
 
     @Test

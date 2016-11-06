@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import java.io.Closeable;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;

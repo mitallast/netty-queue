@@ -22,9 +22,9 @@ public class LocalBlobStorageServiceTest extends BaseTest {
     @Before
     public void setUp() throws Exception {
         Config config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("node.name", "test")
-            .put("blob.path", testFolder.getRoot().getAbsolutePath())
-            .build());
+                .put("node.name", "test")
+                .put("node.path", testFolder.getRoot().getAbsolutePath())
+                .build());
         FileService fileService = new FileService(config);
         blobStorageService = new LocalBlobStorageService(config, fileService);
     }

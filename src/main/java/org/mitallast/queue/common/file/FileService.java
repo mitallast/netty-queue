@@ -42,7 +42,20 @@ public class FileService extends AbstractComponent {
         Path filePath = Paths.get(servicePath.toString(), key).normalize();
         Preconditions.checkArgument(filePath.startsWith(servicePath), "resource path");
 
-        return filePath.toFile();
+        File resource = filePath.toFile();
+        if (!resource.exists()) {
+            if (!resource.getParentFile().exists()) {
+                resource.getParentFile().mkdirs();
+            }
+            resource.createNewFile();
+        }
+        return resource;
+    }
+
+    public File temporary(String service, String prefix, String suffix) throws IOException {
+        Path servicePath = service(service).toPath();
+
+        return Files.createTempFile(servicePath, prefix, suffix).toFile();
     }
 
     public Stream<Path> resources(String service) throws IOException {

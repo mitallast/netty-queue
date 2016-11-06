@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.stream;
 
+import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -19,8 +20,7 @@ public class StreamTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        streamService = new InternalStreamService(ConfigFactory.defaultReference());
-        streamService.register(TestStreamable.class, TestStreamable::new, 1);
+        streamService = new InternalStreamService(ConfigFactory.defaultReference(), ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 1)));
         buffer = Unpooled.buffer();
     }
 

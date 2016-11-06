@@ -10,18 +10,22 @@ import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.component.AbstractComponent;
 
 import java.io.*;
+import java.util.Set;
 
 public class InternalStreamService extends AbstractComponent implements StreamableClassRegistry, StreamService {
     private final TIntObjectMap<StreamableReader<? extends Streamable>> idToReaderMap = new TIntObjectHashMap<>(100, 0.5f, -1);
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);
 
     @Inject
-    public InternalStreamService(Config config) {
+    public InternalStreamService(Config config, Set<StreamableRegistry> registrySet) {
         super(config, StreamService.class);
+
+        for (StreamableRegistry streamableRegistry : registrySet) {
+            register(streamableRegistry.getStreamable(), streamableRegistry.getReader(), streamableRegistry.getId());
+        }
     }
 
-    @Override
-    public synchronized <T extends Streamable> void register(Class<T> streamableClass, StreamableReader<T> reader, int id) {
+    private <T extends Streamable> void register(Class<T> streamableClass, StreamableReader<T> reader, int id) {
         StreamableReader<? extends Streamable> current = idToReaderMap.putIfAbsent(id, reader);
         if (current != null) {
             throw new IllegalArgumentException("Class id already registered, class: " + streamableClass + " id: " + id);
@@ -62,12 +66,7 @@ public class InternalStreamService extends AbstractComponent implements Streamab
 
     @Override
     public StreamInput input(InputStream inputStream) throws IOException {
-        return input((DataInput) new DataInputStream(inputStream));
-    }
-
-    @Override
-    public StreamInput input(DataInput dataInput) throws IOException {
-        return new DataStreamInput(this, dataInput);
+        return new DataStreamInput(this, inputStream);
     }
 
     @Override
@@ -81,12 +80,17 @@ public class InternalStreamService extends AbstractComponent implements Streamab
     }
 
     @Override
-    public StreamOutput output(OutputStream outputStream) throws IOException {
-        return output((DataOutput) new DataOutputStream(outputStream));
+    public StreamOutput output(File file, boolean append) throws IOException {
+        return output(new FileOutputStream(file, append));
     }
 
     @Override
-    public StreamOutput output(DataOutput dataOutput) throws IOException {
+    public StreamOutput output(OutputStream outputStream) throws IOException {
+        return output(new DataOutputStream(outputStream));
+    }
+
+    @Override
+    public StreamOutput output(DataOutputStream dataOutput) throws IOException {
         return new DataStreamOutput(this, dataOutput);
     }
 }

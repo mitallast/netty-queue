@@ -16,6 +16,19 @@ $(function () {
             e.preventDefault();
             createBlobListView()
         });
+        $('a[href="#putBlob"]', context).click(function (e) {
+            e.preventDefault();
+            createPutBlobView()
+        });
+        $('form[action="#putBlob"]', context).submit(function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var key = $form.find('input[name=key]').val();
+            var data = $form.find('textarea[name=data]').val();
+            $.post("/_blob/" + key, data, function(response) {
+                createBlobListView();
+            });
+        });
     }
 
     function renderMain(html) {
@@ -36,10 +49,16 @@ $(function () {
             renderMain(template(data));
         });
     }
+
     function createBlobListView() {
         var template = Handlebars.compile($("#blobList").html());
         $.getJSON("/_blob", function (data) {
             renderMain(template(data));
         });
+    }
+
+    function createPutBlobView() {
+        var template = $("#putBlob").html();
+        renderMain(template)
     }
 });

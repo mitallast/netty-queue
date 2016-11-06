@@ -3,10 +3,8 @@ package org.mitallast.queue.raft.log;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.Term;
@@ -18,22 +16,32 @@ import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import java.io.IOException;
 import java.util.Optional;
 
-public class ReplicatedLogTest extends BaseTest {
+public abstract class ReplicatedLogTest extends BaseTest {
+
+
+    private final ReplicatedLog log;
 
     private final Term term0 = new Term(0);
     private final Term term1 = new Term(1);
     private final Term term = term1;
-    private final ReplicatedLog log = new ReplicatedLog();
+
     private final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1);
     private final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2);
     private final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3);
+
     private final StableClusterConfiguration clusterConf = new StableClusterConfiguration(0, ImmutableSet.of());
+
     private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
     private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
     private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
+
     private final LogEntry snapshotEntry1 = new LogEntry(snapshot1, term, 1);
     private final LogEntry snapshotEntry2 = new LogEntry(snapshot2, term, 2);
     private final LogEntry snapshotEntry3 = new LogEntry(snapshot3, term, 3);
+
+    public ReplicatedLogTest(ReplicatedLog log) {
+        this.log = log;
+    }
 
     @Test
     public void testAddFirstEntry() throws Exception {
@@ -92,22 +100,22 @@ public class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testNextEntriesLowerBound0() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(0));
+        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(1));
     }
 
     @Test
     public void testNextEntriesLowerBound1() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(1));
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(2));
     }
 
     @Test
     public void testNextEntriesLowerBound2() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(2));
+        Assert.assertEquals(ImmutableList.of(entry3), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(3));
     }
 
     @Test
     public void testNextEntriesLowerBound3() throws Exception {
-        Assert.assertEquals(ImmutableList.of(), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(3));
+        Assert.assertEquals(ImmutableList.of(), log.append(entry1).append(entry2).append(entry3).entriesBatchFrom(4));
     }
 
     @Test
@@ -126,23 +134,18 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     @Test
-    public void testBetween0and0empty() throws Exception {
-        Assert.assertEquals(ImmutableList.of(), log.append(entry1).append(entry2).append(entry3).slice(0, 0));
-    }
-
-    @Test
-    public void testBetween0and1entry1() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry1), log.append(entry1).append(entry2).append(entry3).slice(0, 1));
+    public void testBetween1and1empty() throws Exception {
+        Assert.assertEquals(ImmutableList.of(entry1), log.append(entry1).append(entry2).append(entry3).slice(1, 1));
     }
 
     @Test
     public void testBetween1and2entry2() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry2), log.append(entry1).append(entry2).append(entry3).slice(1, 2));
+        Assert.assertEquals(ImmutableList.of(entry1, entry2), log.append(entry1).append(entry2).append(entry3).slice(1, 2));
     }
 
     @Test
     public void testBetween1and3entry3() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), log.append(entry1).append(entry2).append(entry3).slice(1, 3));
+        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log.append(entry1).append(entry2).append(entry3).slice(1, 3));
     }
 
     @Test
@@ -252,19 +255,19 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testEntriesBatchFrom1AfterCompaction1() throws Exception {
         ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(1));
+        Assert.assertEquals(ImmutableList.of(snapshotEntry1, entry2, entry3), compacted.entriesBatchFrom(1));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction2() throws Exception {
         ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
-        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(2));
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(2));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction3() throws Exception {
         ReplicatedLog compacted = log.append(entry1).append(entry2).append(entry3).compactedWith(snapshot1);
-        Assert.assertEquals(ImmutableList.of(), compacted.entriesBatchFrom(3));
+        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3));
     }
 
     private class AppendWord implements Streamable {

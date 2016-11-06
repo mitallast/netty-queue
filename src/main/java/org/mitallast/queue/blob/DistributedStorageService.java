@@ -61,6 +61,7 @@ public class DistributedStorageService extends AbstractComponent {
     }
 
     public CompletableFuture<Boolean> putResource(String key, byte[] data) {
+        logger.info("put resource: {}, bytes: {}", key, data.length);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         List<DiscoveryNode> replicas = new ArrayList<>(raft.currentMeta().getConfig().members());
         for (int i = 0, max = replicas.size() - 1; i < max; i++) {
@@ -70,28 +71,32 @@ public class DistributedStorageService extends AbstractComponent {
             replicas.set(i, b);
             replicas.set(swap, a);
         }
+        BiConsumer<PutBlobResourceResponse, Throwable> completeListener = new BiConsumer<PutBlobResourceResponse, Throwable>() {
+            private AtomicLong countDown = new AtomicLong(QoS);
+            private boolean stored = false;
+
+            @Override
+            public void accept(PutBlobResourceResponse response, Throwable throwable) {
+                stored = stored || response.isStored();
+                long count = countDown.decrementAndGet();
+                logger.info("handle complete: {}", count);
+                if (count == 0) {
+                    if (stored) {
+                        future.complete(Boolean.TRUE);
+                    }
+                }
+            }
+        };
         for (int i = 0; i < QoS; i++) {
             CompletableFuture<PutBlobResourceResponse> nodeFuture = new CompletableFuture<>();
             long id = requestId.incrementAndGet();
             requests.put(id, nodeFuture);
-            nodeFuture.whenComplete(new BiConsumer<PutBlobResourceResponse, Throwable>() {
-
-                private AtomicLong countDown = new AtomicLong();
-                private boolean stored = false;
-
-                @Override
-                public void accept(PutBlobResourceResponse response, Throwable throwable) {
-                    if (countDown.decrementAndGet() == 0) {
-                        stored = stored || response.isStored();
-                        if (stored) {
-                            future.complete(null);
-                        }
-                    }
-                }
-            });
+            nodeFuture.whenComplete(completeListener);
 
             PutBlobResourceRequest message = new PutBlobResourceRequest(id, key, data);
             MessageTransportFrame frame = new MessageTransportFrame(Version.CURRENT, message);
+
+            logger.info("send put request {} to {}", id, replicas.get(i));
             transportService.connectToNode(replicas.get(i));
             transportService.channel(replicas.get(i)).send(frame);
         }
@@ -146,6 +151,7 @@ public class DistributedStorageService extends AbstractComponent {
     }
 
     private void handle(TransportChannel channel, PutBlobResourceRequest message) {
+        logger.info("handle put request: {}", message.getId());
         boolean stored = false;
         try {
             blobStorageService.putObject(message.getKey(), new ByteArrayInputStream(message.getData()));
@@ -154,9 +160,12 @@ public class DistributedStorageService extends AbstractComponent {
             logger.error("error store: {}", e);
         }
 
-        PutBlobResource cmd = new PutBlobResource(message.getKey(), transportServer.localNode());
-        raft.receive(new ClientMessage(transportServer.localNode(), cmd));
+        if (stored) {
+            PutBlobResource cmd = new PutBlobResource(message.getKey(), transportServer.localNode());
+            raft.receive(new ClientMessage(transportServer.localNode(), cmd));
+        }
 
+        logger.info("send put response: {}", message.getId());
         PutBlobResourceResponse response = new PutBlobResourceResponse(
                 message.getId(),
                 transportServer.localNode(),
@@ -169,7 +178,9 @@ public class DistributedStorageService extends AbstractComponent {
     @SuppressWarnings("unchecked")
     private void handle(TransportChannel channel, PutBlobResourceResponse message) {
         CompletableFuture completableFuture = requests.get(message.getId());
+        logger.info("handle put response: {}", message.getId());
         if (completableFuture != null) {
+            logger.info("complete put future: {}", message.getId());
             completableFuture.complete(message);
         }
     }

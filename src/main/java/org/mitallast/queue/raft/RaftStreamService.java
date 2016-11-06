@@ -38,5 +38,6 @@ public class RaftStreamService {
         streamService.register(RequestVote.class, RequestVote::new, 220);
         streamService.register(SendHeartbeat.class, SendHeartbeat::read, 221);
         streamService.register(VoteCandidate.class, VoteCandidate::new, 222);
+        streamService.register(Noop.class, Noop::read, 223);
     }
 }

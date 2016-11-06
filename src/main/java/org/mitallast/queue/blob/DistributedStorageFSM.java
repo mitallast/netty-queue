@@ -31,10 +31,13 @@ public class DistributedStorageFSM extends AbstractComponent implements Resource
     public Streamable apply(Streamable message) {
         if (message instanceof PutBlobResource) {
             PutBlobResource resource = (PutBlobResource) message;
+            logger.info("put resource to routing map: {} ", resource);
             routingMap = routingMap.withResource(resource.getKey(), resource.getNode());
-        }
-        if (message instanceof BlobRoutingMap) {
+        } else if (message instanceof BlobRoutingMap) {
+            logger.info("install routing map: {}", routingMap);
             routingMap = (BlobRoutingMap) message;
+        } else {
+
         }
         return null;
     }

@@ -14,6 +14,7 @@ import org.mitallast.queue.raft.cluster.*;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.domain.*;
 import org.mitallast.queue.raft.log.LogIndexMap;
+import org.mitallast.queue.raft.log.MemoryReplicatedLog;
 import org.mitallast.queue.raft.log.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -40,7 +41,7 @@ public class Raft extends AbstractLifecycleComponent {
 
     private volatile Optional<DiscoveryNode> recentlyContactedByLeader;
 
-    private volatile ReplicatedLog replicatedLog = new ReplicatedLog();
+    private volatile ReplicatedLog replicatedLog = new MemoryReplicatedLog();
     private volatile LogIndexMap nextIndex = new LogIndexMap();
     private volatile LogIndexMap matchIndex = new LogIndexMap();
 
@@ -49,7 +50,7 @@ public class Raft extends AbstractLifecycleComponent {
     private final long discoveryTimeout;
     private final long heartbeat;
 
-    private volatile long nextIndexDefault = 0;
+    private volatile long nextIndexDefault = 1;
 
     private final DefaultEventExecutor context;
     private final ConcurrentMap<String, ScheduledFuture> timerMap = new ConcurrentHashMap<>();
@@ -73,7 +74,7 @@ public class Raft extends AbstractLifecycleComponent {
         this.resourceFSM = resourceFSM;
 
         recentlyContactedByLeader = Optional.empty();
-        replicatedLog = new ReplicatedLog();
+        replicatedLog = new MemoryReplicatedLog();
         nextIndex = new LogIndexMap();
         matchIndex = new LogIndexMap();
 
@@ -430,7 +431,7 @@ public class Raft extends AbstractLifecycleComponent {
             for (LogEntry entry : entries) {
                 atIndex = Math.min(atIndex, entry.getIndex());
             }
-            logger.info("executing: replicatedLog = replicatedLog.append({}, {})", entries, atIndex - 1);
+            logger.info("append({}, {}) to {}", entries, atIndex - 1, replicatedLog);
             replicatedLog = replicatedLog.append(entries, atIndex - 1);
         }
         logger.info("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
@@ -1006,10 +1007,20 @@ public class Raft extends AbstractLifecycleComponent {
     }
 
     private class LeaderBehavior extends SnapshotBehavior {
+
+        private void appendNoop(RaftMetadata meta) {
+            LogEntry entry = new LogEntry(Noop.INSTANCE, meta.getCurrentTerm(), replicatedLog.nextIndex());
+            logger.info("adding to log noop entry: {}", entry);
+            replicatedLog = replicatedLog.append(entry);
+            matchIndex.put(self(), entry.getIndex());
+            logger.info("log status = {}", replicatedLog);
+        }
+
         @Override
         public State handle(ElectedAsLeader message, RaftMetadata meta) {
             logger.info("became leader for {}", meta.getCurrentTerm());
             initializeLeaderState();
+            appendNoop(meta);
             startHeartbeat(meta);
             unstashAll();
             return stay();
@@ -1017,6 +1028,7 @@ public class Raft extends AbstractLifecycleComponent {
 
         @Override
         public State handle(SendHeartbeat message, RaftMetadata meta) {
+            appendNoop(meta);
             sendHeartbeat(meta);
             return stay();
         }

@@ -8,6 +8,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.file.FileService;
 import org.unitils.util.ReaderInputStream;
 
 import java.io.InputStream;
@@ -24,7 +25,8 @@ public class LocalBlobStorageServiceTest extends BaseTest {
             .put("node.name", "test")
             .put("blob.path", testFolder.getRoot().getAbsolutePath())
             .build());
-        blobStorageService = new LocalBlobStorageService(config);
+        FileService fileService = new FileService(config);
+        blobStorageService = new LocalBlobStorageService(config, fileService);
     }
 
     @Test

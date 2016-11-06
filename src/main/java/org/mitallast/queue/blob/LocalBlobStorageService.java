@@ -3,29 +3,30 @@ package org.mitallast.queue.blob;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.common.component.AbstractComponent;
+import org.mitallast.queue.common.file.FileService;
 
 import java.io.*;
-import java.nio.file.*;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class LocalBlobStorageService extends AbstractComponent implements BlobStorageService {
 
-    private File root;
+    private final FileService fileService;
 
     @Inject
-    public LocalBlobStorageService(Config config) throws IOException {
+    public LocalBlobStorageService(Config config, FileService fileService) throws IOException {
         super(config.getConfig("blob"), BlobStorageService.class);
-        File path = new File(this.config.getString("path"));
-        root = new File(path, config.getString("node.name"));
-        if (!root.exists() && !root.mkdirs()) {
-            throw new IOException("error create directory: " + root);
-        }
+        this.fileService = fileService;
     }
 
     @Override
     public void putObject(String key, InputStream input) throws IOException {
-        File objectFile = file(key);
+        File objectFile = fileService.resource("blob", key);
+        if (!objectFile.exists()) {
+            objectFile.getParentFile().mkdirs();
+            objectFile.createNewFile();
+        }
         try (FileOutputStream output = new FileOutputStream(objectFile)) {
             byte[] buffer = new byte[4096];
             int read;
@@ -37,29 +38,20 @@ public class LocalBlobStorageService extends AbstractComponent implements BlobSt
 
     @Override
     public InputStream getObject(String key) throws IOException {
-        return new FileInputStream(file(key));
+        return new FileInputStream(fileService.resource("blob", key));
     }
 
     @Override
     public List<String> listObjects() throws IOException {
-        Path rootPath = root.toPath();
-        return Files.walk(rootPath)
-            .map(path -> path.relativize(rootPath).toString())
-            .collect(Collectors.toList());
+        return fileService.resources("blob")
+                .map(Path::toString)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<String> listObjects(String prefix) throws IOException {
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher(prefix);
-        Path rootPath = root.toPath();
-        return Files.walk(rootPath)
-            .map(path -> path.relativize(rootPath))
-            .filter(matcher::matches)
-            .map(Path::toString)
-            .collect(Collectors.toList());
-    }
-
-    private File file(String key) {
-        return new File(root, key);
+        return fileService.resources("blob", prefix)
+                .map(Path::toString)
+                .collect(Collectors.toList());
     }
 }

@@ -32,13 +32,6 @@ public class LogIndexMap {
         return value;
     }
 
-    public long incrementFor(DiscoveryNode member) {
-        Preconditions.checkArgument(backing.containsKey(member), "Member [" + member + "] not found");
-        long value = backing.get(member) + 1;
-        backing = Immutable.replace(backing, member, value);
-        return value;
-    }
-
     public void put(DiscoveryNode member, long value) {
         backing = Immutable.replace(backing, member, value);
     }

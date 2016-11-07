@@ -115,6 +115,11 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         }
 
         @Override
+        public int committedEntries() {
+            return (int) (committedIndex - start);
+        }
+
+        @Override
         public long committedIndex() {
             return committedIndex;
         }

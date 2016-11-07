@@ -49,6 +49,7 @@ public class Raft extends AbstractLifecycleComponent {
     private final long electionDeadline;
     private final long discoveryTimeout;
     private final long heartbeat;
+    private final long snapshotInterval;
 
     private volatile long nextIndexDefault = 1;
 
@@ -83,6 +84,7 @@ public class Raft extends AbstractLifecycleComponent {
         electionDeadline = this.config.getDuration("election-deadline", TimeUnit.MILLISECONDS);
         discoveryTimeout = this.config.getDuration("discovery-timeout", TimeUnit.MILLISECONDS);
         heartbeat = this.config.getDuration("heartbeat", TimeUnit.MILLISECONDS);
+        snapshotInterval = this.config.getLong("snapshot-interval");
 
         context = new DefaultEventExecutor(new DefaultThreadFactory("raft", true, Thread.MAX_PRIORITY));
 
@@ -408,6 +410,9 @@ public class Raft extends AbstractLifecycleComponent {
         senderIsCurrentLeader(msg.getMember());
         send(msg.getMember(), append(msg.getEntries(), meta));
         replicatedLog = commitUntilLeadersIndex(meta, msg);
+        if (replicatedLog.committedEntries() >= snapshotInterval) {
+            receive(InitLogSnapshot.INSTANCE);
+        }
 
         ClusterConfiguration config = maybeGetNewConfiguration(msg.getEntries().stream().map(LogEntry::getCommand).collect(Collectors.toList()), meta.getConfig());
         if (config == null) {
@@ -1136,6 +1141,9 @@ public class Raft extends AbstractLifecycleComponent {
                 }
                 matchIndex.putIfGreater(message.getMember(), message.getLastIndex());
                 replicatedLog = maybeCommitEntry(meta, matchIndex, replicatedLog);
+                if (replicatedLog.committedEntries() >= snapshotInterval) {
+                    receive(InitLogSnapshot.INSTANCE);
+                }
                 return stay();
             } else {
                 logger.warn("unexpected append successful: {} in term:{}", message, meta.getCurrentTerm());

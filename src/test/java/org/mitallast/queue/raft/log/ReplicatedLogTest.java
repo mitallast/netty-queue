@@ -19,25 +19,25 @@ import java.util.Optional;
 
 public abstract class ReplicatedLogTest extends BaseTest {
 
-    private final Term term0 = new Term(0);
-    private final Term term1 = new Term(1);
-    private final Term term = term1;
+    protected final Term term0 = new Term(0);
+    protected final Term term1 = new Term(1);
+    protected final Term term = term1;
 
-    private final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1);
-    private final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2);
-    private final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3);
+    protected final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1);
+    protected final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2);
+    protected final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3);
 
-    private final StableClusterConfiguration clusterConf = new StableClusterConfiguration(0, ImmutableSet.of());
+    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration(0, ImmutableSet.of());
 
-    private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
-    private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
-    private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
+    protected final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
+    protected final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
+    protected final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
 
-    private final LogEntry snapshotEntry1 = new LogEntry(snapshot1, term, 1);
-    private final LogEntry snapshotEntry2 = new LogEntry(snapshot2, term, 2);
-    private final LogEntry snapshotEntry3 = new LogEntry(snapshot3, term, 3);
+    protected final LogEntry snapshotEntry1 = new LogEntry(snapshot1, term, 1);
+    protected final LogEntry snapshotEntry2 = new LogEntry(snapshot2, term, 2);
+    protected final LogEntry snapshotEntry3 = new LogEntry(snapshot3, term, 3);
 
-    protected abstract ReplicatedLog log() throws IOException;
+    protected abstract ReplicatedLog log() throws Exception;
 
     @Test
     public void testAddFirstEntry() throws Exception {

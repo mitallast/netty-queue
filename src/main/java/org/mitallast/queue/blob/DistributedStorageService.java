@@ -1,7 +1,7 @@
 package org.mitallast.queue.blob;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.Version;
@@ -106,17 +106,18 @@ public class DistributedStorageService extends AbstractComponent {
     public CompletableFuture<GetBlobResourceResponse> getResource(String key) {
         logger.info("get resource {}", key);
         CompletableFuture<GetBlobResourceResponse> future = new CompletableFuture<>();
-        ImmutableMap<String, ImmutableList<DiscoveryNode>> routingMap = fsm.getRoutingMap().getRoutingMap();
+        ImmutableMap<String, ImmutableSet<DiscoveryNode>> routingMap = fsm.getRoutingMap().getRoutingMap();
         if (routingMap.containsKey(key)) {
-            ImmutableList<DiscoveryNode> nodes = routingMap.get(key);
+            ImmutableSet<DiscoveryNode> nodes = routingMap.get(key);
 
             long id = requestId.incrementAndGet();
             requests.put(id, future);
 
-            DiscoveryNode node = nodes.get((int) (id % nodes.size()));
+            DiscoveryNode node = nodes.asList().get((int) (id % nodes.size()));
 
             logger.info("get resource {} id {} node {}", key, id, node);
             MessageTransportFrame frame = new MessageTransportFrame(Version.CURRENT, new GetBlobResourceRequest(id, key));
+            transportService.connectToNode(node);
             transportService.channel(node).send(frame);
         } else {
             future.completeExceptionally(new RuntimeException("resource not found"));

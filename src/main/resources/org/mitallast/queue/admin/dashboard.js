@@ -22,6 +22,10 @@ $(function () {
             e.preventDefault();
             createPutBlobView()
         });
+        $('button[data-resource-id]', context).click(function (e) {
+            e.preventDefault();
+            createGetBlobView($(this).data('resource-id'))
+        })
         $('form[action="#putBlob"]', context).submit(function(e) {
             e.preventDefault();
             var $form = $(this);
@@ -68,7 +72,14 @@ $(function () {
     }
 
     function createPutBlobView() {
-        var template = $("#putBlob").html();
-        renderMain(template)
+        var template = Handlebars.compile($("#putBlob").html());
+        renderMain(template({"key": "", "data": ""}))
+    }
+
+    function createGetBlobView(key) {
+        var template = Handlebars.compile($("#putBlob").html());
+        $.get("/_blob/" + key, function(data) {
+            renderMain(template({"key": key, "data":data}))
+        });
     }
 });

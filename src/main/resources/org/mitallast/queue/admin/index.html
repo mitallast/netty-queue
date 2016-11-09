@@ -184,17 +184,19 @@
             <tr>
                 <th>key</th>
                 <th>nodes</th>
+                <th></th>
             </tr>
             </thead>
             <tbody>
             {{#each resources}}
             <tr>
-                <td>{{key}}</td>
+                <td><a href="/_blob/{{key}}">{{key}}</a></td>
                 <td>
                     {{#each nodes}}
                     <p>{{host}}:{{port}}</p>
                     {{/each}}
                 </td>
+                <td><button data-resource-id="{{key}}" class="btn btn-default">edit</button></td>
             </tr>
             {{/each}}
             </tbody>
@@ -210,11 +212,11 @@
     <form action="#putBlob">
         <div class="form-group">
             <label for="putBlobKey">Resource key</label>
-            <input class="form-control" type="text" name="key" id="putBlobKey" placeholder="some/key">
+            <input class="form-control" type="text" name="key" id="putBlobKey" placeholder="some/key" value="{{key}}">
         </div>
         <div class="form-group">
             <label for="putBlobData">Resource data</label>
-            <textarea class="form-control" rows="10" name="data" id="putBlobData"></textarea>
+            <textarea class="form-control" rows="10" name="data" id="putBlobData">{{data}}</textarea>
         </div>
         <button type="submit" class="btn btn-default">Submit</button>
     </form>

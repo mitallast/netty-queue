@@ -62,16 +62,8 @@ public class RaftMetadata {
         return config.members();
     }
 
-    public boolean isConfigTransitionInProgress() {
-        return config.isTransitioning();
-    }
-
     public boolean canVoteIn(Term term) {
         return !votedFor.isPresent() && term.equals(currentTerm);
-    }
-
-    public boolean cannotVoteIn(Term term) {
-        return term.less(currentTerm) || votedFor.isPresent();
     }
 
     public RaftMetadata forNewElection() {
@@ -80,6 +72,14 @@ public class RaftMetadata {
 
     public RaftMetadata withTerm(Term term) {
         return new RaftMetadata(term, config, votedFor, votesReceived);
+    }
+
+    public RaftMetadata withTerm(Optional<Term> term) {
+        if(term.isPresent()){
+            return new RaftMetadata(term.get(), config, votedFor, votesReceived);
+        }else {
+            return this;
+        }
     }
 
     public RaftMetadata incTerm() {

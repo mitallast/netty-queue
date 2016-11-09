@@ -82,10 +82,6 @@ public class RaftMetadata {
         }
     }
 
-    public RaftMetadata incTerm() {
-        return new RaftMetadata(currentTerm.next(), config, votedFor, votesReceived);
-    }
-
     public RaftMetadata withVoteFor(DiscoveryNode candidate) {
         return new RaftMetadata(currentTerm, config, Optional.of(candidate), votesReceived);
     }
@@ -108,9 +104,5 @@ public class RaftMetadata {
 
     public RaftMetadata forFollower() {
         return new RaftMetadata(currentTerm, config);
-    }
-
-    public RaftMetadata forFollower(Term term) {
-        return new RaftMetadata(term, config);
     }
 }

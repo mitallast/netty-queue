@@ -12,20 +12,8 @@ public class Term {
         return term;
     }
 
-    public Term prev() {
-        return new Term(term - 1);
-    }
-
     public Term next() {
         return new Term(term + 1);
-    }
-
-    public Term minus(long n) {
-        return new Term(term - n);
-    }
-
-    public Term plus(long n) {
-        return new Term(term + n);
     }
 
     public boolean greater(Term other) {
@@ -38,10 +26,6 @@ public class Term {
 
     public boolean greaterOrEqual(Term other) {
         return term >= other.term;
-    }
-
-    public boolean lessOrEqual(Term other) {
-        return term <= other.term;
     }
 
     @Override

@@ -60,7 +60,9 @@ public class FileService extends AbstractComponent {
 
     public Stream<Path> resources(String service) throws IOException {
         Path servicePath = service(service).toPath();
-        return Files.walk(servicePath).map(path -> path.relativize(servicePath));
+        return Files.walk(servicePath)
+                .filter(path -> path.toFile().isFile())
+                .map(servicePath::relativize);
     }
 
     public Stream<Path> resources(String service, String prefix) throws IOException {
@@ -68,7 +70,8 @@ public class FileService extends AbstractComponent {
 
         Path servicePath = service(service).toPath();
         return Files.walk(servicePath)
-                .map(path -> path.relativize(servicePath))
+                .filter(path -> path.toFile().isFile())
+                .map(servicePath::relativize)
                 .filter(matcher::matches);
     }
 }

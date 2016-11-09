@@ -16,6 +16,7 @@ import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -61,7 +62,7 @@ public class FileReplicatedLogTest extends ReplicatedLogTest {
         Assert.assertEquals(2, reopened.entries().size());
         Assert.assertEquals(ImmutableList.of(snapshotEntry2, entry3), reopened.entries());
 
-        List<String> files = fileService().resources("raft").map(path -> path.toString()).collect(Collectors.toList());
+        List<String> files = fileService().resources("raft").map(Path::toString).collect(Collectors.toList());
         logger.info("files: {}", files);
         Assert.assertEquals(2, files.size());
         Assert.assertTrue(files.contains("state.bin"));

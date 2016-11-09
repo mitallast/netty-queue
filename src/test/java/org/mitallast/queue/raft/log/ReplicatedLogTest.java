@@ -115,27 +115,27 @@ public abstract class ReplicatedLogTest extends BaseTest {
     }
 
     @Test
-    public void testContrainsMatchingEntry0IfEmpty() throws Exception {
+    public void testContainsMatchingEntry0IfEmpty() throws Exception {
         Assert.assertTrue(log().containsMatchingEntry(term0, 0));
     }
 
     @Test
-    public void testContrainsMatchingEntry1IfEmpty() throws Exception {
+    public void testContainsMatchingEntry1IfEmpty() throws Exception {
         Assert.assertFalse(log().containsMatchingEntry(term0, 1));
     }
 
     @Test
-    public void testContrainsMatchingEntry3IfNotEmpty() throws Exception {
+    public void testContainsMatchingEntry3IfNotEmpty() throws Exception {
         Assert.assertTrue(log().append(entry1).append(entry2).append(entry3).containsMatchingEntry(term, 3));
     }
 
     @Test
-    public void testContrainsMatchingEntry2IfNotEmpty() throws Exception {
+    public void testContainsMatchingEntry2IfNotEmpty() throws Exception {
         Assert.assertTrue(log().append(entry1).append(entry2).append(entry3).containsMatchingEntry(term, 2));
     }
 
     @Test
-    public void testContrainsMatchingEntry1IfNotEmpty() throws Exception {
+    public void testContainsMatchingEntry1IfNotEmpty() throws Exception {
         Assert.assertTrue(log().append(entry1).append(entry2).append(entry3).containsMatchingEntry(term, 1));
     }
 

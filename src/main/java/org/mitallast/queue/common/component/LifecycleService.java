@@ -2,7 +2,6 @@ package org.mitallast.queue.common.component;
 
 import com.google.inject.spi.ProvisionListener;
 import com.typesafe.config.Config;
-import org.mitallast.queue.rest.action.RestIndexAction;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,7 +12,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     private final List<LifecycleComponent> lifecycleQueue;
 
     protected LifecycleService(Config config) {
-        super(config, RestIndexAction.class);
+        super(config, LifecycleService.class);
         lifecycleQueue = new ArrayList<>();
     }
 

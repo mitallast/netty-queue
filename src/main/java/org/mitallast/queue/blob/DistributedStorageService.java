@@ -94,11 +94,9 @@ public class DistributedStorageService extends AbstractComponent {
             nodeFuture.whenComplete(completeListener);
 
             PutBlobResourceRequest message = new PutBlobResourceRequest(id, key, data);
-            MessageTransportFrame frame = new MessageTransportFrame(Version.CURRENT, message);
-
             logger.info("send put request {} to {}", id, replicas.get(i));
             transportService.connectToNode(replicas.get(i));
-            transportService.channel(replicas.get(i)).send(frame);
+            transportService.channel(replicas.get(i)).message(message);
         }
         return future;
     }
@@ -116,9 +114,8 @@ public class DistributedStorageService extends AbstractComponent {
             DiscoveryNode node = nodes.asList().get((int) (id % nodes.size()));
 
             logger.info("get resource {} id {} node {}", key, id, node);
-            MessageTransportFrame frame = new MessageTransportFrame(Version.CURRENT, new GetBlobResourceRequest(id, key));
             transportService.connectToNode(node);
-            transportService.channel(node).send(frame);
+            transportService.channel(node).message(new GetBlobResourceRequest(id, key));
         } else {
             future.completeExceptionally(new RuntimeException("resource not found"));
         }
@@ -135,8 +132,7 @@ public class DistributedStorageService extends AbstractComponent {
             while ((read = stream.read(bytes)) > 0) {
                 out.write(bytes, 0, read);
             }
-            GetBlobResourceResponse response = new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray());
-            channel.send(new MessageTransportFrame(Version.CURRENT, response));
+            channel.message(new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray()));
         } catch (IOException e) {
             logger.warn("error get resource {}: {}", message.getKey(), e);
         }
@@ -167,13 +163,7 @@ public class DistributedStorageService extends AbstractComponent {
         }
 
         logger.info("send put response: {}", message.getId());
-        PutBlobResourceResponse response = new PutBlobResourceResponse(
-                message.getId(),
-                transportServer.localNode(),
-                message.getKey(),
-                stored
-        );
-        channel.send(new MessageTransportFrame(Version.CURRENT, response));
+        channel.message(new PutBlobResourceResponse(message.getId(),transportServer.localNode(),message.getKey(),stored));
     }
 
     @SuppressWarnings("unchecked")

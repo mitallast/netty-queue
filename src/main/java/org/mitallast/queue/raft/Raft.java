@@ -203,10 +203,6 @@ public class Raft extends AbstractLifecycleComponent {
         return state.stay(newMeta);
     }
 
-    private State goTo(RaftState newState) {
-        return state.goTo(newState);
-    }
-
     private State goTo(RaftState newState, RaftMetadata newMeta) {
         return state.goTo(newState, newMeta);
     }
@@ -335,7 +331,7 @@ public class Raft extends AbstractLifecycleComponent {
             receive(message);
         } else {
             transportService.connectToNode(node);
-            transportService.channel(node).send(new MessageTransportFrame(Version.CURRENT, message));
+            transportService.channel(node).message(message);
         }
     }
 
@@ -424,7 +420,6 @@ public class Raft extends AbstractLifecycleComponent {
             when(builder, DeclineCandidate.class, this::handle);
             when(builder, ElectedAsLeader.class, this::handle);
             when(builder, SendHeartbeat.class, this::handle);
-            when(builder, ElectionMessage.class, this::handle);
             when(builder, AppendRejected.class, this::handle);
             when(builder, AppendSuccessful.class, this::handle);
             when(builder, InstallSnapshotSuccessful.class, this::handle);
@@ -520,11 +515,6 @@ public class Raft extends AbstractLifecycleComponent {
         }
 
         public State handle(SendHeartbeat message, RaftMetadata meta) {
-            logger.warn("unhandled: {} in {}", message, state.currentState);
-            return stay();
-        }
-
-        public State handle(ElectionMessage message, RaftMetadata meta) {
             logger.warn("unhandled: {} in {}", message, state.currentState);
             return stay();
         }
@@ -665,7 +655,7 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(AppendEntries message, RaftMetadata meta) {
             logger.info("cot append entries from a leader, but am in init state, will ask for it's configuration and join raft cluster");
             send(message.getMember(), new RequestConfiguration(self()));
-            return goTo(Candidate);
+            return goTo(Candidate, meta.forNewElection());
         }
 
         @Override
@@ -872,6 +862,7 @@ public class Raft extends AbstractLifecycleComponent {
                 logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta.getCurrentTerm());
                 RequestVote request = new RequestVote(meta.getCurrentTerm(), self(), replicatedLog.lastTerm().orElseGet(() -> new Term(0)), replicatedLog.lastIndex());
                 for (DiscoveryNode member : meta.membersWithout(self())) {
+                    logger.info("send request vote to {}", member);
                     send(member, request);
                 }
                 return stay(meta.incVote().withVoteFor(self()));
@@ -997,12 +988,6 @@ public class Raft extends AbstractLifecycleComponent {
         }
 
         @Override
-        public State handle(ElectionMessage message, RaftMetadata meta) {
-            logger.info("got election message");
-            return stay();
-        }
-
-        @Override
         public State handle(ClientMessage message, RaftMetadata meta) {
             logger.info("appending command: [{}] from {} to replicated log", message.getCmd(), message.getClient());
 
@@ -1080,7 +1065,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (message.getTerm().greater(meta.getCurrentTerm())) {
                 logger.info("leader ({}) got install snapshot from fresher leader ({}), will step down and the leader will keep being: {}",
                     meta.getCurrentTerm(), message.getTerm(), message.getLeader());
-                send(self(), message);
+                receive(message);
                 return goTo(Follower, meta.withTerm(message.getTerm()).forFollower());
             } else {
                 logger.info("rejecting install snapshot {}, current term is {}",

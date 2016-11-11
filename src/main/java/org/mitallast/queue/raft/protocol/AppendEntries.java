@@ -68,4 +68,43 @@ public class AppendEntries implements Streamable {
         stream.writeLong(leaderCommit);
         stream.writeStreamableList(entries);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AppendEntries that = (AppendEntries) o;
+
+        if (prevLogIndex != that.prevLogIndex) return false;
+        if (leaderCommit != that.leaderCommit) return false;
+        if (!member.equals(that.member)) return false;
+        if (!term.equals(that.term)) return false;
+        if (!prevLogTerm.equals(that.prevLogTerm)) return false;
+        return entries.equals(that.entries);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = member.hashCode();
+        result = 31 * result + term.hashCode();
+        result = 31 * result + prevLogTerm.hashCode();
+        result = 31 * result + (int) (prevLogIndex ^ (prevLogIndex >>> 32));
+        result = 31 * result + (int) (leaderCommit ^ (leaderCommit >>> 32));
+        result = 31 * result + entries.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "AppendEntries{" +
+            "member=" + member +
+            ", term=" + term +
+            ", prevLogTerm=" + prevLogTerm +
+            ", prevLogIndex=" + prevLogIndex +
+            ", leaderCommit=" + leaderCommit +
+            ", entries=" + entries +
+            '}';
+    }
 }

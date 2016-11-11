@@ -14,9 +14,12 @@ public class RaftModule extends AbstractModule {
     protected void configure() {
         bind(Raft.class).asEagerSingleton();
         bind(RaftHandler.class).asEagerSingleton();
+        bind(DefaultRaftContext.class).asEagerSingleton();
 
         bind(ClusterDiscovery.class).asEagerSingleton();
         bind(ReplicatedLog.class).toProvider(FileReplicatedLogProvider.class);
+
+        bind(RaftContext.class).to(DefaultRaftContext.class);
 
         Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 

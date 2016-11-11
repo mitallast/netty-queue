@@ -35,4 +35,23 @@ public class ClientMessage implements Streamable {
         stream.writeClass(cmd.getClass());
         stream.writeStreamable(cmd);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ClientMessage that = (ClientMessage) o;
+
+        if (!client.equals(that.client)) return false;
+        return cmd.equals(that.cmd);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = client.hashCode();
+        result = 31 * result + cmd.hashCode();
+        return result;
+    }
 }

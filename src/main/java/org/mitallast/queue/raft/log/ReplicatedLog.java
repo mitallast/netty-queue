@@ -32,7 +32,7 @@ public interface ReplicatedLog {
 
     ReplicatedLog append(ImmutableList<LogEntry> entries);
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries, long take);
+    ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex);
 
     ReplicatedLog compactedWith(RaftSnapshot snapshot);
 

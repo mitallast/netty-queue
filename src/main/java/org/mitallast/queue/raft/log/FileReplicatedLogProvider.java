@@ -17,7 +17,6 @@ import java.io.File;
 import java.io.IOError;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
@@ -77,15 +76,6 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         return fileService.temporary("raft", "log.", ".tmp");
     }
 
-    private int compareSegments(Path a, Path b) {
-        return Long.compare(segmentIndex(a), segmentIndex(b));
-    }
-
-    private long segmentIndex(Path path) {
-        String name = path.getFileName().toString();
-        return Long.parseLong(name.substring(0, name.length() - 4));
-    }
-
     private void writeState(long index, long committedIndex) throws IOException {
         try (StreamOutput output = streamService.output(stateFile)) {
             output.writeLong(index);
@@ -116,7 +106,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
         @Override
         public int committedEntries() {
-            return (int) (committedIndex - start);
+            return (int) (committedIndex - start + 1);
         }
 
         @Override
@@ -132,10 +122,6 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
             return entries.size() + offset();
         }
 
-        private ImmutableList<LogEntry> take(long n) {
-            return entries.subList(0, (int) (n - offset()));
-        }
-
         private LogEntry get(long index) {
             return entries.get((int) (index - start));
         }
@@ -147,7 +133,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         @Override
         public boolean containsMatchingEntry(Term otherPrevTerm, long otherPrevIndex) {
             return (otherPrevTerm.getTerm() == 0 && otherPrevIndex == 0 && entries.isEmpty()) ||
-                    (!entries().isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) && termAt(otherPrevIndex).equals(otherPrevTerm));
+                (!entries().isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) && termAt(otherPrevIndex).equals(otherPrevTerm));
         }
 
         @Override
@@ -192,20 +178,22 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                     segmentOutput.writeStreamable(entry);
                 }
                 return new FileReplicatedLog(segmentFile, segmentOutput, ImmutableList.<LogEntry>builder()
-                        .addAll(this.entries)
-                        .addAll(entries).build(), committedIndex, start);
+                    .addAll(this.entries)
+                    .addAll(entries).build(), committedIndex, start);
             } catch (IOException e) {
                 throw new IOError(e);
             }
         }
 
         @Override
-        public ReplicatedLog append(ImmutableList<LogEntry> entries, long take) {
-            if (take == entries.size() - offset()) {
+        public ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex) {
+            if (prevIndex == lastIndex()) {
                 return append(entries);
             } else {
                 try {
-                    ImmutableList<LogEntry> logEntries = ImmutableList.<LogEntry>builder().addAll(take(take)).addAll(entries).build();
+                    ImmutableList<LogEntry> logEntries = ImmutableList.<LogEntry>builder()
+                        .addAll(slice(0, prevIndex))
+                        .addAll(entries).build();
                     segmentOutput.close();
                     File tmpSegment = temporaryFile();
                     try (StreamOutput output = streamService.output(tmpSegment, false)) {
@@ -286,9 +274,9 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                 logEntries = ImmutableList.of(snapshot.toEntry());
             } else {
                 logEntries = ImmutableList.<LogEntry>builder()
-                        .add(snapshot.toEntry())
-                        .addAll(entries.stream().filter(entry -> entry.getIndex() > snapshot.getMeta().getLastIncludedIndex()).iterator())
-                        .build();
+                    .add(snapshot.toEntry())
+                    .addAll(entries.stream().filter(entry -> entry.getIndex() > snapshot.getMeta().getLastIncludedIndex()).iterator())
+                    .build();
             }
 
             try {
@@ -336,10 +324,10 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         @Override
         public String toString() {
             return "FileReplicatedLog{" +
-                    "entries=" + entries +
-                    ", committedIndex=" + committedIndex +
-                    ", start=" + start +
-                    '}';
+                "entries=" + entries +
+                ", committedIndex=" + committedIndex +
+                ", start=" + start +
+                '}';
         }
     }
 }

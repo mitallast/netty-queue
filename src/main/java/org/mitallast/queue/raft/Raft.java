@@ -345,9 +345,9 @@ public class Raft extends AbstractLifecycleComponent {
 
         senderIsCurrentLeader(msg.getMember());
         if (!msg.getEntries().isEmpty()) {
-            long atIndex = msg.getEntries().get(0).getIndex();
-            logger.debug("append({}, {}) to {}", msg.getEntries(), atIndex - 1, replicatedLog);
-            replicatedLog = replicatedLog.append(msg.getEntries(), atIndex - 1);
+            long prevIndex = msg.getEntries().get(0).getIndex() - 1;
+            logger.debug("append({}, {}) to {}", msg.getEntries(), prevIndex, replicatedLog);
+            replicatedLog = replicatedLog.append(msg.getEntries(), prevIndex);
         }
         logger.info("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
         AppendSuccessful response = new AppendSuccessful(self(), meta.getCurrentTerm(), replicatedLog.lastIndex());

@@ -3,17 +3,19 @@ package org.mitallast.queue.common.netty;
 import com.typesafe.config.Config;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.AdaptiveRecvByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.*;
+import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadFactory;
 
 public abstract class NettyServer extends AbstractLifecycleComponent {
 
@@ -28,7 +30,6 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final int threads;
     protected Channel channel;
     private ServerBootstrap bootstrap;
-    private NioEventLoopGroup boss;
 
     public NettyServer(Config config, Class loggerClass) {
         super(config, loggerClass);
@@ -43,17 +44,28 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         this.threads = config.getInt("threads");
     }
 
-    private NioEventLoopGroup group(String name) {
-        return new NioEventLoopGroup(threads, new DefaultThreadFactory(name));
+    private ThreadFactory threadFactory(String name) {
+        return new DefaultThreadFactory(name, true, Thread.NORM_PRIORITY, new ThreadGroup(name));
     }
 
     @Override
     protected void doStart() throws IOException {
         try {
-            boss = group("boss");
+            final Class<? extends ServerSocketChannel> channelClass;
+            final EventLoopGroup boss;
+            if(Epoll.isAvailable()){
+                logger.info("use epoll");
+                channelClass = EpollServerSocketChannel.class;
+                boss = new EpollEventLoopGroup(threads, threadFactory("boss"));
+            }else {
+                logger.info("use nio");
+                channelClass = NioServerSocketChannel.class;
+                boss = new NioEventLoopGroup(threads, threadFactory("boss"));
+            }
+
             bootstrap = new ServerBootstrap();
             bootstrap.group(boss)
-                .channel(NioServerSocketChannel.class)
+                .channel(channelClass)
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)
                 .option(ChannelOption.SO_REUSEADDR, reuseAddress)
@@ -85,7 +97,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
             Thread.currentThread().interrupt();
             throw new IOException(e);
         }
-        boss.shutdownGracefully();
+        bootstrap.config().group().shutdownGracefully();
         channel = null;
         bootstrap = null;
     }

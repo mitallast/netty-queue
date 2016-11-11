@@ -1,7 +1,9 @@
 package org.mitallast.queue.node;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.mitallast.queue.blob.BlobModule;
@@ -24,7 +26,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
 
     private final Injector injector;
 
-    public InternalNode(Config config) {
+    public InternalNode(Config config, AbstractModule... plugins) {
         super(prepareConfig(config), Node.class);
 
         logger.info("initializing...");
@@ -43,6 +45,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         if(config.getBoolean("blob.enabled")) {
             modules.add(new BlobModule());
         }
+        modules.add((Module[]) plugins);
         injector = modules.createInjector();
 
         logger.info("initialized");

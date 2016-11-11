@@ -1,11 +1,17 @@
 package org.mitallast.queue.common;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.After;
 import org.junit.Before;
+import org.mitallast.queue.common.stream.StreamInput;
+import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.node.InternalNode;
 
 import java.io.IOException;
@@ -26,7 +32,7 @@ public class BaseIntegrationTest extends BaseTest {
     }
 
     protected InternalNode createNode(Config config) throws Exception {
-        InternalNode node = new InternalNode(config);
+        InternalNode node = new InternalNode(config, new TestModule());
         node.start();
         nodes.add(node);
         return node;
@@ -65,5 +71,40 @@ public class BaseIntegrationTest extends BaseTest {
                 .put("transport.port", 20000 + random.nextInt(500))
                 .build();
         return ConfigFactory.parseMap(config).withFallback(ConfigFactory.defaultReference());
+    }
+
+    public class TestModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 100));
+        }
+    }
+
+    public static class TestStreamable implements Streamable {
+
+        private final long value;
+
+        public TestStreamable(StreamInput streamInput) throws IOException {
+            this.value = streamInput.readLong();
+        }
+
+        public TestStreamable(long value) {
+            this.value = value;
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeLong(value);
+        }
+
+        @Override
+        public String toString() {
+            return "TestStreamable{" +
+                "value=" + value +
+                '}';
+        }
     }
 }

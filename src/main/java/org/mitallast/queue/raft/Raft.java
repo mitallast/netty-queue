@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.*;
@@ -17,7 +16,6 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportServer;
 import org.mitallast.queue.transport.TransportService;
-import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 import org.slf4j.MDC;
 
 import java.util.Optional;
@@ -291,7 +289,7 @@ public class Raft extends AbstractLifecycleComponent {
             ImmutableList<LogEntry> entries = replicatedLog.entriesBatchFrom(lastIndex);
             long prevIndex = Math.max(0, lastIndex - 1);
             Term prevTerm = replicatedLog.termAt(prevIndex);
-            logger.debug("send append entries[{}] term:{} from index:{} to {}", entries.size(), term, lastIndex);
+            logger.info("send append entries[{}] term:{} from index:{}", entries.size(), term, lastIndex);
             return new AppendEntries(self(), term, prevTerm, prevIndex, entries, leaderCommitIdx);
         }
     }
@@ -316,6 +314,7 @@ public class Raft extends AbstractLifecycleComponent {
     private State beginElection(RaftMetadata meta) {
         resetElectionDeadline();
         if (meta.getConfig().members().isEmpty()) {
+            logger.info("no members found, keep state follower");
             return goTo(Follower, meta.forFollower());
         } else {
             return goTo(Candidate, meta.forNewElection());
@@ -1011,6 +1010,7 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(AppendEntries message, RaftMetadata meta) {
             if (message.getTerm().greater(meta.getCurrentTerm())) {
                 logger.info("leader ({}) got append entries from fresher leader ({}), will step down and the leader will keep being: {}", meta.getCurrentTerm(), message.getTerm(), message.getMember());
+                receive(message);
                 return goTo(Follower, meta.forFollower());
             } else {
                 logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, will send entries, to force it to step down.", meta.getCurrentTerm(), message.getMember(), message.getTerm());
@@ -1042,6 +1042,9 @@ public class Raft extends AbstractLifecycleComponent {
 
         @Override
         public State handle(AppendSuccessful message, RaftMetadata meta) {
+            if (message.getTerm().greater(meta.getCurrentTerm())) {
+                return goTo(Follower, meta.withTerm(message.getTerm()).forFollower());
+            }
             if (message.getTerm().equals(meta.getCurrentTerm())) {
                 logger.info("received append successful {} in term: {}", message, meta.getCurrentTerm());
                 assert (message.getLastIndex() <= replicatedLog.lastIndex());
@@ -1080,6 +1083,9 @@ public class Raft extends AbstractLifecycleComponent {
 
         @Override
         public State handle(InstallSnapshotSuccessful message, RaftMetadata meta) {
+            if (message.getTerm().greater(meta.getCurrentTerm())) {
+                return goTo(Follower, meta.withTerm(message.getTerm()).forFollower());
+            }
             if (message.getTerm().equals(meta.getCurrentTerm())) {
                 assert (message.getLastIndex() <= replicatedLog.lastIndex());
                 if (message.getLastIndex() > 0) {
@@ -1144,10 +1150,6 @@ public class Raft extends AbstractLifecycleComponent {
 
         public State stay(RaftMetadata newMetadata) {
             return new State(currentState, newMetadata);
-        }
-
-        public State goTo(RaftState newState) {
-            return new State(newState, currentMetadata);
         }
 
         public State goTo(RaftState newState, RaftMetadata newMetadata) {

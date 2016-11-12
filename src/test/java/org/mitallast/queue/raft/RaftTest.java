@@ -612,6 +612,251 @@ public class RaftTest extends BaseTest {
         verify(transportChannel3).message(new AppendEntries(node1, new Term(1), new Term(1), 1, ImmutableList.of(entry), 0));
     }
 
+    @Test
+    public void testLeaderRejectAppendEntriesIfTermIsLower() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendEntries(node2, new Term(0), new Term(0), 0, ImmutableList.of(), 0));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+    }
+
+    @Test
+    public void testLeaderRejectAppendEntriesIfTermIsEqual() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendEntries(node2, new Term(1), new Term(0), 0, ImmutableList.of(), 0));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+    }
+
+    @Test
+    public void testLeaderStepDownOnAppendEntriesIfTermIsNewer() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendEntries(node2, new Term(2), new Term(0), 0, ImmutableList.of(), 0));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
+    }
+
+    @Test
+    public void testLeaderStepDownOnAppendRejectedIfTermIsNewer() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendRejected(node2, new Term(2)));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
+    }
+
+    @Test
+    public void testLeaderIgnoreAppendRejectedIfTermIsOld() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendRejected(node2, new Term(0)));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+    }
+
+    @Test
+    public void testLeaderSendPreviousMessageOnAppendRejectedIfTermMatches() throws Exception {
+        appendClusterConf();
+        LogEntry entry2 = new LogEntry(Noop.INSTANCE, new Term(1), 2);
+        LogEntry entry3 = new LogEntry(Noop.INSTANCE, new Term(1), 3);
+        LogEntry entry4 = new LogEntry(Noop.INSTANCE, new Term(2), 4);
+
+        log = log.append(entry2).append(entry3);
+        start();
+        context.executeAll();
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        verify(transportChannel2).message(any(RequestVote.class));
+        verify(transportChannel3).message(any(RequestVote.class));
+        raft.receive(new VoteCandidate(node2, new Term(2)));
+        raft.receive(new VoteCandidate(node3, new Term(2)));
+        context.executeAll();
+
+        verify(transportChannel2).message(new AppendEntries(node1, new Term(2), new Term(1), 3, ImmutableList.of(entry4), 1));
+        verify(transportChannel3).message(new AppendEntries(node1, new Term(2), new Term(1), 3, ImmutableList.of(entry4), 1));
+
+        raft.receive(new AppendRejected(node2, new Term(2)));
+        raft.receive(new AppendRejected(node3, new Term(2)));
+        context.executeAll();
+
+        // entry 4 does not included because different term
+        verify(transportChannel2).message(new AppendEntries(node1, new Term(2), new Term(1), 2, ImmutableList.of(entry3), 1));
+        verify(transportChannel3).message(new AppendEntries(node1, new Term(2), new Term(1), 2, ImmutableList.of(entry3), 1));
+
+        raft.receive(new AppendRejected(node2, new Term(2)));
+        raft.receive(new AppendRejected(node3, new Term(2)));
+        context.executeAll();
+
+        verify(transportChannel2).message(new AppendEntries(node1, new Term(2), new Term(1), 1, ImmutableList.of(entry2, entry3), 1));
+        verify(transportChannel3).message(new AppendEntries(node1, new Term(2), new Term(1), 1, ImmutableList.of(entry2, entry3), 1));
+    }
+
+    @Test
+    public void testLeaderStepDownOnAppendSuccessfullIfTermIsNewer() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendSuccessful(node2, new Term(2), 1));
+        raft.receive(new AppendSuccessful(node3, new Term(2), 1));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderStepDownOnAppendSuccessfullIfTermIsOld() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendSuccessful(node2, new Term(0), 1));
+        raft.receive(new AppendSuccessful(node3, new Term(0), 1));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderCommitOnAppendSuccessfullIfTermMatches() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new AppendSuccessful(node2, new Term(1), 1));
+        raft.receive(new AppendSuccessful(node3, new Term(1), 1));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(1, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderRejectInstallSnapshotIfTermIsOld() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        StableClusterConfiguration conf = new StableClusterConfiguration(1, ImmutableSet.of(node1, node2, node3));
+        RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
+        raft.receive(new InstallSnapshot(node2, new Term(0), new RaftSnapshot(metadata, Noop.INSTANCE)));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderRejectInstallSnapshotIfTermIsEqual() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        StableClusterConfiguration conf = new StableClusterConfiguration(1, ImmutableSet.of(node1, node2, node3));
+        RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
+        raft.receive(new InstallSnapshot(node2, new Term(1), new RaftSnapshot(metadata, Noop.INSTANCE)));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderStepDownOnInstallSnapshotIfTermIsNewer() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        StableClusterConfiguration conf = new StableClusterConfiguration(1, ImmutableSet.of(node1, node2, node3));
+        RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
+        raft.receive(new InstallSnapshot(node2, new Term(2), new RaftSnapshot(metadata, Noop.INSTANCE)));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderStepDownOnInstallSnapshotSuccessfulIfTermIsNewer() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new InstallSnapshotSuccessful(node2, new Term(2), 1));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
     private class TestRaftContext implements RaftContext {
 
         private LinkedList<Runnable> queue = new LinkedList<>();

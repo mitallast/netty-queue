@@ -313,6 +313,22 @@ public class RaftTest extends BaseTest {
     // candidate
 
     @Test
+    public void testCandidateStepDownWithoutMembers() throws Exception {
+        start();
+        context.executeAll();
+        raft.receive(new ChangeConfiguration(new StableClusterConfiguration(0, ImmutableSet.of(node1))));
+        context.executeAll();
+        raft.receive(new RaftMemberAdded(node1, 1));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeNext();
+        Assert.assertEquals(Candidate, raft.currentState());
+        context.executeNext();
+        Assert.assertEquals(Follower, raft.currentState());
+    }
+
+    @Test
     public void testCandidateRejectVoteIfLastLogTermIsOld() throws Exception {
         appendClusterConf();
         start();
@@ -530,6 +546,35 @@ public class RaftTest extends BaseTest {
         raft.receive(new VoteCandidate(node2, new Term(1)));
         context.executeAll();
         Assert.assertEquals(Leader, raft.currentState());
+    }
+
+    @Test
+    public void testCandidateIgnoreAppendEntriesIfTermIsOld() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new AppendEntries(node2, new Term(0), new Term(0), 0, ImmutableList.of(), 0));
+        context.executeAll();
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(Candidate, raft.currentState());
+    }
+
+    @Test
+    public void testCandidateIgnoreAppendEntriesIfTermIsEqual() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        LogEntry entry = new LogEntry(Noop.INSTANCE, new Term(1), 1);
+        raft.receive(new AppendEntries(node2, new Term(1), new Term(0), 0, ImmutableList.of(entry), 0));
+        context.executeAll();
+        context.executeAll();
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(ImmutableList.of(entry), raft.currentLog().entries());
     }
 
     // leader
@@ -855,6 +900,132 @@ public class RaftTest extends BaseTest {
         Assert.assertEquals(Follower, raft.currentState());
         Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
         Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderIgnoreInstallSnapshotSuccessfullIfTermIsOld() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new InstallSnapshotSuccessful(node2, new Term(0), 1));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+    }
+
+    @Test
+    public void testLeaderHandleInstallSnapshotSuccessfullIfTermMatches() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new InstallSnapshotSuccessful(node2, new Term(1), 1));
+        raft.receive(new InstallSnapshotSuccessful(node3, new Term(1), 1));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(1, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderStepDownOnInstallSnapshotRejectedIfTermIsNew() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new InstallSnapshotRejected(node2, new Term(2)));
+        context.executeAll();
+        Assert.assertEquals(Follower, raft.currentState());
+        Assert.assertEquals(new Term(2), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderIgnoreInstallSnapshotRejectedIfTermIdOld() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new InstallSnapshotRejected(node2, new Term(0)));
+        context.executeAll();
+        Assert.assertEquals(Leader, raft.currentState());
+        Assert.assertEquals(new Term(1), raft.currentMeta().getCurrentTerm());
+        Assert.assertEquals(0, raft.currentLog().committedIndex());
+    }
+
+    @Test
+    public void testLeaderHandleInstallSnapshotRejectedIfTermMatches() throws Exception {
+        appendClusterConf();
+        LogEntry entry2 = new LogEntry(Noop.INSTANCE, new Term(1), 2);
+        LogEntry entry3 = new LogEntry(Noop.INSTANCE, new Term(1), 3);
+        LogEntry entry4 = new LogEntry(Noop.INSTANCE, new Term(2), 4);
+        log = log.append(entry2).append(entry3).commit(3);
+        start();
+        context.executeAll();
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        verify(transportChannel2).message(any(RequestVote.class));
+        verify(transportChannel3).message(any(RequestVote.class));
+        raft.receive(new VoteCandidate(node2, new Term(2)));
+        raft.receive(new VoteCandidate(node3, new Term(2)));
+        context.executeAll();
+        raft.receive(new InstallSnapshotRejected(node2, new Term(2)));
+        context.executeAll();
+        verify(transportChannel2).message(new AppendEntries(node1, new Term(2), new Term(1), 3, ImmutableList.of(entry4), 3));
+    }
+
+    @Test
+    public void testLeaderHandleRequestConfiguration() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        verify(transportChannel2).message(any(RequestVote.class));
+        verify(transportChannel3).message(any(RequestVote.class));
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        raft.receive(new RequestConfiguration(node2));
+        context.executeAll();
+        verify(transportChannel2).message(any(AppendEntries.class));
+        verify(transportChannel3).message(any(AppendEntries.class));
+        verify(transportChannel2).message(new ChangeConfiguration(new StableClusterConfiguration(0, ImmutableSet.of(node1, node2, node3))));
+    }
+
+    @Test
+    public void testLeaderUnstashClientMessages() throws Exception {
+        start();
+        raft.receive(new RaftMemberAdded(node2, 3));
+        raft.receive(new RaftMemberAdded(node3, 3));
+        context.executeAll();
+        raft.receive(new ClientMessage(node2, Noop.INSTANCE));
+        raft.receive(ElectionTimeout.INSTANCE);
+        context.executeAll();
+        Assert.assertEquals(ImmutableList.of(new ClientMessage(node2, Noop.INSTANCE)), raft.currentStashed());
+        verify(transportChannel2).message(any(RequestVote.class));
+        verify(transportChannel3).message(any(RequestVote.class));
+        raft.receive(new VoteCandidate(node2, new Term(1)));
+        raft.receive(new VoteCandidate(node3, new Term(1)));
+        context.executeAll();
+        Assert.assertEquals(ImmutableList.of(), raft.currentStashed());
     }
 
     private class TestRaftContext implements RaftContext {

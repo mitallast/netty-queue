@@ -854,8 +854,8 @@ public class Raft extends AbstractLifecycleComponent {
 
         @Override
         public State handle(BeginElection message, RaftMetadata meta) {
-            if (meta.getConfig().members().isEmpty()) {
-                logger.warn("tried to initialize election with no members");
+            if (meta.getConfig().members().size() <= 1) {
+                logger.warn("unable to initialize election, don't know enough nodes");
                 return goTo(Follower, meta.forFollower());
             } else {
                 logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta.getCurrentTerm());
@@ -1113,6 +1113,7 @@ public class Raft extends AbstractLifecycleComponent {
                 if (nextIndex.indexFor(message.getMember()).filter(index -> index > 1).isPresent()) {
                     nextIndex.decrementFor(message.getMember());
                 }
+                sendEntries(message.getMember(), meta);
                 return stay();
             } else {
                 logger.warn("unexpected install snapshot successful: {} in term:{}", message, meta.getCurrentTerm());

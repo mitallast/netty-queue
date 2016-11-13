@@ -27,4 +27,19 @@ public class ChangeConfiguration implements Streamable {
         stream.writeClass(newConf.getClass());
         stream.writeStreamable(newConf);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ChangeConfiguration that = (ChangeConfiguration) o;
+
+        return newConf.equals(that.newConf);
+    }
+
+    @Override
+    public int hashCode() {
+        return newConf.hashCode();
+    }
 }

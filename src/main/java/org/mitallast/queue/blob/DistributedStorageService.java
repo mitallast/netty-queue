@@ -4,13 +4,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.blob.protocol.*;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.raft.Raft;
+import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
-import org.mitallast.queue.transport.*;
-import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
+import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportChannel;
+import org.mitallast.queue.transport.TransportController;
+import org.mitallast.queue.transport.TransportService;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,7 +29,7 @@ import java.util.function.BiConsumer;
 
 public class DistributedStorageService extends AbstractComponent {
 
-    private final TransportServer transportServer;
+    private final ClusterDiscovery discovery;
     private final TransportService transportService;
     private final BlobStorageService blobStorageService;
     private final Raft raft;
@@ -40,14 +42,14 @@ public class DistributedStorageService extends AbstractComponent {
     public DistributedStorageService(
             Config config,
             TransportController transportController,
-            TransportServer transportServer,
+            ClusterDiscovery discovery,
             TransportService transportService,
             BlobStorageService blobStorageService,
             Raft raft,
             DistributedStorageFSM fsm
     ) {
         super(config.getConfig("blob"), DistributedStorageService.class);
-        this.transportServer = transportServer;
+        this.discovery = discovery;
         this.transportService = transportService;
         this.blobStorageService = blobStorageService;
         this.raft = raft;
@@ -158,12 +160,12 @@ public class DistributedStorageService extends AbstractComponent {
         }
 
         if (stored) {
-            PutBlobResource cmd = new PutBlobResource(message.getKey(), transportServer.localNode());
-            raft.receive(new ClientMessage(transportServer.localNode(), cmd));
+            PutBlobResource cmd = new PutBlobResource(message.getKey(), discovery.self());
+            raft.receive(new ClientMessage(discovery.self(), cmd));
         }
 
         logger.info("send put response: {}", message.getId());
-        channel.message(new PutBlobResourceResponse(message.getId(),transportServer.localNode(),message.getKey(),stored));
+        channel.message(new PutBlobResourceResponse(message.getId(), discovery.self(),message.getKey(),stored));
     }
 
     @SuppressWarnings("unchecked")

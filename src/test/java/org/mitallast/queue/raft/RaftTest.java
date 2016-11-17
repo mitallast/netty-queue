@@ -27,7 +27,6 @@ import org.mitallast.queue.raft.log.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
-import org.mitallast.queue.transport.TransportServer;
 import org.mitallast.queue.transport.TransportService;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -65,9 +64,6 @@ public class RaftTest extends BaseTest {
     private TransportService transportService;
 
     @Mock
-    private TransportServer transportServer;
-
-    @Mock
     private ClusterDiscovery clusterDiscovery;
 
     @Mock
@@ -88,8 +84,8 @@ public class RaftTest extends BaseTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        when(transportServer.localNode()).thenReturn(node1);
-        when(clusterDiscovery.getDiscoveryNodes()).thenReturn(ImmutableSet.of());
+        when(clusterDiscovery.self()).thenReturn(node1);
+        when(clusterDiscovery.discoveryNodes()).thenReturn(ImmutableSet.of());
         when(transportService.channel(node1)).thenReturn(transportChannel1);
         when(transportService.channel(node2)).thenReturn(transportChannel2);
         when(transportService.channel(node3)).thenReturn(transportChannel3);
@@ -124,7 +120,6 @@ public class RaftTest extends BaseTest {
         raft = new Raft(
             injector.getInstance(Config.class),
             injector.getInstance(TransportService.class),
-            injector.getInstance(TransportServer.class),
             injector.getInstance(ClusterDiscovery.class),
             log,
             resourceFSM,
@@ -1135,12 +1130,10 @@ public class RaftTest extends BaseTest {
         @Override
         protected void configure() {
             Preconditions.checkNotNull(transportService);
-            Preconditions.checkNotNull(transportServer);
             Preconditions.checkNotNull(clusterDiscovery);
             Preconditions.checkNotNull(resourceFSM);
             Preconditions.checkNotNull(context);
             bind(TransportService.class).toInstance(transportService);
-            bind(TransportServer.class).toInstance(transportServer);
             bind(ClusterDiscovery.class).toInstance(clusterDiscovery);
             bind(ResourceFSM.class).toInstance(resourceFSM);
             bind(RaftContext.class).toInstance(context);

@@ -5,6 +5,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
+import io.netty.util.concurrent.DefaultEventExecutor;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.stream.StreamService;
@@ -27,6 +29,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final int maxConnections;
     private final TransportController transportController;
     private final StreamService streamService;
+    private final DefaultEventExecutor executor;
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
@@ -37,6 +40,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         maxConnections = this.config.getInt("max_connections");
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
+        executor = new DefaultEventExecutor(new DefaultThreadFactory("connect"));
     }
 
     @Override
@@ -79,6 +83,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     protected void doStop() throws IOException {
         ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
         connectedNodes.keySet().forEach(this::disconnectFromNode);
+        executor.shutdownGracefully();
         super.doStop();
     }
 
@@ -140,7 +145,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         private synchronized void open() {
-            logger.debug("connect to {}", node);
+            logger.info("connect to {}", node);
             ChannelFuture[] channelFutures = new ChannelFuture[maxConnections];
             for (int i = 0; i < maxConnections; i++) {
                 channelFutures[i] = connect(node);
@@ -155,7 +160,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 } catch (Throwable e) {
                     logger.error("error connect to {}", node, e);
                     if (reconnectScheduled.compareAndSet(false, true)) {
-                        bootstrap.config().group().next().execute(this::reconnect);
+                        executor.execute(this::reconnect);
                     }
                 }
             }
@@ -206,7 +211,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 if (channels[index] != null && channels[index].isOpen()) {
                     return channels[index];
                 } else if (reconnectScheduled.compareAndSet(false, true)) {
-                    bootstrap.config().group().next().execute(this::reconnect);
+                    executor.execute(this::reconnect);
                 }
                 index = (index + 1) % channels.length;
             } while (index != loopIndex);

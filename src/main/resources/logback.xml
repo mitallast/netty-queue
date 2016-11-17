@@ -5,7 +5,7 @@
             <level>INFO</level>
         </filter>
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%-9thread] %-5level %-30logger{30} %-10X{state} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%-11thread] %-5level %-30logger{30} %-10X{state} - %msg%n</pattern>
         </encoder>
     </appender>
 

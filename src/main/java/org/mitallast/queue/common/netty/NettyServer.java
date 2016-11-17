@@ -76,6 +76,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator());
 
+            logger.info("listen {}:{}", host, port);
             channel = bootstrap.bind(host, port)
                 .sync()
                 .channel();

@@ -1,5 +1,6 @@
 package org.mitallast.queue.transport;
 
+import com.google.common.base.Preconditions;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -16,6 +17,7 @@ public class DiscoveryNode implements Streamable {
     }
 
     public DiscoveryNode(String host, int port) {
+        Preconditions.checkNotNull(host);
         this.host = host;
         this.port = port;
     }

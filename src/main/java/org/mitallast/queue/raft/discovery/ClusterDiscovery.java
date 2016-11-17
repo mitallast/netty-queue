@@ -1,49 +1,55 @@
 package org.mitallast.queue.raft.discovery;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.transport.TransportServer;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class ClusterDiscovery extends AbstractComponent {
+    private final DiscoveryNode self;
     private final ImmutableSet<DiscoveryNode> discoveryNodes;
 
     @Inject
     public ClusterDiscovery(Config config) {
         super(config.getConfig("raft.discovery"), ClusterDiscovery.class);
+        self = new DiscoveryNode(this.config.getString("host"), this.config.getInt("port"));
         discoveryNodes = parseDiscovery();
     }
 
-    public ImmutableSet<DiscoveryNode> getDiscoveryNodes() {
+    public DiscoveryNode self() {
+        return self;
+    }
+
+    public ImmutableSet<DiscoveryNode> discoveryNodes() {
         return discoveryNodes;
     }
 
     private ImmutableSet<DiscoveryNode> parseDiscovery() {
         Set<DiscoveryNode> nodes = new HashSet<>();
+        nodes.add(self);
 
-        List<Integer> portRange = config.getIntList("port-range");
-
-        if (portRange.size() == 2) {
-            String host = config.getString("host");
-            int from = portRange.get(0);
-            int to = portRange.get(1);
-            logger.info("host {}, port range {}-{}", host, from, to);
-            for (int port = from; port <= to; port++) {
-                nodes.add(new DiscoveryNode(host, port));
+        if (config.hasPath("nodes")) {
+            for (String hosts : config.getStringList("nodes")) {
+                for (String host : hosts.split(",")) {
+                    host = host.trim();
+                    if (!host.isEmpty()) {
+                        HostAndPort hostAndPort = HostAndPort.fromString(host);
+                        nodes.add(new DiscoveryNode(
+                            hostAndPort.getHostText(),
+                            hostAndPort.getPortOrDefault(TransportServer.DEFAULT_PORT)
+                        ));
+                    }
+                }
             }
         }
 
-        for (Config node : config.getConfigList("nodes")) {
-            String host = node.getString("host");
-            int port = node.getInt("port");
-            nodes.add(new DiscoveryNode(host, port));
-        }
-
+        logger.info("nodes: {}", nodes);
         return ImmutableSet.copyOf(nodes);
     }
 }

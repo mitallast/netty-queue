@@ -1,0 +1,17 @@
+version: '2'
+services:
+    node-a:
+        image: mitallast/netty-queue
+        environment:
+          - NETTY_DISCOVERY_HOST=node-a
+          - NETTY_DISCOVERY=node-a,node-b,node-c
+    node-b:
+        image: mitallast/netty-queue
+        environment:
+          - NETTY_DISCOVERY_HOST=node-b
+          - NETTY_DISCOVERY=node-a,node-b,node-c
+    node-c:
+        image: mitallast/netty-queue
+        environment:
+          - NETTY_DISCOVERY_HOST=node-c
+          - NETTY_DISCOVERY=node-a,node-b,node-c

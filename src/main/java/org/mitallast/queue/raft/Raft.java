@@ -344,7 +344,7 @@ public class Raft extends AbstractLifecycleComponent {
         AppendSuccessful response = new AppendSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex());
         send(msg.getMember(), response);
 
-        ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex(), msg.getLeaderCommit());
+        ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, msg.getLeaderCommit());
         for (LogEntry entry : entries) {
             if (entry.getCommand() instanceof ClusterConfiguration) {
                 // ignore

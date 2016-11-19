@@ -36,13 +36,13 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         modules.add(new FileModule());
         modules.add(new StreamModule());
         modules.add(new TransportModule());
-        if (config.getBoolean("rest.enabled")) {
+        if (this.config.getBoolean("rest.enabled")) {
             modules.add(new RestModule());
         }
-        if (config.getBoolean("raft.enabled")) {
+        if (this.config.getBoolean("raft.enabled")) {
             modules.add(new RaftModule());
         }
-        if(config.getBoolean("blob.enabled")) {
+        if(this.config.getBoolean("blob.enabled")) {
             modules.add(new BlobModule());
         }
         modules.add((Module[]) plugins);
@@ -84,6 +84,6 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     private static Config prepareConfig(Config config) {
         String name = UUIDs.generateRandom().toString().substring(0, 8);
         Config fallback = ConfigFactory.parseMap(ImmutableMap.of("node.name", name));
-        return config.withFallback(fallback);
+        return config.withFallback(fallback).withFallback(ConfigFactory.defaultReference());
     }
 }

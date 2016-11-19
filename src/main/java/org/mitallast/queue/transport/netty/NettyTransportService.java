@@ -54,14 +54,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>(false) {
 
                     @Override
-                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-                        ctx.channel().attr(NettyTransportChannel.channelAttr).set(new NettyTransportChannel(ctx));
-                    }
-
-                    @Override
                     protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
-                        NettyTransportChannel transportChannel = ctx.channel().attr(NettyTransportChannel.channelAttr).get();
-                        transportController.dispatch(transportChannel, frame);
+                        transportController.dispatch(frame);
                     }
 
                     @Override

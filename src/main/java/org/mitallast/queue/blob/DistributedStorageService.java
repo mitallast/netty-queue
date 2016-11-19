@@ -10,7 +10,6 @@ import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.transport.DiscoveryNode;
-import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
 
@@ -40,13 +39,13 @@ public class DistributedStorageService extends AbstractComponent {
 
     @Inject
     public DistributedStorageService(
-            Config config,
-            TransportController transportController,
-            ClusterDiscovery discovery,
-            TransportService transportService,
-            BlobStorageService blobStorageService,
-            Raft raft,
-            DistributedStorageFSM fsm
+        Config config,
+        TransportController transportController,
+        ClusterDiscovery discovery,
+        TransportService transportService,
+        BlobStorageService blobStorageService,
+        Raft raft,
+        DistributedStorageFSM fsm
     ) {
         super(config.getConfig("blob"), DistributedStorageService.class);
         this.discovery = discovery;
@@ -95,10 +94,12 @@ public class DistributedStorageService extends AbstractComponent {
             requests.put(id, nodeFuture);
             nodeFuture.whenComplete(completeListener);
 
-            PutBlobResourceRequest message = new PutBlobResourceRequest(id, key, data);
-            logger.info("send put request {} to {}", id, replicas.get(i));
-            transportService.connectToNode(replicas.get(i));
-            transportService.channel(replicas.get(i)).message(message);
+            DiscoveryNode node = replicas.get(i);
+            logger.info("send put request {} to {}", id, node);
+
+            PutBlobResourceRequest message = new PutBlobResourceRequest(node, id, key, data);
+            transportService.connectToNode(node);
+            transportService.channel(node).message(message);
         }
         return future;
     }
@@ -117,14 +118,14 @@ public class DistributedStorageService extends AbstractComponent {
 
             logger.info("get resource {} id {} node {}", key, id, node);
             transportService.connectToNode(node);
-            transportService.channel(node).message(new GetBlobResourceRequest(id, key));
+            transportService.channel(node).message(new GetBlobResourceRequest(node, id, key));
         } else {
             future.completeExceptionally(new RuntimeException("resource not found"));
         }
         return future;
     }
 
-    private void handle(TransportChannel channel, GetBlobResourceRequest message) {
+    private void handle(GetBlobResourceRequest message) {
         try {
             logger.info("handle get resource request {} id {}", message.getKey(), message.getId());
             InputStream stream = blobStorageService.getObject(message.getKey());
@@ -134,14 +135,16 @@ public class DistributedStorageService extends AbstractComponent {
             while ((read = stream.read(bytes)) > 0) {
                 out.write(bytes, 0, read);
             }
-            channel.message(new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray()));
+            transportService.connectToNode(message.getNode());
+            transportService.channel(message.getNode())
+                .message(new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray()));
         } catch (IOException e) {
             logger.warn("error get resource {}: {}", message.getKey(), e);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void handle(TransportChannel channel, GetBlobResourceResponse message) {
+    private void handle(GetBlobResourceResponse message) {
         logger.info("handle get resource response {} id {}", message.getKey(), message.getId());
         CompletableFuture completableFuture = requests.get(message.getId());
         if (completableFuture != null) {
@@ -149,7 +152,7 @@ public class DistributedStorageService extends AbstractComponent {
         }
     }
 
-    private void handle(TransportChannel channel, PutBlobResourceRequest message) {
+    private void handle(PutBlobResourceRequest message) {
         logger.info("handle put request: {}", message.getId());
         boolean stored = false;
         try {
@@ -165,11 +168,13 @@ public class DistributedStorageService extends AbstractComponent {
         }
 
         logger.info("send put response: {}", message.getId());
-        channel.message(new PutBlobResourceResponse(message.getId(), discovery.self(),message.getKey(),stored));
+        transportService.connectToNode(message.getNode());
+        transportService.channel(message.getNode())
+            .message(new PutBlobResourceResponse(message.getId(), discovery.self(), message.getKey(), stored));
     }
 
     @SuppressWarnings("unchecked")
-    private void handle(TransportChannel channel, PutBlobResourceResponse message) {
+    private void handle(PutBlobResourceResponse message) {
         CompletableFuture completableFuture = requests.get(message.getId());
         logger.info("handle put response: {}", message.getId());
         if (completableFuture != null) {

@@ -22,7 +22,6 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
-import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
@@ -101,7 +100,7 @@ public class ClusterRaftTest extends BaseTest {
     public void testClientMessage() throws Exception {
         awaitElection();
         client.get(0).set("hello world");
-        String value = client.get(0).get().get();
+        String value = client.get(1).get().get();
         Assert.assertEquals("hello world", value);
     }
 
@@ -151,8 +150,8 @@ public class ClusterRaftTest extends BaseTest {
         }
 
         @Override
-        public CompletableFuture<Optional<RaftSnapshot>> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-            return CompletableFuture.completedFuture(Optional.of(new RaftSnapshot(snapshotMeta, new RegisterSet(value))));
+        public Optional<RaftSnapshot> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+            return Optional.of(new RaftSnapshot(snapshotMeta, new RegisterSet(value)));
         }
     }
 
@@ -265,7 +264,7 @@ public class ClusterRaftTest extends BaseTest {
             return future;
         }
 
-        private void receive(TransportChannel channel, RegisterValue event) {
+        private void receive(RegisterValue event) {
             logger.info("client received: {}", event);
             requests.get(event.requestId).complete(event.value);
         }

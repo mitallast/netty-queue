@@ -55,6 +55,6 @@ public class DiscoveryNode implements Streamable {
 
     @Override
     public String toString() {
-        return "DiscoveryNode{host=" + host + ", port=" + port + '}';
+        return "node{" + host + ':' + port + '}';
     }
 }

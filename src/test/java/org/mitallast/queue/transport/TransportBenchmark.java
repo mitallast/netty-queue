@@ -5,9 +5,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseQueueTest;
-import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -44,7 +42,7 @@ public class TransportBenchmark extends BaseQueueTest {
         transportService.connectToNode(member);
     }
 
-    public void handle(TransportChannel channel, TestStreamable streamable) {
+    public void handle(TestStreamable streamable) {
         countDownLatch.countDown();
     }
 

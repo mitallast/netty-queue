@@ -10,38 +10,37 @@ import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameType;
 
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class TransportController extends AbstractComponent {
 
-    private volatile ImmutableMap<Class, BiConsumer> handlerMap = ImmutableMap.of();
+    private volatile ImmutableMap<Class, Consumer> handlerMap = ImmutableMap.of();
 
     @Inject
     public TransportController(Config config) {
         super(config.getConfig("transport"), TransportController.class);
     }
 
-    public synchronized <Message extends Streamable> void registerMessageHandler(Class requestClass, BiConsumer<TransportChannel, Message> handler) {
+    public synchronized <Message extends Streamable> void registerMessageHandler(Class requestClass, Consumer<Message> handler) {
         handlerMap = Immutable.compose(handlerMap, requestClass, handler);
     }
 
-    public void dispatch(TransportChannel channel, TransportFrame messageFrame) {
+    public void dispatch(TransportFrame messageFrame) {
         if (messageFrame.type() == TransportFrameType.PING) {
             // channel.send(messageFrame);
         } else if (messageFrame.type() == TransportFrameType.MESSAGE) {
-            dispatchMessage(channel, (MessageTransportFrame) messageFrame);
+            dispatch((MessageTransportFrame) messageFrame);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void dispatchMessage(TransportChannel channel, MessageTransportFrame messageFrame) {
+    public void dispatch(MessageTransportFrame messageFrame) {
         Streamable message = messageFrame.message();
-        BiConsumer handler = handlerMap.get(message.getClass());
+        Consumer handler = handlerMap.get(message.getClass());
         if (handler != null) {
-            handler.accept(channel, message);
+            handler.accept(message);
         } else {
             logger.error("handler not found for {}, close channel", message.getClass());
-            channel.close();
         }
     }
 }

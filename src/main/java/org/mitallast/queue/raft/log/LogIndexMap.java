@@ -1,6 +1,5 @@
 package org.mitallast.queue.raft.log;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.mitallast.queue.common.Immutable;
@@ -9,25 +8,24 @@ import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class LogIndexMap {
 
+    private final long defaultIndex;
     private ImmutableMap<DiscoveryNode, Long> backing;
 
-    public LogIndexMap() {
-        this(ImmutableMap.of());
+    public LogIndexMap(long defaultIndex) {
+        this(ImmutableMap.of(), defaultIndex);
     }
 
-    public LogIndexMap(ImmutableMap<DiscoveryNode, Long> backing) {
+    public LogIndexMap(ImmutableMap<DiscoveryNode, Long> backing, long defaultIndex) {
         this.backing = backing;
+        this.defaultIndex = defaultIndex;
     }
 
     public long decrementFor(DiscoveryNode member) {
-        Preconditions.checkArgument(backing.containsKey(member), "Member [" + member + "] not found");
-        long value = backing.get(member) - 1;
+        long value = indexFor(member) - 1;
         backing = Immutable.replace(backing, member, value);
         return value;
     }
@@ -51,40 +49,26 @@ public class LogIndexMap {
         }
     }
 
-    public Optional<Long> consensusForIndex(ClusterConfiguration config) {
+    public long consensusForIndex(ClusterConfiguration config) {
         if (config.isTransitioning()) { // joint
-            Optional<Long> oldQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getOldMembers());
-            Optional<Long> newQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getNewMembers());
-
-            if (!oldQuorum.isPresent()) {
-                return newQuorum;
-            } else if (!newQuorum.isPresent()) {
-                return oldQuorum;
-            } else {
-                return Optional.of(Math.min(oldQuorum.get(), newQuorum.get()));
-            }
+            long oldQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getOldMembers());
+            long newQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getNewMembers());
+            return Math.min(oldQuorum, newQuorum);
         } else { // stable
             return indexOnMajority(config.members());
         }
     }
 
-    private Optional<Long> indexOnMajority(ImmutableSet<DiscoveryNode> include) {
+    private long indexOnMajority(ImmutableSet<DiscoveryNode> include) {
         if (include.isEmpty()) {
-            return Optional.empty();
-        } else {
-            int index = ceiling(include.size(), 2) - 1;
-            List<Long> sorted = backing.entrySet()
-                    .stream()
-                    .filter(entry -> include.contains(entry.getKey()))
-                    .map(Map.Entry::getValue)
-                    .sorted()
-                    .collect(Collectors.toList());
-            if (sorted.size() <= index) {
-                return Optional.empty();
-            } else {
-                return Optional.of(sorted.get(index));
-            }
+            return 0;
         }
+        int index = ceiling(include.size(), 2) - 1;
+        List<Long> sorted = include.stream()
+            .map(this::indexFor)
+            .sorted()
+            .collect(Collectors.toList());
+        return sorted.get(index);
     }
 
     private int ceiling(int numerator, int divisor) {
@@ -95,7 +79,7 @@ public class LogIndexMap {
         }
     }
 
-    public Optional<Long> indexFor(DiscoveryNode member) {
-        return Optional.ofNullable(backing.get(member));
+    public long indexFor(DiscoveryNode member) {
+        return backing.getOrDefault(member, defaultIndex);
     }
 }

@@ -11,5 +11,5 @@ public interface ResourceFSM {
 
     Streamable apply(Streamable message);
 
-    CompletableFuture<Optional<RaftSnapshot>> prepareSnapshot(RaftSnapshotMetadata snapshotMeta);
+    Optional<RaftSnapshot> prepareSnapshot(RaftSnapshotMetadata snapshotMeta);
 }

@@ -36,14 +36,12 @@ public class DistributedStorageFSM extends AbstractComponent implements Resource
         } else if (message instanceof BlobRoutingMap) {
             logger.info("install routing map: {}", routingMap);
             routingMap = (BlobRoutingMap) message;
-        } else {
-
         }
         return null;
     }
 
     @Override
-    public CompletableFuture<Optional<RaftSnapshot>> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-        return CompletableFuture.completedFuture(Optional.of(new RaftSnapshot(snapshotMeta, routingMap)));
+    public Optional<RaftSnapshot> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+        return Optional.of(new RaftSnapshot(snapshotMeta, routingMap));
     }
 }

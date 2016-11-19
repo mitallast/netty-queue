@@ -83,10 +83,9 @@ public class LogEntry implements Streamable {
 
     @Override
     public String toString() {
-        return "LogEntry{" +
-                "term=" + term.getTerm() +
-                ", index=" + index +
-                ", command=" + command.getClass().getSimpleName() +
-                '}';
+        return "LogEntry{" + term.getTerm() + ',' + index +
+            ',' + command.getClass().getSimpleName() +
+            ',' + client.map(DiscoveryNode::toString).orElse("") +
+            '}';
     }
 }

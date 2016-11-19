@@ -27,6 +27,7 @@ import org.mitallast.queue.raft.log.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
+import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -120,6 +121,7 @@ public class RaftTest extends BaseTest {
         raft = new Raft(
             injector.getInstance(Config.class),
             injector.getInstance(TransportService.class),
+            injector.getInstance(TransportController.class),
             injector.getInstance(ClusterDiscovery.class),
             log,
             resourceFSM,

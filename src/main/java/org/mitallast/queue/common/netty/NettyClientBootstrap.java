@@ -16,6 +16,7 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     protected final int threads;
@@ -25,6 +26,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     protected final boolean tcpNoDelay;
     protected final int sndBuf;
     protected final int rcvBuf;
+    protected final int connectTimeout;
 
     protected volatile Bootstrap bootstrap;
 
@@ -38,6 +40,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
         tcpNoDelay = config.getBoolean("tcp_no_delay");
         sndBuf = config.getInt("snd_buf");
         rcvBuf = config.getInt("rcv_buf");
+        connectTimeout = (int) config.getDuration("connect_timeout", TimeUnit.MILLISECONDS);
     }
 
     private ThreadFactory threadFactory(String name) {
@@ -48,11 +51,11 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     protected void doStart() throws IOException {
         final Class<? extends SocketChannel> channelClass;
         final EventLoopGroup group;
-        if(Epoll.isAvailable()) {
+        if (Epoll.isAvailable()) {
             logger.info("use epoll");
             channelClass = EpollSocketChannel.class;
             group = new EpollEventLoopGroup(threads, threadFactory("client"));
-        }else {
+        } else {
             logger.info("use nio");
             channelClass = NioSocketChannel.class;
             group = new NioEventLoopGroup(threads, threadFactory("client"));
@@ -65,6 +68,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
             .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
             .option(ChannelOption.SO_SNDBUF, sndBuf)
             .option(ChannelOption.SO_RCVBUF, rcvBuf)
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
             .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
             .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator())
             .handler(channelInitializer());
@@ -73,10 +77,12 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     protected abstract ChannelInitializer channelInitializer();
 
     public final ChannelFuture connect(DiscoveryNode node) {
+        checkIsStarted();
         return bootstrap.connect(node.host(), node.port());
     }
 
     public final ChannelFuture connect(String host, int port) {
+        checkIsStarted();
         return bootstrap.connect(host, port);
     }
 

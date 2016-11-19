@@ -26,15 +26,15 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
 
     @Override
     public void checkIsStopped() {
-        if (!lifecycle.started()) {
-            throw new IllegalStateException(logger.getName() + " is not started");
+        if (!lifecycle.stopped()) {
+            throw new IllegalStateException(logger.getName() + " is not stopped");
         }
     }
 
     @Override
     public void checkIsClosed() {
-        if (!lifecycle.started()) {
-            throw new IllegalStateException(logger.getName() + " is not started");
+        if (!lifecycle.closed()) {
+            throw new IllegalStateException(logger.getName() + " is not closed");
         }
     }
 

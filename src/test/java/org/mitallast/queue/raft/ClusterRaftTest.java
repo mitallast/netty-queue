@@ -53,6 +53,7 @@ public class ClusterRaftTest extends BaseTest {
         String nodeDiscovery = ports.stream().map(port -> "127.0.0.1:" + port).reduce((a, b) -> a + "," + b).orElse("");
 
         ImmutableList.Builder<InternalNode> builder = ImmutableList.builder();
+        boolean bootstrap = true;
         for (Integer port : ports) {
             Config config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
                 .put("node.name", "node" + port)
@@ -66,9 +67,11 @@ public class ClusterRaftTest extends BaseTest {
                 .put("raft.election-deadline", "1s")
                 .put("raft.discovery-timeout", "100ms")
                 .put("raft.heartbeat", "500ms")
+                .put("raft.bootstrap", bootstrap)
                 .put("transport.host", "127.0.0.1")
                 .put("transport.port", port)
                 .build());
+            bootstrap = false;
             builder.add(new InternalNode(config, new TestModule()));
         }
         node = builder.build();

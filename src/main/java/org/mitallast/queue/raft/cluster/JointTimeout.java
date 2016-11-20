@@ -6,18 +6,19 @@ import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 
-public class RaftMembersDiscoveryTimeout implements Streamable {
+public class JointTimeout implements Streamable {
 
-    public final static RaftMembersDiscoveryTimeout INSTANCE = new RaftMembersDiscoveryTimeout();
+    public static final JointTimeout INSTANCE = new JointTimeout();
 
-    public static RaftMembersDiscoveryTimeout read(StreamInput stream) throws IOException {
+    public static JointTimeout read(StreamInput stream) throws IOException {
         return INSTANCE;
     }
 
-    private RaftMembersDiscoveryTimeout() {
+    private JointTimeout() {
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
+
     }
 }

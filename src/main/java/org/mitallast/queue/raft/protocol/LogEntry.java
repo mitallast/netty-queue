@@ -4,6 +4,7 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.Term;
+import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
@@ -83,8 +84,9 @@ public class LogEntry implements Streamable {
 
     @Override
     public String toString() {
-        return "LogEntry{" + term.getTerm() + ',' + index +
-            ',' + command.getClass().getSimpleName() +
+
+        return "LogEntry{term=" + term.getTerm() + ',' + index +
+            ',' + (command instanceof ClusterConfiguration ? command : command.getClass().getSimpleName()) +
             ',' + client.map(DiscoveryNode::toString).orElse("") +
             '}';
     }

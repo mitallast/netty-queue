@@ -69,7 +69,7 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
 
     @Override
     public ClusterConfiguration transitionToStable() {
-        return new StableClusterConfiguration(sequenceNumber + 1, newMembers);
+        return new StableClusterConfiguration(sequenceNumber, newMembers);
     }
 
     @Override
@@ -105,5 +105,14 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
         result = 31 * result + newMembers.hashCode();
         result = 31 * result + members.hashCode();
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "JointConsensusClusterConfiguration{" +
+            "seq=" + sequenceNumber +
+            ", old=" + oldMembers +
+            ", new=" + newMembers +
+            '}';
     }
 }

@@ -34,7 +34,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
     protected final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term, 3);
     protected final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term, 4);
 
-    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration(0, ImmutableSet.of());
+    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration(0);
 
     protected final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
     protected final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);

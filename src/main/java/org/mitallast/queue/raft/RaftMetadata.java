@@ -27,7 +27,7 @@ public class RaftMetadata {
     }
 
     public RaftMetadata(ReplicatedLog replicatedLog, Term currentTerm) {
-        this(replicatedLog, currentTerm, new StableClusterConfiguration(0, ImmutableSet.of()));
+        this(replicatedLog, currentTerm, new StableClusterConfiguration(0));
     }
 
     public RaftMetadata(ReplicatedLog replicatedLog, Term currentTerm, ClusterConfiguration config) {
@@ -93,7 +93,7 @@ public class RaftMetadata {
     }
 
     public RaftMetadata withTerm(Optional<Term> term) {
-        if (term.isPresent()) {
+        if (term.filter(newTerm -> newTerm.greater(currentTerm)).isPresent()) {
             return new RaftMetadata(replicatedLog, term.get(), config, votedFor, votesReceived);
         } else {
             return this;

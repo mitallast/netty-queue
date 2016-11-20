@@ -17,6 +17,10 @@ public class StableClusterConfiguration implements ClusterConfiguration {
         members = stream.readStreamableSet(DiscoveryNode::new);
     }
 
+    public StableClusterConfiguration(long sequenceNumber, DiscoveryNode... members) {
+        this(sequenceNumber, ImmutableSet.copyOf(members));
+    }
+
     public StableClusterConfiguration(long sequenceNumber, ImmutableSet<DiscoveryNode> members) {
         this.sequenceNumber = sequenceNumber;
         this.members = members;
@@ -49,7 +53,7 @@ public class StableClusterConfiguration implements ClusterConfiguration {
 
     @Override
     public ClusterConfiguration transitionTo(ClusterConfiguration newConfiguration) {
-        return new JointConsensusClusterConfiguration(sequenceNumber, members, newConfiguration.members());
+        return new JointConsensusClusterConfiguration(sequenceNumber + 1, members, newConfiguration.members());
     }
 
     @Override
@@ -60,6 +64,15 @@ public class StableClusterConfiguration implements ClusterConfiguration {
     @Override
     public boolean containsOnNewState(DiscoveryNode member) {
         return members.contains(member);
+    }
+
+    public StableClusterConfiguration withMember(DiscoveryNode member) {
+        ImmutableSet<DiscoveryNode> newMembers = ImmutableSet.<DiscoveryNode>builder()
+            .addAll(members)
+            .add(member)
+            .build();
+
+        return new StableClusterConfiguration(sequenceNumber, newMembers);
     }
 
     @Override
@@ -85,5 +98,13 @@ public class StableClusterConfiguration implements ClusterConfiguration {
         int result = (int) (sequenceNumber ^ (sequenceNumber >>> 32));
         result = 31 * result + members.hashCode();
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "StableClusterConfiguration{" +
+            "seq=" + sequenceNumber +
+            ", members=" + members +
+            '}';
     }
 }

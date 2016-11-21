@@ -93,11 +93,14 @@ public class Raft extends AbstractLifecycleComponent {
     protected void doStart() {
         if (state.currentMetadata.replicatedLog().entries().isEmpty()) {
             if (bootstrap) {
+                logger.info("bootstrap cluster");
                 receive(new ChangeConfiguration(new StableClusterConfiguration(0, clusterDiscovery.self())));
             } else {
+                logger.info("joint cluster");
                 receive(JointTimeout.INSTANCE);
             }
         } else {
+            logger.info("restarted node");
             receive(ApplyCommittedLog.INSTANCE);
         }
     }

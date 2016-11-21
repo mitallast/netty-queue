@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
+import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.Optional;
 
@@ -34,7 +35,7 @@ public interface ReplicatedLog {
 
     ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex);
 
-    ReplicatedLog compactedWith(RaftSnapshot snapshot);
+    ReplicatedLog compactedWith(RaftSnapshot snapshot, DiscoveryNode node);
 
     ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding);
 

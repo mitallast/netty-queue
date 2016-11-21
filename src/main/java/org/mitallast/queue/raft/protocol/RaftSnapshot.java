@@ -3,9 +3,9 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
-import java.util.Optional;
 
 public class RaftSnapshot implements Streamable {
     private final RaftSnapshotMetadata meta;
@@ -33,8 +33,8 @@ public class RaftSnapshot implements Streamable {
         return data;
     }
 
-    public LogEntry toEntry() {
-        return new LogEntry(this, meta.getLastIncludedTerm(), meta.getLastIncludedIndex(), Optional.empty());
+    public LogEntry toEntry(DiscoveryNode node) {
+        return new LogEntry(this, meta.getLastIncludedTerm(), meta.getLastIncludedIndex(), node);
     }
 
     @Override
@@ -71,8 +71,8 @@ public class RaftSnapshot implements Streamable {
     @Override
     public String toString() {
         return "RaftSnapshot{" +
-                "meta=" + meta +
-                ", data=" + data +
-                '}';
+            "meta=" + meta +
+            ", data=" + data +
+            '}';
     }
 }

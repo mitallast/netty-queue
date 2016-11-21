@@ -8,26 +8,21 @@ import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
-import java.util.Optional;
 
 public class LogEntry implements Streamable {
     private final Term term;
     private final long index;
     private final Streamable command;
-    private final Optional<DiscoveryNode> client;
+    private final DiscoveryNode client;
 
     public LogEntry(StreamInput stream) throws IOException {
         term = new Term(stream.readLong());
         index = stream.readLong();
         command = stream.readStreamable();
-        client = Optional.ofNullable(stream.readStreamableOrNull(DiscoveryNode::new));
+        client = stream.readStreamable(DiscoveryNode::new);
     }
 
-    public LogEntry(Streamable command, Term term, long index) {
-        this(command, term, index, Optional.empty());
-    }
-
-    public LogEntry(Streamable command, Term term, long index, Optional<DiscoveryNode> client) {
+    public LogEntry(Streamable command, Term term, long index, DiscoveryNode client) {
         this.command = command;
         this.term = term;
         this.index = index;
@@ -42,7 +37,7 @@ public class LogEntry implements Streamable {
         return index;
     }
 
-    public Optional<DiscoveryNode> getClient() {
+    public DiscoveryNode getClient() {
         return client;
     }
 
@@ -56,7 +51,7 @@ public class LogEntry implements Streamable {
         stream.writeLong(index);
         stream.writeClass(command.getClass());
         stream.writeStreamable(command);
-        stream.writeStreamableOrNull(client.orElse(null));
+        stream.writeStreamable(client);
     }
 
     @Override
@@ -87,7 +82,7 @@ public class LogEntry implements Streamable {
 
         return "LogEntry{term=" + term.getTerm() + ',' + index +
             ',' + (command instanceof ClusterConfiguration ? command : command.getClass().getSimpleName()) +
-            ',' + client.map(DiscoveryNode::toString).orElse("") +
+            ',' + client +
             '}';
     }
 }

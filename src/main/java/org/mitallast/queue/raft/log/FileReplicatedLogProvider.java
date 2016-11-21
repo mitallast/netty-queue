@@ -12,6 +12,7 @@ import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
+import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.File;
 import java.io.IOError;
@@ -264,17 +265,17 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         }
 
         @Override
-        public ReplicatedLog compactedWith(RaftSnapshot snapshot) {
+        public ReplicatedLog compactedWith(RaftSnapshot snapshot, DiscoveryNode node) {
             boolean snapshotHasLaterTerm = snapshot.getMeta().getLastIncludedTerm().greater(lastTerm().orElse(new Term(0)));
             boolean snapshotHasLaterIndex = snapshot.getMeta().getLastIncludedIndex() > lastIndex();
 
             final ImmutableList<LogEntry> logEntries;
 
             if (snapshotHasLaterTerm && snapshotHasLaterIndex) {
-                logEntries = ImmutableList.of(snapshot.toEntry());
+                logEntries = ImmutableList.of(snapshot.toEntry(node));
             } else {
                 logEntries = ImmutableList.<LogEntry>builder()
-                    .add(snapshot.toEntry())
+                    .add(snapshot.toEntry(node))
                     .addAll(entries.stream().filter(entry -> entry.getIndex() > snapshot.getMeta().getLastIncludedIndex()).iterator())
                     .build();
             }

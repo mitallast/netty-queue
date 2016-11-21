@@ -51,7 +51,7 @@ public class FileReplicatedLogTest extends ReplicatedLogTest {
 
     @Test
     public void testReopen() throws Exception {
-        log().append(entry1).append(entry2).append(entry3).commit(2).compactedWith(snapshot2).commit(3);
+        log().append(entry1).append(entry2).append(entry3).commit(2).compactedWith(snapshot2, node1).commit(3);
 
         ReplicatedLog reopened = log();
         Assert.assertEquals(3, reopened.committedIndex());

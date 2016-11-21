@@ -14,10 +14,8 @@ import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
 import org.mitallast.queue.rest.RestSession;
 import org.mitallast.queue.rest.response.ByteBufRestResponse;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
-import java.util.Optional;
 
 public class RaftLogAction extends BaseRestHandler {
 
@@ -48,13 +46,10 @@ public class RaftLogAction extends BaseRestHandler {
                     builder.writeNumberField("term", logEntry.getTerm().getTerm());
                     builder.writeNumberField("index", logEntry.getIndex());
                     builder.writeStringField("command", logEntry.getCommand().getClass().getSimpleName());
-                    Optional<DiscoveryNode> client = logEntry.getClient();
-                    if (client.isPresent()) {
-                        builder.writeObjectFieldStart("client");
-                        builder.writeStringField("host", client.get().host());
-                        builder.writeNumberField("port", client.get().port());
-                        builder.writeEndObject();
-                    }
+                    builder.writeObjectFieldStart("client");
+                    builder.writeStringField("host", logEntry.getClient().host());
+                    builder.writeNumberField("port", logEntry.getClient().port());
+                    builder.writeEndObject();
                     builder.writeEndObject();
                 }
                 builder.writeEndArray();

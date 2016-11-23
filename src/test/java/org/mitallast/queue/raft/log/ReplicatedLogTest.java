@@ -1,7 +1,6 @@
 package org.mitallast.queue.raft.log;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
@@ -37,7 +36,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
     protected final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term, 3, node1);
     protected final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term, 4, node1);
 
-    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration(0);
+    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration();
 
     protected final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
     protected final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);

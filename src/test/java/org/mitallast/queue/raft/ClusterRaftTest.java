@@ -255,6 +255,7 @@ public class ClusterRaftTest extends BaseTest {
             controller.registerMessageHandler(RegisterValue.class, this::receive);
         }
 
+        @SuppressWarnings("SameParameterValue")
         public void set(String value) {
             raft.receive(new ClientMessage(clusterDiscovery.self(), new RegisterSet(value)));
         }

@@ -43,8 +43,6 @@ public class RaftStateAction extends BaseRestHandler {
                 builder.writeNumberField("currentTerm", meta.getCurrentTerm().getTerm());
                 builder.writeObjectFieldStart("config");
 
-                builder.writeNumberField("sequenceNumber", meta.getConfig().sequenceNumber());
-                builder.writeNumberField("quorum", meta.getConfig().quorum());
                 builder.writeBooleanField("isTransitioning", meta.getConfig().isTransitioning());
 
                 builder.writeArrayFieldStart("members");

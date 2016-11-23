@@ -2,6 +2,7 @@ package org.mitallast.queue.common;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 public class Immutable {
 
@@ -32,6 +33,13 @@ public class Immutable {
     public static <V> ImmutableList<V> compose(Iterable<V> list, V v) {
         return ImmutableList.<V>builder()
             .addAll(list)
+            .add(v)
+            .build();
+    }
+
+    public static <V> ImmutableSet<V> compose(ImmutableSet<V> set, V v) {
+        return ImmutableSet.<V>builder()
+            .addAll(set)
             .add(v)
             .build();
     }

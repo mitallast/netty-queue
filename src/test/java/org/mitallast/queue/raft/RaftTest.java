@@ -22,7 +22,6 @@ import org.mitallast.queue.common.stream.StreamModule;
 import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
-import org.mitallast.queue.raft.cluster.JointRequest;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.log.FileReplicatedLogProvider;
@@ -92,8 +91,8 @@ public class RaftTest extends BaseTest {
         when(transportService.channel(node1)).thenReturn(transportChannel1);
         when(transportService.channel(node2)).thenReturn(transportChannel2);
         when(transportService.channel(node3)).thenReturn(transportChannel3);
-        when(transportService.channel(node4)).thenReturn(transportChannel3);
-        when(transportService.channel(node5)).thenReturn(transportChannel3);
+        when(transportService.channel(node4)).thenReturn(transportChannel4);
+        when(transportService.channel(node5)).thenReturn(transportChannel5);
 
         context = new TestRaftContext();
         Config config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
@@ -113,11 +112,11 @@ public class RaftTest extends BaseTest {
     }
 
     private void appendClusterConf() {
-        log = log.append(new LogEntry(new StableClusterConfiguration(1, node1, node2, node3), new Term(1), 1, node1)).commit(1);
+        log = log.append(new LogEntry(new StableClusterConfiguration(node1, node2, node3), new Term(1), 1, node1)).commit(1);
     }
 
     private void appendBigClusterConf() {
-        log = log.append(new LogEntry(new StableClusterConfiguration(1, node1, node2, node3, node4, node5), new Term(1), 1, node1)).commit(1);
+        log = log.append(new LogEntry(new StableClusterConfiguration(node1, node2, node3, node4, node5), new Term(1), 1, node1)).commit(1);
     }
 
     private void start() throws Exception {
@@ -531,7 +530,7 @@ public class RaftTest extends BaseTest {
     public void testLeaderAppendStableClusterConfigurationOnElection() throws Exception {
         becameLeader();
         Assert.assertEquals(
-            ImmutableList.of(stable(1, 1, 1, node1, node2, node3), noop(2, 2, node1)),
+            ImmutableList.of(stable(1, 1, node1, node2, node3), noop(2, 2, node1)),
             raft.currentLog().entries()
         );
     }
@@ -670,7 +669,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderRejectInstallSnapshotIfTermIsOld() throws Exception {
         becameLeader();
-        StableClusterConfiguration conf = new StableClusterConfiguration(1, node1, node2, node3);
+        StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
         raft.receive(new InstallSnapshot(node2, new Term(1), new RaftSnapshot(metadata, Noop.INSTANCE)));
         execute();
@@ -682,7 +681,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderRejectInstallSnapshotIfTermIsEqual() throws Exception {
         becameLeader();
-        StableClusterConfiguration conf = new StableClusterConfiguration(1, node1, node2, node3);
+        StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
         raft.receive(new InstallSnapshot(node2, new Term(2), new RaftSnapshot(metadata, Noop.INSTANCE)));
         execute();
@@ -694,7 +693,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnInstallSnapshotIfTermIsNewer() throws Exception {
         becameLeader();
-        StableClusterConfiguration conf = new StableClusterConfiguration(1, node1, node2, node3);
+        StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
         raft.receive(new InstallSnapshot(node2, new Term(3), new RaftSnapshot(metadata, Noop.INSTANCE)));
         execute();
@@ -800,32 +799,19 @@ public class RaftTest extends BaseTest {
 
         joint(node4);
         sendHeartbeat();
-        JointConsensusClusterConfiguration jointConf = new JointConsensusClusterConfiguration(
-            2, ImmutableSet.of(node1, node2, node3), ImmutableSet.of(node1, node2, node3, node4)
-        );
-        LogEntry jointEntry = new LogEntry(jointConf, new Term(2), 3, node1);
-        verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, jointEntry));
-        verify(transportChannel3).message(appendEntries(node1, 2, 2, 2, 2, jointEntry));
+        ClusterConfiguration stable = new StableClusterConfiguration(node1, node2, node3, node4);
+        LogEntry stableEntry = new LogEntry(stable, new Term(2), 3, node4);
+        verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, stableEntry));
+        verify(transportChannel3).message(appendEntries(node1, 2, 2, 2, 2, stableEntry));
         appendSuccessful(node2, 2, 3);
         appendSuccessful(node3, 2, 3);
-        Assert.assertEquals(jointConf, raft.currentMeta().getConfig());
-
-        sendHeartbeat();
-        ClusterConfiguration stable = jointConf.transitionToStable();
-        LogEntry stableEntry = new LogEntry(stable, new Term(2), 4, node1);
-        verify(transportChannel2).message(appendEntries(node1, 2, 2, 3, 3, stableEntry));
-        verify(transportChannel3).message(appendEntries(node1, 2, 2, 3, 3, stableEntry));
-        appendSuccessful(node2, 2, 4);
-        appendSuccessful(node3, 2, 4);
         Assert.assertEquals(stable, raft.currentMeta().getConfig());
     }
-
-    // @todo add reject joint request if already contains joint entry
 
     // additional methods
 
     private void joint(DiscoveryNode node) {
-        raft.receive(new JointRequest(node));
+        raft.receive(new AddServer(node));
         execute();
     }
 
@@ -871,10 +857,12 @@ public class RaftTest extends BaseTest {
         return new LogEntry(Noop.INSTANCE, new Term(term), index, client);
     }
 
-    private LogEntry stable(long seq, long term, long index, DiscoveryNode... nodes) {
-        return new LogEntry(new StableClusterConfiguration(seq, nodes), new Term(term), index, node1);
+    @SuppressWarnings("SameParameterValue")
+    private LogEntry stable(long term, long index, DiscoveryNode... nodes) {
+        return new LogEntry(new StableClusterConfiguration(nodes), new Term(term), index, node1);
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void appendSuccessful(DiscoveryNode node, long term, long index) {
         raft.receive(new AppendSuccessful(node, new Term(term), index));
         execute();
@@ -965,30 +953,38 @@ public class RaftTest extends BaseTest {
 
             Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration::new, 100));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 106));
-
-
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendEntries.class, AppendEntries::new, 200));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendRejected.class, AppendRejected::new, 201));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendSuccessful.class, AppendSuccessful::new, 202));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(BeginElection.class, BeginElection::read, 204));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ChangeConfiguration.class, ChangeConfiguration::new, 205));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 206));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 207));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectedAsLeader.class, ElectedAsLeader::read, 208));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectionTimeout.class, ElectionTimeout::read, 209));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InitLogSnapshot.class, InitLogSnapshot::read, 211));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshot.class, InstallSnapshot::new, 212));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 213));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 214));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 216));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 217));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 218));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 220));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(SendHeartbeat.class, SendHeartbeat::read, 221));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 222));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(Noop.class, Noop::read, 223));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 210));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectionTimeout.class, ElectionTimeout::read, 220));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(BeginElection.class, BeginElection::read, 221));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectedAsLeader.class, ElectedAsLeader::read, 222));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(SendHeartbeat.class, SendHeartbeat::read, 224));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 230));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(Noop.class, Noop::read, 231));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 240));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 241));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InitLogSnapshot.class, InitLogSnapshot::read, 260));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshot.class, InstallSnapshot::new, 261));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 262));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 263));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration::new, 270));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 271));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServer.class, AddServer::new, 280));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServerResponse.class, AddServerResponse::new, 281));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServer.class, RemoveServer::new, 282));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServerResponse.class, RemoveServerResponse::new, 283));
         }
     }
 }

@@ -80,11 +80,9 @@ public class DistributedStorageService extends AbstractComponent {
             public void accept(PutBlobResourceResponse response, Throwable throwable) {
                 stored = stored || response.isStored();
                 long count = countDown.decrementAndGet();
-                logger.info("handle complete: {}", count);
+                logger.info("handle complete: {} stored: {}", count, stored);
                 if (count == 0) {
-                    if (stored) {
-                        future.complete(Boolean.TRUE);
-                    }
+                    future.complete(stored);
                 }
             }
         };
@@ -97,7 +95,7 @@ public class DistributedStorageService extends AbstractComponent {
             DiscoveryNode node = replicas.get(i);
             logger.info("send put request {} to {}", id, node);
 
-            PutBlobResourceRequest message = new PutBlobResourceRequest(node, id, key, data);
+            PutBlobResourceRequest message = new PutBlobResourceRequest(discovery.self(), id, key, data);
             transportService.connectToNode(node);
             transportService.channel(node).message(message);
         }
@@ -163,14 +161,19 @@ public class DistributedStorageService extends AbstractComponent {
         }
 
         if (stored) {
-            PutBlobResource cmd = new PutBlobResource(message.getKey(), discovery.self());
-            raft.receive(new ClientMessage(discovery.self(), cmd));
+            PutBlobResource cmd = new PutBlobResource(
+                discovery.self(),
+                message.getId(),
+                message.getKey()
+            );
+            raft.receive(new ClientMessage(message.getNode(), cmd));
+        } else {
+            transportService.connectToNode(message.getNode());
+            transportService.channel(message.getNode()).message(new PutBlobResourceResponse(
+                message.getId(), message.getKey(),
+                false
+            ));
         }
-
-        logger.info("send put response: {}", message.getId());
-        transportService.connectToNode(message.getNode());
-        transportService.channel(message.getNode())
-            .message(new PutBlobResourceResponse(message.getId(), discovery.self(), message.getKey(), stored));
     }
 
     @SuppressWarnings("unchecked")

@@ -17,8 +17,10 @@ public class RaftHandler extends AbstractComponent {
         transportController.registerMessageHandler(AppendRejected.class, raft::receive);
         transportController.registerMessageHandler(AppendSuccessful.class, raft::receive);
 
-        transportController.registerMessageHandler(ChangeConfiguration.class, raft::receive);
-        transportController.registerMessageHandler(JointRequest.class, raft::receive);
+        transportController.registerMessageHandler(AddServer.class, raft::receive);
+        transportController.registerMessageHandler(AddServerResponse.class, raft::receive);
+        transportController.registerMessageHandler(RemoveServer.class, raft::receive);
+        transportController.registerMessageHandler(RemoveServerResponse.class, raft::receive);
 
         transportController.registerMessageHandler(ClientMessage.class, raft::receive);
 

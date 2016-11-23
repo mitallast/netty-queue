@@ -6,13 +6,7 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 public interface ClusterConfiguration extends Streamable {
 
-    long sequenceNumber();
-
     ImmutableSet<DiscoveryNode> members();
-
-    int quorum();
-
-    boolean isNewer(ClusterConfiguration state);
 
     boolean isTransitioning();
 

@@ -27,7 +27,7 @@ public class RaftMetadata {
     }
 
     public RaftMetadata(ReplicatedLog replicatedLog, Term currentTerm) {
-        this(replicatedLog, currentTerm, new StableClusterConfiguration(0));
+        this(replicatedLog, currentTerm, new StableClusterConfiguration());
     }
 
     public RaftMetadata(ReplicatedLog replicatedLog, Term currentTerm, ClusterConfiguration config) {

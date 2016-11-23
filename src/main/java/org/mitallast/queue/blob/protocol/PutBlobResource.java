@@ -8,17 +8,24 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.io.IOException;
 
 public class PutBlobResource implements Streamable {
-    private final String key;
     private final DiscoveryNode node;
+    private final long id;
+    private final String key;
 
-    public PutBlobResource(String key, DiscoveryNode node) {
-        this.key = key;
+    public PutBlobResource(DiscoveryNode node, long id, String key) {
         this.node = node;
+        this.id = id;
+        this.key = key;
     }
 
     public PutBlobResource(StreamInput stream) throws IOException {
-        key = stream.readText();
         node = stream.readStreamable(DiscoveryNode::new);
+        id = stream.readLong();
+        key = stream.readText();
+    }
+
+    public long getId() {
+        return id;
     }
 
     public String getKey() {
@@ -31,7 +38,8 @@ public class PutBlobResource implements Streamable {
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeText(key);
         stream.writeStreamable(node);
+        stream.writeLong(id);
+        stream.writeText(key);
     }
 }

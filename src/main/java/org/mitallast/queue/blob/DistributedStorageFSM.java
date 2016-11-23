@@ -5,6 +5,7 @@ import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.blob.protocol.BlobRoutingMap;
 import org.mitallast.queue.blob.protocol.PutBlobResource;
+import org.mitallast.queue.blob.protocol.PutBlobResourceResponse;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.ResourceFSM;
@@ -12,7 +13,6 @@ import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public class DistributedStorageFSM extends AbstractComponent implements ResourceFSM {
 
@@ -33,6 +33,11 @@ public class DistributedStorageFSM extends AbstractComponent implements Resource
             PutBlobResource resource = (PutBlobResource) message;
             logger.info("put resource to routing map: {} ", resource);
             routingMap = routingMap.withResource(resource.getKey(), resource.getNode());
+            return new PutBlobResourceResponse(
+                resource.getId(),
+                resource.getKey(),
+                true
+            );
         } else if (message instanceof BlobRoutingMap) {
             logger.info("install routing map: {}", routingMap);
             routingMap = (BlobRoutingMap) message;

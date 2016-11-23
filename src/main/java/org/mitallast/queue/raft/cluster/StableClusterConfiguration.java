@@ -8,42 +8,23 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.io.IOException;
 
 public class StableClusterConfiguration implements ClusterConfiguration {
-
-    private final long sequenceNumber;
     private final ImmutableSet<DiscoveryNode> members;
 
     public StableClusterConfiguration(StreamInput stream) throws IOException {
-        sequenceNumber = stream.readLong();
         members = stream.readStreamableSet(DiscoveryNode::new);
     }
 
-    public StableClusterConfiguration(long sequenceNumber, DiscoveryNode... members) {
-        this(sequenceNumber, ImmutableSet.copyOf(members));
+    public StableClusterConfiguration(DiscoveryNode... members) {
+        this(ImmutableSet.copyOf(members));
     }
 
-    public StableClusterConfiguration(long sequenceNumber, ImmutableSet<DiscoveryNode> members) {
-        this.sequenceNumber = sequenceNumber;
+    public StableClusterConfiguration(ImmutableSet<DiscoveryNode> members) {
         this.members = members;
-    }
-
-    @Override
-    public long sequenceNumber() {
-        return sequenceNumber;
     }
 
     @Override
     public ImmutableSet<DiscoveryNode> members() {
         return members;
-    }
-
-    @Override
-    public int quorum() {
-        return members.size() / 2 + 1;
-    }
-
-    @Override
-    public boolean isNewer(ClusterConfiguration state) {
-        return sequenceNumber > state.sequenceNumber();
     }
 
     @Override
@@ -53,7 +34,7 @@ public class StableClusterConfiguration implements ClusterConfiguration {
 
     @Override
     public ClusterConfiguration transitionTo(ClusterConfiguration newConfiguration) {
-        return new JointConsensusClusterConfiguration(sequenceNumber + 1, members, newConfiguration.members());
+        return new JointConsensusClusterConfiguration(members, newConfiguration.members());
     }
 
     @Override
@@ -72,12 +53,11 @@ public class StableClusterConfiguration implements ClusterConfiguration {
             .add(member)
             .build();
 
-        return new StableClusterConfiguration(sequenceNumber, newMembers);
+        return new StableClusterConfiguration(newMembers);
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeLong(sequenceNumber);
         stream.writeStreamableSet(members);
     }
 
@@ -88,23 +68,17 @@ public class StableClusterConfiguration implements ClusterConfiguration {
 
         StableClusterConfiguration that = (StableClusterConfiguration) o;
 
-        if (sequenceNumber != that.sequenceNumber) return false;
         return members.equals(that.members);
 
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (sequenceNumber ^ (sequenceNumber >>> 32));
-        result = 31 * result + members.hashCode();
-        return result;
+        return members.hashCode();
     }
 
     @Override
     public String toString() {
-        return "StableClusterConfiguration{" +
-            "seq=" + sequenceNumber +
-            ", members=" + members +
-            '}';
+        return "StableClusterConfiguration{members=" + members + '}';
     }
 }

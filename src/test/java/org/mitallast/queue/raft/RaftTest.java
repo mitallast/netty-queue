@@ -798,7 +798,6 @@ public class RaftTest extends BaseTest {
         execute();
 
         joint(node4);
-        sendHeartbeat();
         ClusterConfiguration stable = new StableClusterConfiguration(node1, node2, node3, node4);
         LogEntry stableEntry = new LogEntry(stable, new Term(2), 3, node4);
         verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, stableEntry));

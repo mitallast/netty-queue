@@ -206,7 +206,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
                     // recreate file object after move
                     File newSegmentFile = segmentFile(start);
-                    StreamOutput newSegmentOutput = streamService.output(segmentFile, true);
+                    StreamOutput newSegmentOutput = streamService.output(newSegmentFile, true);
                     return new FileReplicatedLog(newSegmentFile, newSegmentOutput, logEntries, committedIndex, start);
                 } catch (IOException e) {
                     throw new IOError(e);
@@ -294,7 +294,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
                     // recreate file object after move
                     File newSegmentFile = segmentFile(start);
-                    StreamOutput newSegmentOutput = streamService.output(segmentFile, true);
+                    StreamOutput newSegmentOutput = streamService.output(newSegmentFile, true);
                     return new FileReplicatedLog(newSegmentFile, newSegmentOutput, logEntries, committedIndex, start);
                 } else {
                     segmentOutput.close();

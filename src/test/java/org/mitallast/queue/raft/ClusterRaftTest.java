@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mitallast.queue.raft.RaftState.Follower;
@@ -102,13 +101,43 @@ public class ClusterRaftTest extends BaseTest {
     @Test
     public void testClientMessage() throws Exception {
         awaitElection();
-        client.get(0).set("hello world");
-        String value = client.get(1).get().get();
-        Assert.assertEquals("hello world", value);
+        String value1 = client.get(1).get().get();
+        Assert.assertEquals("", value1);
+
+        String value2 = client.get(0).set("hello world").get();
+        Assert.assertEquals("hello world", value2);
+    }
+
+    @Test
+    public void benchmark() throws Exception {
+        awaitElection();
+        int leader = 0;
+        for (int i = 0; i < nodesCount; i++) {
+            if (raft.get(i).currentState() == Leader) {
+                leader = i;
+            }
+        }
+
+        final long total = 1000;
+        final long start = System.currentTimeMillis();
+        for (int i = 0; i < total; i++) {
+            String value = client.get(leader).set("hello world " + i).get();
+            Assert.assertEquals("hello world " + i, value);
+        }
+        final long end = System.currentTimeMillis();
+        printQps("raft command rpc", total, start, end);
     }
 
     private void awaitElection() throws Exception {
-        Thread.sleep(TimeUnit.SECONDS.toMillis(2));
+        while (true) {
+            if (raft.stream().anyMatch(raft -> raft.currentState() == Leader)) {
+                if (raft.stream().allMatch(raft -> raft.currentLog().committedIndex() == nodesCount)) {
+                    logger.info("leader found, cluster available");
+                    return;
+                }
+            }
+            Thread.sleep(10);
+        }
     }
 
     private void assertLeaderElected() throws Exception {
@@ -144,8 +173,9 @@ public class ClusterRaftTest extends BaseTest {
         public Streamable apply(Streamable message) {
             if (message instanceof RegisterSet) {
                 RegisterSet registerSet = (RegisterSet) message;
-                logger.info("prev value: {} new value: {}", value, registerSet.value);
+                logger.debug("prev value: {} new value: {}", value, registerSet.value);
                 value = registerSet.value;
+                return new RegisterValue(registerSet.requestId, value);
             } else if (message instanceof RegisterGet) {
                 return new RegisterValue(((RegisterGet) message).requestId, value);
             }
@@ -154,24 +184,27 @@ public class ClusterRaftTest extends BaseTest {
 
         @Override
         public Optional<RaftSnapshot> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-            return Optional.of(new RaftSnapshot(snapshotMeta, new RegisterSet(value)));
+            return Optional.of(new RaftSnapshot(snapshotMeta, new RegisterSet(-1, value)));
         }
     }
 
     public static class RegisterSet implements Streamable {
-
+        private final long requestId;
         private final String value;
 
         public RegisterSet(StreamInput streamInput) throws IOException {
+            this.requestId = streamInput.readLong();
             this.value = streamInput.readText();
         }
 
-        public RegisterSet(String value) {
+        public RegisterSet(long requestId, String value) {
+            this.requestId = requestId;
             this.value = value;
         }
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeLong(requestId);
             stream.writeText(value);
         }
 
@@ -255,9 +288,12 @@ public class ClusterRaftTest extends BaseTest {
             controller.registerMessageHandler(RegisterValue.class, this::receive);
         }
 
-        @SuppressWarnings("SameParameterValue")
-        public void set(String value) {
-            raft.receive(new ClientMessage(clusterDiscovery.self(), new RegisterSet(value)));
+        public CompletableFuture<String> set(String value) {
+            long request = counter.incrementAndGet();
+            CompletableFuture<String> future = new CompletableFuture<>();
+            requests.put(request, future);
+            raft.receive(new ClientMessage(clusterDiscovery.self(), new RegisterSet(request, value)));
+            return future;
         }
 
         public CompletableFuture<String> get() {
@@ -269,7 +305,7 @@ public class ClusterRaftTest extends BaseTest {
         }
 
         private void receive(RegisterValue event) {
-            logger.info("client received: {}", event);
+            logger.debug("client received: {}", event);
             requests.get(event.requestId).complete(event.value);
         }
     }

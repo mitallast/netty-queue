@@ -25,6 +25,7 @@ import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -64,9 +65,9 @@ public class ClusterRaftTest extends BaseTest {
                 .put("raft.discovery.nodes.0", nodeDiscovery)
                 .put("raft.keep-init-until-found", nodesCount)
                 .put("raft.election-deadline", "1s")
-                .put("raft.discovery-timeout", "100ms")
                 .put("raft.heartbeat", "500ms")
                 .put("raft.bootstrap", bootstrap)
+                .put("raft.snapshot-interval", 10000)
                 .put("transport.host", "127.0.0.1")
                 .put("transport.port", port)
                 .build());
@@ -109,7 +110,7 @@ public class ClusterRaftTest extends BaseTest {
     }
 
     @Test
-    public void benchmark() throws Exception {
+    public void benchmarkSynchronous() throws Exception {
         awaitElection();
         int leader = 0;
         for (int i = 0; i < nodesCount; i++) {
@@ -124,6 +125,33 @@ public class ClusterRaftTest extends BaseTest {
             String value = client.get(leader).set("hello world " + i).get();
             Assert.assertEquals("hello world " + i, value);
         }
+        final long end = System.currentTimeMillis();
+        printQps("raft command rpc", total, start, end);
+    }
+
+    @Test
+    public void benchmarkAsynchronous() throws Exception {
+        awaitElection();
+        int leader = 0;
+        for (int i = 0; i < nodesCount; i++) {
+            if (raft.get(i).currentState() == Leader) {
+                leader = i;
+            }
+        }
+
+        final int total = 10000;
+        final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
+        final long start = System.currentTimeMillis();
+        for (int i = 0; i < total; i++) {
+            CompletableFuture<String> future = client.get(leader).set("hello world " + i);
+            futures.add(future);
+        }
+        for (int i = 0; i < total; i++) {
+            CompletableFuture<String> future = futures.get(i);
+            String value = future.get();
+            Assert.assertEquals("hello world " + i, value);
+        }
+
         final long end = System.currentTimeMillis();
         printQps("raft command rpc", total, start, end);
     }

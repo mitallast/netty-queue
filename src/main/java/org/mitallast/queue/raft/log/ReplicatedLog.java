@@ -37,8 +37,6 @@ public interface ReplicatedLog {
 
     ReplicatedLog compactedWith(RaftSnapshot snapshot, DiscoveryNode node);
 
-    ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding);
-
     ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);
 
     ImmutableList<LogEntry> slice(long from, long until);

@@ -547,14 +547,17 @@ public class RaftTest extends BaseTest {
         becameLeader();
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
+        raft.receive(new AppendSuccessful(node2, new Term(2), 2));
+        raft.receive(new AppendSuccessful(node3, new Term(2), 2));
+        execute();
 
         raft.receive(new ClientMessage(node2, Noop.INSTANCE));
         execute();
         raft.receive(SendHeartbeat.INSTANCE);
         execute();
 
-        verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1), noop(2, 3, node2)));
-        verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1), noop(2, 3, node2)));
+        verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, noop(2, 3, node2)));
+        verify(transportChannel3).message(appendEntries(node1, 2, 2, 2, 2, noop(2, 3, node2)));
     }
 
     @Test

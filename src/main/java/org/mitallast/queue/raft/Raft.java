@@ -37,6 +37,7 @@ public class Raft extends AbstractLifecycleComponent {
 
     private volatile Optional<DiscoveryNode> recentlyContactedByLeader;
 
+    private volatile ImmutableMap<DiscoveryNode, Long> replicationIndex;
     private volatile LogIndexMap nextIndex;
     private volatile LogIndexMap matchIndex;
 
@@ -213,7 +214,7 @@ public class Raft extends AbstractLifecycleComponent {
     }
 
     private void resetElectionDeadline() {
-        logger.info("reset election deadline");
+        logger.debug("reset election deadline");
         cancelElectionDeadline();
         long timeout = new Random().nextInt((int) (electionDeadline / 2)) + electionDeadline;
         setTimer("raft-election-timeout", ElectionTimeout.INSTANCE, timeout, TimeUnit.MILLISECONDS, false);
@@ -233,7 +234,7 @@ public class Raft extends AbstractLifecycleComponent {
     }
 
     private void senderIsCurrentLeader(DiscoveryNode leader) {
-        logger.info("leader is {}", leader);
+        logger.debug("leader is {}", leader);
         recentlyContactedByLeader = Optional.of(leader);
     }
 
@@ -527,10 +528,10 @@ public class Raft extends AbstractLifecycleComponent {
                 // Append any new entries not already in the log
 
                 long prevIndex = msg.getEntries().get(0).getIndex() - 1;
-                logger.info("append({}, {}) to {}", msg.getEntries(), prevIndex, meta.replicatedLog());
+                logger.debug("append({}, {})", msg.getEntries(), prevIndex);
                 meta = meta.withLog(meta.replicatedLog().append(msg.getEntries(), prevIndex));
             }
-            logger.info("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), meta.replicatedLog().lastIndex());
+            logger.debug("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), meta.replicatedLog().lastIndex());
             AppendSuccessful response = new AppendSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(), meta.replicatedLog().lastIndex());
             send(msg.getMember(), response);
 
@@ -547,7 +548,7 @@ public class Raft extends AbstractLifecycleComponent {
                     } else if (entry.getCommand() instanceof RaftSnapshot) {
                         logger.warn("unexpected raft snapshot in log");
                     } else {
-                        logger.info("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
+                        logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
                         resourceFSM.apply(entry.getCommand());
                     }
                     meta = meta.withLog(meta.replicatedLog().commit(entry.getIndex()));
@@ -842,6 +843,10 @@ public class Raft extends AbstractLifecycleComponent {
             // (initialized to 0, increases monotonically)
             matchIndex = new LogIndexMap(0);
 
+            // for each server store last send heartbeat time
+            // 0 if no response is expected
+            replicationIndex = ImmutableMap.of();
+
             final LogEntry entry;
             if (meta.replicatedLog().entries().isEmpty()) {
                 entry = new LogEntry(meta.getConfig(), meta.getCurrentTerm(), meta.replicatedLog().nextIndex(), clusterDiscovery.self());
@@ -867,13 +872,11 @@ public class Raft extends AbstractLifecycleComponent {
 
         @Override
         public State handle(ClientMessage message, RaftMetadata meta) {
-            logger.info("appending command: [{}] from {} to replicated log", message.getCmd(), message.getClient());
+            logger.debug("appending command: [{}] from {} to replicated log", message.getCmd(), message.getClient());
             LogEntry entry = new LogEntry(message.getCmd(), meta.getCurrentTerm(), meta.replicatedLog().nextIndex(), message.getClient());
-            logger.info("adding {} to log {}", entry, meta.replicatedLog());
             meta = meta.withLog(meta.replicatedLog().append(entry));
             matchIndex.put(clusterDiscovery.self(), entry.getIndex());
-            logger.debug("log status = {}", meta.replicatedLog());
-            maybeSendHeartbeat(meta);
+            sendHeartbeat(meta);
             return maybeCommitEntry(meta);
         }
 
@@ -914,12 +917,13 @@ public class Raft extends AbstractLifecycleComponent {
                 return goTo(Follower, meta.withTerm(message.getTerm()).forFollower());
             }
             if (message.getTerm().equals(meta.getCurrentTerm())) {
-                logger.info("received append successful {} in term: {}", message, meta.getCurrentTerm());
+                logger.debug("received append successful {} in term: {}", message, meta.getCurrentTerm());
                 assert (message.getLastIndex() <= meta.replicatedLog().lastIndex());
                 if (message.getLastIndex() > 0) {
                     nextIndex.put(message.getMember(), message.getLastIndex() + 1);
                 }
                 matchIndex.putIfGreater(message.getMember(), message.getLastIndex());
+                replicationIndex = Immutable.replace(replicationIndex, message.getMember(), 0L);
                 maybeSendEntries(message.getMember(), meta);
                 return maybeCommitEntry(meta);
             } else {
@@ -1022,28 +1026,30 @@ public class Raft extends AbstractLifecycleComponent {
         }
 
         private void sendHeartbeat(RaftMetadata meta) {
-            logger.info("send heartbeat: {}", meta.members());
+            logger.debug("send heartbeat: {}", meta.members());
+            long timeout = System.currentTimeMillis() - heartbeat;
             for (DiscoveryNode member : meta.membersWithout(clusterDiscovery.self())) {
-                sendEntries(member, meta);
-            }
-        }
-
-        private void maybeSendHeartbeat(RaftMetadata meta) {
-            for (DiscoveryNode member : meta.membersWithout(clusterDiscovery.self())) {
-                maybeSendEntries(member, meta);
+                // check heartbeat response timeout for prevent re-send heartbeat
+                if (replicationIndex.getOrDefault(member, 0L) < timeout) {
+                    sendEntries(member, meta);
+                }
             }
         }
 
         private void maybeSendEntries(DiscoveryNode follower, RaftMetadata meta) {
-            // if member is already append prev entries,
-            // their next index must be equal to last index in log
-            logger.info("maybe send heartbeat {}[{}] last index {}", follower, nextIndex.indexFor(follower), meta.replicatedLog().lastIndex());
-            if (nextIndex.indexFor(follower) == meta.replicatedLog().lastIndex()) {
-                sendEntries(follower, meta);
+            // check heartbeat response timeout for prevent re-send heartbeat
+            long timeout = System.currentTimeMillis() - heartbeat;
+            if (replicationIndex.getOrDefault(follower, 0L) < timeout) {
+                // if member is already append prev entries,
+                // their next index must be equal to last index in log
+                if (nextIndex.indexFor(follower) == meta.replicatedLog().lastIndex()) {
+                    sendEntries(follower, meta);
+                }
             }
         }
 
         private void sendEntries(DiscoveryNode follower, RaftMetadata meta) {
+            replicationIndex = Immutable.replace(replicationIndex, follower, System.currentTimeMillis());
             long lastIndex = nextIndex.indexFor(follower);
 
             if (meta.replicatedLog().hasSnapshot()) {
@@ -1058,10 +1064,10 @@ public class Raft extends AbstractLifecycleComponent {
             if (lastIndex > meta.replicatedLog().nextIndex()) {
                 throw new Error("Unexpected from index " + lastIndex + " > " + meta.replicatedLog().nextIndex());
             } else {
-                ImmutableList<LogEntry> entries = meta.replicatedLog().entriesBatchFrom(lastIndex);
+                ImmutableList<LogEntry> entries = meta.replicatedLog().entriesBatchFrom(lastIndex, 1000);
                 long prevIndex = Math.max(0, lastIndex - 1);
                 Term prevTerm = meta.replicatedLog().termAt(prevIndex);
-                logger.info("send append entries {} prev {}:{} in {} from index:{}", entries, prevTerm, prevIndex, meta.getCurrentTerm(), lastIndex);
+                logger.info("send append entries {} prev {}:{} in {} from index:{}", entries.size(), prevTerm, prevIndex, meta.getCurrentTerm(), lastIndex);
                 AppendEntries append = new AppendEntries(clusterDiscovery.self(), meta.getCurrentTerm(),
                     prevTerm, prevIndex,
                     entries,
@@ -1073,11 +1079,11 @@ public class Raft extends AbstractLifecycleComponent {
         private State maybeCommitEntry(RaftMetadata meta) {
             long indexOnMajority;
             while ((indexOnMajority = matchIndex.consensusForIndex(meta.getConfig())) > meta.replicatedLog().committedIndex()) {
-                logger.info("index of majority: {}", indexOnMajority);
+                logger.debug("index of majority: {}", indexOnMajority);
                 meta.replicatedLog().slice(meta.replicatedLog().committedIndex(), indexOnMajority);
                 ImmutableList<LogEntry> entries = meta.replicatedLog().slice(meta.replicatedLog().committedIndex() + 1, indexOnMajority);
                 for (LogEntry entry : entries) {
-                    logger.info("committing log at index: {}", entry.getIndex());
+                    logger.debug("committing log at index: {}", entry.getIndex());
                     meta = meta.withLog(meta.replicatedLog().commit(entry.getIndex()));
                     if (entry.getCommand() instanceof JointConsensusClusterConfiguration) {
                         JointConsensusClusterConfiguration config = (JointConsensusClusterConfiguration) entry.getCommand();
@@ -1099,7 +1105,7 @@ public class Raft extends AbstractLifecycleComponent {
                     } else if (entry.getCommand() instanceof Noop) {
                         logger.trace("ignore noop entry");
                     } else {
-                        logger.info("applying command[index={}]: {}, will send result to client: {}", entry.getIndex(), entry.getCommand().getClass(), entry.getClient());
+                        logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex(), entry.getCommand().getClass(), entry.getClient());
                         Streamable result = resourceFSM.apply(entry.getCommand());
                         if (result != null) {
                             send(entry.getClient(), result);

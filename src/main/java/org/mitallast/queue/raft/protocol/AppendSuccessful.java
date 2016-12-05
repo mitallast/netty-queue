@@ -43,4 +43,13 @@ public class AppendSuccessful implements Streamable {
         stream.writeLong(term.getTerm());
         stream.writeLong(lastIndex);
     }
+
+    @Override
+    public String toString() {
+        return "AppendSuccessful{" +
+            "member=" + member +
+            ", term=" + term +
+            ", lastIndex=" + lastIndex +
+            '}';
+    }
 }

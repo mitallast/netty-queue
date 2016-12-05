@@ -105,22 +105,22 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testNextEntriesLowerBound0() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(1));
+        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(1,3));
     }
 
     @Test
     public void testNextEntriesLowerBound1() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(2));
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(2,3));
     }
 
     @Test
     public void testNextEntriesLowerBound2() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(3));
+        Assert.assertEquals(ImmutableList.of(entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(3,3));
     }
 
     @Test
     public void testNextEntriesLowerBound3() throws Exception {
-        Assert.assertEquals(ImmutableList.of(), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(4));
+        Assert.assertEquals(ImmutableList.of(), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(4,3));
     }
 
     @Test
@@ -277,19 +277,19 @@ public abstract class ReplicatedLogTest extends BaseTest {
     @Test
     public void testEntriesBatchFrom1AfterCompaction1() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
-        Assert.assertEquals(ImmutableList.of(snapshotEntry1, entry2, entry3), compacted.entriesBatchFrom(1));
+        Assert.assertEquals(ImmutableList.of(snapshotEntry1, entry2, entry3), compacted.entriesBatchFrom(1, 3));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction2() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(2));
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(2,3));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction3() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
-        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3));
+        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3,3));
     }
 
     @Test

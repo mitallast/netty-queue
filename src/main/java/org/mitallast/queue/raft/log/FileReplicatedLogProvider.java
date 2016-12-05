@@ -215,11 +215,6 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         }
 
         @Override
-        public ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding) {
-            return entriesBatchFrom(fromIncluding, 3);
-        }
-
-        @Override
         public ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany) {
             ImmutableList<LogEntry> toSend = slice(fromIncluding, fromIncluding + howMany);
             if (toSend.isEmpty()) {

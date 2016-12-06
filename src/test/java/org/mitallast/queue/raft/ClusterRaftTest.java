@@ -119,7 +119,14 @@ public class ClusterRaftTest extends BaseTest {
             }
         }
 
-        final long total = 1000;
+        // warm up
+        for (int i = 0; i < 10000; i++) {
+            String value = client.get(leader).set("hello world " + i).get();
+            Assert.assertEquals("hello world " + i, value);
+        }
+
+        // bench
+        final long total = 5000;
         final long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
             String value = client.get(leader).set("hello world " + i).get();
@@ -139,7 +146,13 @@ public class ClusterRaftTest extends BaseTest {
             }
         }
 
-        final int total = 10000;
+        // warm up
+        for (int i = 0; i < 10000; i++) {
+            String value = client.get(leader).set("hello world " + i).get();
+            Assert.assertEquals("hello world " + i, value);
+        }
+
+        final int total = 5000;
         final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
         final long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {

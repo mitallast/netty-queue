@@ -14,9 +14,7 @@ import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.File;
-import java.io.IOError;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Optional;
@@ -29,30 +27,27 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
     private final FileService fileService;
     private final StreamService streamService;
 
-    private final File stateFile;
+    private final RandomAccessFile stateFile;
 
     @Inject
     public FileReplicatedLogProvider(Config config, FileService fileService, StreamService streamService) throws IOException {
         super(config.getConfig("raft"), FileReplicatedLogProvider.class);
         this.fileService = fileService;
         this.streamService = streamService;
-        this.stateFile = fileService.resource("raft", "state.bin");
+        File stateFile = fileService.resource("raft", "state.bin");
+        this.stateFile = new RandomAccessFile(stateFile, "rw");
     }
 
     @Override
     public ReplicatedLog get() {
         try {
             final long index;
-            final long committedIndex;
 
             if (stateFile.length() == 0) {
                 index = initialIndex;
-                committedIndex = initialCommittedIndex;
             } else {
-                try (StreamInput input = streamService.input(stateFile)) {
-                    index = input.readLong();
-                    committedIndex = input.readLong();
-                }
+                stateFile.seek(0);
+                index = stateFile.readLong();
             }
 
             final File segmentFile = segmentFile(index);
@@ -62,12 +57,20 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                     builder.add(input.readStreamable(LogEntry::new));
                 }
             }
-            return new FileReplicatedLog(segmentFile, streamService.output(segmentFile, true), builder.build(), committedIndex, index);
+            BufferedOutputStream segmentOutput_ = new BufferedOutputStream(new FileOutputStream(segmentFile, true));
+            StreamOutput segmentOutput = streamService.output(segmentOutput_);
+            return new FileReplicatedLog(
+                segmentFile,
+                segmentOutput_,
+                segmentOutput,
+                builder.build(),
+                initialCommittedIndex,
+                index
+            );
         } catch (IOException e) {
             throw new IOError(e);
         }
     }
-
 
     private File segmentFile(long input) throws IOException {
         return fileService.resource("raft", input + ".log");
@@ -77,11 +80,9 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         return fileService.temporary("raft", "log.", ".tmp");
     }
 
-    private void writeState(long index, long committedIndex) throws IOException {
-        try (StreamOutput output = streamService.output(stateFile)) {
-            output.writeLong(index);
-            output.writeLong(committedIndex);
-        }
+    private void writeState(long index) throws IOException {
+        stateFile.seek(0);
+        stateFile.writeLong(index);
     }
 
     public class FileReplicatedLog implements ReplicatedLog {
@@ -90,13 +91,15 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         private final long start;
 
         private final File segmentFile;
+        private final OutputStream segmentOutput_;
         private final StreamOutput segmentOutput;
 
-        public FileReplicatedLog(File segmentFile, StreamOutput segmentOutput, ImmutableList<LogEntry> entries, long committedIndex, long start) throws IOException {
+        public FileReplicatedLog(File segmentFile, OutputStream segmentOutput_, StreamOutput segmentOutput, ImmutableList<LogEntry> entries, long committedIndex, long start) throws IOException {
             this.entries = entries;
             this.committedIndex = committedIndex;
             this.start = start;
             this.segmentFile = segmentFile;
+            this.segmentOutput_ = segmentOutput_;
             this.segmentOutput = segmentOutput;
         }
 
@@ -160,8 +163,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         @Override
         public ReplicatedLog commit(long committedIndex) {
             try {
-                writeState(start, committedIndex);
-                return new FileReplicatedLog(segmentFile, segmentOutput, entries, committedIndex, start);
+                return new FileReplicatedLog(segmentFile, segmentOutput_, segmentOutput, entries, committedIndex, start);
             } catch (IOException e) {
                 throw new IOError(e);
             }
@@ -177,8 +179,9 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
             try {
                 for (LogEntry entry : entries) {
                     segmentOutput.writeStreamable(entry);
+                    segmentOutput_.flush();
                 }
-                return new FileReplicatedLog(segmentFile, segmentOutput, ImmutableList.<LogEntry>builder()
+                return new FileReplicatedLog(segmentFile, segmentOutput_, segmentOutput, ImmutableList.<LogEntry>builder()
                     .addAll(this.entries)
                     .addAll(entries).build(), committedIndex, start);
             } catch (IOException e) {
@@ -195,6 +198,8 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                     ImmutableList<LogEntry> logEntries = ImmutableList.<LogEntry>builder()
                         .addAll(slice(0, prevIndex))
                         .addAll(entries).build();
+                    segmentOutput_.flush();
+                    segmentOutput_.close();
                     segmentOutput.close();
                     File tmpSegment = temporaryFile();
                     try (StreamOutput output = streamService.output(tmpSegment, false)) {
@@ -206,8 +211,9 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
                     // recreate file object after move
                     File newSegmentFile = segmentFile(start);
-                    StreamOutput newSegmentOutput = streamService.output(newSegmentFile, true);
-                    return new FileReplicatedLog(newSegmentFile, newSegmentOutput, logEntries, committedIndex, start);
+                    BufferedOutputStream newSegmentOutput_ = new BufferedOutputStream(new FileOutputStream(newSegmentFile, true));
+                    StreamOutput newSegmentOutput = streamService.output(newSegmentOutput_);
+                    return new FileReplicatedLog(newSegmentFile, newSegmentOutput_, newSegmentOutput, logEntries, committedIndex, start);
                 } catch (IOException e) {
                     throw new IOError(e);
                 }
@@ -278,6 +284,8 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
             try {
 
                 if (snapshot.getMeta().getLastIncludedIndex() == start) {
+                    segmentOutput_.flush();
+                    segmentOutput_.close();
                     segmentOutput.close();
                     File tmpSegment = temporaryFile();
                     try (StreamOutput output = streamService.output(tmpSegment, false)) {
@@ -289,18 +297,23 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
                     // recreate file object after move
                     File newSegmentFile = segmentFile(start);
-                    StreamOutput newSegmentOutput = streamService.output(newSegmentFile, true);
-                    return new FileReplicatedLog(newSegmentFile, newSegmentOutput, logEntries, committedIndex, start);
+                    BufferedOutputStream newSegmentOutput_ = new BufferedOutputStream(new FileOutputStream(newSegmentFile, true));
+                    StreamOutput newSegmentOutput = streamService.output(newSegmentOutput_);
+                    return new FileReplicatedLog(newSegmentFile, newSegmentOutput_, newSegmentOutput, logEntries, committedIndex, start);
                 } else {
+                    segmentOutput_.flush();
+                    segmentOutput_.close();
                     segmentOutput.close();
                     File newSegmentFile = segmentFile(snapshot.getMeta().getLastIncludedIndex());
-                    StreamOutput newSegmentOutput = streamService.output(newSegmentFile, false);
+                    BufferedOutputStream newSegmentOutput_ = new BufferedOutputStream(new FileOutputStream(newSegmentFile, false));
+                    StreamOutput newSegmentOutput = streamService.output(newSegmentOutput_);
                     for (LogEntry logEntry : logEntries) {
                         newSegmentOutput.writeStreamable(logEntry);
                     }
-                    writeState(snapshot.getMeta().getLastIncludedIndex(), committedIndex);
+                    newSegmentOutput_.flush();
+                    writeState(snapshot.getMeta().getLastIncludedIndex());
                     segmentFile.delete();
-                    return new FileReplicatedLog(newSegmentFile, newSegmentOutput, logEntries, committedIndex, snapshot.getMeta().getLastIncludedIndex());
+                    return new FileReplicatedLog(newSegmentFile, newSegmentOutput_, newSegmentOutput, logEntries, committedIndex, snapshot.getMeta().getLastIncludedIndex());
                 }
             } catch (IOException e) {
                 throw new IOError(e);
@@ -323,6 +336,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                 "entries=" + entries +
                 ", committedIndex=" + committedIndex +
                 ", start=" + start +
+                ", file=" + segmentFile + " (" + segmentFile.length() + " bytes)" +
                 '}';
         }
     }

@@ -51,10 +51,14 @@ public class FileReplicatedLogTest extends ReplicatedLogTest {
 
     @Test
     public void testReopen() throws Exception {
-        log().append(entry1).append(entry2).append(entry3).commit(2).compactedWith(snapshot2, node1).commit(3);
+        ReplicatedLog origin = log().append(entry1).append(entry2).append(entry3).commit(2).compactedWith(snapshot2, node1).commit(3);
+        logger.info("origin:   {}", origin);
 
         ReplicatedLog reopened = log();
-        Assert.assertEquals(3, reopened.committedIndex());
+        logger.info("reopened: {}", reopened);
+
+        // committed index should not be persistent
+        Assert.assertEquals(0, reopened.committedIndex());
 
         Assert.assertTrue(reopened.hasSnapshot());
         Assert.assertEquals(snapshot2, reopened.snapshot());

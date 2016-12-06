@@ -23,7 +23,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
     protected final Term term1 = new Term(1);
     protected final Term term2 = new Term(2);
     protected final Term term3 = new Term(3);
-    protected final Term term = term1;
+    protected Term term = term1;
 
     protected final DiscoveryNode node1 = new DiscoveryNode("127.0.0.1", 8900);
 
@@ -105,22 +105,22 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testNextEntriesLowerBound0() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(1,3));
+        Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(1, 3));
     }
 
     @Test
     public void testNextEntriesLowerBound1() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(2,3));
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(2, 3));
     }
 
     @Test
     public void testNextEntriesLowerBound2() throws Exception {
-        Assert.assertEquals(ImmutableList.of(entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(3,3));
+        Assert.assertEquals(ImmutableList.of(entry3), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(3, 3));
     }
 
     @Test
     public void testNextEntriesLowerBound3() throws Exception {
-        Assert.assertEquals(ImmutableList.of(), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(4,3));
+        Assert.assertEquals(ImmutableList.of(), log().append(entry1).append(entry2).append(entry3).entriesBatchFrom(4, 3));
     }
 
     @Test
@@ -283,13 +283,13 @@ public abstract class ReplicatedLogTest extends BaseTest {
     @Test
     public void testEntriesBatchFrom1AfterCompaction2() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
-        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(2,3));
+        Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(2, 3));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction3() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
-        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3,3));
+        Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3, 3));
     }
 
     @Test
@@ -423,6 +423,20 @@ public abstract class ReplicatedLogTest extends BaseTest {
     @Test
     public void testToString() throws Exception {
         Assert.assertFalse(log().toString().isEmpty());
+    }
+
+    @Test
+    public void benchmarkAppend() throws Exception {
+        ReplicatedLog log = log();
+        AppendWord cmd = new AppendWord("hello world");
+        DiscoveryNode client = new DiscoveryNode("localhost", 8800);
+        final long start = System.currentTimeMillis();
+        final long total = 20000;
+        for (int i = 0; i < total; i++) {
+            log = log.append(new LogEntry(cmd, term, i, client));
+        }
+        final long end = System.currentTimeMillis();
+        printQps("append", total, start, end);
     }
 
     public class AppendWord implements Streamable {

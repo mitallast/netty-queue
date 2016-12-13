@@ -23,21 +23,16 @@ public abstract class ReplicatedLogTest extends BaseTest {
     protected final Term term1 = new Term(1);
     protected final Term term2 = new Term(2);
     protected final Term term3 = new Term(3);
-    protected Term term = term1;
-
     protected final DiscoveryNode node1 = new DiscoveryNode("127.0.0.1", 8900);
-
+    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration();
+    protected Term term = term1;
     protected final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1, node1);
     protected final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2, node1);
     protected final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3, node1);
-
     protected final LogEntry rewriteEntry1 = new LogEntry(new AppendWord("rewrite"), term, 1, node1);
     protected final LogEntry rewriteEntry2 = new LogEntry(new AppendWord("rewrite"), term, 2, node1);
     protected final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term, 3, node1);
     protected final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term, 4, node1);
-
-    protected final StableClusterConfiguration clusterConf = new StableClusterConfiguration();
-
     protected final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
     protected final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
     protected final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
@@ -431,7 +426,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
         AppendWord cmd = new AppendWord("hello world");
         DiscoveryNode client = new DiscoveryNode("localhost", 8800);
         final long start = System.currentTimeMillis();
-        final long total = 20000;
+        final long total = 500000;
         for (int i = 0; i < total; i++) {
             log = log.append(new LogEntry(cmd, term, i, client));
         }

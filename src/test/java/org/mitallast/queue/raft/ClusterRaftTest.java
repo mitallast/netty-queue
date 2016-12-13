@@ -126,7 +126,7 @@ public class ClusterRaftTest extends BaseTest {
         }
 
         // bench
-        final long total = 5000;
+        final long total = 10000;
         final long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
             String value = client.get(leader).set("hello world " + i).get();

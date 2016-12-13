@@ -11,6 +11,10 @@ import java.util.Optional;
 
 public interface ReplicatedLog {
 
+    boolean isEmpty();
+
+    boolean contains(LogEntry entry);
+
     ImmutableList<LogEntry> entries();
 
     int committedEntries();

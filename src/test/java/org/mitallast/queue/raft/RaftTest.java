@@ -19,6 +19,7 @@ import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.file.FileModule;
 import org.mitallast.queue.common.stream.StreamModule;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
@@ -37,7 +38,9 @@ import org.mockito.MockitoAnnotations;
 import java.util.LinkedList;
 import java.util.concurrent.*;
 
-import static org.mitallast.queue.raft.RaftState.*;
+import static org.mitallast.queue.raft.RaftState.Candidate;
+import static org.mitallast.queue.raft.RaftState.Follower;
+import static org.mitallast.queue.raft.RaftState.Leader;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -150,15 +153,6 @@ public class RaftTest extends BaseTest {
         Assert.assertEquals(Leader, raft.currentState());
     }
 
-    @Test
-    public void testInitStashClientMessage() throws Exception {
-        appendClusterConf();
-        start();
-        raft.receive(new ClientMessage(node2, Noop.INSTANCE));
-        execute();
-        Assert.assertEquals(ImmutableList.of(new ClientMessage(node2, Noop.INSTANCE)), raft.currentStashed());
-    }
-
     // follower
 
     @Test
@@ -247,7 +241,7 @@ public class RaftTest extends BaseTest {
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
         raft.receive(appendEntries(node2, 1, 1, 0, 0, logEntry));
         execute();
-        Assert.assertFalse(raft.currentLog().entries().contains(logEntry));
+        Assert.assertFalse(raft.currentLog().contains(logEntry));
     }
 
     @Test
@@ -258,7 +252,7 @@ public class RaftTest extends BaseTest {
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
         raft.receive(appendEntries(node2, 1, 0, 1, 0, logEntry));
         execute();
-        Assert.assertFalse(raft.currentLog().entries().contains(logEntry));
+        Assert.assertFalse(raft.currentLog().contains(logEntry));
     }
 
     @Test
@@ -269,7 +263,7 @@ public class RaftTest extends BaseTest {
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 2, node2);
         raft.receive(appendEntries(node2, 1, 1, 1, 0, logEntry));
         execute();
-        Assert.assertTrue(raft.currentLog().entries().contains(logEntry));
+        Assert.assertTrue(raft.currentLog().contains(logEntry));
     }
 
     // candidate
@@ -501,7 +495,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectFollower();
         expectTerm(2);
-        Assert.assertTrue(raft.currentLog().entries().contains(entry));
+        Assert.assertTrue(raft.currentLog().contains(entry));
     }
 
     // leader
@@ -850,11 +844,6 @@ public class RaftTest extends BaseTest {
         execute();
     }
 
-    private void sendHeartbeat() throws Exception {
-        raft.receive(SendHeartbeat.INSTANCE);
-        execute();
-    }
-
     private LogEntry noop(long term, long index, DiscoveryNode client) {
         return new LogEntry(Noop.INSTANCE, new Term(term), index, client);
     }
@@ -878,26 +867,27 @@ public class RaftTest extends BaseTest {
 
     private class TestRaftContext implements RaftContext {
 
-        private LinkedList<Runnable> queue = new LinkedList<>();
-
-        @Override
-        public void execute(Runnable runnable) {
-            queue.add(runnable);
-        }
+        private final LinkedList<Streamable> queue = new LinkedList<>();
 
         public void execute() {
             while (!queue.isEmpty()) {
-                queue.pop().run();
+                Streamable event = queue.pop();
+                raft.handle(event);
             }
         }
 
         @Override
-        public ScheduledFuture schedule(Runnable runnable, long timeout, TimeUnit timeUnit) {
+        public void submit(Streamable event) {
+            queue.add(event);
+        }
+
+        @Override
+        public ScheduledFuture schedule(Streamable event, long timeout, TimeUnit timeUnit) {
             return new TestScheduledFuture();
         }
 
         @Override
-        public ScheduledFuture scheduleAtFixedRate(Runnable runnable, long delay, long timeout, TimeUnit timeUnit) {
+        public ScheduledFuture scheduleAtFixedRate(Streamable event, long delay, long timeout, TimeUnit timeUnit) {
             return new TestScheduledFuture();
         }
     }

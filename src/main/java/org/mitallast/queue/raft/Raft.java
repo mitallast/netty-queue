@@ -26,7 +26,9 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.*;
 
-import static org.mitallast.queue.raft.RaftState.*;
+import static org.mitallast.queue.raft.RaftState.Candidate;
+import static org.mitallast.queue.raft.RaftState.Follower;
+import static org.mitallast.queue.raft.RaftState.Leader;
 
 public class Raft extends AbstractLifecycleComponent {
 
@@ -34,23 +36,18 @@ public class Raft extends AbstractLifecycleComponent {
     private final TransportController transportController;
     private final ClusterDiscovery clusterDiscovery;
     private final ResourceFSM resourceFSM;
-
-    private volatile Optional<DiscoveryNode> recentlyContactedByLeader;
-
-    private volatile ImmutableMap<DiscoveryNode, Long> replicationIndex;
-    private volatile LogIndexMap nextIndex;
-    private volatile LogIndexMap matchIndex;
-
     private final boolean bootstrap;
     private final long electionDeadline;
     private final long heartbeat;
     private final long snapshotInterval;
-
     private final RaftContext context;
     private final ConcurrentMap<String, ScheduledFuture> timerMap = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<Streamable> stashed = new ConcurrentLinkedQueue<>();
-
     private final ImmutableMap<RaftState, Behavior> stateMap;
+    private volatile Optional<DiscoveryNode> recentlyContactedByLeader;
+    private volatile ImmutableMap<DiscoveryNode, Long> replicationIndex;
+    private volatile LogIndexMap nextIndex;
+    private volatile LogIndexMap matchIndex;
     private volatile State state;
 
     @Inject
@@ -90,7 +87,7 @@ public class Raft extends AbstractLifecycleComponent {
 
     @Override
     protected void doStart() {
-        if (state.currentMetadata.replicatedLog().entries().isEmpty()) {
+        if (state.currentMetadata.replicatedLog().isEmpty()) {
             if (bootstrap) {
                 logger.info("bootstrap cluster");
                 receive(new AddServer(clusterDiscovery.self()));
@@ -142,32 +139,35 @@ public class Raft extends AbstractLifecycleComponent {
         cancelTimer(timerName);
         final ScheduledFuture timer;
         if (repeat) {
-            timer = context.scheduleAtFixedRate(() -> receive(event), timeout, timeout, timeUnit);
+            timer = context.scheduleAtFixedRate(event, timeout, timeout, timeUnit);
         } else {
-            timer = context.schedule(() -> receive(event), timeout, timeUnit);
+            timer = context.schedule(event, timeout, timeUnit);
         }
         timerMap.put(timerName, timer);
     }
 
     public void receive(Streamable event) {
-        context.execute(() -> {
-            try (MDC.MDCCloseable ignore = MDC.putCloseable("state", this.state.currentState.name())) {
-                MDC.put("state", this.state.currentState.name());
-                State prevState = this.state;
-                State newState = stateMap.get(this.state.currentState).receiveMessage(event, this.state.currentMetadata);
-                if (newState == null) {
-                    logger.warn("unhandled event: {} in state {}", event, this.state.currentState);
-                } else {
-                    this.state = newState;
-                    if (!this.state.currentState.equals(prevState.currentState)) {
-                        logger.info("transition {} to {}", prevState.currentState, this.state.currentState);
-                        onTransition(prevState.currentState, this.state.currentState);
-                    }
+        context.submit(event);
+    }
+
+    // package private
+    void handle(Streamable event) {
+        try (MDC.MDCCloseable ignore = MDC.putCloseable("state", this.state.currentState.name())) {
+            MDC.put("state", this.state.currentState.name());
+            State prevState = this.state;
+            State newState = stateMap.get(this.state.currentState).receiveMessage(event, this.state.currentMetadata);
+            if (newState == null) {
+                logger.warn("unhandled event: {} in state {}", event, this.state.currentState);
+            } else {
+                this.state = newState;
+                if (!this.state.currentState.equals(prevState.currentState)) {
+                    logger.info("transition {} to {}", prevState.currentState, this.state.currentState);
+                    onTransition(prevState.currentState, this.state.currentState);
                 }
-            } catch (Exception e) {
-                logger.error("unexpected error in fsm", e);
             }
-        });
+        } catch (Exception e) {
+            logger.error("unexpected error in fsm", e);
+        }
     }
 
     public RaftState currentState() {
@@ -624,7 +624,7 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(AddServer request, RaftMetadata meta) {
             if (bootstrap && meta.getConfig().members().isEmpty() &&
                 request.getMember().equals(clusterDiscovery.self()) &&
-                meta.replicatedLog().entries().isEmpty()) {
+                meta.replicatedLog().isEmpty()) {
                 logger.info("bootstrap cluster with {}", request.getMember());
                 return goTo(Leader, meta.withTerm(meta.getCurrentTerm().next()).withConfig(new StableClusterConfiguration(request.getMember())));
             }
@@ -848,7 +848,7 @@ public class Raft extends AbstractLifecycleComponent {
             replicationIndex = ImmutableMap.of();
 
             final LogEntry entry;
-            if (meta.replicatedLog().entries().isEmpty()) {
+            if (meta.replicatedLog().isEmpty()) {
                 entry = new LogEntry(meta.getConfig(), meta.getCurrentTerm(), meta.replicatedLog().nextIndex(), clusterDiscovery.self());
             } else {
                 entry = new LogEntry(Noop.INSTANCE, meta.getCurrentTerm(), meta.replicatedLog().nextIndex(), clusterDiscovery.self());

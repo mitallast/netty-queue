@@ -17,6 +17,7 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Optional;
 
 public class FileReplicatedLogProvider extends AbstractComponent implements Provider<ReplicatedLog> {
@@ -51,10 +52,10 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
             }
 
             final File segmentFile = segmentFile(index);
-            ImmutableList.Builder<LogEntry> builder = ImmutableList.builder();
+            ArrayList<LogEntry> entries = new ArrayList<>();
             try (StreamInput input = streamService.input(segmentFile)) {
                 while (input.available() > 0) {
-                    builder.add(input.readStreamable(LogEntry::new));
+                    entries.add(input.readStreamable(LogEntry::new));
                 }
             }
             BufferedOutputStream segmentOutput_ = new BufferedOutputStream(new FileOutputStream(segmentFile, true));
@@ -63,7 +64,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                 segmentFile,
                 segmentOutput_,
                 segmentOutput,
-                builder.build(),
+                entries,
                 initialCommittedIndex,
                 index
             );
@@ -86,7 +87,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
     }
 
     public class FileReplicatedLog implements ReplicatedLog {
-        private final ImmutableList<LogEntry> entries;
+        private final ArrayList<LogEntry> entries;
         private final long committedIndex;
         private final long start;
 
@@ -94,7 +95,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         private final OutputStream segmentOutput_;
         private final StreamOutput segmentOutput;
 
-        public FileReplicatedLog(File segmentFile, OutputStream segmentOutput_, StreamOutput segmentOutput, ImmutableList<LogEntry> entries, long committedIndex, long start) throws IOException {
+        public FileReplicatedLog(File segmentFile, OutputStream segmentOutput_, StreamOutput segmentOutput, ArrayList<LogEntry> entries, long committedIndex, long start) throws IOException {
             this.entries = entries;
             this.committedIndex = committedIndex;
             this.start = start;
@@ -104,8 +105,18 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         }
 
         @Override
+        public boolean isEmpty() {
+            return entries.isEmpty();
+        }
+
+        @Override
+        public boolean contains(LogEntry entry) {
+            return entries.contains(entry);
+        }
+
+        @Override
         public ImmutableList<LogEntry> entries() {
-            return entries;
+            return ImmutableList.copyOf(entries);
         }
 
         @Override
@@ -137,7 +148,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         @Override
         public boolean containsMatchingEntry(Term otherPrevTerm, long otherPrevIndex) {
             return (otherPrevTerm.getTerm() == 0 && otherPrevIndex == 0 && entries.isEmpty()) ||
-                (!entries().isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) && termAt(otherPrevIndex).equals(otherPrevTerm));
+                (!isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) && termAt(otherPrevIndex).equals(otherPrevTerm));
         }
 
         @Override
@@ -179,11 +190,10 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
             try {
                 for (LogEntry entry : entries) {
                     segmentOutput.writeStreamable(entry);
-                    segmentOutput_.flush();
                 }
-                return new FileReplicatedLog(segmentFile, segmentOutput_, segmentOutput, ImmutableList.<LogEntry>builder()
-                    .addAll(this.entries)
-                    .addAll(entries).build(), committedIndex, start);
+                segmentOutput_.flush();
+                this.entries.addAll(entries);
+                return this;
             } catch (IOException e) {
                 throw new IOError(e);
             }
@@ -195,9 +205,9 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                 return append(entries);
             } else {
                 try {
-                    ImmutableList<LogEntry> logEntries = ImmutableList.<LogEntry>builder()
-                        .addAll(slice(0, prevIndex))
-                        .addAll(entries).build();
+                    ArrayList<LogEntry> logEntries = new ArrayList<>();
+                    logEntries.addAll(slice(0, prevIndex));
+                    logEntries.addAll(entries);
                     segmentOutput_.flush();
                     segmentOutput_.close();
                     segmentOutput.close();
@@ -246,7 +256,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
             if (fromIndex >= entries.size()) {
                 return ImmutableList.of();
             }
-            return entries.subList(Math.max(0, fromIndex), Math.min(toIndex, entries.size()));
+            return ImmutableList.copyOf(entries.subList(Math.max(0, fromIndex), Math.min(toIndex, entries.size())));
         }
 
         @Override
@@ -267,22 +277,12 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
         @Override
         public ReplicatedLog compactedWith(RaftSnapshot snapshot, DiscoveryNode node) {
-            boolean snapshotHasLaterTerm = snapshot.getMeta().getLastIncludedTerm().greater(lastTerm().orElse(new Term(0)));
-            boolean snapshotHasLaterIndex = snapshot.getMeta().getLastIncludedIndex() > lastIndex();
+            final ArrayList<LogEntry> logEntries = new ArrayList<>();
 
-            final ImmutableList<LogEntry> logEntries;
-
-            if (snapshotHasLaterTerm && snapshotHasLaterIndex) {
-                logEntries = ImmutableList.of(snapshot.toEntry(node));
-            } else {
-                logEntries = ImmutableList.<LogEntry>builder()
-                    .add(snapshot.toEntry(node))
-                    .addAll(entries.stream().filter(entry -> entry.getIndex() > snapshot.getMeta().getLastIncludedIndex()).iterator())
-                    .build();
-            }
+            logEntries.add(snapshot.toEntry(node));
+            entries.stream().filter(entry -> entry.getIndex() > snapshot.getMeta().getLastIncludedIndex()).forEach(logEntries::add);
 
             try {
-
                 if (snapshot.getMeta().getLastIncludedIndex() == start) {
                     segmentOutput_.flush();
                     segmentOutput_.close();

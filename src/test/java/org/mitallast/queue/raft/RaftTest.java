@@ -241,7 +241,7 @@ public class RaftTest extends BaseTest {
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
         raft.receive(appendEntries(node2, 1, 1, 0, 0, logEntry));
         execute();
-        Assert.assertFalse(raft.currentLog().contains(logEntry));
+        Assert.assertFalse(raft.replicatedLog().contains(logEntry));
     }
 
     @Test
@@ -252,7 +252,7 @@ public class RaftTest extends BaseTest {
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
         raft.receive(appendEntries(node2, 1, 0, 1, 0, logEntry));
         execute();
-        Assert.assertFalse(raft.currentLog().contains(logEntry));
+        Assert.assertFalse(raft.replicatedLog().contains(logEntry));
     }
 
     @Test
@@ -263,7 +263,7 @@ public class RaftTest extends BaseTest {
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 2, node2);
         raft.receive(appendEntries(node2, 1, 1, 1, 0, logEntry));
         execute();
-        Assert.assertTrue(raft.currentLog().contains(logEntry));
+        Assert.assertTrue(raft.replicatedLog().contains(logEntry));
     }
 
     // candidate
@@ -495,7 +495,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectFollower();
         expectTerm(2);
-        Assert.assertTrue(raft.currentLog().contains(entry));
+        Assert.assertTrue(raft.replicatedLog().contains(entry));
     }
 
     // leader
@@ -525,7 +525,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         Assert.assertEquals(
             ImmutableList.of(stable(1, 1, node1, node2, node3), noop(2, 2, node1)),
-            raft.currentLog().entries()
+            raft.replicatedLog().entries()
         );
     }
 
@@ -638,7 +638,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectFollower();
         expectTerm(3);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -649,7 +649,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectLeader();
         expectTerm(2);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -660,7 +660,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectLeader();
         expectTerm(2);
-        Assert.assertEquals(2, raft.currentLog().committedIndex());
+        Assert.assertEquals(2, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -672,7 +672,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectLeader();
         expectTerm(2);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -684,7 +684,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectLeader();
         expectTerm(2);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -696,7 +696,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectFollower();
         expectTerm(3);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -706,7 +706,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectFollower();
         expectTerm(3);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -726,7 +726,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectLeader();
         expectTerm(2);
-        Assert.assertEquals(2, raft.currentLog().committedIndex());
+        Assert.assertEquals(2, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -736,7 +736,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectFollower();
         expectTerm(3);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test
@@ -746,7 +746,7 @@ public class RaftTest extends BaseTest {
         execute();
         expectLeader();
         expectTerm(2);
-        Assert.assertEquals(1, raft.currentLog().committedIndex());
+        Assert.assertEquals(1, raft.replicatedLog().committedIndex());
     }
 
     @Test

@@ -31,7 +31,7 @@ public class RaftLogAction extends BaseRestHandler {
     @Override
     public void handleRequest(RestRequest request, RestSession session) {
         request.content().release();
-        ReplicatedLog log = raft.currentLog();
+        ReplicatedLog log = raft.replicatedLog();
 
         ByteBuf buffer = session.alloc().directBuffer();
         try {

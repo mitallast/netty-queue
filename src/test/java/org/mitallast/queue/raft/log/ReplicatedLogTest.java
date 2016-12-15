@@ -175,7 +175,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testCompactLog() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot3, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot3, node1);
         Assert.assertEquals(ImmutableList.of(snapshotEntry3), compacted.entries());
         Assert.assertTrue(compacted.hasSnapshot());
         Assert.assertEquals(snapshot3, compacted.snapshot());
@@ -183,32 +183,32 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testContainsMatchingEntryAfterCompaction1() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).compactWith(snapshot1, node1);
         Assert.assertTrue(compacted.containsMatchingEntry(term, 1));
     }
 
     @Test
     public void testContainsMatchingEntry1AfterCompaction2() throws Exception {
         RaftSnapshot snapshot = new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null);
-        ReplicatedLog compacted = log().append(entry1).compactedWith(snapshot, node1);
+        ReplicatedLog compacted = log().append(entry1).compactWith(snapshot, node1);
         Assert.assertTrue(compacted.containsMatchingEntry(term2, 2));
     }
 
     @Test
     public void testContainsMatchingEntryAfterCompaction2() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).compactedWith(snapshot2, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).compactWith(snapshot2, node1);
         Assert.assertTrue(compacted.containsMatchingEntry(term, 2));
     }
 
     @Test
     public void testContainsMatchingEntryAfterCompaction3() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot3, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot3, node1);
         Assert.assertTrue(compacted.containsMatchingEntry(term, 3));
     }
 
     @Test
     public void testContainsEntry1AfterCompaction1() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot1, node1);
         Assert.assertEquals(ImmutableList.of(snapshotEntry1, entry2, entry3), compacted.entries());
         Assert.assertTrue(compacted.containsEntryAt(1));
         Assert.assertTrue(compacted.containsEntryAt(2));
@@ -217,7 +217,8 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testContainsEntry1AfterCompaction2() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot2, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot2, node1);
+        logger.info("compacted: {}", compacted);
         Assert.assertEquals(ImmutableList.of(snapshotEntry2, entry3), compacted.entries());
         Assert.assertFalse(compacted.containsEntryAt(1));
         Assert.assertTrue(compacted.containsEntryAt(2));
@@ -226,7 +227,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testContainsEntry1AfterCompaction3() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot3, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot3, node1);
         Assert.assertEquals(ImmutableList.of(snapshotEntry3), compacted.entries());
         Assert.assertFalse(compacted.containsEntryAt(1));
         Assert.assertFalse(compacted.containsEntryAt(2));
@@ -235,55 +236,55 @@ public abstract class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testLastTermAfterCompaction1() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).compactWith(snapshot1, node1);
         Assert.assertEquals(Optional.of(term), compacted.lastTerm());
     }
 
     @Test
     public void testLastTermAfterCompaction2() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).compactWith(snapshot1, node1);
         Assert.assertEquals(Optional.of(term), compacted.lastTerm());
     }
 
     @Test
     public void testLastTermAfterCompaction3() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot1, node1);
         Assert.assertEquals(Optional.of(term), compacted.lastTerm());
     }
 
     @Test
     public void testLastIndexAfterCompaction1() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).compactWith(snapshot1, node1);
         Assert.assertEquals(1, compacted.lastIndex());
     }
 
     @Test
     public void testLastIndexAfterCompaction2() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).compactedWith(snapshot2, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).compactWith(snapshot2, node1);
         Assert.assertEquals(2, compacted.lastIndex());
     }
 
     @Test
     public void testLastIndexAfterCompaction3() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot3, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot3, node1);
         Assert.assertEquals(3, compacted.lastIndex());
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction1() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot1, node1);
         Assert.assertEquals(ImmutableList.of(snapshotEntry1, entry2, entry3), compacted.entriesBatchFrom(1, 3));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction2() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot1, node1);
         Assert.assertEquals(ImmutableList.of(entry2, entry3), compacted.entriesBatchFrom(2, 3));
     }
 
     @Test
     public void testEntriesBatchFrom1AfterCompaction3() throws Exception {
-        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactedWith(snapshot1, node1);
+        ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot1, node1);
         Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3, 3));
     }
 
@@ -383,7 +384,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
             .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
             .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
             .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactedWith(new RaftSnapshot(new RaftSnapshotMetadata(term1, 1, clusterConf), null), node1);
+            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term1, 1, clusterConf), null), node1);
         Assert.assertEquals(term1, log.termAt(1));
         Assert.assertEquals(term2, log.termAt(2));
         Assert.assertEquals(term3, log.termAt(3));
@@ -395,7 +396,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
             .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
             .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
             .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactedWith(new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null), node1);
+            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null), node1);
         Assert.assertEquals(term2, log.termAt(2));
         Assert.assertEquals(term3, log.termAt(3));
     }
@@ -406,7 +407,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
             .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
             .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
             .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactedWith(new RaftSnapshot(new RaftSnapshotMetadata(term3, 3, clusterConf), null), node1);
+            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term3, 3, clusterConf), null), node1);
         Assert.assertEquals(term3, log.termAt(3));
     }
 
@@ -426,7 +427,7 @@ public abstract class ReplicatedLogTest extends BaseTest {
         AppendWord cmd = new AppendWord("hello world");
         DiscoveryNode client = new DiscoveryNode("localhost", 8800);
         final long start = System.currentTimeMillis();
-        final long total = 500000;
+        final long total = 3000000;
         for (int i = 0; i < total; i++) {
             log = log.append(new LogEntry(cmd, term, i, client));
         }

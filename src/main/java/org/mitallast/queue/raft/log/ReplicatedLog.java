@@ -39,7 +39,7 @@ public interface ReplicatedLog {
 
     ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex);
 
-    ReplicatedLog compactedWith(RaftSnapshot snapshot, DiscoveryNode node);
+    ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node);
 
     ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);
 

@@ -37,7 +37,7 @@ import static org.mitallast.queue.raft.RaftState.Follower;
 import static org.mitallast.queue.raft.RaftState.Leader;
 
 public class ClusterRaftTest extends BaseTest {
-    private static final int nodesCount = 5;
+    private static final int nodesCount = 3;
 
     private ImmutableList<InternalNode> node;
     private ImmutableList<Raft> raft;
@@ -70,6 +70,7 @@ public class ClusterRaftTest extends BaseTest {
                 .put("raft.snapshot-interval", 10000)
                 .put("transport.host", "127.0.0.1")
                 .put("transport.port", port)
+                .put("transport.max_connections", 1)
                 .build());
             bootstrap = false;
             builder.add(new InternalNode(config, new TestModule()));
@@ -172,7 +173,7 @@ public class ClusterRaftTest extends BaseTest {
     private void awaitElection() throws Exception {
         while (true) {
             if (raft.stream().anyMatch(raft -> raft.currentState() == Leader)) {
-                if (raft.stream().allMatch(raft -> raft.currentLog().committedIndex() == nodesCount)) {
+                if (raft.stream().allMatch(raft -> raft.replicatedLog().committedIndex() == nodesCount)) {
                     logger.info("leader found, cluster available");
                     return;
                 }

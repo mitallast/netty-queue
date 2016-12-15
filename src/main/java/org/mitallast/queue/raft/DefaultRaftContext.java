@@ -6,41 +6,28 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class DefaultRaftContext extends AbstractLifecycleComponent implements RaftContext {
 
-    private final ArrayBlockingQueue<Streamable> queue = new ArrayBlockingQueue<>(65536);
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    private final Thread thread;
+    private final Raft raft;
 
     @Inject
     public DefaultRaftContext(Config config, Raft raft) {
         super(config, RaftContext.class);
-        thread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    Streamable event = queue.take();
-                    if (event != null) {
-                        raft.handle(event);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        });
-        thread.setName("raft");
-        thread.setDaemon(true);
-        thread.start();
+        this.raft = raft;
     }
 
     @Override
-    public void submit(Streamable event) {
+    public synchronized void submit(Streamable event) {
         try {
-            queue.put(event);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.error("event not offered", e);
+            raft.handle(event);
+        } catch (Throwable e) {
+            logger.error("unexpected error: {}", e);
         }
     }
 
@@ -67,6 +54,5 @@ public class DefaultRaftContext extends AbstractLifecycleComponent implements Ra
     @Override
     protected void doClose() throws IOException {
         scheduler.shutdown();
-        thread.interrupt();
     }
 }

@@ -96,8 +96,12 @@ public class DistributedStorageService extends AbstractComponent {
             logger.info("send put request {} to {}", id, node);
 
             PutBlobResourceRequest message = new PutBlobResourceRequest(discovery.self(), id, key, data);
-            transportService.connectToNode(node);
-            transportService.channel(node).message(message);
+            try {
+                transportService.connectToNode(node);
+                transportService.channel(node).message(message);
+            } catch (IOException e) {
+                logger.error("error send message to {}", node);
+            }
         }
         return future;
     }
@@ -115,8 +119,12 @@ public class DistributedStorageService extends AbstractComponent {
             DiscoveryNode node = nodes.asList().get((int) (id % nodes.size()));
 
             logger.info("get resource {} id {} node {}", key, id, node);
-            transportService.connectToNode(node);
-            transportService.channel(node).message(new GetBlobResourceRequest(node, id, key));
+            try {
+                transportService.connectToNode(node);
+                transportService.channel(node).message(new GetBlobResourceRequest(node, id, key));
+            } catch (IOException e) {
+                logger.error("error send message to {}", node);
+            }
         } else {
             future.completeExceptionally(new RuntimeException("resource not found"));
         }
@@ -133,9 +141,9 @@ public class DistributedStorageService extends AbstractComponent {
             while ((read = stream.read(bytes)) > 0) {
                 out.write(bytes, 0, read);
             }
+            GetBlobResourceResponse response = new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray());
             transportService.connectToNode(message.getNode());
-            transportService.channel(message.getNode())
-                .message(new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray()));
+            transportService.channel(message.getNode()).message(response);
         } catch (IOException e) {
             logger.warn("error get resource {}: {}", message.getKey(), e);
         }
@@ -166,13 +174,17 @@ public class DistributedStorageService extends AbstractComponent {
                 message.getId(),
                 message.getKey()
             );
-            raft.receive(new ClientMessage(message.getNode(), cmd));
+            raft.apply(new ClientMessage(message.getNode(), cmd));
         } else {
-            transportService.connectToNode(message.getNode());
-            transportService.channel(message.getNode()).message(new PutBlobResourceResponse(
-                message.getId(), message.getKey(),
-                false
-            ));
+            try {
+                transportService.connectToNode(message.getNode());
+                transportService.channel(message.getNode()).message(new PutBlobResourceResponse(
+                    message.getId(), message.getKey(),
+                    false
+                ));
+            } catch (IOException e) {
+                logger.error("error send message to {}: ", message.getNode());
+            }
         }
     }
 

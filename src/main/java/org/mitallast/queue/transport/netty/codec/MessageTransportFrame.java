@@ -29,6 +29,24 @@ public class MessageTransportFrame implements TransportFrame {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MessageTransportFrame that = (MessageTransportFrame) o;
+
+        if (!version.equals(that.version)) return false;
+        return message.equals(that.message);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = version.hashCode();
+        result = 31 * result + message.hashCode();
+        return result;
+    }
+
+    @Override
     public String toString() {
         return "MessageTransportFrame{" +
                 "version=" + version +

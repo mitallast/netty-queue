@@ -14,13 +14,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mitallast.queue.Version;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.file.FileModule;
-import org.mitallast.queue.common.stream.StreamModule;
-import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
@@ -32,15 +31,15 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
+import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.LinkedList;
+import java.io.IOException;
+import java.util.Optional;
 import java.util.concurrent.*;
 
-import static org.mitallast.queue.raft.RaftState.Candidate;
-import static org.mitallast.queue.raft.RaftState.Follower;
-import static org.mitallast.queue.raft.RaftState.Leader;
+import static org.mitallast.queue.raft.RaftState.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,12 +68,17 @@ public class RaftTest extends BaseTest {
     private TransportService transportService;
 
     @Mock
+    private TransportController transportController;
+
+    @Mock
     private ClusterDiscovery clusterDiscovery;
 
     @Mock
     private ResourceFSM resourceFSM;
 
     private TestRaftContext context;
+
+    private Config config;
 
     private Raft raft;
 
@@ -96,14 +100,14 @@ public class RaftTest extends BaseTest {
         when(transportService.channel(node3)).thenReturn(transportChannel3);
         when(transportService.channel(node4)).thenReturn(transportChannel4);
         when(transportService.channel(node5)).thenReturn(transportChannel5);
+        when(resourceFSM.apply(TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
 
         context = new TestRaftContext();
-        Config config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("node.name", "test")
-            .put("node.path", testFolder.getRoot().getAbsolutePath())
-            .put("raft.enabled", true)
-            .put("raft.bootstrap", true)
-            .build()).withFallback(ConfigFactory.defaultReference());
+        config = ConfigFactory.defaultReference();
+        override("node.name", "test");
+        override("node.path", testFolder.getRoot().getAbsolutePath());
+        override("raft.enabled", "true");
+        override("raft.bootstrap", "true");
         injector = Guice.createInjector(
             new ComponentModule(config),
             new StreamModule(),
@@ -111,7 +115,12 @@ public class RaftTest extends BaseTest {
             new TestRaftModule()
         );
         log = injector.getInstance(ReplicatedLog.class);
+        config = injector.getInstance(Config.class);
         injector.getInstance(LifecycleService.class).start();
+    }
+
+    private void appendClusterSelf() {
+        log = log.append(new LogEntry(new StableClusterConfiguration(node1), new Term(1), 1, node1)).commit(1);
     }
 
     private void appendClusterConf() {
@@ -122,9 +131,13 @@ public class RaftTest extends BaseTest {
         log = log.append(new LogEntry(new StableClusterConfiguration(node1, node2, node3, node4, node5), new Term(1), 1, node1)).commit(1);
     }
 
+    private void override(String key, String value) {
+        config = ConfigFactory.parseMap(ImmutableMap.of(key, value)).withFallback(config);
+    }
+
     private void start() throws Exception {
         raft = new Raft(
-            injector.getInstance(Config.class),
+            config,
             injector.getInstance(TransportService.class),
             injector.getInstance(TransportController.class),
             injector.getInstance(ClusterDiscovery.class),
@@ -149,8 +162,18 @@ public class RaftTest extends BaseTest {
     public void testBootstrapWithOneMember() throws Exception {
         start();
         electionTimeout();
-        execute();
-        Assert.assertEquals(Leader, raft.currentState());
+        expectLeader();
+    }
+
+    @Test
+    public void testJointCluster() throws Exception {
+        override("raft.bootstrap", "false");
+        when(clusterDiscovery.discoveryNodes()).thenReturn(ImmutableSet.of(node1, node2, node3));
+        start();
+        expectFollower();
+        Assert.assertEquals(ImmutableSet.of(node1, node2, node3), clusterDiscovery.discoveryNodes());
+        verify(transportChannel2).message(new AddServer(node1));
+        verify(transportChannel3).message(new AddServer(node1));
     }
 
     // follower
@@ -159,7 +182,6 @@ public class RaftTest extends BaseTest {
     public void testStartAsFollower() throws Exception {
         appendClusterConf();
         start();
-        execute();
         expectFollower();
     }
 
@@ -167,8 +189,7 @@ public class RaftTest extends BaseTest {
     public void testFollowerStashClientMessage() throws Exception {
         appendClusterConf();
         start();
-        raft.receive(new ClientMessage(node2, Noop.INSTANCE));
-        execute();
+        raft.apply(new ClientMessage(node2, Noop.INSTANCE));
         Assert.assertEquals(ImmutableList.of(new ClientMessage(node2, Noop.INSTANCE)), raft.currentStashed());
     }
 
@@ -181,12 +202,20 @@ public class RaftTest extends BaseTest {
     }
 
     @Test
+    public void testFollowerDoesNotBeginElectionWithoutNodes() throws Exception {
+        override("raft.bootstrap", "false");
+        start();
+        expectFollower();
+        Assert.assertEquals(ImmutableSet.of(), clusterDiscovery.discoveryNodes());
+        raft.apply(BeginElection.INSTANCE);
+        expectFollower();
+    }
+
+    @Test
     public void testFollowerRejectVoteIfLastLogTermIsOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         requestVote(1, node2, 0, 0);
-        execute();
         Assert.assertFalse(raft.currentMeta().getVotedFor().isPresent());
     }
 
@@ -194,9 +223,7 @@ public class RaftTest extends BaseTest {
     public void testFollowerRejectVoteIfLastLogIndexIsOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         requestVote(1, node2, 1, 0);
-        execute();
         Assert.assertFalse(raft.currentMeta().getVotedFor().isPresent());
     }
 
@@ -204,10 +231,8 @@ public class RaftTest extends BaseTest {
     public void testFollowerRejectVoteIfAlreadyVoted() throws Exception {
         appendClusterConf();
         start();
-        execute();
         requestVote(1, node2, 1, 1);
         requestVote(1, node3, 1, 1);
-        execute();
         Assert.assertEquals(node2, raft.currentMeta().getVotedFor().orElse(null));
     }
 
@@ -215,32 +240,34 @@ public class RaftTest extends BaseTest {
     public void testFollowerRejectVoteIfTermOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         requestVote(0, node2, 1, 1);
-        execute();
         Assert.assertFalse(raft.currentMeta().getVotedFor().isPresent());
     }
-
 
     @Test
     public void testFollowerAcceptVoteIfTermIsNewer() throws Exception {
         appendClusterConf();
         start();
-        execute();
         requestVote(2, node2, 1, 1);
-        execute();
         Assert.assertEquals(node2, raft.currentMeta().getVotedFor().orElse(null));
         expectTerm(2);
+    }
+
+    @Test
+    public void testFollowerRejectAppendEntriesIfTermIsOld() throws Exception {
+        appendClusterConf();
+        start();
+        LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
+        raft.apply(appendEntries(node2, 1, 1, 0, 0, logEntry));
+        Assert.assertFalse(raft.replicatedLog().contains(logEntry));
     }
 
     @Test
     public void testFollowerRejectAppendEntriesIfLogEmptyAndTermNotMatch() throws Exception {
         appendClusterConf();
         start();
-        execute();
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
-        raft.receive(appendEntries(node2, 1, 1, 0, 0, logEntry));
-        execute();
+        raft.apply(appendEntries(node2, 0, 1, 0, 0, logEntry));
         Assert.assertFalse(raft.replicatedLog().contains(logEntry));
     }
 
@@ -248,10 +275,8 @@ public class RaftTest extends BaseTest {
     public void testFollowerRejectAppendEntriesIfLogEmptyAndIndexNotMatch() throws Exception {
         appendClusterConf();
         start();
-        execute();
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 1, node2);
-        raft.receive(appendEntries(node2, 1, 0, 1, 0, logEntry));
-        execute();
+        raft.apply(appendEntries(node2, 1, 0, 1, 0, logEntry));
         Assert.assertFalse(raft.replicatedLog().contains(logEntry));
     }
 
@@ -259,24 +284,109 @@ public class RaftTest extends BaseTest {
     public void testFollowerAppendEntriesIfLogEmpty() throws Exception {
         appendClusterConf();
         start();
-        execute();
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, new Term(1), 2, node2);
-        raft.receive(appendEntries(node2, 1, 1, 1, 0, logEntry));
-        execute();
+        raft.apply(appendEntries(node2, 1, 1, 1, 0, logEntry));
         Assert.assertTrue(raft.replicatedLog().contains(logEntry));
+    }
+
+    @Test
+    public void testFollowerBecameLeaderOnSelfElection() throws Exception {
+        appendClusterSelf();
+        start();
+        electionTimeout();
+        expectLeader();
+    }
+
+    @Test
+    public void testFollowerIgnoreAppendSuccessful() throws Exception {
+        appendClusterSelf();
+        start();
+        appendSuccessful(node2, 2, 2);
+        expectFollower();
+    }
+
+    @Test
+    public void testFollowerIgnoreAppendRejected() throws Exception {
+        appendClusterSelf();
+        start();
+        raft.apply(new AppendRejected(node2, new Term(1)));
+        expectFollower();
+    }
+
+    @Test
+    public void testFollowerIgnoreDeclineCandidate() throws Exception {
+        appendClusterSelf();
+        start();
+        raft.apply(new DeclineCandidate(node2, new Term(1)));
+        expectFollower();
+        expectTerm(1);
+    }
+
+    @Test
+    public void testFollowerIgnoreElectedAsLeader() throws Exception {
+        appendClusterSelf();
+        start();
+        raft.apply(ElectedAsLeader.INSTANCE);
+        expectFollower();
+        expectTerm(1);
+    }
+
+    @Test
+    public void testFollowerIgnoreSendHeartbeat() throws Exception {
+        appendClusterSelf();
+        start();
+        raft.apply(SendHeartbeat.INSTANCE);
+        expectFollower();
+        expectTerm(1);
+    }
+
+    @Test
+    public void testFollowerIgnoreInstallSnapshotSuccessful() throws Exception {
+        appendClusterSelf();
+        start();
+        raft.apply(new InstallSnapshotSuccessful(node2, new Term(2), 1));
+        expectFollower();
+        expectTerm(1);
+    }
+
+    @Test
+    public void testFollowerIgnoreInstallInstallSnapshotRejected() throws Exception {
+        appendClusterSelf();
+        start();
+        raft.apply(new InstallSnapshotRejected(node2, new Term(2)));
+        expectFollower();
+        expectTerm(1);
     }
 
     // candidate
 
     @Test
+    public void testCandidateRejectAddServer() throws Exception {
+        appendClusterConf();
+        start();
+        electionTimeout();
+        expectCandidate();
+        raft.apply(new AddServer(node4));
+        verify(transportChannel4).message(new AddServerResponse(AddServerResponse.Status.NOT_LEADER, Optional.empty()));
+    }
+
+    @Test
+    public void testCandidateRejectRemoveServer() throws Exception {
+        appendClusterConf();
+        start();
+        electionTimeout();
+        expectCandidate();
+        raft.apply(new RemoveServer(node3));
+        verify(transportChannel3).message(new RemoveServerResponse(RemoveServerResponse.Status.NOT_LEADER, Optional.empty()));
+    }
+
+    @Test
     public void testCandidateRejectVoteIfLastLogTermIsOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         requestVote(1, node2, 0, 0);
-        execute();
         Assert.assertEquals(node1, raft.currentMeta().getVotedFor().orElse(null));
     }
 
@@ -284,11 +394,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateRejectVoteIfTermEqual() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         requestVote(2, node2, 1, 1);
-        execute();
         Assert.assertEquals(node1, raft.currentMeta().getVotedFor().orElse(null));
     }
 
@@ -296,11 +404,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateRejectVoteIfLastLogIndexIsOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         requestVote(3, node2, 1, 0);
-        execute();
         expectFollower();
         Assert.assertFalse(raft.currentMeta().getVotedFor().isPresent());
     }
@@ -309,14 +415,11 @@ public class RaftTest extends BaseTest {
     public void testCandidateRejectVoteIfAlreadyVoted() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         requestVote(3, node2, 1, 1);
-        execute();
         expectFollower();
         requestVote(3, node3, 1, 1);
-        execute();
         Assert.assertEquals(node2, raft.currentMeta().getVotedFor().orElse(null));
     }
 
@@ -324,11 +427,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateRejectVoteIfTermOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         requestVote(0, node2, 1, 1);
-        execute();
         Assert.assertEquals(node1, raft.currentMeta().getVotedFor().orElse(null));
     }
 
@@ -336,11 +437,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateVoteIfTermIsNewer() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         requestVote(3, node2, 1, 1);
-        execute();
         Assert.assertEquals(node2, raft.currentMeta().getVotedFor().orElse(null));
         expectTerm(3);
     }
@@ -349,11 +448,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateVoteRejectIfTermOld() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         voteCandidate(node2, 1);
-        execute();
         expectCandidate();
     }
 
@@ -361,11 +458,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateVoteRejectIfTermNewer() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         voteCandidate(node2, 3);
-        execute();
         expectFollower();
         expectTerm(3);
     }
@@ -374,11 +469,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateVotedHasNotMajority() throws Exception {
         appendBigClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         voteCandidate(node2, 2);
-        execute();
         expectCandidate();
         Assert.assertFalse(raft.currentMeta().hasMajority());
     }
@@ -387,12 +480,10 @@ public class RaftTest extends BaseTest {
     public void testCandidateVotedHasMajority() throws Exception {
         appendBigClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
-        execute();
         expectLeader();
         Assert.assertFalse(raft.currentMeta().hasMajority());
     }
@@ -401,11 +492,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateDeclineCandidateWithTermNewer() throws Exception {
         appendBigClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
-        raft.receive(new DeclineCandidate(node2, new Term(3)));
-        execute();
+        raft.apply(new DeclineCandidate(node2, new Term(3)));
         expectFollower();
         expectTerm(3);
     }
@@ -414,11 +503,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateDeclineCandidateWithEqualTerm() throws Exception {
         appendBigClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
-        raft.receive(new DeclineCandidate(node2, new Term(2)));
-        execute();
+        raft.apply(new DeclineCandidate(node2, new Term(2)));
         expectCandidate();
     }
 
@@ -426,11 +513,9 @@ public class RaftTest extends BaseTest {
     public void testCandidateDeclineCandidateWithTermOld() throws Exception {
         appendBigClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
-        raft.receive(new DeclineCandidate(node2, new Term(1)));
-        execute();
+        raft.apply(new DeclineCandidate(node2, new Term(1)));
         expectCandidate();
     }
 
@@ -438,7 +523,6 @@ public class RaftTest extends BaseTest {
     public void testCandidateElectionTimeout() throws Exception {
         appendBigClusterConf();
         start();
-        execute();
         expectFollower();
         expectTerm(1);
         electionTimeout();
@@ -453,10 +537,8 @@ public class RaftTest extends BaseTest {
     public void testCandidateStashClientMessage() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
-        raft.receive(new ClientMessage(node2, Noop.INSTANCE));
-        execute();
+        raft.apply(new ClientMessage(node2, Noop.INSTANCE));
         Assert.assertEquals(ImmutableList.of(new ClientMessage(node2, Noop.INSTANCE)), raft.currentStashed());
     }
 
@@ -464,10 +546,8 @@ public class RaftTest extends BaseTest {
     public void testCandidateBecameLeaderOnVoteMajority() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         voteCandidate(node2, 2);
-        execute();
         expectLeader();
     }
 
@@ -477,8 +557,7 @@ public class RaftTest extends BaseTest {
         start();
         electionTimeout();
         expectCandidate();
-        raft.receive(appendEntries(node2, 0, 1, 0, 0));
-        execute();
+        raft.apply(appendEntries(node2, 0, 1, 0, 0));
         expectTerm(2);
         expectCandidate();
     }
@@ -490,9 +569,7 @@ public class RaftTest extends BaseTest {
         electionTimeout();
         expectCandidate();
         LogEntry entry = new LogEntry(Noop.INSTANCE, new Term(1), 2, node2);
-        raft.receive(appendEntries(node2, 2, 1, 1, 0, entry));
-        execute();
-        execute();
+        raft.apply(appendEntries(node2, 2, 1, 1, 0, entry));
         expectFollower();
         expectTerm(2);
         Assert.assertTrue(raft.replicatedLog().contains(entry));
@@ -503,14 +580,12 @@ public class RaftTest extends BaseTest {
     private void becameLeader() throws Exception {
         appendClusterConf();
         start();
-        execute();
         electionTimeout();
         expectCandidate();
         verify(transportChannel2).message(new RequestVote(new Term(2), node1, new Term(1), 1));
         verify(transportChannel3).message(new RequestVote(new Term(2), node1, new Term(1), 1));
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
-        execute();
         expectLeader();
     }
 
@@ -541,14 +616,11 @@ public class RaftTest extends BaseTest {
         becameLeader();
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
-        raft.receive(new AppendSuccessful(node2, new Term(2), 2));
-        raft.receive(new AppendSuccessful(node3, new Term(2), 2));
-        execute();
+        raft.apply(new AppendSuccessful(node2, new Term(2), 2));
+        raft.apply(new AppendSuccessful(node3, new Term(2), 2));
 
-        raft.receive(new ClientMessage(node2, Noop.INSTANCE));
-        execute();
-        raft.receive(SendHeartbeat.INSTANCE);
-        execute();
+        raft.apply(new ClientMessage(node2, Noop.INSTANCE));
+        raft.apply(SendHeartbeat.INSTANCE);
 
         verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, noop(2, 3, node2)));
         verify(transportChannel3).message(appendEntries(node1, 2, 2, 2, 2, noop(2, 3, node2)));
@@ -557,8 +629,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderRejectAppendEntriesIfTermIsLower() throws Exception {
         becameLeader();
-        raft.receive(appendEntries(node2, 1, 0, 0, 0));
-        execute();
+        raft.apply(appendEntries(node2, 1, 0, 0, 0));
         expectLeader();
         expectTerm(2);
     }
@@ -566,8 +637,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderRejectAppendEntriesIfTermIsEqual() throws Exception {
         becameLeader();
-        raft.receive(appendEntries(node2, 2, 0, 0, 0));
-        execute();
+        raft.apply(appendEntries(node2, 2, 0, 0, 0));
         expectLeader();
         expectTerm(2);
     }
@@ -575,8 +645,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnAppendEntriesIfTermIsNewer() throws Exception {
         becameLeader();
-        raft.receive(appendEntries(node2, 3, 0, 0, 0));
-        execute();
+        raft.apply(appendEntries(node2, 3, 0, 0, 0));
         expectFollower();
         expectTerm(3);
     }
@@ -584,8 +653,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnAppendRejectedIfTermIsNewer() throws Exception {
         becameLeader();
-        raft.receive(new AppendRejected(node2, new Term(3)));
-        execute();
+        raft.apply(new AppendRejected(node2, new Term(3)));
         expectFollower();
         expectTerm(3);
     }
@@ -593,8 +661,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderIgnoreAppendRejectedIfTermIsOld() throws Exception {
         becameLeader();
-        raft.receive(new AppendRejected(node2, new Term(0)));
-        execute();
+        raft.apply(new AppendRejected(node2, new Term(0)));
         expectLeader();
         expectTerm(2);
     }
@@ -604,28 +671,24 @@ public class RaftTest extends BaseTest {
         appendClusterConf();
         log = log.append(noop(1, 2, node1)).append(noop(1, 3, node1));
         start();
-        execute();
         electionTimeout();
         verify(transportChannel2).message(any(RequestVote.class));
         verify(transportChannel3).message(any(RequestVote.class));
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
-        execute();
 
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 3, 1, noop(2, 4, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 3, 1, noop(2, 4, node1)));
 
-        raft.receive(new AppendRejected(node2, new Term(2)));
-        raft.receive(new AppendRejected(node3, new Term(2)));
-        execute();
+        raft.apply(new AppendRejected(node2, new Term(2)));
+        raft.apply(new AppendRejected(node3, new Term(2)));
 
         // entry 4 does not included because different term
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 2, 1, noop(1, 3, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 2, 1, noop(1, 3, node1)));
 
-        raft.receive(new AppendRejected(node2, new Term(2)));
-        raft.receive(new AppendRejected(node3, new Term(2)));
-        execute();
+        raft.apply(new AppendRejected(node2, new Term(2)));
+        raft.apply(new AppendRejected(node3, new Term(2)));
 
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 1, noop(1, 2, node1), noop(1, 3, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 1, noop(1, 2, node1), noop(1, 3, node1)));
@@ -634,8 +697,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnAppendSuccessfulIfTermIsNewer() throws Exception {
         becameLeader();
-        raft.receive(new AppendSuccessful(node2, new Term(3), 2));
-        execute();
+        raft.apply(new AppendSuccessful(node2, new Term(3), 2));
         expectFollower();
         expectTerm(3);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -644,9 +706,8 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnAppendSuccessfulIfTermIsOld() throws Exception {
         becameLeader();
-        raft.receive(new AppendSuccessful(node2, new Term(1), 2));
-        raft.receive(new AppendSuccessful(node3, new Term(1), 2));
-        execute();
+        raft.apply(new AppendSuccessful(node2, new Term(1), 2));
+        raft.apply(new AppendSuccessful(node3, new Term(1), 2));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -655,9 +716,8 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderCommitOnAppendSuccessfulIfTermMatches() throws Exception {
         becameLeader();
-        raft.receive(new AppendSuccessful(node2, new Term(2), 2));
-        raft.receive(new AppendSuccessful(node3, new Term(2), 2));
-        execute();
+        raft.apply(new AppendSuccessful(node2, new Term(2), 2));
+        raft.apply(new AppendSuccessful(node3, new Term(2), 2));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(2, raft.replicatedLog().committedIndex());
@@ -668,8 +728,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
-        raft.receive(new InstallSnapshot(node2, new Term(1), new RaftSnapshot(metadata, Noop.INSTANCE)));
-        execute();
+        raft.apply(new InstallSnapshot(node2, new Term(1), new RaftSnapshot(metadata, Noop.INSTANCE)));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -680,8 +739,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
-        raft.receive(new InstallSnapshot(node2, new Term(2), new RaftSnapshot(metadata, Noop.INSTANCE)));
-        execute();
+        raft.apply(new InstallSnapshot(node2, new Term(2), new RaftSnapshot(metadata, Noop.INSTANCE)));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -692,8 +750,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(new Term(1), 1, conf);
-        raft.receive(new InstallSnapshot(node2, new Term(3), new RaftSnapshot(metadata, Noop.INSTANCE)));
-        execute();
+        raft.apply(new InstallSnapshot(node2, new Term(3), new RaftSnapshot(metadata, Noop.INSTANCE)));
         expectFollower();
         expectTerm(3);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -702,8 +759,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnInstallSnapshotSuccessfulIfTermIsNewer() throws Exception {
         becameLeader();
-        raft.receive(new InstallSnapshotSuccessful(node2, new Term(3), 1));
-        execute();
+        raft.apply(new InstallSnapshotSuccessful(node2, new Term(3), 1));
         expectFollower();
         expectTerm(3);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -712,8 +768,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderIgnoreInstallSnapshotSuccessfulIfTermIsOld() throws Exception {
         becameLeader();
-        raft.receive(new InstallSnapshotSuccessful(node2, new Term(1), 1));
-        execute();
+        raft.apply(new InstallSnapshotSuccessful(node2, new Term(1), 1));
         expectLeader();
         expectTerm(2);
     }
@@ -721,9 +776,8 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderHandleInstallSnapshotSuccessfulIfTermMatches() throws Exception {
         becameLeader();
-        raft.receive(new InstallSnapshotSuccessful(node2, new Term(2), 2));
-        raft.receive(new InstallSnapshotSuccessful(node3, new Term(2), 2));
-        execute();
+        raft.apply(new InstallSnapshotSuccessful(node2, new Term(2), 2));
+        raft.apply(new InstallSnapshotSuccessful(node3, new Term(2), 2));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(2, raft.replicatedLog().committedIndex());
@@ -732,8 +786,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnInstallSnapshotRejectedIfTermIsNew() throws Exception {
         becameLeader();
-        raft.receive(new InstallSnapshotRejected(node2, new Term(3)));
-        execute();
+        raft.apply(new InstallSnapshotRejected(node2, new Term(3)));
         expectFollower();
         expectTerm(3);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -742,8 +795,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderIgnoreInstallSnapshotRejectedIfTermIdOld() throws Exception {
         becameLeader();
-        raft.receive(new InstallSnapshotRejected(node2, new Term(0)));
-        execute();
+        raft.apply(new InstallSnapshotRejected(node2, new Term(0)));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(1, raft.replicatedLog().committedIndex());
@@ -754,15 +806,12 @@ public class RaftTest extends BaseTest {
         appendClusterConf();
         log = log.append(noop(1, 2, node1)).append(noop(1, 3, node1)).commit(3);
         start();
-        execute();
         electionTimeout();
         verify(transportChannel2).message(any(RequestVote.class));
         verify(transportChannel3).message(any(RequestVote.class));
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
-        execute();
-        raft.receive(new InstallSnapshotRejected(node2, new Term(2)));
-        execute();
+        raft.apply(new InstallSnapshotRejected(node2, new Term(2)));
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 3, 3, noop(2, 4, node1)));
     }
 
@@ -770,17 +819,75 @@ public class RaftTest extends BaseTest {
     public void testLeaderUnstashClientMessages() throws Exception {
         appendClusterConf();
         start();
-        execute();
         expectFollower();
-        raft.receive(new ClientMessage(node2, Noop.INSTANCE));
+        raft.apply(new ClientMessage(node2, Noop.INSTANCE));
         electionTimeout();
         Assert.assertEquals(ImmutableList.of(new ClientMessage(node2, Noop.INSTANCE)), raft.currentStashed());
         verify(transportChannel2).message(any(RequestVote.class));
         verify(transportChannel3).message(any(RequestVote.class));
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
-        execute();
+        expectLeader();
         Assert.assertEquals(ImmutableList.of(), raft.currentStashed());
+    }
+
+    @Test
+    public void testLeaderSendResponseToRemoteClient() throws Exception {
+        becameLeader();
+        raft.apply(new AppendSuccessful(node2, new Term(2), 2));
+        raft.apply(new AppendSuccessful(node3, new Term(2), 2));
+
+        raft.apply(new ClientMessage(node2, TestFSMMessage.INSTANCE));
+        raft.apply(new AppendSuccessful(node2, new Term(2), 3));
+        raft.apply(new AppendSuccessful(node3, new Term(2), 3));
+
+        Assert.assertEquals(3, raft.replicatedLog().committedIndex());
+        verify(transportChannel2).message(TestFSMMessage.INSTANCE);
+    }
+
+    @Test
+    public void testLeaderSendResponseToLocalClient() throws Exception {
+        becameLeader();
+        raft.apply(new AppendSuccessful(node2, new Term(2), 2));
+        raft.apply(new AppendSuccessful(node3, new Term(2), 2));
+
+        raft.apply(new ClientMessage(node1, TestFSMMessage.INSTANCE));
+        raft.apply(new AppendSuccessful(node2, new Term(2), 3));
+        raft.apply(new AppendSuccessful(node3, new Term(2), 3));
+
+        Assert.assertEquals(3, raft.replicatedLog().committedIndex());
+        verify(transportController).dispatch(new MessageTransportFrame(Version.CURRENT, TestFSMMessage.INSTANCE));
+    }
+
+    @Test
+    public void testLeaderRejectVoteIfTermIsEqual() throws Exception {
+        becameLeader();
+        requestVote(2, node2, 2, 2);
+        expectLeader();
+        expectTerm(2);
+        verify(transportChannel2).message(new DeclineCandidate(node1, new Term(2)));
+    }
+
+    @Test
+    public void testLeaderVoteCandidateIfTermIsNewer() throws Exception {
+        becameLeader();
+        requestVote(3, node2, 2, 2);
+        expectFollower();
+        expectTerm(3);
+        Assert.assertEquals(node2, raft.currentMeta().getVotedFor().orElse(null));
+        verify(transportChannel2).message(new VoteCandidate(node1, new Term(3)));
+    }
+
+    @Test
+    public void testLeaderCreateSnapshot() throws Exception {
+        becameLeader();
+        RaftSnapshotMetadata meta = new RaftSnapshotMetadata(new Term(1), 1, new StableClusterConfiguration(node1, node2, node3));
+        when(resourceFSM.prepareSnapshot(meta)).thenReturn(Optional.of(new RaftSnapshot(meta, null)));
+        raft.apply(InitLogSnapshot.INSTANCE);
+        ReplicatedLog log = raft.replicatedLog();
+        logger.info("log: {}", log);
+        Assert.assertTrue(log.hasSnapshot());
+        Assert.assertEquals(meta, log.snapshot().getMeta());
     }
 
     // joint consensus
@@ -792,7 +899,6 @@ public class RaftTest extends BaseTest {
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
         appendSuccessful(node2, 2, 2);
         appendSuccessful(node3, 2, 2);
-        execute();
 
         joint(node4);
         ClusterConfiguration stable = new StableClusterConfiguration(node1, node2, node3, node4);
@@ -804,23 +910,38 @@ public class RaftTest extends BaseTest {
         Assert.assertEquals(stable, raft.currentMeta().getConfig());
     }
 
+    @Test
+    public void testJointInTransitioningState() throws Exception {
+        becameLeader();
+        verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
+        verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 1, noop(2, 2, node1)));
+        appendSuccessful(node2, 2, 2);
+        appendSuccessful(node3, 2, 2);
+
+        joint(node4);
+        ClusterConfiguration stable = new StableClusterConfiguration(node1, node2, node3, node4);
+        LogEntry stableEntry = new LogEntry(stable, new Term(2), 3, node4);
+        verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, stableEntry));
+        verify(transportChannel3).message(appendEntries(node1, 2, 2, 2, 2, stableEntry));
+        expectLeader();
+        Assert.assertTrue(raft.currentMeta().getConfig().isTransitioning());
+
+        joint(node5);
+        verify(transportChannel5).message(new AddServerResponse(AddServerResponse.Status.TIMEOUT, Optional.of(node1)));
+    }
+
     // additional methods
 
     private void joint(DiscoveryNode node) {
-        raft.receive(new AddServer(node));
-        execute();
+        raft.apply(new AddServer(node));
     }
 
     private void requestVote(long term, DiscoveryNode node, long lastLogTerm, long lastLogIndex) {
-        raft.receive(new RequestVote(new Term(term), node, new Term(lastLogTerm), lastLogIndex));
+        raft.apply(new RequestVote(new Term(term), node, new Term(lastLogTerm), lastLogIndex));
     }
 
     private void voteCandidate(DiscoveryNode node, long term) {
-        raft.receive(new VoteCandidate(node, new Term(term)));
-    }
-
-    private void execute() {
-        context.execute();
+        raft.apply(new VoteCandidate(node, new Term(term)));
     }
 
     private void expectTerm(long term) {
@@ -840,8 +961,7 @@ public class RaftTest extends BaseTest {
     }
 
     private void electionTimeout() throws Exception {
-        raft.receive(ElectionTimeout.INSTANCE);
-        execute();
+        raft.apply(ElectionTimeout.INSTANCE);
     }
 
     private LogEntry noop(long term, long index, DiscoveryNode client) {
@@ -855,8 +975,7 @@ public class RaftTest extends BaseTest {
 
     @SuppressWarnings("SameParameterValue")
     private void appendSuccessful(DiscoveryNode node, long term, long index) {
-        raft.receive(new AppendSuccessful(node, new Term(term), index));
-        execute();
+        raft.apply(new AppendSuccessful(node, new Term(term), index));
     }
 
     private AppendEntries appendEntries(DiscoveryNode node, long term, long prevTerm, long prevIndex, long commit, LogEntry... logEntries) {
@@ -866,20 +985,6 @@ public class RaftTest extends BaseTest {
     // test dependencies
 
     private class TestRaftContext implements RaftContext {
-
-        private final LinkedList<Streamable> queue = new LinkedList<>();
-
-        public void execute() {
-            while (!queue.isEmpty()) {
-                Streamable event = queue.pop();
-                raft.handle(event);
-            }
-        }
-
-        @Override
-        public void submit(Streamable event) {
-            queue.add(event);
-        }
 
         @Override
         public ScheduledFuture schedule(Streamable event, long timeout, TimeUnit timeUnit) {
@@ -934,10 +1039,12 @@ public class RaftTest extends BaseTest {
         @Override
         protected void configure() {
             Preconditions.checkNotNull(transportService);
+            Preconditions.checkNotNull(transportController);
             Preconditions.checkNotNull(clusterDiscovery);
             Preconditions.checkNotNull(resourceFSM);
             Preconditions.checkNotNull(context);
             bind(TransportService.class).toInstance(transportService);
+            bind(TransportController.class).toInstance(transportController);
             bind(ClusterDiscovery.class).toInstance(clusterDiscovery);
             bind(ResourceFSM.class).toInstance(resourceFSM);
             bind(RaftContext.class).toInstance(context);
@@ -977,6 +1084,25 @@ public class RaftTest extends BaseTest {
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServerResponse.class, AddServerResponse::new, 281));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServer.class, RemoveServer::new, 282));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServerResponse.class, RemoveServerResponse::new, 283));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(TestFSMMessage.class, TestFSMMessage::read, 290));
+        }
+    }
+
+    private static class TestFSMMessage implements Streamable {
+
+        public static final TestFSMMessage INSTANCE = new TestFSMMessage();
+
+        @SuppressWarnings("unused")
+        public static TestFSMMessage read(StreamInput stream) throws IOException {
+            return INSTANCE;
+        }
+
+        private TestFSMMessage() {
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
         }
     }
 }

@@ -181,11 +181,8 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public void send(TransportFrame message) {
+        public void send(TransportFrame message) throws IOException {
             Channel channel = channel();
-            if (channel == null) {
-                return;
-            }
             channel.writeAndFlush(message, channel.voidPromise());
         }
 
@@ -197,7 +194,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
         }
 
-        private Channel channel() {
+        private Channel channel() throws IOException {
             int index = (int) channelCounter.get() % channels.length;
             channelCounter.set(index + 1);
             int loopIndex = index;
@@ -209,7 +206,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 }
                 index = (index + 1) % channels.length;
             } while (index != loopIndex);
-            throw new RuntimeException("error connect to " + node);
+            throw new IOException("error connect to " + node);
         }
     }
 }

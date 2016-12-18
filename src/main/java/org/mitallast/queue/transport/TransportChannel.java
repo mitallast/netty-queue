@@ -5,11 +5,13 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrame;
 
+import java.io.IOException;
+
 public interface TransportChannel {
 
-    void send(TransportFrame response);
+    void send(TransportFrame response) throws IOException;
 
-    default void message(Streamable message) {
+    default void message(Streamable message) throws IOException {
         send(new MessageTransportFrame(Version.CURRENT, message));
     }
 

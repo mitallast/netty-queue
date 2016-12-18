@@ -13,23 +13,23 @@ public class RaftHandler extends AbstractComponent {
     public RaftHandler(Config config, TransportController transportController, Raft raft) {
         super(config.getConfig("raft"), RaftHandler.class);
 
-        transportController.registerMessageHandler(AppendEntries.class, raft::receive);
-        transportController.registerMessageHandler(AppendRejected.class, raft::receive);
-        transportController.registerMessageHandler(AppendSuccessful.class, raft::receive);
+        transportController.registerMessageHandler(AppendEntries.class, raft::apply);
+        transportController.registerMessageHandler(AppendRejected.class, raft::apply);
+        transportController.registerMessageHandler(AppendSuccessful.class, raft::apply);
 
-        transportController.registerMessageHandler(AddServer.class, raft::receive);
-        transportController.registerMessageHandler(AddServerResponse.class, raft::receive);
-        transportController.registerMessageHandler(RemoveServer.class, raft::receive);
-        transportController.registerMessageHandler(RemoveServerResponse.class, raft::receive);
+        transportController.registerMessageHandler(AddServer.class, raft::apply);
+        transportController.registerMessageHandler(AddServerResponse.class, raft::apply);
+        transportController.registerMessageHandler(RemoveServer.class, raft::apply);
+        transportController.registerMessageHandler(RemoveServerResponse.class, raft::apply);
 
-        transportController.registerMessageHandler(ClientMessage.class, raft::receive);
+        transportController.registerMessageHandler(ClientMessage.class, raft::apply);
 
-        transportController.registerMessageHandler(InstallSnapshot.class, raft::receive);
-        transportController.registerMessageHandler(InstallSnapshotRejected.class, raft::receive);
-        transportController.registerMessageHandler(InstallSnapshotSuccessful.class, raft::receive);
+        transportController.registerMessageHandler(InstallSnapshot.class, raft::apply);
+        transportController.registerMessageHandler(InstallSnapshotRejected.class, raft::apply);
+        transportController.registerMessageHandler(InstallSnapshotSuccessful.class, raft::apply);
 
-        transportController.registerMessageHandler(RequestVote.class, raft::receive);
-        transportController.registerMessageHandler(VoteCandidate.class, raft::receive);
-        transportController.registerMessageHandler(DeclineCandidate.class, raft::receive);
+        transportController.registerMessageHandler(RequestVote.class, raft::apply);
+        transportController.registerMessageHandler(VoteCandidate.class, raft::apply);
+        transportController.registerMessageHandler(DeclineCandidate.class, raft::apply);
     }
 }

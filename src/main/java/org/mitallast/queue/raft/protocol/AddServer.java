@@ -25,4 +25,24 @@ public class AddServer implements Streamable {
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeStreamable(member);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AddServer addServer = (AddServer) o;
+
+        return member.equals(addServer.member);
+    }
+
+    @Override
+    public int hashCode() {
+        return member.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "AddServer{" + member + "}";
+    }
 }

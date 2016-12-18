@@ -35,4 +35,30 @@ public class VoteCandidate implements Streamable {
         stream.writeStreamable(member);
         stream.writeLong(term.getTerm());
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        VoteCandidate that = (VoteCandidate) o;
+
+        if (!member.equals(that.member)) return false;
+        return term.equals(that.term);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = member.hashCode();
+        result = 31 * result + term.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "VoteCandidate{" +
+            "member=" + member +
+            ", term=" + term +
+            '}';
+    }
 }

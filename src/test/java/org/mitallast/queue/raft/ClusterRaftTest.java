@@ -79,8 +79,14 @@ public class ClusterRaftTest extends BaseTest {
         raft = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(Raft.class)).iterator());
         client = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterClient.class)).iterator());
 
-        for (InternalNode node : this.node) {
-            node.start();
+        for (InternalNode item : this.node) {
+            submit(() -> {
+                try {
+                    item.start();
+                } catch (IOException e) {
+                    assert false : e;
+                }
+            });
         }
     }
 
@@ -153,7 +159,7 @@ public class ClusterRaftTest extends BaseTest {
             Assert.assertEquals("hello world " + i, value);
         }
 
-        final int total = 5000;
+        final int total = 100000;
         final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
         final long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
@@ -325,8 +331,8 @@ public class ClusterRaftTest extends BaseTest {
             this.raft = raft;
             this.clusterDiscovery = clusterDiscovery;
 
-            controller.registerMessageHandler(RegisterSet.class, raft::receive);
-            controller.registerMessageHandler(RegisterGet.class, raft::receive);
+            controller.registerMessageHandler(RegisterSet.class, raft::apply);
+            controller.registerMessageHandler(RegisterGet.class, raft::apply);
             controller.registerMessageHandler(RegisterValue.class, this::receive);
         }
 
@@ -334,7 +340,7 @@ public class ClusterRaftTest extends BaseTest {
             long request = counter.incrementAndGet();
             CompletableFuture<String> future = new CompletableFuture<>();
             requests.put(request, future);
-            raft.receive(new ClientMessage(clusterDiscovery.self(), new RegisterSet(request, value)));
+            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterSet(request, value)));
             return future;
         }
 
@@ -342,7 +348,7 @@ public class ClusterRaftTest extends BaseTest {
             long request = counter.incrementAndGet();
             CompletableFuture<String> future = new CompletableFuture<>();
             requests.put(request, future);
-            raft.receive(new ClientMessage(clusterDiscovery.self(), new RegisterGet(request)));
+            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterGet(request)));
             return future;
         }
 

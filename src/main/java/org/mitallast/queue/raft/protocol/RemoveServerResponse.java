@@ -37,4 +37,30 @@ public class RemoveServerResponse implements Streamable {
         stream.writeEnum(status);
         stream.writeStreamableOrNull(leader.orElse(null));
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RemoveServerResponse that = (RemoveServerResponse) o;
+
+        if (status != that.status) return false;
+        return leader.equals(that.leader);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = status.hashCode();
+        result = 31 * result + leader.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RemoveServerResponse{" +
+            "status=" + status +
+            ", leader=" + leader +
+            '}';
+    }
 }

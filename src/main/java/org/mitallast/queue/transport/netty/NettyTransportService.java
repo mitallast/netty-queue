@@ -85,6 +85,9 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     public void connectToNode(DiscoveryNode node) {
         checkIsStarted();
         Preconditions.checkNotNull(node);
+        if (connectedNodes.get(node) != null) {
+            return;
+        }
         connectionLock.lock();
         try {
             if (connectedNodes.get(node) != null) {

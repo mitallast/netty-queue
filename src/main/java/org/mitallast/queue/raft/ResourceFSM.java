@@ -5,7 +5,6 @@ import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public interface ResourceFSM {
 

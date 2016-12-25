@@ -15,14 +15,14 @@ import org.mitallast.queue.rest.response.ByteBufRestResponse;
 
 import java.io.IOException;
 
-public class RestIndexAction extends BaseRestHandler {
+public class IndexAction extends BaseRestHandler {
 
     private final static XStreamString MESSAGE = new XStreamString("message");
     private final static XStreamString MESSAGE_TEXT = new XStreamString("You now, for queue");
 
     @Inject
-    public RestIndexAction(Config config, RestController controller) {
-        super(config.getConfig("rest"), RestIndexAction.class);
+    public IndexAction(Config config, RestController controller) {
+        super(config.getConfig("rest"), IndexAction.class);
         controller.registerHandler(HttpMethod.GET, "/", this);
         controller.registerHandler(HttpMethod.HEAD, "/", this);
     }

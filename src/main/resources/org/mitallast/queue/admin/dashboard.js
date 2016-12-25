@@ -6,6 +6,10 @@ $(function () {
     var refresh= null;
 
     function initActions(context) {
+        $('a[href="#settings"]', context).click(function(e) {
+            e.preventDefault();
+            createSettingsView();
+        });
         $('a[href="#raftState"]', context).click(function (e) {
             e.preventDefault();
             createRaftClusterView()
@@ -18,6 +22,7 @@ $(function () {
             e.preventDefault();
             createBlobListView()
         });
+
         $('a[href="#putBlob"]', context).click(function (e) {
             e.preventDefault();
             createPutBlobView()
@@ -35,6 +40,21 @@ $(function () {
                 createBlobListView();
             });
         });
+
+        $('a[href="#startBenchmark"]', context).click(function (e) {
+            e.preventDefault();
+            createStartBenchmarkView()
+        });
+        $('form[action="#startBenchmark"]', context).submit(function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var requests = $form.find('input[name=requests]').val();
+            var dataSize = $form.find('input[name=dataSize]').val();
+
+            $.getJSON("/_benchmark?requests="+requests+"&dataSize="+dataSize, function(response) {
+                createBenchmarkResultView(response);
+            });
+        });
     }
 
     function renderMain(html) {
@@ -44,6 +64,13 @@ $(function () {
         }
         $main.html(html);
         initActions($main);
+    }
+
+    function createSettingsView() {
+        var template = Handlebars.compile($("#settings").html());
+        $.getJSON("/_settings", function (data) {
+            renderMain(template(data));
+        });
     }
 
     function createRaftClusterView() {
@@ -81,5 +108,14 @@ $(function () {
         $.get("/_blob/" + key, function(data) {
             renderMain(template({"key": key, "data":data}))
         });
+    }
+
+    function createStartBenchmarkView() {
+        renderMain($("#startBenchmark").html())
+    }
+
+    function createBenchmarkResultView(response) {
+        var template = Handlebars.compile($("#benchmarkResult").html());
+        renderMain(template(response))
     }
 });

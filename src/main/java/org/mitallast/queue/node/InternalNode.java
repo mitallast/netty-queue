@@ -6,7 +6,10 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import org.mitallast.queue.benchmark.BenchmarkModule;
+import org.mitallast.queue.benchmark.rest.BenchmarkRestModule;
 import org.mitallast.queue.blob.BlobModule;
+import org.mitallast.queue.blob.rest.BlobRestModule;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
@@ -15,6 +18,7 @@ import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.file.FileModule;
 import org.mitallast.queue.common.stream.StreamModule;
 import org.mitallast.queue.raft.RaftModule;
+import org.mitallast.queue.raft.rest.RaftRestModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportModule;
@@ -41,10 +45,24 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         }
         if (this.config.getBoolean("raft.enabled")) {
             modules.add(new RaftModule());
+            if (this.config.getBoolean("rest.enabled")) {
+                modules.add(new RaftRestModule());
+            }
+            if(this.config.getBoolean("blob.enabled")) {
+                modules.add(new BlobModule());
+                if (this.config.getBoolean("rest.enabled")) {
+                    modules.add(new BlobRestModule());
+                }
+            }
+            if(this.config.getBoolean("benchmark.enabled")) {
+                modules.add(new BenchmarkModule());
+                if (this.config.getBoolean("rest.enabled")) {
+                    modules.add(new BenchmarkRestModule());
+                }
+            }
         }
-        if(this.config.getBoolean("blob.enabled")) {
-            modules.add(new BlobModule());
-        }
+
+
         modules.add((Module[]) plugins);
         injector = modules.createInjector();
 

@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest.action.blob;
+package org.mitallast.queue.blob.rest;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;

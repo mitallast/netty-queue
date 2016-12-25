@@ -1,4 +1,4 @@
-package org.mitallast.queue.rest.action.blob;
+package org.mitallast.queue.blob.rest;
 
 import com.google.inject.Inject;
 import com.typesafe.config.Config;

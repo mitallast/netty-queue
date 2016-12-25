@@ -7,6 +7,8 @@ import com.google.inject.Inject;
 import com.google.inject.multibindings.Multibinder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -25,9 +27,11 @@ import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -42,6 +46,7 @@ public class ClusterRaftTest extends BaseTest {
     private ImmutableList<InternalNode> node;
     private ImmutableList<Raft> raft;
     private ImmutableList<RegisterClient> client;
+    private ImmutableList<RegisterByteClient> byteClient;
 
     @Before
     public void setUpNodes() throws Exception {
@@ -78,6 +83,7 @@ public class ClusterRaftTest extends BaseTest {
         node = builder.build();
         raft = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(Raft.class)).iterator());
         client = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterClient.class)).iterator());
+        byteClient = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterByteClient.class)).iterator());
 
         for (InternalNode item : this.node) {
             submit(() -> {
@@ -159,7 +165,7 @@ public class ClusterRaftTest extends BaseTest {
             Assert.assertEquals("hello world " + i, value);
         }
 
-        final int total = 100000;
+        final int total = 200000;
         final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
         final long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
@@ -174,6 +180,49 @@ public class ClusterRaftTest extends BaseTest {
 
         final long end = System.currentTimeMillis();
         printQps("raft command rpc", total, start, end);
+    }
+
+    @Test
+    public void benchmarkAsynchronousByte() throws Exception {
+        awaitElection();
+        int leader = 0;
+        for (int i = 0; i < nodesCount; i++) {
+            if (raft.get(i).currentState() == Leader) {
+                leader = i;
+            }
+        }
+
+        byte[] bytes = new byte[4096];
+        new Random().nextBytes(bytes);
+
+        // warm up
+        for (int i = 0; i < 10000; i++) {
+            byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes)).get();
+        }
+
+        final int total = 200000;
+        final ArrayList<CompletableFuture<RegisterByteOK>> futures = new ArrayList<>(total);
+        final long start = System.currentTimeMillis();
+        for (int i = 0; i < total; i++) {
+            CompletableFuture<RegisterByteOK> future = byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes));
+            futures.add(future);
+        }
+        for (int i = 0; i < total; i++) {
+            futures.get(i).get();
+        }
+        final long end = System.currentTimeMillis();
+
+
+        BigInteger totalBytes = BigInteger.valueOf(bytes.length).multiply(BigInteger.valueOf(total));
+        BigInteger bytesPerSec = totalBytes
+            .multiply(BigInteger.valueOf(1000)) // to sec
+            .divide(BigInteger.valueOf(end - start)); // duration in ms
+
+        logger.info("messages    : {}", total);
+        logger.info("message size: {}", bytes.length);
+        logger.info("data size   : {}MB", totalBytes.divide(BigInteger.valueOf(1024 * 1024)));
+        logger.info("total time  : {}ms", end - start);
+        logger.info("throughput  : {}MB/s", bytesPerSec.divide(BigInteger.valueOf(1024 * 1024)));
     }
 
     private void awaitElection() throws Exception {
@@ -198,6 +247,7 @@ public class ClusterRaftTest extends BaseTest {
         @Override
         protected void configure() {
             bind(RegisterClient.class).asEagerSingleton();
+            bind(RegisterByteClient.class).asEagerSingleton();
             bind(RegisterResourceFSM.class).asEagerSingleton();
             bind(ResourceFSM.class).to(RegisterResourceFSM.class);
 
@@ -205,12 +255,18 @@ public class ClusterRaftTest extends BaseTest {
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterSet.class, RegisterSet::new, 900000));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterGet.class, RegisterGet::new, 900001));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterValue.class, RegisterValue::new, 900002));
+
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteSet.class, RegisterByteSet::new, 900010));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteOK.class, RegisterByteOK::new, 900011));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteGet.class, RegisterByteGet::new, 900012));
+            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteValue.class, RegisterByteValue::new, 900013));
         }
     }
 
     public static class RegisterResourceFSM extends AbstractComponent implements ResourceFSM {
 
         private volatile String value = "";
+        private volatile ByteBuf buff = Unpooled.EMPTY_BUFFER;
 
         @Inject
         public RegisterResourceFSM(Config config) {
@@ -226,13 +282,20 @@ public class ClusterRaftTest extends BaseTest {
                 return new RegisterValue(registerSet.requestId, value);
             } else if (message instanceof RegisterGet) {
                 return new RegisterValue(((RegisterGet) message).requestId, value);
+            } else if (message instanceof RegisterByteSet) {
+                RegisterByteSet set = (RegisterByteSet) message;
+                logger.debug("prev value: {} new value: {}", value, set.buff);
+                buff = set.buff;
+                return new RegisterByteOK(set.requestId);
+            } else if (message instanceof RegisterByteGet) {
+                return new RegisterByteValue(((RegisterByteGet) message).requestId, buff);
             }
             return null;
         }
 
         @Override
         public Optional<RaftSnapshot> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-            return Optional.of(new RaftSnapshot(snapshotMeta, new RegisterSet(-1, value)));
+            return Optional.empty();
         }
     }
 
@@ -318,8 +381,83 @@ public class ClusterRaftTest extends BaseTest {
         }
     }
 
-    public static class RegisterClient extends AbstractComponent {
+    public static class RegisterByteSet implements Streamable {
+        private final long requestId;
+        private final ByteBuf buff;
 
+        public RegisterByteSet(long requestId, ByteBuf buff) {
+            this.requestId = requestId;
+            this.buff = buff;
+        }
+
+        public RegisterByteSet(StreamInput stream) throws IOException {
+            requestId = stream.readLong();
+            buff = stream.readByteBuf();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeLong(requestId);
+            stream.writeByteBuf(buff);
+        }
+    }
+
+    public static class RegisterByteOK implements Streamable {
+        private final long requestId;
+
+        public RegisterByteOK(long requestId) {
+            this.requestId = requestId;
+        }
+
+        public RegisterByteOK(StreamInput stream) throws IOException {
+            requestId = stream.readLong();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeLong(requestId);
+        }
+    }
+
+    public static class RegisterByteGet implements Streamable {
+        private final long requestId;
+
+        public RegisterByteGet(long requestId) {
+            this.requestId = requestId;
+        }
+
+        public RegisterByteGet(StreamInput stream) throws IOException {
+            requestId = stream.readLong();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeLong(requestId);
+        }
+    }
+
+    public static class RegisterByteValue implements Streamable {
+        private final long requestId;
+        private final ByteBuf buff;
+
+        public RegisterByteValue(long requestId, ByteBuf buff) {
+            this.requestId = requestId;
+            this.buff = buff;
+        }
+
+        public RegisterByteValue(StreamInput stream) throws IOException {
+            requestId = stream.readLong();
+            buff = stream.readByteBuf();
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+            stream.writeLong(requestId);
+            stream.writeByteBuf(buff);
+        }
+    }
+
+    public static class RegisterClient extends AbstractComponent {
         private final Raft raft;
         private final ClusterDiscovery clusterDiscovery;
         private final AtomicLong counter = new AtomicLong();
@@ -355,6 +493,52 @@ public class ClusterRaftTest extends BaseTest {
         private void receive(RegisterValue event) {
             logger.debug("client received: {}", event);
             requests.get(event.requestId).complete(event.value);
+        }
+    }
+
+    public static class RegisterByteClient extends AbstractComponent {
+        private final Raft raft;
+        private final ClusterDiscovery clusterDiscovery;
+        private final AtomicLong counter = new AtomicLong();
+        private final ConcurrentMap<Long, CompletableFuture<RegisterByteOK>> setRequests = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Long, CompletableFuture<ByteBuf>> getRequests = new ConcurrentHashMap<>();
+
+        @Inject
+        public RegisterByteClient(Config config, Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
+            super(config, RegisterByteClient.class);
+            this.raft = raft;
+            this.clusterDiscovery = clusterDiscovery;
+
+            controller.registerMessageHandler(RegisterByteSet.class, raft::apply);
+            controller.registerMessageHandler(RegisterByteGet.class, raft::apply);
+            controller.registerMessageHandler(RegisterByteOK.class, this::receiveOk);
+            controller.registerMessageHandler(RegisterByteValue.class, this::receiveValue);
+        }
+
+        public CompletableFuture<RegisterByteOK> set(ByteBuf value) {
+            long request = counter.incrementAndGet();
+            CompletableFuture<RegisterByteOK> future = new CompletableFuture<>();
+            setRequests.put(request, future);
+            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterByteSet(request, value)));
+            return future;
+        }
+
+        public CompletableFuture<ByteBuf> get() {
+            long request = counter.incrementAndGet();
+            CompletableFuture<ByteBuf> future = new CompletableFuture<>();
+            getRequests.put(request, future);
+            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterByteGet(request)));
+            return future;
+        }
+
+        private void receiveOk(RegisterByteOK event) {
+            logger.debug("client received: {}", event);
+            setRequests.get(event.requestId).complete(event);
+        }
+
+        private void receiveValue(RegisterByteValue event) {
+            logger.debug("client received: {}", event);
+            getRequests.get(event.requestId).complete(event.buff);
         }
     }
 }

@@ -88,6 +88,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
 
     public class FileReplicatedLog implements ReplicatedLog {
         private final ArrayList<LogEntry> entries;
+        private boolean dirty = false;
         private long start;
 
         private File segmentFile;
@@ -182,6 +183,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         @Override
         public ReplicatedLog append(LogEntry entry) {
             try {
+                dirty = true;
                 segmentOutput.writeStreamable(entry);
                 this.entries.add(entry);
                 return this;
@@ -193,6 +195,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         @Override
         public ReplicatedLog append(ImmutableList<LogEntry> entries) {
             try {
+                dirty = true;
                 for (LogEntry entry : entries) {
                     segmentOutput.writeStreamable(entry);
                 }
@@ -235,6 +238,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                     this.segmentFile = newSegmentFile;
                     this.segmentOutput_ = newSegmentOutput_;
                     this.segmentOutput = newSegmentOutput;
+                    dirty = false;
                     return this;
                 } catch (IOException e) {
                     throw new IOError(e);
@@ -325,6 +329,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                     this.segmentOutput_ = newSegmentOutput_;
                     this.segmentOutput = newSegmentOutput;
                     this.start = lastIncludedIndex;
+                    dirty = false;
                     return this;
                 } else {
                     segmentOutput_.flush();
@@ -345,6 +350,7 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
                     this.segmentOutput_ = newSegmentOutput_;
                     this.segmentOutput = newSegmentOutput;
                     this.start = lastIncludedIndex;
+                    dirty = false;
                     return this;
                 }
             } catch (IOException e) {
@@ -363,10 +369,13 @@ public class FileReplicatedLogProvider extends AbstractComponent implements Prov
         }
 
         private void flush() {
-            try {
-                segmentOutput_.flush();
-            } catch (IOException e) {
-                throw new IOError(e);
+            if(dirty) {
+                try {
+                    segmentOutput_.flush();
+                    dirty = false;
+                } catch (IOException e) {
+                    throw new IOError(e);
+                }
             }
         }
 

@@ -16,6 +16,7 @@ public class InternalStreamService extends AbstractComponent implements Streamab
     private final TIntObjectMap<StreamableReader<? extends Streamable>> idToReaderMap = new TIntObjectHashMap<>(100, 0.5f, -1);
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);
 
+    @SuppressWarnings("unchecked")
     @Inject
     public InternalStreamService(Config config, Set<StreamableRegistry> registrySet) {
         super(config, StreamService.class);

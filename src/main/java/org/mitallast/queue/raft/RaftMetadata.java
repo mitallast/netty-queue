@@ -2,7 +2,6 @@ package org.mitallast.queue.raft;
 
 import com.google.common.collect.ImmutableSet;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
-import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.util.Optional;
@@ -18,14 +17,6 @@ public class RaftMetadata {
      */
     private final Optional<DiscoveryNode> votedFor;
     private final int votesReceived;
-
-    public RaftMetadata() {
-        this(new Term(0));
-    }
-
-    public RaftMetadata(Term currentTerm) {
-        this(currentTerm, new StableClusterConfiguration());
-    }
 
     public RaftMetadata(Term currentTerm, ClusterConfiguration config) {
         this(currentTerm, config, Optional.empty());

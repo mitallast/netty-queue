@@ -15,22 +15,20 @@ import java.util.concurrent.TimeUnit;
 public class DefaultRaftContext extends AbstractLifecycleComponent implements RaftContext {
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new DefaultThreadFactory("raft"));
-    private final Raft raft;
 
     @Inject
-    public DefaultRaftContext(Config config, Raft raft) {
+    public DefaultRaftContext(Config config) {
         super(config, RaftContext.class);
-        this.raft = raft;
     }
 
     @Override
-    public ScheduledFuture schedule(Streamable event, long timeout, TimeUnit timeUnit) {
-        return scheduler.schedule(() -> raft.apply(event), timeout, timeUnit);
+    public ScheduledFuture schedule(Runnable task, long timeout, TimeUnit timeUnit) {
+        return scheduler.schedule(task, timeout, timeUnit);
     }
 
     @Override
-    public ScheduledFuture scheduleAtFixedRate(Streamable event, long delay, long timeout, TimeUnit timeUnit) {
-        return scheduler.scheduleAtFixedRate(() -> raft.apply(event), delay, timeout, timeUnit);
+    public ScheduledFuture scheduleAtFixedRate(Runnable task, long delay, long timeout, TimeUnit timeUnit) {
+        return scheduler.scheduleAtFixedRate(task, delay, timeout, timeUnit);
     }
 
     @Override

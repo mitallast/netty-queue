@@ -32,9 +32,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mitallast.queue.raft.RaftState.Follower;
@@ -85,14 +83,19 @@ public class ClusterRaftTest extends BaseTest {
         client = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterClient.class)).iterator());
         byteClient = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterByteClient.class)).iterator());
 
+        ArrayList<Future> futures = new ArrayList<>();
         for (InternalNode item : this.node) {
-            submit(() -> {
+            Future future = submit(() -> {
                 try {
                     item.start();
                 } catch (IOException e) {
                     assert false : e;
                 }
             });
+            futures.add(future);
+        }
+        for (Future future : futures) {
+            future.get(10, TimeUnit.SECONDS);
         }
     }
 
@@ -469,8 +472,6 @@ public class ClusterRaftTest extends BaseTest {
             this.raft = raft;
             this.clusterDiscovery = clusterDiscovery;
 
-            controller.registerMessageHandler(RegisterSet.class, raft::apply);
-            controller.registerMessageHandler(RegisterGet.class, raft::apply);
             controller.registerMessageHandler(RegisterValue.class, this::receive);
         }
 
@@ -509,8 +510,6 @@ public class ClusterRaftTest extends BaseTest {
             this.raft = raft;
             this.clusterDiscovery = clusterDiscovery;
 
-            controller.registerMessageHandler(RegisterByteSet.class, raft::apply);
-            controller.registerMessageHandler(RegisterByteGet.class, raft::apply);
             controller.registerMessageHandler(RegisterByteOK.class, this::receiveOk);
             controller.registerMessageHandler(RegisterByteValue.class, this::receiveValue);
         }

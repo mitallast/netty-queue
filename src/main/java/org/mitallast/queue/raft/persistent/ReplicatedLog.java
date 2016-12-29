@@ -1,5 +1,5 @@
 
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft.persistent;
 
 import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.raft.Term;
@@ -7,9 +7,11 @@ import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Optional;
 
-public interface ReplicatedLog {
+public interface ReplicatedLog extends Closeable {
 
     boolean isEmpty();
 
@@ -52,4 +54,7 @@ public interface ReplicatedLog {
     boolean hasSnapshot();
 
     RaftSnapshot snapshot();
+
+    @Override
+    void close() throws IOException;
 }

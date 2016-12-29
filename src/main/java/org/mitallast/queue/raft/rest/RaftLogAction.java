@@ -7,7 +7,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
 import org.mitallast.queue.raft.Raft;
-import org.mitallast.queue.raft.log.ReplicatedLog;
+import org.mitallast.queue.raft.persistent.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;

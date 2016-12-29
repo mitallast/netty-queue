@@ -6,8 +6,8 @@ import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
-import org.mitallast.queue.raft.log.FileReplicatedLogProvider;
-import org.mitallast.queue.raft.log.ReplicatedLog;
+import org.mitallast.queue.raft.persistent.FilePersistentService;
+import org.mitallast.queue.raft.persistent.PersistentService;
 import org.mitallast.queue.raft.protocol.*;
 
 public class RaftModule extends AbstractModule {
@@ -16,9 +16,10 @@ public class RaftModule extends AbstractModule {
         bind(Raft.class).asEagerSingleton();
         bind(RaftHandler.class).asEagerSingleton();
         bind(DefaultRaftContext.class).asEagerSingleton();
+        bind(FilePersistentService.class).asEagerSingleton();
 
         bind(ClusterDiscovery.class).asEagerSingleton();
-        bind(ReplicatedLog.class).toProvider(FileReplicatedLogProvider.class);
+        bind(PersistentService.class).to(FilePersistentService.class);
 
         bind(RaftContext.class).to(DefaultRaftContext.class);
 

@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft;
 
 import com.google.common.collect.ImmutableSet;
 import gnu.trove.map.TObjectLongMap;

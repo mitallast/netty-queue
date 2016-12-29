@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 public interface RaftContext {
 
-    ScheduledFuture schedule(Streamable event, long timeout, TimeUnit timeUnit);
+    ScheduledFuture schedule(Runnable task, long timeout, TimeUnit timeUnit);
 
-    ScheduledFuture scheduleAtFixedRate(Streamable event, long delay, long timeout, TimeUnit timeUnit);
+    ScheduledFuture scheduleAtFixedRate(Runnable task, long delay, long timeout, TimeUnit timeUnit);
 }

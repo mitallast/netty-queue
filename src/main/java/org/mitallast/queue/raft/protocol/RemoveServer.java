@@ -3,7 +3,6 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;

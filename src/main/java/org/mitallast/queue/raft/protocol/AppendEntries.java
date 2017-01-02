@@ -4,29 +4,28 @@ import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
 public class AppendEntries implements Streamable {
     private final DiscoveryNode member;
-    private final Term term;
-    private final Term prevLogTerm;
+    private final long term;
+    private final long prevLogTerm;
     private final long prevLogIndex;
     private final long leaderCommit;
     private final ImmutableList<LogEntry> entries;
 
     public AppendEntries(StreamInput stream) throws IOException {
         member = stream.readStreamable(DiscoveryNode::new);
-        term = new Term(stream.readLong());
-        prevLogTerm = new Term(stream.readLong());
+        term = stream.readLong();
+        prevLogTerm = stream.readLong();
         prevLogIndex = stream.readLong();
         leaderCommit = stream.readLong();
         entries = stream.readStreamableList(LogEntry::new);
     }
 
-    public AppendEntries(DiscoveryNode member, Term term, Term prevLogTerm, long prevLogIndex, ImmutableList<LogEntry> entries, long leaderCommit) {
+    public AppendEntries(DiscoveryNode member, long term, long prevLogTerm, long prevLogIndex, ImmutableList<LogEntry> entries, long leaderCommit) {
         this.member = member;
         this.term = term;
         this.prevLogTerm = prevLogTerm;
@@ -39,11 +38,11 @@ public class AppendEntries implements Streamable {
         return member;
     }
 
-    public Term getTerm() {
+    public long getTerm() {
         return term;
     }
 
-    public Term getPrevLogTerm() {
+    public long getPrevLogTerm() {
         return prevLogTerm;
     }
 
@@ -62,8 +61,8 @@ public class AppendEntries implements Streamable {
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeStreamable(member);
-        stream.writeLong(term.getTerm());
-        stream.writeLong(prevLogTerm.getTerm());
+        stream.writeLong(term);
+        stream.writeLong(prevLogTerm);
         stream.writeLong(prevLogIndex);
         stream.writeLong(leaderCommit);
         stream.writeStreamableList(entries);
@@ -79,8 +78,8 @@ public class AppendEntries implements Streamable {
         if (prevLogIndex != that.prevLogIndex) return false;
         if (leaderCommit != that.leaderCommit) return false;
         if (!member.equals(that.member)) return false;
-        if (!term.equals(that.term)) return false;
-        if (!prevLogTerm.equals(that.prevLogTerm)) return false;
+        if (term != that.term) return false;
+        if (prevLogTerm != that.prevLogTerm) return false;
         return entries.equals(that.entries);
 
     }
@@ -88,8 +87,8 @@ public class AppendEntries implements Streamable {
     @Override
     public int hashCode() {
         int result = member.hashCode();
-        result = 31 * result + term.hashCode();
-        result = 31 * result + prevLogTerm.hashCode();
+        result = 31 * result + (int) (term ^ (term >>> 32));
+        result = 31 * result + (int) (prevLogTerm ^ (prevLogTerm >>> 32));
         result = 31 * result + (int) (prevLogIndex ^ (prevLogIndex >>> 32));
         result = 31 * result + (int) (leaderCommit ^ (leaderCommit >>> 32));
         result = 31 * result + entries.hashCode();

@@ -40,7 +40,7 @@ public class RaftStateAction extends BaseRestHandler {
             try (XStreamBuilder builder = createBuilder(request, buffer)) {
                 builder.writeStartObject();
 
-                builder.writeNumberField("currentTerm", meta.getCurrentTerm().getTerm());
+                builder.writeNumberField("currentTerm", meta.getCurrentTerm());
                 builder.writeObjectFieldStart("config");
 
                 builder.writeBooleanField("isTransitioning", meta.getConfig().isTransitioning());

@@ -3,23 +3,22 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
 public class AppendSuccessful implements Streamable {
     private final DiscoveryNode member;
-    private final Term term;
+    private final long term;
     private final long lastIndex;
 
     public AppendSuccessful(StreamInput stream) throws IOException {
         member = stream.readStreamable(DiscoveryNode::new);
-        term = new Term(stream.readLong());
+        term = stream.readLong();
         lastIndex = stream.readLong();
     }
 
-    public AppendSuccessful(DiscoveryNode member, Term term, long lastIndex) {
+    public AppendSuccessful(DiscoveryNode member, long term, long lastIndex) {
         this.member = member;
         this.term = term;
         this.lastIndex = lastIndex;
@@ -29,7 +28,7 @@ public class AppendSuccessful implements Streamable {
         return member;
     }
 
-    public Term getTerm() {
+    public long getTerm() {
         return term;
     }
 
@@ -40,7 +39,7 @@ public class AppendSuccessful implements Streamable {
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeStreamable(member);
-        stream.writeLong(term.getTerm());
+        stream.writeLong(term);
         stream.writeLong(lastIndex);
     }
 

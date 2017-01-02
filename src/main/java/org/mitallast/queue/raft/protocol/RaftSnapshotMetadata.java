@@ -4,28 +4,27 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
-import org.mitallast.queue.raft.Term;
 
 import java.io.IOException;
 
 public class RaftSnapshotMetadata implements Streamable {
-    private final Term lastIncludedTerm;
+    private final long lastIncludedTerm;
     private final long lastIncludedIndex;
     private final ClusterConfiguration config;
 
     public RaftSnapshotMetadata(StreamInput stream) throws IOException {
-        lastIncludedTerm = new Term(stream.readLong());
+        lastIncludedTerm = stream.readLong();
         lastIncludedIndex = stream.readLong();
         config = stream.readStreamable();
     }
 
-    public RaftSnapshotMetadata(Term lastIncludedTerm, long lastIncludedIndex, ClusterConfiguration config) {
+    public RaftSnapshotMetadata(long lastIncludedTerm, long lastIncludedIndex, ClusterConfiguration config) {
         this.lastIncludedTerm = lastIncludedTerm;
         this.lastIncludedIndex = lastIncludedIndex;
         this.config = config;
     }
 
-    public Term getLastIncludedTerm() {
+    public long getLastIncludedTerm() {
         return lastIncludedTerm;
     }
 
@@ -39,7 +38,7 @@ public class RaftSnapshotMetadata implements Streamable {
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeLong(lastIncludedTerm.getTerm());
+        stream.writeLong(lastIncludedTerm);
         stream.writeLong(lastIncludedIndex);
         stream.writeClass(config.getClass());
         stream.writeStreamable(config);
@@ -52,15 +51,14 @@ public class RaftSnapshotMetadata implements Streamable {
 
         RaftSnapshotMetadata that = (RaftSnapshotMetadata) o;
 
+        if (lastIncludedTerm != that.lastIncludedTerm) return false;
         if (lastIncludedIndex != that.lastIncludedIndex) return false;
-        if (!lastIncludedTerm.equals(that.lastIncludedTerm)) return false;
         return config.equals(that.config);
-
     }
 
     @Override
     public int hashCode() {
-        int result = lastIncludedTerm.hashCode();
+        int result = (int) (lastIncludedTerm ^ (lastIncludedTerm >>> 32));
         result = 31 * result + (int) (lastIncludedIndex ^ (lastIncludedIndex >>> 32));
         result = 31 * result + config.hashCode();
         return result;

@@ -43,7 +43,7 @@ public class RaftLogAction extends BaseRestHandler {
                 builder.writeArrayFieldStart("entries");
                 for (LogEntry logEntry : log.entries()) {
                     builder.writeStartObject();
-                    builder.writeNumberField("term", logEntry.getTerm().getTerm());
+                    builder.writeNumberField("term", logEntry.getTerm());
                     builder.writeNumberField("index", logEntry.getIndex());
                     builder.writeStringField("command", logEntry.getCommand().getClass().getSimpleName());
                     builder.writeObjectFieldStart("client");

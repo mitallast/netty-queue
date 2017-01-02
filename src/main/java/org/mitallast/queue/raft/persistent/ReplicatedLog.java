@@ -2,7 +2,6 @@
 package org.mitallast.queue.raft.persistent;
 
 import com.google.common.collect.ImmutableList;
-import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -23,9 +22,9 @@ public interface ReplicatedLog extends Closeable {
 
     long committedIndex();
 
-    boolean containsMatchingEntry(Term otherPrevTerm, long otherPrevIndex);
+    boolean containsMatchingEntry(long otherPrevTerm, long otherPrevIndex);
 
-    Optional<Term> lastTerm();
+    Optional<Long> lastTerm();
 
     long lastIndex();
 
@@ -33,15 +32,15 @@ public interface ReplicatedLog extends Closeable {
 
     long nextIndex();
 
-    ReplicatedLog commit(long committedIndex);
+    ReplicatedLog commit(long committedIndex) throws IOException;
 
-    ReplicatedLog append(LogEntry entry);
+    ReplicatedLog append(LogEntry entry) throws IOException;
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries);
+    ReplicatedLog append(ImmutableList<LogEntry> entries) throws IOException;
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex);
+    ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex) throws IOException;
 
-    ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node);
+    ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) throws IOException;
 
     ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);
 
@@ -49,7 +48,7 @@ public interface ReplicatedLog extends Closeable {
 
     boolean containsEntryAt(long index);
 
-    Term termAt(long index);
+    long termAt(long index);
 
     boolean hasSnapshot();
 

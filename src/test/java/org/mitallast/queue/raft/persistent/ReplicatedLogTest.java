@@ -1,4 +1,4 @@
-package org.mitallast.queue.raft.log;
+package org.mitallast.queue.raft.persistent;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -10,11 +10,8 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.file.FileService;
 import org.mitallast.queue.common.stream.*;
-import org.mitallast.queue.raft.Term;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
-import org.mitallast.queue.raft.persistent.FilePersistentService;
-import org.mitallast.queue.raft.persistent.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
@@ -26,15 +23,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class FileReplicatedLogTest extends BaseTest {
+public class ReplicatedLogTest extends BaseTest {
 
-    private final Term term0 = new Term(0);
-    private final Term term1 = new Term(1);
-    private final Term term2 = new Term(2);
-    private final Term term3 = new Term(3);
+    private final long term = 1;
+    private final long term0 = 0;
+    private final long term1 = 1;
+    private final long term2 = 2;
+    private final long term3 = 3;
     private final DiscoveryNode node1 = new DiscoveryNode("127.0.0.1", 8900);
     private final StableClusterConfiguration clusterConf = new StableClusterConfiguration();
-    private Term term = term1;
     private final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1, node1);
     private final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2, node1);
     private final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3, node1);
@@ -80,6 +77,7 @@ public class FileReplicatedLogTest extends BaseTest {
     public void testReopen() throws Exception {
         ReplicatedLog origin = log().append(entry1).append(entry2).append(entry3).commit(2).compactWith(snapshot2, node1).commit(3);
         logger.info("origin:   {}", origin);
+        origin.close();
 
         ReplicatedLog reopened = log();
         logger.info("reopened: {}", reopened);
@@ -98,6 +96,16 @@ public class FileReplicatedLogTest extends BaseTest {
         Assert.assertEquals(2, files.size());
         Assert.assertTrue(files.contains("state.bin"));
         Assert.assertTrue(files.contains("2.log"));
+    }
+
+    @Test
+    public void testContainsEntry() throws Exception {
+        Assert.assertTrue(log().append(entry1).contains(entry1));
+    }
+
+    @Test
+    public void testNotContainsEntry() throws Exception {
+        Assert.assertFalse(log().append(entry1).contains(entry2));
     }
 
     @Test
@@ -343,6 +351,19 @@ public class FileReplicatedLogTest extends BaseTest {
     public void testEntriesBatchFrom1AfterCompaction3() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot1, node1);
         Assert.assertEquals(ImmutableList.of(entry3), compacted.entriesBatchFrom(3, 3));
+    }
+
+    @Test
+    public void testCompactEmpty() throws Exception {
+        ReplicatedLog compacted = log().compactWith(snapshot1, node1);
+        Assert.assertEquals(ImmutableList.of(snapshotEntry1), compacted.entries());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testCompactWithOldSnapshot() throws Exception {
+        log().append(entry1).append(entry2).append(entry3)
+            .compactWith(snapshot3, node1)
+            .compactWith(snapshot1, node1);
     }
 
     @Test

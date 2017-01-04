@@ -1112,7 +1112,11 @@ public class Raft extends AbstractLifecycleComponent {
                     }
                 }
             }
-            return stay(meta);
+            if (replicatedLog.committedEntries() >= snapshotInterval) {
+                return stay(meta).apply(InitLogSnapshot.INSTANCE);
+            } else {
+                return stay(meta);
+            }
         }
 
         @Override

@@ -10,7 +10,6 @@ public class BenchmarkModule extends AbstractModule {
     protected void configure() {
         bind(BenchmarkService.class).asEagerSingleton();
         bind(BenchmarkFSM.class).asEagerSingleton();
-        bind(ResourceFSM.class).to(BenchmarkFSM.class);
 
         Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
         streamableBinder.addBinding().toInstance(StreamableRegistry.of(BenchmarkRequest.class, BenchmarkRequest::new, 5501));

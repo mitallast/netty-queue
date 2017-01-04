@@ -3,7 +3,7 @@ package org.mitallast.queue.benchmark;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.raft.ResourceFSM;
+import org.mitallast.queue.raft.resource.ResourceFSM;
 
 public class BenchmarkModule extends AbstractModule {
     @Override

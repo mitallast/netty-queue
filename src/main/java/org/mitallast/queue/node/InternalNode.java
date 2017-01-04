@@ -62,16 +62,10 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
             }
         }
 
-
         modules.add((Module[]) plugins);
         injector = modules.createInjector();
 
         logger.info("initialized");
-    }
-
-    @Override
-    public DiscoveryNode localNode() {
-        return injector.getInstance(TransportServer.class).localNode();
     }
 
     @Override

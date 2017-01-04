@@ -14,6 +14,7 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.persistent.PersistentService;
 import org.mitallast.queue.raft.persistent.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
+import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
@@ -58,7 +59,7 @@ public class Raft extends AbstractLifecycleComponent {
     private final ClusterDiscovery clusterDiscovery;
     private final PersistentService persistentService;
     private final ReplicatedLog replicatedLog;
-    private final ResourceFSM resourceFSM;
+    private final ResourceRegistry registry;
     private final boolean bootstrap;
     private final long electionDeadline;
     private final long heartbeat;
@@ -79,7 +80,7 @@ public class Raft extends AbstractLifecycleComponent {
         TransportController transportController,
         ClusterDiscovery clusterDiscovery,
         PersistentService persistentService,
-        ResourceFSM resourceFSM,
+        ResourceRegistry registry,
         RaftContext context
     ) throws IOException {
         super(config.getConfig("raft"), Raft.class);
@@ -88,7 +89,7 @@ public class Raft extends AbstractLifecycleComponent {
         this.clusterDiscovery = clusterDiscovery;
         this.persistentService = persistentService;
         this.replicatedLog = persistentService.openLog();
-        this.resourceFSM = resourceFSM;
+        this.registry = registry;
         this.context = context;
 
         recentlyContactedByLeader = Optional.empty();
@@ -319,11 +320,9 @@ public class Raft extends AbstractLifecycleComponent {
             RaftSnapshotMetadata snapshotMeta = new RaftSnapshotMetadata(replicatedLog.termAt(committedIndex), committedIndex, meta.getConfig());
             logger.info("init snapshot up to: {}:{}", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
 
-            Optional<RaftSnapshot> snapshot = resourceFSM.prepareSnapshot(snapshotMeta);
-            if (snapshot.isPresent()) {
-                logger.info("successfully prepared snapshot for {}:{}, compacting log now", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
-                replicatedLog.compactWith(snapshot.get(), clusterDiscovery.self());
-            }
+            RaftSnapshot snapshot = registry.prepareSnapshot(snapshotMeta);
+            logger.info("successfully prepared snapshot for {}:{}, compacting log now", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
+            replicatedLog.compactWith(snapshot, clusterDiscovery.self());
 
             return stay(meta);
         }
@@ -525,7 +524,7 @@ public class Raft extends AbstractLifecycleComponent {
                         logger.warn("unexpected raft snapshot in log");
                     } else {
                         logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
-                        resourceFSM.apply(entry.getCommand());
+                        registry.apply(entry.getCommand());
                     }
                     replicatedLog.commit(entry.getIndex());
                 }
@@ -628,7 +627,9 @@ public class Raft extends AbstractLifecycleComponent {
 
                 meta = meta.withConfig(message.getSnapshot().getMeta().getConfig());
                 replicatedLog.compactWith(message.getSnapshot(), clusterDiscovery.self());
-                resourceFSM.apply(message.getSnapshot().getData());
+                for (Streamable streamable : message.getSnapshot().getData()) {
+                    registry.apply(streamable);
+                }
 
                 logger.info("response snapshot installed in {} last index {}", meta.getCurrentTerm(), replicatedLog.lastIndex());
                 send(message.getLeader(), new InstallSnapshotSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
@@ -1104,7 +1105,7 @@ public class Raft extends AbstractLifecycleComponent {
                         logger.trace("ignore noop entry");
                     } else {
                         logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex(), entry.getCommand().getClass(), entry.getClient());
-                        Streamable result = resourceFSM.apply(entry.getCommand());
+                        Streamable result = registry.apply(entry.getCommand());
                         if (result != null) {
                             send(entry.getClient(), result);
                         }

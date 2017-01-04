@@ -10,6 +10,4 @@ public interface Node extends LifecycleComponent {
     Config config();
 
     Injector injector();
-
-    DiscoveryNode localNode();
 }

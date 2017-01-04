@@ -54,7 +54,7 @@ public class BenchmarkService extends AbstractComponent {
             public void accept(BenchmarkResponse response, Throwable throwable) {
                 if(counter.decrementAndGet() == 0) {
                     long end = System.currentTimeMillis();
-                    logger.info("start benchmark: requests={} data size={} at {}ms", requests, dataSize, end - start);
+                    logger.info("finish benchmark: requests={} data size={} at {}ms", requests, dataSize, end - start);
                     resultFuture.complete(new BenchmarkResult(
                         requests, dataSize,
                         start, end

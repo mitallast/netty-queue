@@ -22,8 +22,9 @@ import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
-import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
+import org.mitallast.queue.raft.resource.ResourceFSM;
+import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.transport.TransportController;
 
 import java.io.IOException;
@@ -272,32 +273,37 @@ public class ClusterRaftTest extends BaseTest {
         private volatile ByteBuf buff = Unpooled.EMPTY_BUFFER;
 
         @Inject
-        public RegisterResourceFSM(Config config) {
+        public RegisterResourceFSM(Config config, ResourceRegistry registry) {
             super(config, RegisterResourceFSM.class);
+            registry.register(this);
+            registry.register(RegisterSet.class, this::handle);
+            registry.register(RegisterGet.class, this::handle);
+            registry.register(RegisterByteSet.class, this::handle);
+            registry.register(RegisterByteGet.class, this::handle);
+        }
+
+        public Streamable handle(RegisterSet registerSet) {
+            logger.debug("prev value: {} new value: {}", value, registerSet.value);
+            value = registerSet.value;
+            return new RegisterValue(registerSet.requestId, value);
+        }
+
+        public Streamable handle(RegisterGet message) {
+            return new RegisterValue(message.requestId, value);
+        }
+
+        public Streamable handle(RegisterByteSet set) {
+            logger.debug("prev value: {} new value: {}", value, set.buff);
+            buff = set.buff;
+            return new RegisterByteOK(set.requestId);
+        }
+
+        public Streamable handle(RegisterByteGet message) {
+            return new RegisterByteValue(message.requestId, buff);
         }
 
         @Override
-        public Streamable apply(Streamable message) {
-            if (message instanceof RegisterSet) {
-                RegisterSet registerSet = (RegisterSet) message;
-                logger.debug("prev value: {} new value: {}", value, registerSet.value);
-                value = registerSet.value;
-                return new RegisterValue(registerSet.requestId, value);
-            } else if (message instanceof RegisterGet) {
-                return new RegisterValue(((RegisterGet) message).requestId, value);
-            } else if (message instanceof RegisterByteSet) {
-                RegisterByteSet set = (RegisterByteSet) message;
-                logger.debug("prev value: {} new value: {}", value, set.buff);
-                buff = set.buff;
-                return new RegisterByteOK(set.requestId);
-            } else if (message instanceof RegisterByteGet) {
-                return new RegisterByteValue(((RegisterByteGet) message).requestId, buff);
-            }
-            return null;
-        }
-
-        @Override
-        public Optional<RaftSnapshot> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+        public Optional<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
             return Optional.empty();
         }
     }

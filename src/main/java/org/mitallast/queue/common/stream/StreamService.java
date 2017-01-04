@@ -6,8 +6,6 @@ import java.io.*;
 
 public interface StreamService {
 
-    // <T extends Streamable> void register(Class<T> streamableClass, StreamableReader<T> reader, int id);
-
     StreamInput input(ByteBuf buffer);
 
     StreamInput input(ByteBuf buffer, int size);

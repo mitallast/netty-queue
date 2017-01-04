@@ -4,7 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import org.mitallast.queue.blob.protocol.*;
 import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.raft.ResourceFSM;
+import org.mitallast.queue.raft.resource.ResourceFSM;
 
 public class BlobModule extends AbstractModule {
     @Override
@@ -14,7 +14,6 @@ public class BlobModule extends AbstractModule {
         bind(DistributedStorageFSM.class).asEagerSingleton();
 
         bind(BlobStorageService.class).to(LocalBlobStorageService.class);
-        bind(ResourceFSM.class).to(DistributedStorageFSM.class);
 
         Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 

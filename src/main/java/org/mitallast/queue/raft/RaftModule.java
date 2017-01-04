@@ -9,6 +9,7 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.persistent.FilePersistentService;
 import org.mitallast.queue.raft.persistent.PersistentService;
 import org.mitallast.queue.raft.protocol.*;
+import org.mitallast.queue.raft.resource.ResourceRegistry;
 
 public class RaftModule extends AbstractModule {
     @Override
@@ -22,6 +23,8 @@ public class RaftModule extends AbstractModule {
         bind(PersistentService.class).to(FilePersistentService.class);
 
         bind(RaftContext.class).to(DefaultRaftContext.class);
+
+        bind(ResourceRegistry.class).asEagerSingleton();
 
         Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 

@@ -28,6 +28,7 @@ import org.mitallast.queue.raft.persistent.FilePersistentService;
 import org.mitallast.queue.raft.persistent.PersistentService;
 import org.mitallast.queue.raft.persistent.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
+import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
@@ -75,7 +76,7 @@ public class RaftTest extends BaseTest {
     private ClusterDiscovery clusterDiscovery;
 
     @Mock
-    private ResourceFSM resourceFSM;
+    private ResourceRegistry registry;
 
     private TestRaftContext context;
 
@@ -102,7 +103,7 @@ public class RaftTest extends BaseTest {
         when(transportService.channel(node3)).thenReturn(transportChannel3);
         when(transportService.channel(node4)).thenReturn(transportChannel4);
         when(transportService.channel(node5)).thenReturn(transportChannel5);
-        when(resourceFSM.apply(TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
+        when(registry.apply(TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
 
         context = new TestRaftContext();
         config = ConfigFactory.defaultReference();
@@ -147,7 +148,7 @@ public class RaftTest extends BaseTest {
             injector.getInstance(TransportController.class),
             injector.getInstance(ClusterDiscovery.class),
             persistentService,
-            resourceFSM,
+            registry,
             context
         );
         raft.start();
@@ -369,7 +370,7 @@ public class RaftTest extends BaseTest {
         start();
         ClusterConfiguration conf = new StableClusterConfiguration(node1);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        RaftSnapshot snapshot = new RaftSnapshot(metadata, Noop.INSTANCE);
+        RaftSnapshot snapshot = new RaftSnapshot(metadata, ImmutableList.of());
         raft.apply(new InstallSnapshot(node4, 0, snapshot));
         expectFollower();
         expectTerm(1);
@@ -382,7 +383,7 @@ public class RaftTest extends BaseTest {
         start();
         ClusterConfiguration conf = new StableClusterConfiguration(node1);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        RaftSnapshot snapshot = new RaftSnapshot(metadata, Noop.INSTANCE);
+        RaftSnapshot snapshot = new RaftSnapshot(metadata, ImmutableList.of());
         raft.apply(new InstallSnapshot(node4, 2, snapshot));
         expectFollower();
         expectTerm(2);
@@ -395,7 +396,7 @@ public class RaftTest extends BaseTest {
         start();
         ClusterConfiguration conf = new StableClusterConfiguration(node1);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        RaftSnapshot snapshot = new RaftSnapshot(metadata, Noop.INSTANCE);
+        RaftSnapshot snapshot = new RaftSnapshot(metadata, ImmutableList.of());
         raft.apply(new InstallSnapshot(node4, 1, snapshot));
         expectFollower();
         expectTerm(1);
@@ -644,7 +645,7 @@ public class RaftTest extends BaseTest {
         expectTerm(2);
         ClusterConfiguration conf = new StableClusterConfiguration(node1);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        RaftSnapshot snapshot = new RaftSnapshot(metadata, Noop.INSTANCE);
+        RaftSnapshot snapshot = new RaftSnapshot(metadata, ImmutableList.of());
         raft.apply(new InstallSnapshot(node4, 2, snapshot));
         expectFollower();
         expectTerm(2);
@@ -660,7 +661,7 @@ public class RaftTest extends BaseTest {
         expectTerm(2);
         ClusterConfiguration conf = new StableClusterConfiguration(node1);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        RaftSnapshot snapshot = new RaftSnapshot(metadata, Noop.INSTANCE);
+        RaftSnapshot snapshot = new RaftSnapshot(metadata, ImmutableList.of());
         raft.apply(new InstallSnapshot(node4, 3, snapshot));
         expectFollower();
         expectTerm(3);
@@ -676,7 +677,7 @@ public class RaftTest extends BaseTest {
         expectTerm(2);
         ClusterConfiguration conf = new StableClusterConfiguration(node1);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        RaftSnapshot snapshot = new RaftSnapshot(metadata, Noop.INSTANCE);
+        RaftSnapshot snapshot = new RaftSnapshot(metadata, ImmutableList.of());
         raft.apply(new InstallSnapshot(node4, 1, snapshot));
         expectCandidate();
         expectTerm(2);
@@ -836,7 +837,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        raft.apply(new InstallSnapshot(node2, 1, new RaftSnapshot(metadata, Noop.INSTANCE)));
+        raft.apply(new InstallSnapshot(node2, 1, new RaftSnapshot(metadata, ImmutableList.of())));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(0, raft.replicatedLog().committedIndex());
@@ -847,7 +848,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        raft.apply(new InstallSnapshot(node2, 2, new RaftSnapshot(metadata, Noop.INSTANCE)));
+        raft.apply(new InstallSnapshot(node2, 2, new RaftSnapshot(metadata, ImmutableList.of())));
         expectLeader();
         expectTerm(2);
         Assert.assertEquals(0, raft.replicatedLog().committedIndex());
@@ -858,7 +859,7 @@ public class RaftTest extends BaseTest {
         becameLeader();
         StableClusterConfiguration conf = new StableClusterConfiguration(node1, node2, node3);
         RaftSnapshotMetadata metadata = new RaftSnapshotMetadata(1, 1, conf);
-        raft.apply(new InstallSnapshot(node2, 3, new RaftSnapshot(metadata, Noop.INSTANCE)));
+        raft.apply(new InstallSnapshot(node2, 3, new RaftSnapshot(metadata, ImmutableList.of())));
         expectFollower();
         expectTerm(3);
         Assert.assertEquals(0, raft.replicatedLog().committedIndex());
@@ -996,8 +997,8 @@ public class RaftTest extends BaseTest {
 
         // snapshot
         RaftSnapshotMetadata meta = new RaftSnapshotMetadata(2, 2, new StableClusterConfiguration(node1, node2, node3));
-        RaftSnapshot snapshot = new RaftSnapshot(meta, Noop.INSTANCE);
-        when(resourceFSM.prepareSnapshot(meta)).thenReturn(Optional.of(snapshot));
+        RaftSnapshot snapshot = new RaftSnapshot(meta, ImmutableList.of());
+        when(registry.prepareSnapshot(meta)).thenReturn(snapshot);
         raft.apply(InitLogSnapshot.INSTANCE);
         ReplicatedLog log = raft.replicatedLog();
         logger.info("log: {}", log);
@@ -1231,12 +1232,12 @@ public class RaftTest extends BaseTest {
             Preconditions.checkNotNull(transportService);
             Preconditions.checkNotNull(transportController);
             Preconditions.checkNotNull(clusterDiscovery);
-            Preconditions.checkNotNull(resourceFSM);
+            Preconditions.checkNotNull(registry);
             Preconditions.checkNotNull(context);
             bind(TransportService.class).toInstance(transportService);
             bind(TransportController.class).toInstance(transportController);
             bind(ClusterDiscovery.class).toInstance(clusterDiscovery);
-            bind(ResourceFSM.class).toInstance(resourceFSM);
+            bind(ResourceRegistry.class).toInstance(registry);
             bind(RaftContext.class).toInstance(context);
             bind(FilePersistentService.class).asEagerSingleton();
             bind(PersistentService.class).to(FilePersistentService.class);

@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.protocol;
 
+import com.google.common.collect.ImmutableList;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -9,44 +10,44 @@ import java.io.IOException;
 
 public class RaftSnapshot implements Streamable {
     private final RaftSnapshotMetadata meta;
-    private final Streamable data;
+    private final ImmutableList<Streamable> data;
+
+    public RaftSnapshot(RaftSnapshotMetadata meta, ImmutableList<Streamable> data) {
+        this.meta = meta;
+        this.data = data;
+    }
 
     public RaftSnapshot(StreamInput stream) throws IOException {
         meta = stream.readStreamable(RaftSnapshotMetadata::new);
-        if (stream.readBoolean()) {
-            data = stream.readStreamable();
-        } else {
-            data = null;
+        int size = stream.readInt();
+        ImmutableList.Builder<Streamable> builder = ImmutableList.builder();
+        for (int i = 0; i < size; i++) {
+            Streamable streamable = stream.readStreamable();
+            builder.add(streamable);
         }
+        data = builder.build();
     }
 
-    public RaftSnapshot(RaftSnapshotMetadata meta, Streamable data) {
-        this.meta = meta;
-        this.data = data;
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeStreamable(meta);
+        stream.writeInt(data.size());
+        for (Streamable item : data) {
+            stream.writeClass(item.getClass());
+            stream.writeStreamable(item);
+        }
     }
 
     public RaftSnapshotMetadata getMeta() {
         return meta;
     }
 
-    public Streamable getData() {
+    public ImmutableList<Streamable> getData() {
         return data;
     }
 
     public LogEntry toEntry(DiscoveryNode node) {
         return new LogEntry(this, meta.getLastIncludedTerm(), meta.getLastIncludedIndex(), node);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamable(meta);
-        if (data != null) {
-            stream.writeBoolean(true);
-            stream.writeClass(data.getClass());
-            stream.writeStreamable(data);
-        } else {
-            stream.writeBoolean(false);
-        }
     }
 
     @Override
@@ -56,15 +57,13 @@ public class RaftSnapshot implements Streamable {
 
         RaftSnapshot that = (RaftSnapshot) o;
 
-        if (!meta.equals(that.meta)) return false;
-        return data != null ? data.equals(that.data) : that.data == null;
-
+        return meta.equals(that.meta) && data.equals(that.data);
     }
 
     @Override
     public int hashCode() {
         int result = meta.hashCode();
-        result = 31 * result + (data != null ? data.hashCode() : 0);
+        result = 31 * result + data.hashCode();
         return result;
     }
 

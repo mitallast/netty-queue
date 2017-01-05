@@ -200,6 +200,20 @@ public class RaftTest extends BaseTest {
     }
 
     @Test
+    public void testFollowerSendClientMessageToRecentLeader() throws Exception {
+        appendClusterConf();
+        start();
+        expectFollower();
+        expectTerm(1);
+        raft.apply(appendEntries(node2, 1, 1, 1, 1));
+        Assert.assertEquals(Optional.of(node2), raft.recentLeader());
+
+        raft.apply(new ClientMessage(node2, Noop.INSTANCE));
+        Assert.assertEquals(ImmutableList.of(), raft.currentStashed());
+        verify(transportChannel2).message(new ClientMessage(node2, Noop.INSTANCE));
+    }
+
+    @Test
     public void testFollowerElectionTimeout() throws Exception {
         appendClusterConf();
         start();
@@ -682,6 +696,30 @@ public class RaftTest extends BaseTest {
         expectCandidate();
         expectTerm(2);
         verify(transportChannel4).message(new InstallSnapshotRejected(node1, 2));
+    }
+
+    @Test
+    public void testCandidateIgnoreAddServerResponse() throws Exception {
+        appendClusterConf();
+        start();
+        electionTimeout();
+        expectCandidate();
+        expectTerm(2);
+        raft.apply(new AddServerResponse(AddServerResponse.Status.OK, Optional.empty()));
+        expectCandidate();
+        expectTerm(2);
+    }
+
+    @Test
+    public void testCandidateIgnoreRemoveServerResponse() throws Exception {
+        appendClusterConf();
+        start();
+        electionTimeout();
+        expectCandidate();
+        expectTerm(2);
+        raft.apply(new RemoveServerResponse(RemoveServerResponse.Status.OK, Optional.empty()));
+        expectCandidate();
+        expectTerm(2);
     }
 
     // leader

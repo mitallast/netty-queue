@@ -2,10 +2,11 @@ package org.mitallast.queue.raft.protocol;
 
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 
-public class ElectedAsLeader implements ElectionMessage {
+public class ElectedAsLeader implements Streamable {
 
     public static final ElectedAsLeader INSTANCE = new ElectedAsLeader();
 

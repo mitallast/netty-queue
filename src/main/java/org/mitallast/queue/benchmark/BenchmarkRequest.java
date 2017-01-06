@@ -9,29 +9,38 @@ import java.io.IOException;
 
 public class BenchmarkRequest implements Streamable {
     private final long request;
-    private final ByteBuf data;
+    private final byte[] data;
 
-    public BenchmarkRequest(long request, ByteBuf data) {
+    public BenchmarkRequest(long request, byte[] data) {
         this.request = request;
         this.data = data;
     }
 
     public BenchmarkRequest(StreamInput stream) throws IOException {
         this.request = stream.readLong();
-        this.data = stream.readByteBuf();
+        int size = stream.readInt();
+        if (size > 0) {
+            this.data = new byte[size];
+            stream.readFully(this.data);
+        } else {
+            this.data = new byte[0];
+        }
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeLong(request);
-        stream.writeByteBuf(data);
+        stream.write(data.length);
+        if (data.length > 0) {
+            stream.write(data);
+        }
     }
 
     public long getRequest() {
         return request;
     }
 
-    public ByteBuf getData() {
+    public byte[] getData() {
         return data;
     }
 }

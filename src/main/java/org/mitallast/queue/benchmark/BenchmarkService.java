@@ -2,8 +2,6 @@ package org.mitallast.queue.benchmark;
 
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
@@ -63,13 +61,13 @@ public class BenchmarkService extends AbstractComponent {
             }
         };
         for(int i=0; i<requests; i++) {
-            CompletableFuture<BenchmarkResponse> future = send(Unpooled.wrappedBuffer(bytes));
+            CompletableFuture<BenchmarkResponse> future = send(bytes);
             future.whenComplete(handler);
         }
         return resultFuture;
     }
 
-    private CompletableFuture<BenchmarkResponse> send(ByteBuf data) {
+    private CompletableFuture<BenchmarkResponse> send(byte[] data) {
         long request = requestId.incrementAndGet();
         CompletableFuture<BenchmarkResponse> future = new CompletableFuture<>();
         requests.put(request, future);

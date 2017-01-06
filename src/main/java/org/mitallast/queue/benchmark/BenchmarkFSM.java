@@ -20,7 +20,6 @@ public class BenchmarkFSM extends AbstractComponent implements ResourceFSM {
     }
 
     public Streamable handle(BenchmarkRequest request) {
-        request.getData().release();
         return new BenchmarkResponse(request.getRequest());
     }
 

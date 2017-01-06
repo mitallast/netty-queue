@@ -9,9 +9,7 @@ import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.transport.TransportController;
 
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
@@ -21,6 +19,7 @@ public class BenchmarkService extends AbstractComponent {
     private final Raft raft;
     private final ConcurrentMap<Long, CompletableFuture<BenchmarkResponse>> requests = new ConcurrentHashMap<>();
     private final AtomicLong requestId = new AtomicLong();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     @Inject
     public BenchmarkService(
@@ -50,7 +49,7 @@ public class BenchmarkService extends AbstractComponent {
 
             @Override
             public void accept(BenchmarkResponse response, Throwable throwable) {
-                if(counter.decrementAndGet() == 0) {
+                if (counter.decrementAndGet() == 0) {
                     long end = System.currentTimeMillis();
                     logger.info("finish benchmark: requests={} data size={} at {}ms", requests, dataSize, end - start);
                     resultFuture.complete(new BenchmarkResult(
@@ -60,10 +59,12 @@ public class BenchmarkService extends AbstractComponent {
                 }
             }
         };
-        for(int i=0; i<requests; i++) {
-            CompletableFuture<BenchmarkResponse> future = send(bytes);
-            future.whenComplete(handler);
-        }
+        executorService.execute(() -> {
+            for (int i = 0; i < requests; i++) {
+                CompletableFuture<BenchmarkResponse> future = send(bytes);
+                future.whenComplete(handler);
+            }
+        });
         return resultFuture;
     }
 
@@ -77,7 +78,7 @@ public class BenchmarkService extends AbstractComponent {
 
     private void handle(BenchmarkResponse response) {
         CompletableFuture<BenchmarkResponse> completableFuture = requests.remove(response.getRequest());
-        if(completableFuture != null) {
+        if (completableFuture != null) {
             completableFuture.complete(response);
         }
     }

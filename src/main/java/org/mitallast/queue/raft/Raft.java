@@ -899,7 +899,7 @@ public class Raft extends AbstractLifecycleComponent {
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
             }
             if (message.getTerm() == meta().getCurrentTerm()) {
-                logger.debug("received append successful {} in term: {}", message, meta().getCurrentTerm());
+                logger.info("received append successful {} in term: {}", message, meta().getCurrentTerm());
                 assert (message.getLastIndex() <= replicatedLog.lastIndex());
                 if (message.getLastIndex() > 0) {
                     nextIndex.put(message.getMember(), message.getLastIndex() + 1);
@@ -1038,7 +1038,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (replicationIndex.getOrDefault(follower, 0L) < timeout) {
                 // if member is already append prev entries,
                 // their next index must be equal to last index in log
-                if (nextIndex.indexFor(follower) == replicatedLog.lastIndex()) {
+                if (nextIndex.indexFor(follower) <= replicatedLog.lastIndex()) {
                     sendEntries(follower);
                 }
             }

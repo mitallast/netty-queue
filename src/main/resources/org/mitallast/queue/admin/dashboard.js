@@ -115,7 +115,25 @@ $(function () {
     }
 
     function createBenchmarkResultView(response) {
+        response.throughput = humanizeBytes(response.throughput)
         var template = Handlebars.compile($("#benchmarkResult").html());
         renderMain(template(response))
+    }
+
+    function humanizeBytes(bytes) {
+        var units = ["B/s","KB/s","MB/s","GB/s","TB/s","PB/s"];
+        var unit = 0;
+        while(true) {
+            if(unit >= units.length) {
+                break;
+            }
+            if(bytes > 1024){
+                bytes = bytes / 1024;
+                unit = unit + 1;
+            }else{
+                break;
+            }
+        }
+        return bytes.toFixed(3) + " " + units[unit];
     }
 });

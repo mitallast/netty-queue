@@ -1,6 +1,5 @@
 package org.mitallast.queue.benchmark;
 
-import io.netty.buffer.ByteBuf;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -30,7 +29,7 @@ public class BenchmarkRequest implements Streamable {
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
         stream.writeLong(request);
-        stream.write(data.length);
+        stream.writeInt(data.length);
         if (data.length > 0) {
             stream.write(data);
         }

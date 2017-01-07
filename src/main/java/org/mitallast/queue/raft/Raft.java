@@ -63,7 +63,8 @@ public class Raft extends AbstractLifecycleComponent {
     private final boolean bootstrap;
     private final long electionDeadline;
     private final long heartbeat;
-    private final long snapshotInterval;
+    private final int snapshotInterval;
+    private final int maxEntries;
     private final RaftContext context;
     private final ConcurrentMap<String, ScheduledFuture> timerMap = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<ClientMessage> stashed = new ConcurrentLinkedQueue<>();
@@ -99,7 +100,8 @@ public class Raft extends AbstractLifecycleComponent {
         bootstrap = this.config.getBoolean("bootstrap");
         electionDeadline = this.config.getDuration("election-deadline", TimeUnit.MILLISECONDS);
         heartbeat = this.config.getDuration("heartbeat", TimeUnit.MILLISECONDS);
-        snapshotInterval = this.config.getLong("snapshot-interval");
+        snapshotInterval = this.config.getInt("snapshot-interval");
+        maxEntries = this.config.getInt("max-entries");
     }
 
     @Override
@@ -126,19 +128,21 @@ public class Raft extends AbstractLifecycleComponent {
     private void cancelTimer(String timerName) {
         ScheduledFuture timer = timerMap.remove(timerName);
         if (timer != null) {
-            timer.cancel(false);
+            timer.cancel(true);
         }
     }
 
     private void setTimer(String timerName, Streamable event, long timeout, TimeUnit timeUnit, boolean repeat) {
-        cancelTimer(timerName);
-        final ScheduledFuture timer;
-        if (repeat) {
-            timer = context.scheduleAtFixedRate(() -> apply(event), timeout, timeout, timeUnit);
-        } else {
-            timer = context.schedule(() -> apply(event), timeout, timeUnit);
-        }
-        timerMap.put(timerName, timer);
+        timerMap.compute(timerName, (key, prev) -> {
+            if (prev != null) {
+                prev.cancel(true);
+            }
+            if (repeat) {
+                return context.scheduleAtFixedRate(() -> apply(event), timeout, timeout, timeUnit);
+            } else {
+                return context.schedule(() -> apply(event), timeout, timeUnit);
+            }
+        });
     }
 
     public synchronized void apply(Streamable event) {
@@ -235,8 +239,6 @@ public class Raft extends AbstractLifecycleComponent {
             return this;
         }
 
-        public abstract State stay(RaftMetadata meta) throws IOException;
-
         // replication
 
         public State apply(Streamable message) throws IOException {
@@ -300,14 +302,14 @@ public class Raft extends AbstractLifecycleComponent {
         @SuppressWarnings("unused")
         public State handle(InitLogSnapshot message) throws IOException {
             long committedIndex = replicatedLog.committedIndex();
-            RaftSnapshotMetadata snapshotMeta = new RaftSnapshotMetadata(replicatedLog.termAt(committedIndex), committedIndex, meta.getConfig());
+            RaftSnapshotMetadata snapshotMeta = new RaftSnapshotMetadata(replicatedLog.termAt(committedIndex), committedIndex, meta().getConfig());
             logger.info("init snapshot up to: {}:{}", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
 
             RaftSnapshot snapshot = registry.prepareSnapshot(snapshotMeta);
             logger.info("successfully prepared snapshot for {}:{}, compacting log now", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
             replicatedLog.compactWith(snapshot, clusterDiscovery.self());
 
-            return stay(meta);
+            return stay();
         }
 
         public abstract State handle(InstallSnapshot message) throws IOException;
@@ -357,17 +359,16 @@ public class Raft extends AbstractLifecycleComponent {
             return Follower;
         }
 
-        @Override
-        public FollowerState stay(RaftMetadata meta) throws IOException {
+        private FollowerState stay(RaftMetadata meta) throws IOException {
             return new FollowerState(meta);
         }
 
-        public State gotoCandidate(RaftMetadata meta) throws IOException {
+        private State gotoCandidate(RaftMetadata meta) throws IOException {
             resetElectionDeadline();
             return new CandidateState(meta).handle(BeginElection.INSTANCE);
         }
 
-        public State gotoLeader(RaftMetadata meta) throws IOException {
+        private State gotoLeader(RaftMetadata meta) throws IOException {
             cancelElectionDeadline();
             return new LeaderState(meta).handle(ElectedAsLeader.INSTANCE);
         }
@@ -465,13 +466,18 @@ public class Raft extends AbstractLifecycleComponent {
                 send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm()));
                 return stay(meta);
             }
-            // 2) Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (5.3)
-            if (!replicatedLog.containsMatchingEntry(message.getPrevLogTerm(), message.getPrevLogIndex())) {
-                logger.warn("rejecting write (inconsistent log): {}:{} {} ", message.getPrevLogTerm(), message.getPrevLogIndex(), replicatedLog);
-                send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm()));
-                return stay(meta);
-            } else {
-                return appendEntries(message, meta);
+
+            try {
+                // 2) Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (5.3)
+                if (!replicatedLog.containsMatchingEntry(message.getPrevLogTerm(), message.getPrevLogIndex())) {
+                    logger.warn("rejecting write (inconsistent log): {}:{} {} ", message.getPrevLogTerm(), message.getPrevLogIndex(), replicatedLog);
+                    send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm()));
+                    return stay(meta);
+                } else {
+                    return appendEntries(message, meta);
+                }
+            } finally {
+                resetElectionDeadline();
             }
         }
 
@@ -518,8 +524,6 @@ public class Raft extends AbstractLifecycleComponent {
                 .filter(cmd -> cmd instanceof ClusterConfiguration)
                 .map(cmd -> (ClusterConfiguration) cmd)
                 .reduce(meta.getConfig(), (a, b) -> b);
-
-            resetElectionDeadline();
 
             FollowerState newState = stay(meta.withTerm(replicatedLog.lastTerm()).withConfig(config));
             newState.unstash();
@@ -645,12 +649,11 @@ public class Raft extends AbstractLifecycleComponent {
             return Candidate;
         }
 
-        @Override
-        public State stay(RaftMetadata meta) throws IOException {
+        private CandidateState stay(RaftMetadata meta) throws IOException {
             return new CandidateState(meta);
         }
 
-        public State gotoFollower(RaftMetadata meta) throws IOException {
+        private FollowerState gotoFollower(RaftMetadata meta) throws IOException {
             cancelElectionDeadline();
             resetElectionDeadline();
             return new FollowerState(meta);
@@ -794,12 +797,11 @@ public class Raft extends AbstractLifecycleComponent {
             return Leader;
         }
 
-        @Override
-        public LeaderState stay(RaftMetadata meta) throws IOException {
+        private LeaderState stay(RaftMetadata meta) throws IOException {
             return new LeaderState(meta);
         }
 
-        public State gotoFollower(RaftMetadata meta) throws IOException {
+        private State gotoFollower(RaftMetadata meta) throws IOException {
             stopHeartbeat();
             resetElectionDeadline();
             return new FollowerState(meta);
@@ -1061,7 +1063,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (lastIndex > replicatedLog.nextIndex()) {
                 throw new Error("Unexpected from index " + lastIndex + " > " + replicatedLog.nextIndex());
             } else {
-                ImmutableList<LogEntry> entries = replicatedLog.entriesBatchFrom(lastIndex, 1000);
+                ImmutableList<LogEntry> entries = replicatedLog.entriesBatchFrom(lastIndex, maxEntries);
                 long prevIndex = Math.max(0, lastIndex - 1);
                 long prevTerm = replicatedLog.termAt(prevIndex);
                 logger.info("send to {} append entries {} prev {}:{} in {} from index:{}", follower, entries.size(), prevTerm, prevIndex, meta.getCurrentTerm(), lastIndex);

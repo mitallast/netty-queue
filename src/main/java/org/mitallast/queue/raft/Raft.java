@@ -463,7 +463,7 @@ public class Raft extends AbstractLifecycleComponent {
             // 1) Reply false if term < currentTerm (5.1)
             if (message.getTerm() < meta.getCurrentTerm()) {
                 logger.warn("rejecting write (old term): {} < {} ", message.getTerm(), meta.getCurrentTerm());
-                send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm()));
+                send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
                 return stay(meta);
             }
 
@@ -471,7 +471,7 @@ public class Raft extends AbstractLifecycleComponent {
                 // 2) Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (5.3)
                 if (!replicatedLog.containsMatchingEntry(message.getPrevLogTerm(), message.getPrevLogIndex())) {
                     logger.warn("rejecting write (inconsistent log): {}:{} {} ", message.getPrevLogTerm(), message.getPrevLogIndex(), replicatedLog);
-                    send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm()));
+                    send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
                     return stay(meta);
                 } else {
                     return appendEntries(message, meta);
@@ -883,7 +883,10 @@ public class Raft extends AbstractLifecycleComponent {
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
             }
             if (message.getTerm() == meta().getCurrentTerm()) {
-                if (nextIndex.indexFor(message.getMember()) > 0) {
+                long nextIndexFor = nextIndex.indexFor(message.getMember());
+                if (nextIndexFor > message.getLastIndex()) {
+                    nextIndex.put(message.getMember(), message.getLastIndex());
+                } else if (nextIndexFor > 0) {
                     nextIndex.decrementFor(message.getMember());
                 }
                 logger.warn("follower {} rejected write, term {}, decrement index to {}", message.getMember(), message.getTerm(), nextIndex.indexFor(message.getMember()));

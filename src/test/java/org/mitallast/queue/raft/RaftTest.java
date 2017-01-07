@@ -329,7 +329,7 @@ public class RaftTest extends BaseTest {
     public void testFollowerIgnoreAppendRejected() throws Exception {
         appendClusterSelf();
         start();
-        raft.apply(new AppendRejected(node2, 1));
+        raft.apply(new AppendRejected(node2, 1, 1));
         expectFollower();
     }
 
@@ -800,7 +800,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderStepDownOnAppendRejectedIfTermIsNewer() throws Exception {
         becameLeader();
-        raft.apply(new AppendRejected(node2, 3));
+        raft.apply(new AppendRejected(node2, 3, 1));
         expectFollower();
         expectTerm(3);
     }
@@ -808,7 +808,7 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderIgnoreAppendRejectedIfTermIsOld() throws Exception {
         becameLeader();
-        raft.apply(new AppendRejected(node2, 0));
+        raft.apply(new AppendRejected(node2, 0, 1));
         expectLeader();
         expectTerm(2);
     }
@@ -827,15 +827,15 @@ public class RaftTest extends BaseTest {
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 3, 0, noop(2, 4, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 3, 0, noop(2, 4, node1)));
 
-        raft.apply(new AppendRejected(node2, 2));
-        raft.apply(new AppendRejected(node3, 2));
+        raft.apply(new AppendRejected(node2, 2, 4));
+        raft.apply(new AppendRejected(node3, 2, 4));
 
         // entry 4 does not included because different term
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 2, 0, noop(1, 3, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 2, 0, noop(1, 3, node1)));
 
-        raft.apply(new AppendRejected(node2, 2));
-        raft.apply(new AppendRejected(node3, 2));
+        raft.apply(new AppendRejected(node2, 2, 4));
+        raft.apply(new AppendRejected(node3, 2, 4));
 
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 0, noop(1, 2, node1), noop(1, 3, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 0, noop(1, 2, node1), noop(1, 3, node1)));
@@ -1044,7 +1044,7 @@ public class RaftTest extends BaseTest {
         Assert.assertEquals(meta, log.snapshot().getMeta());
 
         // send install snapshot
-        raft.apply(new AppendRejected(node3, 2));
+        raft.apply(new AppendRejected(node3, 2, 1));
         verify(transportChannel3).message(new InstallSnapshot(node1, 2, snapshot));
     }
 

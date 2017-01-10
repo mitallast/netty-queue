@@ -39,7 +39,8 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import static org.mitallast.queue.raft.RaftState.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -113,10 +114,10 @@ public class RaftTest extends BaseTest {
         override("raft.bootstrap", "true");
         override("raft.snapshot-interval", "100");
         injector = Guice.createInjector(
-                new ComponentModule(config),
-                new StreamModule(),
-                new FileModule(),
-                new TestRaftModule()
+            new ComponentModule(config),
+            new StreamModule(),
+            new FileModule(),
+            new TestRaftModule()
         );
         config = injector.getInstance(Config.class);
         injector.getInstance(LifecycleService.class).start();
@@ -144,13 +145,13 @@ public class RaftTest extends BaseTest {
         log.close();
         log = null;
         raft = new Raft(
-                config,
-                injector.getInstance(TransportService.class),
-                injector.getInstance(TransportController.class),
-                injector.getInstance(ClusterDiscovery.class),
-                persistentService,
-                registry,
-                context
+            config,
+            injector.getInstance(TransportService.class),
+            injector.getInstance(TransportController.class),
+            injector.getInstance(ClusterDiscovery.class),
+            persistentService,
+            registry,
+            context
         );
         raft.start();
     }
@@ -168,7 +169,6 @@ public class RaftTest extends BaseTest {
     @Test
     public void testBootstrapWithOneMember() throws Exception {
         start();
-        electionTimeout();
         expectLeader();
     }
 
@@ -228,7 +228,7 @@ public class RaftTest extends BaseTest {
         start();
         expectFollower();
         Assert.assertEquals(ImmutableSet.of(), clusterDiscovery.discoveryNodes());
-        raft.apply(ElectionTimeout.INSTANCE);
+        electionTimeout();
         expectFollower();
     }
 
@@ -339,15 +339,6 @@ public class RaftTest extends BaseTest {
         appendClusterSelf();
         start();
         raft.apply(new DeclineCandidate(node2, 1));
-        expectFollower();
-        expectTerm(1);
-    }
-
-    @Test
-    public void testFollowerIgnoreSendHeartbeat() throws Exception {
-        appendClusterSelf();
-        start();
-        raft.apply(SendHeartbeat.INSTANCE);
         expectFollower();
         expectTerm(1);
     }
@@ -738,8 +729,8 @@ public class RaftTest extends BaseTest {
     public void testLeaderAppendStableClusterConfigurationOnElection() throws Exception {
         becameLeader();
         Assert.assertEquals(
-                ImmutableList.of(stable(1, 1, node1, node2, node3), noop(2, 2, node1)),
-                raft.replicatedLog().entries()
+            ImmutableList.of(stable(1, 1, node1, node2, node3), noop(2, 2, node1)),
+            raft.replicatedLog().entries()
         );
     }
 
@@ -759,7 +750,7 @@ public class RaftTest extends BaseTest {
         raft.apply(new AppendSuccessful(node3, 2, 2));
 
         raft.apply(new ClientMessage(node2, Noop.INSTANCE));
-        raft.apply(SendHeartbeat.INSTANCE);
+        context.runTimer(RaftContext.SEND_HEARTBEAT);
 
         verify(transportChannel2).message(appendEntries(node1, 2, 2, 2, 2, noop(2, 3, node2)));
         verify(transportChannel3).message(appendEntries(node1, 2, 2, 2, 2, noop(2, 3, node2)));
@@ -1187,7 +1178,7 @@ public class RaftTest extends BaseTest {
     }
 
     private void electionTimeout() throws Exception {
-        raft.apply(ElectionTimeout.INSTANCE);
+        context.runTimer(RaftContext.ELECTION_TIMEOUT);
     }
 
     private LogEntry noop(long term, long index, DiscoveryNode client) {
@@ -1229,52 +1220,27 @@ public class RaftTest extends BaseTest {
 
     private class TestRaftContext implements RaftContext {
 
+        private ConcurrentMap<String, Runnable> timers = new ConcurrentHashMap<>();
+
         @Override
-        public ScheduledFuture schedule(Runnable task, long timeout, TimeUnit timeUnit) {
-            return new TestScheduledFuture();
+        public void setTimer(String name, long delayMs, Runnable task) {
+            timers.put(name, task);
         }
 
         @Override
-        public ScheduledFuture scheduleAtFixedRate(Runnable task, long delay, long timeout, TimeUnit timeUnit) {
-            return new TestScheduledFuture();
-        }
-    }
-
-    private class TestScheduledFuture<V> implements ScheduledFuture<V> {
-
-        @Override
-        public long getDelay(TimeUnit timeUnit) {
-            return 0;
+        public void startTimer(String name, long delayMs, long periodMs, Runnable task) {
+            timers.put(name, task);
         }
 
         @Override
-        public int compareTo(Delayed delayed) {
-            return 0;
+        public void cancelTimer(String name) {
+            timers.remove(name);
         }
 
-        @Override
-        public boolean cancel(boolean b) {
-            return false;
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return false;
-        }
-
-        @Override
-        public boolean isDone() {
-            return false;
-        }
-
-        @Override
-        public V get() throws InterruptedException, ExecutionException {
-            return null;
-        }
-
-        @Override
-        public V get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
-            return null;
+        public void runTimer(String name) {
+            Runnable runnable = timers.get(name);
+            Assert.assertNotNull(runnable);
+            runnable.run();
         }
     }
 
@@ -1302,11 +1268,9 @@ public class RaftTest extends BaseTest {
 
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 210));
 
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectionTimeout.class, ElectionTimeout::read, 220));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(SendHeartbeat.class, SendHeartbeat::read, 224));
 
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 230));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(Noop.class, Noop::read, 231));

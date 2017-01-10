@@ -37,13 +37,11 @@ public class Raft extends AbstractLifecycleComponent {
             .put(AppendRejected.class, (state, event) -> state.handle((AppendRejected) event))
             .put(AppendSuccessful.class, (state, event) -> state.handle((AppendSuccessful) event))
             .put(ElectionTimeout.class, (state, event) -> state.handle((ElectionTimeout) event))
-            .put(BeginElection.class, (state, event) -> state.handle((BeginElection) event))
             .put(RequestVote.class, (state, event) -> state.handle((RequestVote) event))
             .put(VoteCandidate.class, (state, event) -> state.handle((VoteCandidate) event))
             .put(DeclineCandidate.class, (state, event) -> state.handle((DeclineCandidate) event))
             .put(SendHeartbeat.class, (state, event) -> state.handle((SendHeartbeat) event))
             .put(ClientMessage.class, (state, event) -> state.handle((ClientMessage) event))
-            .put(InitLogSnapshot.class, (state, event) -> state.handle((InitLogSnapshot) event))
             .put(InstallSnapshot.class, (state, event) -> state.handle((InstallSnapshot) event))
             .put(InstallSnapshotSuccessful.class, (state, event) -> state.handle((InstallSnapshotSuccessful) event))
             .put(InstallSnapshotRejected.class, (state, event) -> state.handle((InstallSnapshotRejected) event))
@@ -265,11 +263,6 @@ public class Raft extends AbstractLifecycleComponent {
             return stay();
         }
 
-        public State handle(BeginElection message) throws IOException {
-            logger.debug("unhandled: {} in {}", message, state());
-            return stay();
-        }
-
         public abstract State handle(RequestVote message) throws IOException;
 
         public State handle(VoteCandidate message) throws IOException {
@@ -293,8 +286,7 @@ public class Raft extends AbstractLifecycleComponent {
 
         // snapshot
 
-        @SuppressWarnings("unused")
-        public State handle(InitLogSnapshot message) throws IOException {
+        public State createSnapshot() throws IOException {
             long committedIndex = replicatedLog.committedIndex();
             RaftSnapshotMetadata snapshotMeta = new RaftSnapshotMetadata(replicatedLog.termAt(committedIndex), committedIndex, meta().getConfig());
             logger.info("init snapshot up to: {}:{}", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
@@ -359,7 +351,7 @@ public class Raft extends AbstractLifecycleComponent {
 
         private State gotoCandidate(RaftMetadata meta) throws IOException {
             resetElectionDeadline();
-            return new CandidateState(meta).handle(BeginElection.INSTANCE);
+            return new CandidateState(meta).beginElection();
         }
 
         private State gotoLeader(RaftMetadata meta) throws IOException {
@@ -522,7 +514,7 @@ public class Raft extends AbstractLifecycleComponent {
             FollowerState newState = stay(meta.withTerm(replicatedLog.lastTerm()).withConfig(config));
             newState.unstash();
             if (replicatedLog.committedEntries() >= snapshotInterval) {
-                return newState.handle(InitLogSnapshot.INSTANCE);
+                return newState.createSnapshot();
             } else {
                 return newState;
             }
@@ -683,8 +675,7 @@ public class Raft extends AbstractLifecycleComponent {
             return stay();
         }
 
-        @Override
-        public State handle(BeginElection message) throws IOException {
+        public State beginElection() throws IOException {
             RaftMetadata meta = meta();
             logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta.getCurrentTerm());
             RequestVote request = new RequestVote(meta.getCurrentTerm(), clusterDiscovery.self(), replicatedLog.lastTerm().orElse(0L), replicatedLog.lastIndex());
@@ -776,7 +767,7 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(ElectionTimeout message) throws IOException {
             logger.info("voting timeout, starting a new election (among {})", meta().getConfig().members().size());
-            return stay(meta().forNewElection()).apply(BeginElection.INSTANCE);
+            return stay(meta().forNewElection()).beginElection();
         }
     }
 
@@ -1100,7 +1091,7 @@ public class Raft extends AbstractLifecycleComponent {
                 }
             }
             if (replicatedLog.committedEntries() >= snapshotInterval) {
-                return stay(meta).apply(InitLogSnapshot.INSTANCE);
+                return stay(meta).createSnapshot();
             } else {
                 return stay(meta);
             }

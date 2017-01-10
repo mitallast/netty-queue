@@ -111,11 +111,12 @@ public class RaftTest extends BaseTest {
         override("node.path", testFolder.getRoot().getAbsolutePath());
         override("raft.enabled", "true");
         override("raft.bootstrap", "true");
+        override("raft.snapshot-interval", "100");
         injector = Guice.createInjector(
-            new ComponentModule(config),
-            new StreamModule(),
-            new FileModule(),
-            new TestRaftModule()
+                new ComponentModule(config),
+                new StreamModule(),
+                new FileModule(),
+                new TestRaftModule()
         );
         config = injector.getInstance(Config.class);
         injector.getInstance(LifecycleService.class).start();
@@ -143,13 +144,13 @@ public class RaftTest extends BaseTest {
         log.close();
         log = null;
         raft = new Raft(
-            config,
-            injector.getInstance(TransportService.class),
-            injector.getInstance(TransportController.class),
-            injector.getInstance(ClusterDiscovery.class),
-            persistentService,
-            registry,
-            context
+                config,
+                injector.getInstance(TransportService.class),
+                injector.getInstance(TransportController.class),
+                injector.getInstance(ClusterDiscovery.class),
+                persistentService,
+                registry,
+                context
         );
         raft.start();
     }
@@ -227,7 +228,7 @@ public class RaftTest extends BaseTest {
         start();
         expectFollower();
         Assert.assertEquals(ImmutableSet.of(), clusterDiscovery.discoveryNodes());
-        raft.apply(BeginElection.INSTANCE);
+        raft.apply(ElectionTimeout.INSTANCE);
         expectFollower();
     }
 
@@ -737,8 +738,8 @@ public class RaftTest extends BaseTest {
     public void testLeaderAppendStableClusterConfigurationOnElection() throws Exception {
         becameLeader();
         Assert.assertEquals(
-            ImmutableList.of(stable(1, 1, node1, node2, node3), noop(2, 2, node1)),
-            raft.replicatedLog().entries()
+                ImmutableList.of(stable(1, 1, node1, node2, node3), noop(2, 2, node1)),
+                raft.replicatedLog().entries()
         );
     }
 
@@ -1018,17 +1019,22 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testLeaderCreateSnapshot() throws Exception {
+        // snapshot
+        RaftSnapshotMetadata meta = new RaftSnapshotMetadata(2, 100, new StableClusterConfiguration(node1, node2, node3));
+        RaftSnapshot snapshot = new RaftSnapshot(meta, ImmutableList.of());
+        when(registry.prepareSnapshot(meta)).thenReturn(snapshot);
+
         becameLeader();
+        for (int i = 0; i < 100; i++) {
+            raft.apply(new ClientMessage(node1, Noop.INSTANCE));
+        }
+
         verify(transportChannel2).message(appendEntries(node1, 2, 1, 1, 0, new LogEntry(Noop.INSTANCE, 2, 2, node1)));
         verify(transportChannel3).message(appendEntries(node1, 2, 1, 1, 0, new LogEntry(Noop.INSTANCE, 2, 2, node1)));
         // commit index 1
-        appendSuccessful(node2, 2, 2);
+        appendSuccessful(node2, 2, 100);
+        appendSuccessful(node3, 2, 100);
 
-        // snapshot
-        RaftSnapshotMetadata meta = new RaftSnapshotMetadata(2, 2, new StableClusterConfiguration(node1, node2, node3));
-        RaftSnapshot snapshot = new RaftSnapshot(meta, ImmutableList.of());
-        when(registry.prepareSnapshot(meta)).thenReturn(snapshot);
-        raft.apply(InitLogSnapshot.INSTANCE);
         ReplicatedLog log = raft.replicatedLog();
         logger.info("log: {}", log);
         Assert.assertTrue(log.hasSnapshot());
@@ -1297,7 +1303,6 @@ public class RaftTest extends BaseTest {
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 210));
 
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectionTimeout.class, ElectionTimeout::read, 220));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(BeginElection.class, BeginElection::read, 221));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
@@ -1309,7 +1314,6 @@ public class RaftTest extends BaseTest {
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 240));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 241));
 
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InitLogSnapshot.class, InitLogSnapshot::read, 260));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshot.class, InstallSnapshot::new, 261));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 262));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 263));

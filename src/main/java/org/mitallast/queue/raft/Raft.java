@@ -41,7 +41,6 @@ public class Raft extends AbstractLifecycleComponent {
             .put(RequestVote.class, (state, event) -> state.handle((RequestVote) event))
             .put(VoteCandidate.class, (state, event) -> state.handle((VoteCandidate) event))
             .put(DeclineCandidate.class, (state, event) -> state.handle((DeclineCandidate) event))
-            .put(ElectedAsLeader.class, (state, event) -> state.handle((ElectedAsLeader) event))
             .put(SendHeartbeat.class, (state, event) -> state.handle((SendHeartbeat) event))
             .put(ClientMessage.class, (state, event) -> state.handle((ClientMessage) event))
             .put(InitLogSnapshot.class, (state, event) -> state.handle((InitLogSnapshot) event))
@@ -283,11 +282,6 @@ public class Raft extends AbstractLifecycleComponent {
             return stay();
         }
 
-        public State handle(ElectedAsLeader message) throws IOException {
-            logger.debug("unhandled: {} in {}", message, state());
-            return stay();
-        }
-
         // leader
 
         public State handle(SendHeartbeat message) throws IOException {
@@ -370,7 +364,7 @@ public class Raft extends AbstractLifecycleComponent {
 
         private State gotoLeader(RaftMetadata meta) throws IOException {
             cancelElectionDeadline();
-            return new LeaderState(meta).handle(ElectedAsLeader.INSTANCE);
+            return new LeaderState(meta).elected();
         }
 
         public State initialize() throws IOException {
@@ -662,7 +656,7 @@ public class Raft extends AbstractLifecycleComponent {
         public State gotoLeader(RaftMetadata meta) throws IOException {
             cancelElectionDeadline();
             startHeartbeat();
-            return new LeaderState(meta).handle(ElectedAsLeader.INSTANCE);
+            return new LeaderState(meta).elected();
         }
 
         @Override
@@ -807,8 +801,7 @@ public class Raft extends AbstractLifecycleComponent {
             return new FollowerState(meta);
         }
 
-        @Override
-        public State handle(ElectedAsLeader message) throws IOException {
+        public State elected() throws IOException {
             logger.info("became leader for {}", meta().getCurrentTerm());
 
             // for each server, index of the next log entry

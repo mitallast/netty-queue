@@ -343,15 +343,6 @@ public class RaftTest extends BaseTest {
     }
 
     @Test
-    public void testFollowerIgnoreElectedAsLeader() throws Exception {
-        appendClusterSelf();
-        start();
-        raft.apply(ElectedAsLeader.INSTANCE);
-        expectFollower();
-        expectTerm(1);
-    }
-
-    @Test
     public void testFollowerIgnoreSendHeartbeat() throws Exception {
         appendClusterSelf();
         start();
@@ -1213,6 +1204,23 @@ public class RaftTest extends BaseTest {
 
     // test dependencies
 
+    private static class TestFSMMessage implements Streamable {
+
+        public static final TestFSMMessage INSTANCE = new TestFSMMessage();
+
+        private TestFSMMessage() {
+        }
+
+        @SuppressWarnings("unused")
+        public static TestFSMMessage read(StreamInput stream) throws IOException {
+            return INSTANCE;
+        }
+
+        @Override
+        public void writeTo(StreamOutput stream) throws IOException {
+        }
+    }
+
     private class TestRaftContext implements RaftContext {
 
         @Override
@@ -1293,7 +1301,6 @@ public class RaftTest extends BaseTest {
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ElectedAsLeader.class, ElectedAsLeader::read, 222));
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(SendHeartbeat.class, SendHeartbeat::read, 224));
 
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 230));
@@ -1316,23 +1323,6 @@ public class RaftTest extends BaseTest {
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServerResponse.class, RemoveServerResponse::new, 283));
 
             streamableBinder.addBinding().toInstance(StreamableRegistry.of(TestFSMMessage.class, TestFSMMessage::read, 290));
-        }
-    }
-
-    private static class TestFSMMessage implements Streamable {
-
-        public static final TestFSMMessage INSTANCE = new TestFSMMessage();
-
-        @SuppressWarnings("unused")
-        public static TestFSMMessage read(StreamInput stream) throws IOException {
-            return INSTANCE;
-        }
-
-        private TestFSMMessage() {
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) throws IOException {
         }
     }
 }

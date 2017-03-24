@@ -1,4 +1,5 @@
 package org.mitallast.queue.transport;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 
 public interface TransportServer {
 

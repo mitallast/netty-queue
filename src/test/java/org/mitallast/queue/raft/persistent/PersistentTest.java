@@ -8,16 +8,18 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.InternalStreamService;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.common.proto.ProtoService;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 
 import java.util.Optional;
 
 public class PersistentTest extends BaseTest {
 
     private final long term1 = 1;
-    private final DiscoveryNode node = new DiscoveryNode("127.0.0.1", 8900);
+    private final DiscoveryNode node = DiscoveryNode.newBuilder()
+        .setHost("127.0.0.1")
+        .setPort(8900)
+        .build();
 
     private Config config() {
         return ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
@@ -31,15 +33,15 @@ public class PersistentTest extends BaseTest {
         return new FileService(config());
     }
 
-    private StreamService streamService() throws Exception {
-        return new InternalStreamService(config(), ImmutableSet.of());
+    private ProtoService protoService() throws Exception {
+        return new ProtoService(ImmutableSet.of());
     }
 
     private PersistentService persistent() throws Exception {
         return new FilePersistentService(
             config(),
             fileService(),
-            streamService()
+            protoService()
         );
     }
 

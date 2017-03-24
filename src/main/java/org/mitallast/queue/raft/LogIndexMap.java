@@ -1,12 +1,10 @@
 package org.mitallast.queue.raft;
 
-import com.google.common.collect.ImmutableSet;
 import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
-import org.mitallast.queue.raft.cluster.ClusterConfiguration;
-import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,21 +40,21 @@ public class LogIndexMap {
         }
     }
 
-    public long consensusForIndex(ClusterConfiguration config) {
-        if (config.isTransitioning()) { // joint
-            long oldQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getOldMembers());
-            long newQuorum = indexOnMajority(((JointConsensusClusterConfiguration) config).getNewMembers());
+    public long consensusForIndex(RaftMetadata meta) {
+        if (meta.isTransitioning()) { // joint
+            long oldQuorum = indexOnMajority(meta.getConfig().getJoint().getOldMembersList());
+            long newQuorum = indexOnMajority(meta.getConfig().getJoint().getNewMembersList());
             return Math.min(oldQuorum, newQuorum);
         } else { // stable
-            return indexOnMajority(config.members());
+            return indexOnMajority(meta.getConfig().getStable().getMembersList());
         }
     }
 
-    private long indexOnMajority(ImmutableSet<DiscoveryNode> include) {
+    private long indexOnMajority(Collection<DiscoveryNode> include) {
         if (include.isEmpty()) {
             return 0;
         }
-        int index = ceiling(include.size(), 2) - 1;
+        int index = ceiling(include.size()) - 1;
         List<Long> sorted = include.stream()
             .map(this::indexFor)
             .sorted()
@@ -64,11 +62,11 @@ public class LogIndexMap {
         return sorted.get(index);
     }
 
-    private int ceiling(int numerator, int divisor) {
-        if (numerator % divisor == 0) {
-            return numerator / divisor;
+    private int ceiling(int numerator) {
+        if (numerator % 2 == 0) {
+            return numerator / 2;
         } else {
-            return (numerator / divisor) + 1;
+            return (numerator / 2) + 1;
         }
     }
 

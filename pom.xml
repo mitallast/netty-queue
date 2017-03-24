@@ -142,6 +142,13 @@
             <version>${trove.version}</version>
             <scope>compile</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>bootstrap</artifactId>
@@ -195,6 +202,28 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.5.0</version>
+                <configuration>
+                    <attachDescriptorSet>false</attachDescriptorSet>
+                    <attachProtoSources>false</attachProtoSources>
+                    <checkStaleness>false</checkStaleness>
+                    <clearOutputDirectory>true</clearOutputDirectory>
+                    <protocArtifact>com.google.protobuf:protoc:3.2.0:exe:linux-x86_64</protocArtifact>
+                    <writeDescriptorSet>false</writeDescriptorSet>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

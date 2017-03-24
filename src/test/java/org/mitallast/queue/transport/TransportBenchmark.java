@@ -1,11 +1,16 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
+import org.mitallast.queue.common.proto.ProtoRegistry;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
+import org.mitallast.queue.proto.test.TestLongMessage;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -36,13 +41,13 @@ public class TransportBenchmark extends BaseQueueTest {
         TransportServer transportServer = node().injector().getInstance(TransportServer.class);
 
         TransportController transportController = node().injector().getInstance(TransportController.class);
-        transportController.registerMessageHandler(TestStreamable.class, this::handle);
+        transportController.registerMessageHandler(TestLongMessage.class, this::handle);
 
         member = transportServer.localNode();
         transportService.connectToNode(member);
     }
 
-    public void handle(TestStreamable streamable) {
+    public void handle(TestLongMessage streamable) {
         countDownLatch.countDown();
     }
 
@@ -52,7 +57,7 @@ public class TransportBenchmark extends BaseQueueTest {
         countDownLatch = new CountDownLatch(total());
         long start = System.currentTimeMillis();
         for (int i = 0; i < total(); i++) {
-            transportService.channel(member).message(new TestStreamable(i));
+            transportService.channel(member).send(TestLongMessage.newBuilder().setValue(i).build());
         }
         countDownLatch.await();
         long end = System.currentTimeMillis();
@@ -67,7 +72,7 @@ public class TransportBenchmark extends BaseQueueTest {
         long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < total(); i += concurrency) {
-                transportService.channel(member).message(new TestStreamable(i));
+                transportService.channel(member).send(TestLongMessage.newBuilder().setValue(i).build());
             }
         });
         countDownLatch.await();
@@ -79,7 +84,7 @@ public class TransportBenchmark extends BaseQueueTest {
         int warmUp = total() * 4;
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
-            transportService.channel(member).message(new TestStreamable(i));
+            transportService.channel(member).send(TestLongMessage.newBuilder().setValue(i).build());
         }
         countDownLatch.await();
         System.gc();

@@ -6,23 +6,17 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import org.mitallast.queue.benchmark.BenchmarkModule;
-import org.mitallast.queue.benchmark.rest.BenchmarkRestModule;
-import org.mitallast.queue.blob.BlobModule;
-import org.mitallast.queue.blob.rest.BlobRestModule;
 import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.file.FileModule;
-import org.mitallast.queue.common.stream.StreamModule;
+import org.mitallast.queue.common.proto.ProtoModule;
 import org.mitallast.queue.raft.RaftModule;
 import org.mitallast.queue.raft.rest.RaftRestModule;
 import org.mitallast.queue.rest.RestModule;
-import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportModule;
-import org.mitallast.queue.transport.TransportServer;
 
 import java.io.IOException;
 
@@ -38,7 +32,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         ModulesBuilder modules = new ModulesBuilder();
         modules.add(new ComponentModule(this.config));
         modules.add(new FileModule());
-        modules.add(new StreamModule());
+        modules.add(new ProtoModule());
         modules.add(new TransportModule());
         if (this.config.getBoolean("rest.enabled")) {
             modules.add(new RestModule());
@@ -47,18 +41,6 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
             modules.add(new RaftModule());
             if (this.config.getBoolean("rest.enabled")) {
                 modules.add(new RaftRestModule());
-            }
-            if(this.config.getBoolean("blob.enabled")) {
-                modules.add(new BlobModule());
-                if (this.config.getBoolean("rest.enabled")) {
-                    modules.add(new BlobRestModule());
-                }
-            }
-            if(this.config.getBoolean("benchmark.enabled")) {
-                modules.add(new BenchmarkModule());
-                if (this.config.getBoolean("rest.enabled")) {
-                    modules.add(new BenchmarkRestModule());
-                }
             }
         }
 

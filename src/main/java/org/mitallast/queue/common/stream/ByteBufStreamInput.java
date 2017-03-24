@@ -6,6 +6,7 @@ import io.netty.buffer.Unpooled;
 
 import java.io.IOException;
 
+@Deprecated
 public class ByteBufStreamInput extends ByteBufInputStream implements StreamInput {
 
     private final StreamableClassRegistry classRegistry;

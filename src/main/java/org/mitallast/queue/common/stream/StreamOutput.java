@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+@Deprecated
 public interface StreamOutput extends DataOutput, Closeable {
 
     @Override

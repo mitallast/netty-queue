@@ -9,6 +9,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.util.UUID;
 
+@Deprecated
 public interface StreamInput extends DataInput, Closeable {
 
     int available() throws IOException;

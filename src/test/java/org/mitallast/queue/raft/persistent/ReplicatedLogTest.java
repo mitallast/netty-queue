@@ -3,21 +3,18 @@ package org.mitallast.queue.raft.persistent;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Message;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.*;
-import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
-import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
-import org.mitallast.queue.raft.protocol.LogEntry;
-import org.mitallast.queue.raft.protocol.RaftSnapshot;
-import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.common.proto.ProtoRegistry;
+import org.mitallast.queue.common.proto.ProtoService;
+import org.mitallast.queue.proto.raft.*;
+import org.mitallast.queue.proto.test.AppendWord;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -25,27 +22,71 @@ import java.util.stream.Collectors;
 
 public class ReplicatedLogTest extends BaseTest {
 
+    private final ProtoService protoService = new ProtoService(ImmutableSet.of(
+        new ProtoRegistry(1000, AppendWord.getDescriptor(), AppendWord.parser()),
+        new ProtoRegistry(1001, LogEntry.getDescriptor(), LogEntry.parser()),
+        new ProtoRegistry(1002, RaftSnapshot.getDescriptor(), RaftSnapshot.parser()),
+        new ProtoRegistry(1003, StableClusterConfiguration.getDescriptor(), StableClusterConfiguration.parser()),
+        new ProtoRegistry(1004, JointConsensusClusterConfiguration.getDescriptor(), JointConsensusClusterConfiguration.parser())
+    ));
+
     private final long term = 1;
     private final long term0 = 0;
     private final long term1 = 1;
     private final long term2 = 2;
     private final long term3 = 3;
-    private final DiscoveryNode node1 = new DiscoveryNode("127.0.0.1", 8900);
-    private final StableClusterConfiguration clusterConf = new StableClusterConfiguration();
-    private final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1, node1);
-    private final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2, node1);
-    private final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3, node1);
-    private final LogEntry rewriteEntry1 = new LogEntry(new AppendWord("rewrite"), term, 1, node1);
-    private final LogEntry rewriteEntry2 = new LogEntry(new AppendWord("rewrite"), term, 2, node1);
-    private final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term, 3, node1);
-    private final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term, 4, node1);
-    private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
-    private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
-    private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
+    private final DiscoveryNode node1 = DiscoveryNode.newBuilder().setHost("127.0.0.1").setPort(8900).build();
+    private final ClusterConfiguration clusterConf = ClusterConfiguration.newBuilder()
+        .setStable(StableClusterConfiguration.newBuilder().build())
+        .build();
 
-    private final LogEntry snapshotEntry1 = new LogEntry(snapshot1, term, 1, node1);
-    private final LogEntry snapshotEntry2 = new LogEntry(snapshot2, term, 2, node1);
-    private final LogEntry snapshotEntry3 = new LogEntry(snapshot3, term, 3, node1);
+    private final AppendWord word1 = AppendWord.newBuilder().setMessage("word").build();
+    private final AppendWord word2 = AppendWord.newBuilder().setMessage("hello world").build();
+
+    private final LogEntry entry1 = logEntry(word1, term, 1, node1);
+    private final LogEntry entry2 = logEntry(word1, term, 2, node1);
+    private final LogEntry entry3 = logEntry(word1, term, 3, node1);
+    private final LogEntry rewriteEntry1 = logEntry(word2, term, 1, node1);
+    private final LogEntry rewriteEntry2 = logEntry(word2, term, 2, node1);
+    private final LogEntry rewriteEntry3 = logEntry(word2, term, 3, node1);
+    private final LogEntry rewriteEntry4 = logEntry(word2, term, 4, node1);
+    private final RaftSnapshot snapshot1 = snapshot(snapshotMeta(term, 1, clusterConf));
+    private final RaftSnapshot snapshot2 = snapshot(snapshotMeta(term, 2, clusterConf));
+    private final RaftSnapshot snapshot3 = snapshot(snapshotMeta(term, 3, clusterConf));
+
+    private final LogEntry snapshotEntry1 = logEntry(snapshot1, term, 1, node1);
+    private final LogEntry snapshotEntry2 = logEntry(snapshot2, term, 2, node1);
+    private final LogEntry snapshotEntry3 = logEntry(snapshot3, term, 3, node1);
+
+    private LogEntry logEntry(Message message, long term, long index, DiscoveryNode client) {
+        return LogEntry.newBuilder()
+            .setCommand(protoService.pack(message))
+            .setTerm(term)
+            .setIndex(index)
+            .setClient(client)
+            .build();
+    }
+
+    private RaftSnapshotMetadata snapshotMeta(long term, long index, ClusterConfiguration config) {
+        return RaftSnapshotMetadata.newBuilder()
+            .setLastIncludedTerm(term)
+            .setLastIncludedIndex(index)
+            .setConfig(config)
+            .build();
+    }
+
+    private RaftSnapshot snapshot(RaftSnapshotMetadata meta) {
+        return RaftSnapshot.newBuilder()
+            .setMeta(meta)
+            .build();
+    }
+
+    private RaftSnapshot snapshot(RaftSnapshotMetadata meta, Message data) {
+        return RaftSnapshot.newBuilder()
+            .setMeta(meta)
+            .addData(protoService.pack(data))
+            .build();
+    }
 
     private Config config() {
         return ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
@@ -59,18 +100,8 @@ public class ReplicatedLogTest extends BaseTest {
         return new FileService(config());
     }
 
-    private StreamService streamService() throws Exception {
-        return new InternalStreamService(config(), ImmutableSet.of(
-            StreamableRegistry.of(AppendWord.class, AppendWord::new, 10000),
-            StreamableRegistry.of(LogEntry.class, LogEntry::new, 10001),
-            StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 10002),
-            StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 10003),
-            StreamableRegistry.of(JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration::new, 10004)
-        ));
-    }
-
     private ReplicatedLog log() throws Exception {
-        return new FilePersistentService(config(), fileService(), streamService()).openLog();
+        return new FilePersistentService(config(), fileService(), protoService).openLog();
     }
 
     @Test
@@ -254,7 +285,7 @@ public class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testContainsMatchingEntry1AfterCompaction2() throws Exception {
-        RaftSnapshot snapshot = new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null);
+        RaftSnapshot snapshot = snapshot(snapshotMeta(term2, 2, clusterConf));
         ReplicatedLog compacted = log().append(entry1).compactWith(snapshot, node1);
         Assert.assertTrue(compacted.containsMatchingEntry(term2, 2));
     }
@@ -447,9 +478,9 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testTermAt() throws Exception {
         ReplicatedLog log = log()
-            .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
-            .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
-            .append(new LogEntry(new AppendWord("word"), term3, 3, node1));
+            .append(logEntry(word1, term1, 1, node1))
+            .append(logEntry(word1, term2, 2, node1))
+            .append(logEntry(word1, term3, 3, node1));
         Assert.assertEquals(term0, log.termAt(0));
         Assert.assertEquals(term1, log.termAt(1));
         Assert.assertEquals(term2, log.termAt(2));
@@ -459,10 +490,10 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testTermAtAfterCompaction1() throws Exception {
         ReplicatedLog log = log()
-            .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
-            .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
-            .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term1, 1, clusterConf), null), node1);
+            .append(logEntry(word1, term1, 1, node1))
+            .append(logEntry(word1, term2, 2, node1))
+            .append(logEntry(word1, term3, 3, node1))
+            .compactWith(snapshot(snapshotMeta(term1, 1, clusterConf)), node1);
         Assert.assertEquals(term1, log.termAt(1));
         Assert.assertEquals(term2, log.termAt(2));
         Assert.assertEquals(term3, log.termAt(3));
@@ -471,10 +502,10 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testTermAtAfterCompaction2() throws Exception {
         ReplicatedLog log = log()
-            .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
-            .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
-            .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null), node1);
+            .append(logEntry(word1, term1, 1, node1))
+            .append(logEntry(word1, term2, 2, node1))
+            .append(logEntry(word1, term3, 3, node1))
+            .compactWith(snapshot(snapshotMeta(term2, 2, clusterConf)), node1);
         Assert.assertEquals(term2, log.termAt(2));
         Assert.assertEquals(term3, log.termAt(3));
     }
@@ -482,10 +513,10 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testTermAtAfterCompaction3() throws Exception {
         ReplicatedLog log = log()
-            .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
-            .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
-            .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term3, 3, clusterConf), null), node1);
+            .append(logEntry(word1, term1, 1, node1))
+            .append(logEntry(word1, term2, 2, node1))
+            .append(logEntry(word1, term3, 3, node1))
+            .compactWith(snapshot(snapshotMeta(term3, 3, clusterConf)), node1);
         Assert.assertEquals(term3, log.termAt(3));
     }
 
@@ -502,47 +533,12 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void benchmarkAppend() throws Exception {
         ReplicatedLog log = log();
-        AppendWord cmd = new AppendWord("hello world");
-        DiscoveryNode client = new DiscoveryNode("localhost", 8800);
         final long start = System.currentTimeMillis();
-        final long total = 3000000;
+        final long total = 1000000;
         for (int i = 0; i < total; i++) {
-            log = log.append(new LogEntry(cmd, term, i, client));
+            log = log.append(logEntry(word2, term, i, node1));
         }
         final long end = System.currentTimeMillis();
         printQps("append", total, start, end);
-    }
-
-    public class AppendWord implements Streamable {
-        private final String word;
-
-        public AppendWord(StreamInput stream) throws IOException {
-            word = stream.readText();
-        }
-
-        public AppendWord(String word) {
-            this.word = word;
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeText(word);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            AppendWord that = (AppendWord) o;
-
-            return word.equals(that.word);
-
-        }
-
-        @Override
-        public int hashCode() {
-            return word.hashCode();
-        }
     }
 }

@@ -8,11 +8,9 @@ import com.typesafe.config.ConfigFactory;
 import io.netty.util.ResourceLeakDetector;
 import org.junit.After;
 import org.junit.Before;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.proto.ProtoRegistry;
 import org.mitallast.queue.node.InternalNode;
+import org.mitallast.queue.proto.test.TestLongMessage;
 
 import java.io.IOException;
 import java.util.List;
@@ -77,34 +75,8 @@ public class BaseIntegrationTest extends BaseTest {
 
         @Override
         protected void configure() {
-            Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 100));
-        }
-    }
-
-    public static class TestStreamable implements Streamable {
-
-        private final long value;
-
-        public TestStreamable(StreamInput streamInput) throws IOException {
-            this.value = streamInput.readLong();
-        }
-
-        public TestStreamable(long value) {
-            this.value = value;
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) throws IOException {
-            stream.writeLong(value);
-        }
-
-        @Override
-        public String toString() {
-            return "TestStreamable{" +
-                "value=" + value +
-                '}';
+            Multibinder<ProtoRegistry> protoBinder = Multibinder.newSetBinder(binder(), ProtoRegistry.class);
+            protoBinder.addBinding().toInstance(new ProtoRegistry(2000, TestLongMessage.getDescriptor(), TestLongMessage.parser()));
         }
     }
 }

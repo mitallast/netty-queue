@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft.persistent;
 
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.Optional;

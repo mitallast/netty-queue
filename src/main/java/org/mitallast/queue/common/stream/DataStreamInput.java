@@ -7,6 +7,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+@Deprecated
 public class DataStreamInput extends DataInputStream implements StreamInput {
 
     private final StreamableClassRegistry classRegistry;

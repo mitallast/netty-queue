@@ -5,7 +5,7 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 import org.mitallast.queue.transport.TransportServer;
 
 import java.util.HashSet;
@@ -18,7 +18,10 @@ public class ClusterDiscovery extends AbstractComponent {
     @Inject
     public ClusterDiscovery(Config config) {
         super(config.getConfig("raft.discovery"), ClusterDiscovery.class);
-        self = new DiscoveryNode(this.config.getString("host"), this.config.getInt("port"));
+        self = DiscoveryNode.newBuilder()
+            .setHost(this.config.getString("host"))
+            .setPort(this.config.getInt("port"))
+            .build();
         discoveryNodes = parseDiscovery();
     }
 
@@ -40,10 +43,12 @@ public class ClusterDiscovery extends AbstractComponent {
                     host = host.trim();
                     if (!host.isEmpty()) {
                         HostAndPort hostAndPort = HostAndPort.fromString(host);
-                        nodes.add(new DiscoveryNode(
-                            hostAndPort.getHostText(),
-                            hostAndPort.getPortOrDefault(TransportServer.DEFAULT_PORT)
-                        ));
+                        nodes.add(
+                            DiscoveryNode.newBuilder()
+                                .setHost(hostAndPort.getHostText())
+                                .setPort(hostAndPort.getPortOrDefault(TransportServer.DEFAULT_PORT))
+                                .build()
+                        );
                     }
                 }
             }

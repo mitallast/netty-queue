@@ -2,12 +2,13 @@
 package org.mitallast.queue.raft.persistent;
 
 import com.google.common.collect.ImmutableList;
-import org.mitallast.queue.raft.protocol.LogEntry;
-import org.mitallast.queue.raft.protocol.RaftSnapshot;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
+import org.mitallast.queue.proto.raft.LogEntry;
+import org.mitallast.queue.proto.raft.RaftSnapshot;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 
 public interface ReplicatedLog extends Closeable {
@@ -36,9 +37,9 @@ public interface ReplicatedLog extends Closeable {
 
     ReplicatedLog append(LogEntry entry) throws IOException;
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries) throws IOException;
+    ReplicatedLog append(List<LogEntry> entries) throws IOException;
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex) throws IOException;
+    ReplicatedLog append(List<LogEntry> entries, long prevIndex) throws IOException;
 
     ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) throws IOException;
 

@@ -2,6 +2,7 @@ package org.mitallast.queue.common.stream;
 
 import com.google.inject.AbstractModule;
 
+@Deprecated
 public class StreamModule extends AbstractModule {
     @Override
     protected void configure() {

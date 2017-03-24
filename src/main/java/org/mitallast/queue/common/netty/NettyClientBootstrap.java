@@ -12,7 +12,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
@@ -78,7 +78,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     public final ChannelFuture connect(DiscoveryNode node) {
         checkIsStarted();
-        return bootstrap.connect(node.host(), node.port());
+        return bootstrap.connect(node.getHost(), node.getPort());
     }
 
     public final ChannelFuture connect(String host, int port) {

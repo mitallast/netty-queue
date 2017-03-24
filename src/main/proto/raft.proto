@@ -1,0 +1,151 @@
+syntax = "proto3";
+package raft;
+
+option optimize_for = CODE_SIZE;
+option java_multiple_files = true;
+option java_outer_classname = "RaftProtocol";
+option java_package = "org.mitallast.queue.proto.raft";
+
+// common
+
+message Any {
+    int32 index = 1;
+    bytes value = 2;
+}
+
+message DiscoveryNode {
+    string host = 1;
+    int32 port = 2;
+}
+
+// Cluster
+
+message ClusterConfiguration {
+    oneof config {
+        StableClusterConfiguration stable = 1;
+        JointConsensusClusterConfiguration joint = 2;
+    }
+}
+
+message StableClusterConfiguration {
+    repeated DiscoveryNode members = 1;
+}
+
+message JointConsensusClusterConfiguration {
+    repeated DiscoveryNode oldMembers = 1;
+    repeated DiscoveryNode newMembers = 2;
+    repeated DiscoveryNode members = 3;
+}
+
+// Log
+
+message LogEntry {
+    int64 term = 1;
+    int64 index = 2;
+    Any command = 3;
+    DiscoveryNode client = 4;
+}
+
+message RaftSnapshot {
+    RaftSnapshotMetadata meta = 1;
+    repeated Any data = 2;
+}
+
+message RaftSnapshotMetadata {
+    int64 lastIncludedTerm = 1;
+    int64 lastIncludedIndex = 2;
+    ClusterConfiguration config = 3;
+}
+
+// RPC
+
+message AddServer {
+    DiscoveryNode member = 1;
+}
+
+message AddServerResponse {
+    enum Status {
+        OK = 0;
+        TIMEOUT = 1;
+        NOT_LEADER = 2;
+    }
+    Status status = 1;
+    DiscoveryNode leader = 2;
+}
+
+message AppendEntries {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+    int64 prevLogTerm = 3;
+    int64 prevLogIndex = 4;
+    int64 leaderCommit = 5;
+    repeated LogEntry entries = 6;
+}
+
+message AppendRejected {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+    int64 lastIndex = 3;
+}
+
+message AppendSuccessful {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+    int64 lastIndex = 3;
+}
+
+message ClientMessage {
+    DiscoveryNode client = 1;
+    Any command = 2;
+}
+
+message DeclineCandidate {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+}
+
+message InstallSnapshot {
+    DiscoveryNode leader = 1;
+    int64 term = 2;
+    RaftSnapshot snapshot = 3;
+}
+
+message InstallSnapshotRejected {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+}
+
+message InstallSnapshotSuccessful {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+    int64 lastIndex = 3;
+}
+
+message Noop {
+}
+
+message RemoveServer {
+    DiscoveryNode member = 1;
+}
+
+message RemoveServerResponse {
+    enum Status {
+        OK = 0;
+        TIMEOUT = 1;
+        NOT_LEADER = 2;
+    }
+    Status status = 1;
+    DiscoveryNode leader = 2;
+}
+
+message RequestVote {
+    DiscoveryNode candidate = 1;
+    int64 term = 2;
+    int64 lastLogTerm = 3;
+    int64 lastLogIndex = 4;
+}
+
+message VoteCandidate {
+    DiscoveryNode member = 1;
+    int64 term = 2;
+}

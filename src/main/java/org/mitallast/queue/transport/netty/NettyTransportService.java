@@ -3,18 +3,18 @@ package org.mitallast.queue.transport.netty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.google.protobuf.Message;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.common.proto.ProtoService;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
-import org.mitallast.queue.transport.netty.codec.TransportFrame;
 import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
 import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 
@@ -28,15 +28,15 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock;
     private final int maxConnections;
     private final TransportController transportController;
-    private final StreamService streamService;
+    private final ProtoService protoService;
     private final DefaultEventExecutor executor;
     private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
 
     @Inject
-    public NettyTransportService(Config config, TransportController transportController, StreamService streamService) {
+    public NettyTransportService(Config config, TransportController transportController, ProtoService protoService) {
         super(config.getConfig("transport"), TransportService.class);
         this.transportController = transportController;
-        this.streamService = streamService;
+        this.protoService = protoService;
         maxConnections = this.config.getInt("max_connections");
         connectedNodes = ImmutableMap.of();
         connectionLock = new ReentrantLock();
@@ -49,12 +49,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new TransportFrameDecoder(streamService));
-                pipeline.addLast(new TransportFrameEncoder(streamService));
-                pipeline.addLast(new SimpleChannelInboundHandler<TransportFrame>(false) {
+                pipeline.addLast(new TransportFrameDecoder(protoService));
+                pipeline.addLast(new TransportFrameEncoder(protoService));
+                pipeline.addLast(new SimpleChannelInboundHandler<Message>(false) {
 
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, TransportFrame frame) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, Message frame) throws Exception {
                         transportController.dispatch(frame);
                     }
 
@@ -184,7 +184,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public void send(TransportFrame message) throws IOException {
+        public void send(Message message) throws IOException {
             Channel channel = channel();
             channel.writeAndFlush(message, channel.voidPromise());
         }

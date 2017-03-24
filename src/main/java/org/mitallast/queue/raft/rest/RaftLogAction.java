@@ -6,9 +6,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import org.mitallast.queue.common.xstream.XStreamBuilder;
+import org.mitallast.queue.proto.raft.LogEntry;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.persistent.ReplicatedLog;
-import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.rest.BaseRestHandler;
 import org.mitallast.queue.rest.RestController;
 import org.mitallast.queue.rest.RestRequest;
@@ -47,8 +47,8 @@ public class RaftLogAction extends BaseRestHandler {
                     builder.writeNumberField("index", logEntry.getIndex());
                     builder.writeStringField("command", logEntry.getCommand().getClass().getSimpleName());
                     builder.writeObjectFieldStart("client");
-                    builder.writeStringField("host", logEntry.getClient().host());
-                    builder.writeNumberField("port", logEntry.getClient().port());
+                    builder.writeStringField("host", logEntry.getClient().getHost());
+                    builder.writeNumberField("port", logEntry.getClient().getPort());
                     builder.writeEndObject();
                     builder.writeEndObject();
                 }

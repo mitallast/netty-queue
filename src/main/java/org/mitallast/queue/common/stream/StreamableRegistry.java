@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.stream;
 
+@Deprecated
 public class StreamableRegistry<T extends Streamable> {
     private final int id;
     private final Class<T> streamable;

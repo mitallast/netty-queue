@@ -1,10 +1,15 @@
 package org.mitallast.queue.raft;
 
 import com.google.common.collect.ImmutableSet;
-import org.mitallast.queue.raft.cluster.ClusterConfiguration;
-import org.mitallast.queue.transport.DiscoveryNode;
+import org.mitallast.queue.proto.raft.ClusterConfiguration;
+import org.mitallast.queue.proto.raft.DiscoveryNode;
+import org.mitallast.queue.proto.raft.JointConsensusClusterConfiguration;
+import org.mitallast.queue.proto.raft.StableClusterConfiguration;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RaftMetadata {
     /**
@@ -51,12 +56,33 @@ public class RaftMetadata {
 
     public ImmutableSet<DiscoveryNode> membersWithout(DiscoveryNode member) {
         return ImmutableSet.<DiscoveryNode>builder()
-            .addAll(config.members().stream().filter(node -> !node.equals(member)).iterator())
+            .addAll(members().stream().filter(node -> !node.equals(member)).iterator())
             .build();
     }
 
+    public boolean isTransitioning() {
+        return config.getConfigCase() == ClusterConfiguration.ConfigCase.JOINT;
+    }
+
     public ImmutableSet<DiscoveryNode> members() {
-        return config.members();
+        if (isTransitioning()) {
+            return ImmutableSet.copyOf(config.getJoint().getMembersList());
+        } else {
+            return ImmutableSet.copyOf(config.getStable().getMembersList());
+        }
+    }
+
+    public JointConsensusClusterConfiguration transitionTo(StableClusterConfiguration newConfig) {
+        List<DiscoveryNode> members = Stream.concat(
+            config.getStable().getMembersList().stream(),
+            newConfig.getMembersList().stream()
+        ).distinct().collect(Collectors.toList());
+
+        return JointConsensusClusterConfiguration.newBuilder()
+            .addAllOldMembers(config.getStable().getMembersList())
+            .addAllNewMembers(newConfig.getMembersList())
+            .addAllMembers(members)
+            .build();
     }
 
     public boolean canVoteIn(long term) {
@@ -88,7 +114,7 @@ public class RaftMetadata {
     }
 
     public boolean hasMajority() {
-        return votesReceived > config.members().size() / 2;
+        return votesReceived > members().size() / 2;
     }
 
     public RaftMetadata incVote() {
@@ -101,5 +127,13 @@ public class RaftMetadata {
 
     public RaftMetadata forFollower() {
         return new RaftMetadata(currentTerm, config);
+    }
+
+    public boolean containsOnNewState(DiscoveryNode self) {
+        if (isTransitioning()) {
+            return config.getJoint().getNewMembersList().contains(self);
+        } else {
+            return config.getStable().getMembersList().contains(self);
+        }
     }
 }

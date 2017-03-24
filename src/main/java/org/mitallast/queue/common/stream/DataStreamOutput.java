@@ -6,6 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+@Deprecated
 public class DataStreamOutput extends DataOutputStream implements StreamOutput {
 
     private final StreamableClassRegistry classRegistry;

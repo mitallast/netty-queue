@@ -2,13 +2,11 @@ package org.mitallast.queue.raft;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
-import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
-import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
+import org.mitallast.queue.common.proto.ProtoRegistry;
+import org.mitallast.queue.proto.raft.*;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.persistent.FilePersistentService;
 import org.mitallast.queue.raft.persistent.PersistentService;
-import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 
 public class RaftModule extends AbstractModule {
@@ -26,34 +24,29 @@ public class RaftModule extends AbstractModule {
 
         bind(ResourceRegistry.class).asEagerSingleton();
 
-        Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
+        Multibinder<ProtoRegistry> protoBinder = Multibinder.newSetBinder(binder(), ProtoRegistry.class);
 
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendEntries.class, AppendEntries::new, 200));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendRejected.class, AppendRejected::new, 201));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendSuccessful.class, AppendSuccessful::new, 202));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 210));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 230));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(Noop.class, Noop::read, 231));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 240));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 241));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshot.class, InstallSnapshot::new, 261));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 262));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 263));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration::new, 270));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 271));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServer.class, AddServer::new, 280));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServerResponse.class, AddServerResponse::new, 281));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServer.class, RemoveServer::new, 282));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServerResponse.class, RemoveServerResponse::new, 283));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1000, AddServer.getDescriptor(), AddServer.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1001, AddServerResponse.getDescriptor(), AddServerResponse.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1002, AppendEntries.getDescriptor(), AppendEntries.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1003, AppendRejected.getDescriptor(), AppendRejected.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1004, AppendSuccessful.getDescriptor(), AppendSuccessful.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1005, ClientMessage.getDescriptor(), ClientMessage.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1006, DeclineCandidate.getDescriptor(), DeclineCandidate.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1007, DiscoveryNode.getDescriptor(), DiscoveryNode.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1008, InstallSnapshot.getDescriptor(), InstallSnapshot.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1009, InstallSnapshotRejected.getDescriptor(), InstallSnapshotRejected.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1010, InstallSnapshotSuccessful.getDescriptor(), InstallSnapshotSuccessful.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1011, ClusterConfiguration.getDescriptor(), ClusterConfiguration.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1012, JointConsensusClusterConfiguration.getDescriptor(), JointConsensusClusterConfiguration.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1013, StableClusterConfiguration.getDescriptor(), StableClusterConfiguration.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1014, LogEntry.getDescriptor(), LogEntry.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1015, Noop.getDescriptor(), Noop.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1016, RaftSnapshot.getDescriptor(), RaftSnapshot.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1017, RaftSnapshotMetadata.getDescriptor(), RaftSnapshotMetadata.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1018, RemoveServer.getDescriptor(), RemoveServer.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1019, RemoveServerResponse.getDescriptor(), RemoveServerResponse.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1020, RequestVote.getDescriptor(), RequestVote.parser()));
+        protoBinder.addBinding().toInstance(new ProtoRegistry(1021, VoteCandidate.getDescriptor(), VoteCandidate.parser()));
     }
 }

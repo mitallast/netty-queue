@@ -12,6 +12,7 @@ import org.mitallast.queue.common.component.AbstractComponent;
 import java.io.*;
 import java.util.Set;
 
+@Deprecated
 public class InternalStreamService extends AbstractComponent implements StreamableClassRegistry, StreamService {
     private final TIntObjectMap<StreamableReader<? extends Streamable>> idToReaderMap = new TIntObjectHashMap<>(100, 0.5f, -1);
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);

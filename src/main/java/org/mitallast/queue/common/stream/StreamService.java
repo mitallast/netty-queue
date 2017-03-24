@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.*;
 
+@Deprecated
 public interface StreamService {
 
     StreamInput input(ByteBuf buffer);

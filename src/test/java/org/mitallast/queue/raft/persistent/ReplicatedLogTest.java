@@ -81,13 +81,6 @@ public class ReplicatedLogTest extends BaseTest {
             .build();
     }
 
-    private RaftSnapshot snapshot(RaftSnapshotMetadata meta, Message data) {
-        return RaftSnapshot.newBuilder()
-            .setMeta(meta)
-            .addData(protoService.pack(data))
-            .build();
-    }
-
     private Config config() {
         return ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
             .put("node.name", "test")

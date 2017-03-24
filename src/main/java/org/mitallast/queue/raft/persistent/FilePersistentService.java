@@ -2,7 +2,7 @@ package org.mitallast.queue.raft.persistent;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.google.protobuf.TextFormat;
+import com.google.protobuf.*;
 import com.typesafe.config.Config;
 import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.file.FileService;
@@ -46,7 +46,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
             currentTerm = 0;
             votedFor = Optional.empty();
             writeState();
-            if(logger.isInfoEnabled()) {
+            if (logger.isInfoEnabled()) {
                 logger.info("initialize state: segment={} term={} voted={}", segment, currentTerm, votedFor.map(TextFormat::shortDebugString));
             }
         } else {
@@ -60,7 +60,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
                 } else {
                     votedFor = Optional.empty();
                 }
-                if(logger.isInfoEnabled()) {
+                if (logger.isInfoEnabled()) {
                     logger.info("read state: segment={} term={} voted={}", segment, currentTerm, votedFor.map(TextFormat::shortDebugString));
                 }
             }
@@ -72,7 +72,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
              DataOutputStream data = new DataOutputStream(output)
         ) {
 
-            if(logger.isInfoEnabled()) {
+            if (logger.isInfoEnabled()) {
                 logger.info("write state: segment={} term={} voted={}", segment, currentTerm, votedFor.map(TextFormat::shortDebugString));
             }
             data.writeLong(segment);
@@ -124,15 +124,18 @@ public class FilePersistentService extends AbstractComponent implements Persiste
         ArrayList<LogEntry> entries = new ArrayList<>();
 
         try (FileInputStream input = new FileInputStream(segmentFile)) {
-            while (input.available() > 0) {
-                entries.add(LogEntry.parser().parseDelimitedFrom(input));
+            CodedInputStream coded = CodedInputStream.newInstance(input);
+            while (!coded.isAtEnd()) {
+                entries.add(protoService.readDelimited(coded, LogEntry.parser()));
             }
         }
 
         FileOutputStream output = new FileOutputStream(segmentFile, true);
+        CodedOutputStream coded = CodedOutputStream.newInstance(output, 65536);
         return new FileReplicatedLog(
             segmentFile,
             output,
+            coded,
             entries,
             initialCommittedIndex,
             segment
@@ -154,15 +157,17 @@ public class FilePersistentService extends AbstractComponent implements Persiste
 
         private File segmentFile;
         private FileOutputStream output;
+        private CodedOutputStream coded;
 
         private long committedIndex;
 
-        public FileReplicatedLog(File segmentFile, FileOutputStream output, ArrayList<LogEntry> entries, long committedIndex, long start) throws IOException {
+        public FileReplicatedLog(File segmentFile, FileOutputStream output, CodedOutputStream coded, ArrayList<LogEntry> entries, long committedIndex, long start) throws IOException {
             this.entries = entries;
             this.committedIndex = committedIndex;
             this.start = start;
             this.segmentFile = segmentFile;
             this.output = output;
+            this.coded = coded;
         }
 
         @Override
@@ -242,7 +247,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
         @Override
         public ReplicatedLog append(LogEntry entry) throws IOException {
             dirty = true;
-            entry.writeDelimitedTo(output);
+            protoService.writeDelimited(coded, entry);
             this.entries.add(entry);
             return this;
         }
@@ -251,7 +256,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
         public ReplicatedLog append(List<LogEntry> entries) throws IOException {
             dirty = true;
             for (LogEntry entry : entries) {
-                entry.writeDelimitedTo(output);
+                protoService.writeDelimited(coded, entry);
             }
             this.entries.addAll(entries);
             return this;
@@ -272,9 +277,11 @@ public class FilePersistentService extends AbstractComponent implements Persiste
 
                 File tmpSegment = temporaryFile();
                 try (FileOutputStream output = new FileOutputStream(tmpSegment, true)) {
+                    CodedOutputStream coded = CodedOutputStream.newInstance(output, 65536);
                     for (LogEntry logEntry : entries) {
-                        logEntry.writeDelimitedTo(output);
+                        protoService.writeDelimited(coded, logEntry);
                     }
+                    coded.flush();
                 }
 
                 Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -282,9 +289,11 @@ public class FilePersistentService extends AbstractComponent implements Persiste
                 // recreate file object after move
                 File newSegmentFile = segmentFile(start);
                 FileOutputStream output = new FileOutputStream(newSegmentFile, true);
+                CodedOutputStream coded = CodedOutputStream.newInstance(output, 65536);
 
                 this.segmentFile = newSegmentFile;
                 this.output = output;
+                this.coded = coded;
                 dirty = false;
                 return this;
             }
@@ -360,18 +369,22 @@ public class FilePersistentService extends AbstractComponent implements Persiste
                 output.close();
                 File tmpSegment = temporaryFile();
                 try (FileOutputStream output = new FileOutputStream(tmpSegment, true)) {
+                    CodedOutputStream coded = CodedOutputStream.newInstance(output, 65536);
                     for (LogEntry logEntry : entries) {
-                        logEntry.writeDelimitedTo(output);
+                        protoService.writeDelimited(coded, logEntry);
                     }
+                    coded.flush();
                 }
                 Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
                 // recreate file object after move
                 File newSegmentFile = segmentFile(start);
                 FileOutputStream output = new FileOutputStream(newSegmentFile, true);
+                CodedOutputStream coded = CodedOutputStream.newInstance(output, 65536);
 
                 this.segmentFile = newSegmentFile;
                 this.output = output;
+                this.coded = coded;
                 this.start = lastIncludedIndex;
                 dirty = false;
                 return this;
@@ -380,10 +393,12 @@ public class FilePersistentService extends AbstractComponent implements Persiste
 
                 File newSegmentFile = segmentFile(snapshot.getMeta().getLastIncludedIndex());
                 FileOutputStream output = new FileOutputStream(newSegmentFile, true);
+                CodedOutputStream coded = CodedOutputStream.newInstance(output, 65536);
 
                 for (LogEntry logEntry : entries) {
-                    logEntry.writeDelimitedTo(output);
+                    protoService.writeDelimited(coded, logEntry);
                 }
+                coded.flush();
                 output.flush();
                 updateSegment(snapshot.getMeta().getLastIncludedIndex());
 
@@ -391,6 +406,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
 
                 this.segmentFile = newSegmentFile;
                 this.output = output;
+                this.coded = coded;
                 this.start = lastIncludedIndex;
                 dirty = false;
                 return this;
@@ -409,6 +425,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
 
         private void flush() throws IOException {
             if (dirty) {
+                coded.flush();
                 output.flush();
                 dirty = false;
             }
@@ -422,6 +439,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
 
             segmentFile = null;
             output = null;
+            coded = null;
         }
 
         @Override

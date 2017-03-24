@@ -1,6 +1,5 @@
 package org.mitallast.queue.transport.netty.codec;
 
-import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.Message;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
@@ -27,7 +26,9 @@ public class TransportFrameEncoder extends MessageToByteEncoder<Message> {
         int header = out.writerIndex();
         out.writeInt(index);
         out.writeInt(0);
-        message.writeTo(new ByteBufOutputStream(out));
-        out.setInt(header + 4, out.writerIndex() - 8 - header);
+        ByteBufOutputStream stream = new ByteBufOutputStream(out);
+        message.writeTo(stream);
+        int size = out.writerIndex() - 8 - header;
+        out.setInt(header + 4, size);
     }
 }

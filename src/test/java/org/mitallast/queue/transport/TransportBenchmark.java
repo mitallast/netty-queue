@@ -67,7 +67,6 @@ public class TransportBenchmark extends BaseQueueTest {
     @Test
     public void testConcurrent() throws Exception {
         warmUp();
-        System.gc();
         countDownLatch = new CountDownLatch(total());
         long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
@@ -81,7 +80,7 @@ public class TransportBenchmark extends BaseQueueTest {
     }
 
     private void warmUp() throws Exception {
-        int warmUp = total() * 4;
+        int warmUp = total() * 10;
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
             transportService.channel(member).send(TestLongMessage.newBuilder().setValue(i).build());

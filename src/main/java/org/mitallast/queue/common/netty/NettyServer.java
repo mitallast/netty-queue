@@ -27,7 +27,8 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final boolean tcpNoDelay;
     private final int sndBuf;
     private final int rcvBuf;
-    private final int threads;
+    private final int bossThreads;
+    private final int childThreads;
     protected Channel channel;
     private ServerBootstrap bootstrap;
 
@@ -41,7 +42,8 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         this.tcpNoDelay = config.getBoolean("tcp_no_delay");
         this.sndBuf = config.getInt("snd_buf");
         this.rcvBuf = config.getInt("rcv_buf");
-        this.threads = config.getInt("threads");
+        this.bossThreads = config.getInt("boss_threads");
+        this.childThreads = config.getInt("child_threads");
     }
 
     private ThreadFactory threadFactory(String name) {
@@ -53,18 +55,21 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         try {
             final Class<? extends ServerSocketChannel> channelClass;
             final EventLoopGroup boss;
+            final EventLoopGroup child;
             if(Epoll.isAvailable()){
                 logger.info("use epoll");
                 channelClass = EpollServerSocketChannel.class;
-                boss = new EpollEventLoopGroup(threads, threadFactory("boss"));
+                boss = new EpollEventLoopGroup(bossThreads, threadFactory("boss"));
+                child = new EpollEventLoopGroup(childThreads, threadFactory("child"));
             }else {
                 logger.info("use nio");
                 channelClass = NioServerSocketChannel.class;
-                boss = new NioEventLoopGroup(threads, threadFactory("boss"));
+                boss = new NioEventLoopGroup(bossThreads, threadFactory("boss"));
+                child = new NioEventLoopGroup(childThreads, threadFactory("child"));
             }
 
             bootstrap = new ServerBootstrap();
-            bootstrap.group(boss)
+            bootstrap.group(boss, child)
                 .channel(channelClass)
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)

@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import org.apache.logging.log4j.CloseableThreadContext;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.Match;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
@@ -124,10 +125,10 @@ public class Raft extends AbstractLifecycleComponent {
     public void apply(Streamable event) {
         lock.lock();
         try {
-            if(state == null){
+            if (state == null) {
                 return;
             }
-            try (MDC.MDCCloseable ignore = MDC.putCloseable("state", state.state().name())) {
+            try (final CloseableThreadContext.Instance ctx = CloseableThreadContext.push(state.state().name())) {
                 state = mapper.apply(event);
             }
         } catch (IOException e) {

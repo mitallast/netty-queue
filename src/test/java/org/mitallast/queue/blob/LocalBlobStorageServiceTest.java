@@ -27,7 +27,7 @@ public class LocalBlobStorageServiceTest extends BaseTest {
                 .put("node.path", testFolder.getRoot().getAbsolutePath())
                 .build());
         FileService fileService = new FileService(config);
-        blobStorageService = new LocalBlobStorageService(config, fileService);
+        blobStorageService = new LocalBlobStorageService(fileService);
     }
 
     @Test

@@ -2,13 +2,13 @@ package org.mitallast.queue.rest;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import org.mitallast.queue.common.component.AbstractComponent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.error.MaybeErrors;
 import org.mitallast.queue.common.json.JsonService;
 import org.mitallast.queue.common.path.PathTrie;
@@ -22,7 +22,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class RestController extends AbstractComponent {
+public class RestController {
+    private final static Logger logger = LogManager.getLogger();
 
     private final JsonService jsonService;
 
@@ -37,8 +38,7 @@ public class RestController extends AbstractComponent {
     private final ParamMappers paramMappers;
 
     @Inject
-    public RestController(Config config, JsonService jsonService) {
-        super(config.getConfig("rest"), RestController.class);
+    public RestController(JsonService jsonService) {
         this.jsonService = jsonService;
 
         this.responseMappers = new ResponseMappers();

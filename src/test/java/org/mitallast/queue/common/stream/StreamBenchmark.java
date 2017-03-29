@@ -23,7 +23,7 @@ public class StreamBenchmark extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        StreamService streamService = new InternalStreamService(ConfigFactory.defaultReference(), ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
+        StreamService streamService = new InternalStreamService(ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
         buffer = Unpooled.buffer();
         output = streamService.output(buffer);
         output.writeClass(TestStreamable.class);

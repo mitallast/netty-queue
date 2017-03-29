@@ -2,8 +2,8 @@ package org.mitallast.queue.raft.persistent;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
-import org.mitallast.queue.common.component.AbstractComponent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.file.FileService;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
@@ -12,13 +12,17 @@ import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Optional;
 
-public class FilePersistentService extends AbstractComponent implements PersistentService {
+public class FilePersistentService implements PersistentService {
+    private final static Logger logger = LogManager.getLogger();
 
     private final static long initialIndex = 1;
     private final static long initialCommittedIndex = 0;
@@ -32,8 +36,7 @@ public class FilePersistentService extends AbstractComponent implements Persiste
     private Optional<DiscoveryNode> votedFor;
 
     @Inject
-    public FilePersistentService(Config config, FileService fileService, StreamService streamService) throws IOException {
-        super(config, PersistentService.class);
+    public FilePersistentService(FileService fileService, StreamService streamService) throws IOException {
         this.fileService = fileService;
         this.streamService = streamService;
         this.stateFile = fileService.resource("raft", "state.bin");

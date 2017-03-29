@@ -30,8 +30,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     protected volatile Bootstrap bootstrap;
 
-    public NettyClientBootstrap(Config config, Class loggerClass) {
-        super(config, loggerClass);
+    public NettyClientBootstrap(Config config) {
         maxContentLength = config.getInt("max_content_length");
         threads = config.getInt("threads");
 

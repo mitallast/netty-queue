@@ -18,18 +18,15 @@ public class Main {
         synchronized (mutex) {
             mutex.wait();
         }
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                try {
-                    synchronized (mutex) {
-                        mutex.notify();
-                    }
-                    node.close();
-                } catch (IOException e) {
-                    e.printStackTrace(System.err);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                synchronized (mutex) {
+                    mutex.notify();
                 }
+                node.close();
+            } catch (IOException e) {
+                e.printStackTrace(System.err);
             }
-        });
+        }));
     }
 }

@@ -13,7 +13,7 @@ public class ComponentModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        LifecycleService lifecycleService = new LifecycleService(config);
+        LifecycleService lifecycleService = new LifecycleService();
         bind(Config.class).toInstance(config);
         bind(LifecycleService.class).toInstance(lifecycleService);
         bindListener(new LifecycleMatcher(), lifecycleService);

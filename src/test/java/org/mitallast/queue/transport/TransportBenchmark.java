@@ -52,7 +52,7 @@ public class TransportBenchmark extends BaseQueueTest {
         countDownLatch = new CountDownLatch(total());
         long start = System.currentTimeMillis();
         for (int i = 0; i < total(); i++) {
-            transportService.channel(member).message(new TestStreamable(i));
+            transportService.channel(member).send(new TestStreamable(i));
         }
         countDownLatch.await();
         long end = System.currentTimeMillis();
@@ -67,7 +67,7 @@ public class TransportBenchmark extends BaseQueueTest {
         long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < total(); i += concurrency) {
-                transportService.channel(member).message(new TestStreamable(i));
+                transportService.channel(member).send(new TestStreamable(i));
             }
         });
         countDownLatch.await();
@@ -79,7 +79,7 @@ public class TransportBenchmark extends BaseQueueTest {
         int warmUp = total() * 4;
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
-            transportService.channel(member).message(new TestStreamable(i));
+            transportService.channel(member).send(new TestStreamable(i));
         }
         countDownLatch.await();
         System.gc();

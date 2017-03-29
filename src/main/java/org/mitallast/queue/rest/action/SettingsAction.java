@@ -4,14 +4,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.handler.codec.http.HttpMethod;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.rest.RestController;
 
-public class SettingsAction extends AbstractComponent {
+public class SettingsAction {
+
+    private final Config config;
 
     @Inject
     public SettingsAction(Config config, RestController controller) {
-        super(config, SettingsAction.class);
+        this.config = config;
 
         controller.handler(this::settings)
             .response(controller.response().json())

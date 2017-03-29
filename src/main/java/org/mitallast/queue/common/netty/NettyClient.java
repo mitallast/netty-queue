@@ -12,8 +12,8 @@ public abstract class NettyClient extends NettyClientBootstrap {
     protected final int port;
     protected volatile Channel channel;
 
-    public NettyClient(Config config, Class loggerClass) {
-        super(config, loggerClass);
+    public NettyClient(Config config) {
+        super(config);
         host = config.getString("host");
         port = config.getInt("port");
     }

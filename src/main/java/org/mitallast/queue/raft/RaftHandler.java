@@ -1,18 +1,13 @@
 package org.mitallast.queue.raft;
 
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
-import org.mitallast.queue.common.component.AbstractComponent;
-import org.mitallast.queue.raft.cluster.*;
 import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.transport.TransportController;
 
-public class RaftHandler extends AbstractComponent {
+public class RaftHandler {
 
     @Inject
-    public RaftHandler(Config config, TransportController transportController, Raft raft) {
-        super(config.getConfig("raft"), RaftHandler.class);
-
+    public RaftHandler(TransportController transportController, Raft raft) {
         transportController.registerMessageHandler(AppendEntries.class, raft::apply);
         transportController.registerMessageHandler(AppendRejected.class, raft::apply);
         transportController.registerMessageHandler(AppendSuccessful.class, raft::apply);

@@ -22,49 +22,48 @@ import org.mitallast.queue.crdt.rest.RestCrdtModule;
 import org.mitallast.queue.raft.RaftModule;
 import org.mitallast.queue.raft.rest.RaftRestModule;
 import org.mitallast.queue.rest.RestModule;
-import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportModule;
-import org.mitallast.queue.transport.TransportServer;
 
 import java.io.IOException;
 
 public class InternalNode extends AbstractLifecycleComponent implements Node {
 
+    private final Config config;
     private final Injector injector;
 
-    public InternalNode(Config config, AbstractModule... plugins) {
-        super(prepareConfig(config), Node.class);
+    public InternalNode(Config rawConfig, AbstractModule... plugins) {
+        config = prepareConfig(rawConfig);
 
         logger.info("initializing...");
 
         ModulesBuilder modules = new ModulesBuilder();
-        modules.add(new ComponentModule(this.config));
+        modules.add(new ComponentModule(config));
         modules.add(new FileModule());
         modules.add(new StreamModule());
         modules.add(new TransportModule());
-        if (this.config.getBoolean("rest.enabled")) {
+        if (config.getBoolean("rest.enabled")) {
             modules.add(new RestModule());
         }
-        if (this.config.getBoolean("raft.enabled")) {
+        if (config.getBoolean("raft.enabled")) {
             modules.add(new RaftModule());
-            if (this.config.getBoolean("rest.enabled")) {
+            if (config.getBoolean("rest.enabled")) {
                 modules.add(new RaftRestModule());
             }
-            if (this.config.getBoolean("blob.enabled")) {
+            if (config.getBoolean("blob.enabled")) {
                 modules.add(new BlobModule());
-                if (this.config.getBoolean("rest.enabled")) {
+                if (config.getBoolean("rest.enabled")) {
                     modules.add(new BlobRestModule());
                 }
             }
-            if (this.config.getBoolean("benchmark.enabled")) {
+            if (config.getBoolean("benchmark.enabled")) {
                 modules.add(new BenchmarkModule());
-                if (this.config.getBoolean("rest.enabled")) {
+                if (config.getBoolean("rest.enabled")) {
                     modules.add(new BenchmarkRestModule());
                 }
             }
-            if (this.config.getBoolean("crdt.enabled")) {
+            if (config.getBoolean("crdt.enabled")) {
                 modules.add(new CrdtModule());
-                if (this.config.getBoolean("rest.enabled")) {
+                if (config.getBoolean("rest.enabled")) {
                     modules.add(new RestCrdtModule());
                 }
             }

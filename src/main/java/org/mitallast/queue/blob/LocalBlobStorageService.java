@@ -1,8 +1,6 @@
 package org.mitallast.queue.blob;
 
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.file.FileService;
 
 import java.io.*;
@@ -10,13 +8,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class LocalBlobStorageService extends AbstractComponent implements BlobStorageService {
+public class LocalBlobStorageService implements BlobStorageService {
 
     private final FileService fileService;
 
     @Inject
-    public LocalBlobStorageService(Config config, FileService fileService) throws IOException {
-        super(config.getConfig("blob"), BlobStorageService.class);
+    public LocalBlobStorageService(FileService fileService) throws IOException {
         this.fileService = fileService;
     }
 

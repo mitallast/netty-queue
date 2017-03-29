@@ -9,12 +9,13 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -267,14 +268,13 @@ public class ClusterRaftTest extends BaseTest {
         }
     }
 
-    public static class RegisterResourceFSM extends AbstractComponent implements ResourceFSM {
-
+    public static class RegisterResourceFSM implements ResourceFSM {
+        private final Logger logger = LogManager.getLogger();
         private volatile String value = "";
         private volatile ByteBuf buff = Unpooled.EMPTY_BUFFER;
 
         @Inject
-        public RegisterResourceFSM(Config config, ResourceRegistry registry) {
-            super(config, RegisterResourceFSM.class);
+        public RegisterResourceFSM(ResourceRegistry registry) {
             registry.register(this);
             registry.register(RegisterSet.class, this::handle);
             registry.register(RegisterGet.class, this::handle);
@@ -466,15 +466,15 @@ public class ClusterRaftTest extends BaseTest {
         }
     }
 
-    public static class RegisterClient extends AbstractComponent {
+    public static class RegisterClient {
+        private final Logger logger = LogManager.getLogger();
         private final Raft raft;
         private final ClusterDiscovery clusterDiscovery;
         private final AtomicLong counter = new AtomicLong();
         private final ConcurrentMap<Long, CompletableFuture<String>> requests = new ConcurrentHashMap<>();
 
         @Inject
-        public RegisterClient(Config config, Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
-            super(config, RegisterClient.class);
+        public RegisterClient(Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
             this.raft = raft;
             this.clusterDiscovery = clusterDiscovery;
 
@@ -503,7 +503,9 @@ public class ClusterRaftTest extends BaseTest {
         }
     }
 
-    public static class RegisterByteClient extends AbstractComponent {
+    public static class RegisterByteClient {
+        private final Logger logger = LogManager.getLogger();
+
         private final Raft raft;
         private final ClusterDiscovery clusterDiscovery;
         private final AtomicLong counter = new AtomicLong();
@@ -511,8 +513,7 @@ public class ClusterRaftTest extends BaseTest {
         private final ConcurrentMap<Long, CompletableFuture<ByteBuf>> getRequests = new ConcurrentHashMap<>();
 
         @Inject
-        public RegisterByteClient(Config config, Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
-            super(config, RegisterByteClient.class);
+        public RegisterByteClient(Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
             this.raft = raft;
             this.clusterDiscovery = clusterDiscovery;
 

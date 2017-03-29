@@ -9,12 +9,7 @@ import java.util.List;
 
 public class LifecycleService extends AbstractLifecycleComponent implements ProvisionListener {
 
-    private final List<LifecycleComponent> lifecycleQueue;
-
-    protected LifecycleService(Config config) {
-        super(config, LifecycleService.class);
-        lifecycleQueue = new ArrayList<>();
-    }
+    private final List<LifecycleComponent> lifecycleQueue = new ArrayList<>();
 
     @Override
     public synchronized <T> void onProvision(ProvisionInvocation<T> provision) {

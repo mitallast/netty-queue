@@ -6,12 +6,10 @@ import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.stream.StreamService;
+import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportServer;
-import org.mitallast.queue.transport.netty.codec.TransportFrame;
-import org.mitallast.queue.transport.netty.codec.TransportFrameDecoder;
-import org.mitallast.queue.transport.netty.codec.TransportFrameEncoder;
 
 public class NettyTransportServer extends NettyServer implements TransportServer {
 
@@ -21,11 +19,11 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     @Inject
     public NettyTransportServer(
-            Config config,
-            TransportController transportController,
-            StreamService streamService
+        Config config,
+        TransportController transportController,
+        StreamService streamService
     ) {
-        super(config.getConfig("transport"), TransportServer.class);
+        super(config.getConfig("transport"));
         this.transportController = transportController;
         this.streamService = streamService;
         this.discoveryNode = new DiscoveryNode(host, port);
@@ -46,14 +44,14 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         @Override
         protected void initChannel(SocketChannel ch) throws Exception {
             ChannelPipeline pipeline = ch.pipeline();
-            pipeline.addLast(new TransportFrameDecoder(streamService));
-            pipeline.addLast(new TransportFrameEncoder(streamService));
+            pipeline.addLast(new StreamableDecoder(streamService));
+            pipeline.addLast(new StreamableEncoder(streamService));
             pipeline.addLast(new TransportServerHandler());
         }
     }
 
     @ChannelHandler.Sharable
-    private class TransportServerHandler extends SimpleChannelInboundHandler<TransportFrame> {
+    private class TransportServerHandler extends SimpleChannelInboundHandler<Streamable> {
 
         public TransportServerHandler() {
             super(false);
@@ -65,8 +63,8 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, TransportFrame request) {
-            transportController.dispatch(request);
+        protected void channelRead0(ChannelHandlerContext ctx, Streamable message) {
+            transportController.dispatch(message);
         }
 
         @Override

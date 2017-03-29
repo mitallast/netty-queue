@@ -6,7 +6,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="com.zaxxer.hikari" level="INFO"/>
+        <Logger name="org.mitallast.queue.raft.Raft" level="WARN"/>
         <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>

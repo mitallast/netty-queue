@@ -32,12 +32,11 @@ public class PersistentTest extends BaseTest {
     }
 
     private StreamService streamService() throws Exception {
-        return new InternalStreamService(config(), ImmutableSet.of());
+        return new InternalStreamService(ImmutableSet.of());
     }
 
     private PersistentService persistent() throws Exception {
         return new FilePersistentService(
-            config(),
             fileService(),
             streamService()
         );

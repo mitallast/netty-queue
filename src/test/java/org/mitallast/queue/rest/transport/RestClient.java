@@ -21,7 +21,7 @@ public class RestClient extends NettyClient {
     private final ConcurrentLinkedDeque<CompletableFuture<FullHttpResponse>> queue = new ConcurrentLinkedDeque<>();
 
     public RestClient(Config config) {
-        super(config.getConfig("rest"), RestClient.class);
+        super(config.getConfig("rest"));
     }
 
     public CompletableFuture<FullHttpResponse> send(HttpRequest request) {

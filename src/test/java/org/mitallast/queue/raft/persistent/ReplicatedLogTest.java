@@ -60,7 +60,7 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     private StreamService streamService() throws Exception {
-        return new InternalStreamService(config(), ImmutableSet.of(
+        return new InternalStreamService(ImmutableSet.of(
             StreamableRegistry.of(AppendWord.class, AppendWord::new, 10000),
             StreamableRegistry.of(LogEntry.class, LogEntry::new, 10001),
             StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 10002),
@@ -70,7 +70,7 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     private ReplicatedLog log() throws Exception {
-        return new FilePersistentService(config(), fileService(), streamService()).openLog();
+        return new FilePersistentService(fileService(), streamService()).openLog();
     }
 
     @Test

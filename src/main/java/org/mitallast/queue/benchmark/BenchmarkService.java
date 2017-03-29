@@ -1,8 +1,8 @@
 package org.mitallast.queue.benchmark;
 
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
-import org.mitallast.queue.common.component.AbstractComponent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
@@ -13,8 +13,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
-public class BenchmarkService extends AbstractComponent {
-
+public class BenchmarkService {
+    private final static Logger logger = LogManager.getLogger();
     private final ClusterDiscovery discovery;
     private final Raft raft;
     private final ConcurrentMap<Long, CompletableFuture<BenchmarkResponse>> requests = new ConcurrentHashMap<>();
@@ -23,13 +23,10 @@ public class BenchmarkService extends AbstractComponent {
 
     @Inject
     public BenchmarkService(
-        Config config,
         TransportController transportController,
         ClusterDiscovery discovery,
         Raft raft
     ) {
-        super(config, BenchmarkService.class);
-
         this.discovery = discovery;
         this.raft = raft;
 

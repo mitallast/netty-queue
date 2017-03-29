@@ -12,7 +12,7 @@ public class HttpServer extends NettyServer {
 
     @Inject
     public HttpServer(Config config, HttpServerHandler serverHandler, WebSocketFrameHandler webSocketFrameHandler) {
-        super(config.getConfig("rest"), HttpServer.class);
+        super(config.getConfig("rest"));
         this.serverHandler = serverHandler;
         this.webSocketFrameHandler = webSocketFrameHandler;
     }

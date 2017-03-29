@@ -20,7 +20,7 @@ public class StreamTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        streamService = new InternalStreamService(ConfigFactory.defaultReference(), ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 1)));
+        streamService = new InternalStreamService(ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 1)));
         buffer = Unpooled.buffer();
     }
 

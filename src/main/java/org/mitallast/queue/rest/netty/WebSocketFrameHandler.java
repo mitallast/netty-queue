@@ -9,8 +9,7 @@ import org.apache.logging.log4j.Logger;
 
 @ChannelHandler.Sharable
 public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
-
-    private final Logger logger = LogManager.getLogger();
+    private final static Logger logger = LogManager.getLogger();
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

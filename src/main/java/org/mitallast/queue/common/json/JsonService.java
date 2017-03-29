@@ -11,11 +11,12 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.google.inject.Inject;
-import com.typesafe.config.*;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigRenderOptions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.error.Errors;
 
 import java.io.IOError;
@@ -24,14 +25,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 
-public class JsonService extends AbstractComponent {
+public class JsonService {
 
     private final ObjectMapper mapper;
 
     @Inject
-    public JsonService(Config config) {
-        super(config, JsonService.class);
-
+    public JsonService() {
         SimpleModule module = new SimpleModule();
         module.addSerializer(Config.class, new ConfigSerializer());
         module.addDeserializer(Config.class, new ConfigDeserializer());

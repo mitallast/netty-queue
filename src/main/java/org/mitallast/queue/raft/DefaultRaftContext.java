@@ -3,19 +3,21 @@ package org.mitallast.queue.raft;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 
 import java.io.IOException;
 import java.util.concurrent.*;
 
 public class DefaultRaftContext extends AbstractLifecycleComponent implements RaftContext {
+    private final static Logger logger = LogManager.getLogger();
 
     private final ConcurrentMap<String, ScheduledFuture> timers;
     private final ScheduledExecutorService scheduler;
 
     @Inject
     public DefaultRaftContext(Config config) {
-        super(config, RaftContext.class);
         timers = new ConcurrentHashMap<>();
         scheduler = Executors.newScheduledThreadPool(1, new DefaultThreadFactory("raft"));
     }

@@ -1,16 +1,13 @@
 package org.mitallast.queue.common.component;
 
-import com.typesafe.config.Config;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 
-public abstract class AbstractLifecycleComponent extends AbstractComponent implements LifecycleComponent {
-
+public abstract class AbstractLifecycleComponent implements LifecycleComponent {
+    protected final Logger logger = LogManager.getLogger(getClass());
     private final Lifecycle lifecycle = new Lifecycle();
-
-    protected AbstractLifecycleComponent(Config config, Class loggerClass) {
-        super(config, loggerClass);
-    }
 
     @Override
     public Lifecycle lifecycle() {
@@ -20,21 +17,21 @@ public abstract class AbstractLifecycleComponent extends AbstractComponent imple
     @Override
     public void checkIsStarted() {
         if (!lifecycle.started()) {
-            throw new IllegalStateException(logger.getName() + " is not started");
+            throw new IllegalStateException(getClass().getSimpleName() + " is not started");
         }
     }
 
     @Override
     public void checkIsStopped() {
         if (!lifecycle.stopped()) {
-            throw new IllegalStateException(logger.getName() + " is not stopped");
+            throw new IllegalStateException(getClass().getSimpleName() + " is not stopped");
         }
     }
 
     @Override
     public void checkIsClosed() {
         if (!lifecycle.closed()) {
-            throw new IllegalStateException(logger.getName() + " is not closed");
+            throw new IllegalStateException(getClass().getSimpleName() + " is not closed");
         }
     }
 

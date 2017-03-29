@@ -4,8 +4,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.blob.protocol.*;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
@@ -26,8 +27,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
-public class DistributedStorageService extends AbstractComponent {
-
+public class DistributedStorageService {
+    private final Logger logger = LogManager.getLogger();
     private final ClusterDiscovery discovery;
     private final TransportService transportService;
     private final BlobStorageService blobStorageService;
@@ -47,13 +48,12 @@ public class DistributedStorageService extends AbstractComponent {
         Raft raft,
         DistributedStorageFSM fsm
     ) {
-        super(config.getConfig("blob"), DistributedStorageService.class);
         this.discovery = discovery;
         this.transportService = transportService;
         this.blobStorageService = blobStorageService;
         this.raft = raft;
         this.fsm = fsm;
-        this.QoS = this.config.getInt("QoS");
+        this.QoS = config.getInt("blob.QoS");
 
         transportController.<PutBlobResourceRequest>registerMessageHandler(PutBlobResourceRequest.class, this::handle);
         transportController.<PutBlobResourceResponse>registerMessageHandler(PutBlobResourceResponse.class, this::handle);
@@ -98,7 +98,7 @@ public class DistributedStorageService extends AbstractComponent {
             PutBlobResourceRequest message = new PutBlobResourceRequest(discovery.self(), id, key, data);
             try {
                 transportService.connectToNode(node);
-                transportService.channel(node).message(message);
+                transportService.channel(node).send(message);
             } catch (IOException e) {
                 logger.error("error send message to {}", node);
             }
@@ -121,7 +121,7 @@ public class DistributedStorageService extends AbstractComponent {
             logger.info("value resource {} id {} node {}", key, id, node);
             try {
                 transportService.connectToNode(node);
-                transportService.channel(node).message(new GetBlobResourceRequest(node, id, key));
+                transportService.channel(node).send(new GetBlobResourceRequest(node, id, key));
             } catch (IOException e) {
                 logger.error("error send message to {}", node);
             }
@@ -143,7 +143,7 @@ public class DistributedStorageService extends AbstractComponent {
             }
             GetBlobResourceResponse response = new GetBlobResourceResponse(message.getId(), message.getKey(), out.toByteArray());
             transportService.connectToNode(message.getNode());
-            transportService.channel(message.getNode()).message(response);
+            transportService.channel(message.getNode()).send(response);
         } catch (IOException e) {
             logger.warn("error value resource {}: {}", message.getKey(), e);
         }
@@ -178,7 +178,7 @@ public class DistributedStorageService extends AbstractComponent {
         } else {
             try {
                 transportService.connectToNode(message.getNode());
-                transportService.channel(message.getNode()).message(new PutBlobResourceResponse(
+                transportService.channel(message.getNode()).send(new PutBlobResourceResponse(
                     message.getId(), message.getKey(),
                     false
                 ));

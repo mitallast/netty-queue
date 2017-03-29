@@ -2,27 +2,20 @@ package org.mitallast.queue.raft.resource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import com.typesafe.config.Config;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.Immutable;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 
 import java.io.IOException;
 
-public class ResourceRegistry extends AbstractComponent {
+public class ResourceRegistry {
+    private final static Logger logger = LogManager.getLogger();
 
-    private ImmutableList<ResourceFSM> resources;
-    private ImmutableMap<Class, ResourceHandler> handlers;
-
-    @Inject
-    public ResourceRegistry(Config config) {
-        super(config, ResourceRegistry.class);
-        this.resources = ImmutableList.of();
-        this.handlers = ImmutableMap.of();
-    }
+    private ImmutableList<ResourceFSM> resources = ImmutableList.of();
+    private ImmutableMap<Class, ResourceHandler> handlers = ImmutableMap.of();
 
     public synchronized void register(ResourceFSM fsm) {
         resources = Immutable.compose(resources, fsm);
@@ -35,9 +28,9 @@ public class ResourceRegistry extends AbstractComponent {
     @SuppressWarnings("unchecked")
     public Streamable apply(Streamable event) throws IOException {
         ResourceHandler handler = handlers.get(event.getClass());
-        if(handler!= null) {
+        if (handler != null) {
             return handler.apply(event);
-        }else {
+        } else {
             logger.warn("resource handler not found: {}", event);
             return null;
         }

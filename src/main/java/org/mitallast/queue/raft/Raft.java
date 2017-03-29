@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import org.mitallast.queue.Version;
 import org.mitallast.queue.common.Immutable;
+import org.mitallast.queue.common.Match;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
@@ -18,7 +18,6 @@ import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
-import org.mitallast.queue.transport.netty.codec.MessageTransportFrame;
 import org.slf4j.MDC;
 
 import java.io.IOError;
@@ -32,25 +31,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import static org.mitallast.queue.raft.RaftState.*;
 
 public class Raft extends AbstractLifecycleComponent {
-
-    private static final ImmutableMap<Class<? extends Streamable>, StateConsumer> consumerMap =
-        ImmutableMap.<Class<? extends Streamable>, StateConsumer>builder()
-            .put(AppendEntries.class, (state, event) -> state.handle((AppendEntries) event))
-            .put(AppendRejected.class, (state, event) -> state.handle((AppendRejected) event))
-            .put(AppendSuccessful.class, (state, event) -> state.handle((AppendSuccessful) event))
-            .put(RequestVote.class, (state, event) -> state.handle((RequestVote) event))
-            .put(VoteCandidate.class, (state, event) -> state.handle((VoteCandidate) event))
-            .put(DeclineCandidate.class, (state, event) -> state.handle((DeclineCandidate) event))
-            .put(ClientMessage.class, (state, event) -> state.handle((ClientMessage) event))
-            .put(InstallSnapshot.class, (state, event) -> state.handle((InstallSnapshot) event))
-            .put(InstallSnapshotSuccessful.class, (state, event) -> state.handle((InstallSnapshotSuccessful) event))
-            .put(InstallSnapshotRejected.class, (state, event) -> state.handle((InstallSnapshotRejected) event))
-            .put(AddServer.class, (state, event) -> state.handle((AddServer) event))
-            .put(AddServerResponse.class, (state, event) -> state.handle((AddServerResponse) event))
-            .put(RemoveServer.class, (state, event) -> state.handle((RemoveServer) event))
-            .put(RemoveServerResponse.class, (state, event) -> state.handle((RemoveServerResponse) event))
-            .build();
-
     private final TransportService transportService;
     private final TransportController transportController;
     private final ClusterDiscovery clusterDiscovery;
@@ -71,6 +51,23 @@ public class Raft extends AbstractLifecycleComponent {
     private volatile LogIndexMap matchIndex;
     private volatile State state;
 
+    private final Match.Mapper<Streamable, State> mapper = Match.<Streamable, State>map()
+        .when(AppendEntries.class, (e) -> state.handle(e))
+        .when(AppendRejected.class, (e) -> state.handle(e))
+        .when(AppendSuccessful.class, (e) -> state.handle(e))
+        .when(RequestVote.class, (e) -> state.handle(e))
+        .when(VoteCandidate.class, (e) -> state.handle(e))
+        .when(DeclineCandidate.class, (e) -> state.handle(e))
+        .when(ClientMessage.class, (e) -> state.handle(e))
+        .when(InstallSnapshot.class, (e) -> state.handle(e))
+        .when(InstallSnapshotSuccessful.class, (e) -> state.handle(e))
+        .when(InstallSnapshotRejected.class, (e) -> state.handle(e))
+        .when(AddServer.class, (e) -> state.handle(e))
+        .when(AddServerResponse.class, (e) -> state.handle(e))
+        .when(RemoveServer.class, (e) -> state.handle(e))
+        .when(RemoveServerResponse.class, (e) -> state.handle(e))
+        .build();
+
     @Inject
     public Raft(
         Config config,
@@ -81,7 +78,6 @@ public class Raft extends AbstractLifecycleComponent {
         ResourceRegistry registry,
         RaftContext context
     ) throws IOException {
-        super(config.getConfig("raft"), Raft.class);
         this.transportService = transportService;
         this.transportController = transportController;
         this.clusterDiscovery = clusterDiscovery;
@@ -96,11 +92,11 @@ public class Raft extends AbstractLifecycleComponent {
         nextIndex = new LogIndexMap(0);
         matchIndex = new LogIndexMap(0);
 
-        bootstrap = this.config.getBoolean("bootstrap");
-        electionDeadline = this.config.getDuration("election-deadline", TimeUnit.MILLISECONDS);
-        heartbeat = this.config.getDuration("heartbeat", TimeUnit.MILLISECONDS);
-        snapshotInterval = this.config.getInt("snapshot-interval");
-        maxEntries = this.config.getInt("max-entries");
+        bootstrap = config.getBoolean("raft.bootstrap");
+        electionDeadline = config.getDuration("raft.election-deadline", TimeUnit.MILLISECONDS);
+        heartbeat = config.getDuration("raft.heartbeat", TimeUnit.MILLISECONDS);
+        snapshotInterval = config.getInt("raft.snapshot-interval");
+        maxEntries = config.getInt("raft.max-entries");
     }
 
     @Override
@@ -128,7 +124,12 @@ public class Raft extends AbstractLifecycleComponent {
     public void apply(Streamable event) {
         lock.lock();
         try {
-            state = state.apply(event);
+            if(state == null){
+                return;
+            }
+            try (MDC.MDCCloseable ignore = MDC.putCloseable("state", state.state().name())) {
+                state = mapper.apply(event);
+            }
         } catch (IOException e) {
             logger.error("error apply event", e);
             throw new IOError(e);
@@ -161,11 +162,11 @@ public class Raft extends AbstractLifecycleComponent {
 
     private void send(DiscoveryNode node, Streamable message) {
         if (node.equals(clusterDiscovery.self())) {
-            transportController.dispatch(new MessageTransportFrame(Version.CURRENT, message));
+            transportController.dispatch(message);
         } else {
             try {
                 transportService.connectToNode(node);
-                transportService.channel(node).message(message);
+                transportService.channel(node).send(message);
             } catch (IOException e) {
                 logger.warn("error send message to {}", node, e);
             }
@@ -178,11 +179,6 @@ public class Raft extends AbstractLifecycleComponent {
     }
 
     // additional classes
-
-    @FunctionalInterface
-    private interface StateConsumer {
-        State apply(State state, Streamable event) throws IOException;
-    }
 
     private abstract class State {
         private RaftMetadata meta;
@@ -205,12 +201,6 @@ public class Raft extends AbstractLifecycleComponent {
         }
 
         // replication
-
-        public State apply(Streamable message) throws IOException {
-            try (MDC.MDCCloseable ignore = MDC.putCloseable("state", state().name())) {
-                return consumerMap.get(message.getClass()).apply(this, message);
-            }
-        }
 
         public abstract State handle(AppendEntries message) throws IOException;
 
@@ -246,11 +236,14 @@ public class Raft extends AbstractLifecycleComponent {
 
         public State createSnapshot() throws IOException {
             long committedIndex = replicatedLog.committedIndex();
-            RaftSnapshotMetadata snapshotMeta = new RaftSnapshotMetadata(replicatedLog.termAt(committedIndex), committedIndex, meta().getConfig());
-            logger.info("init snapshot up to: {}:{}", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
+            RaftSnapshotMetadata snapshotMeta = new RaftSnapshotMetadata(replicatedLog.termAt(committedIndex),
+                committedIndex, meta().getConfig());
+            logger.info("init snapshot up to: {}:{}", snapshotMeta.getLastIncludedIndex(), snapshotMeta
+                .getLastIncludedTerm());
 
             RaftSnapshot snapshot = registry.prepareSnapshot(snapshotMeta);
-            logger.info("successfully prepared snapshot for {}:{}, compacting log now", snapshotMeta.getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
+            logger.info("successfully prepared snapshot for {}:{}, compacting log now", snapshotMeta
+                .getLastIncludedIndex(), snapshotMeta.getLastIncludedTerm());
             replicatedLog.compactWith(snapshot, clusterDiscovery.self());
 
             return this;
@@ -429,15 +422,18 @@ public class Raft extends AbstractLifecycleComponent {
             // 1) Reply false if term < currentTerm (5.1)
             if (message.getTerm() < meta.getCurrentTerm()) {
                 logger.warn("rejecting write (old term): {} < {} ", message.getTerm(), meta.getCurrentTerm());
-                send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
+                send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(),
+                    replicatedLog.lastIndex()));
                 return stay(meta);
             }
 
             try {
                 // 2) Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (5.3)
                 if (!replicatedLog.containsMatchingEntry(message.getPrevLogTerm(), message.getPrevLogIndex())) {
-                    logger.warn("rejecting write (inconsistent log): {}:{} {} ", message.getPrevLogTerm(), message.getPrevLogIndex(), replicatedLog);
-                    send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
+                    logger.warn("rejecting write (inconsistent log): {}:{} {} ", message.getPrevLogTerm(), message
+                        .getPrevLogIndex(), replicatedLog);
+                    send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(),
+                        replicatedLog.lastIndex()));
                     return stay(meta);
                 } else {
                     return appendEntries(message, meta);
@@ -461,14 +457,17 @@ public class Raft extends AbstractLifecycleComponent {
                 logger.debug("append({}, {})", msg.getEntries(), prevIndex);
                 replicatedLog.append(msg.getEntries(), prevIndex);
             }
-            logger.debug("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
-            AppendSuccessful response = new AppendSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex());
+            logger.debug("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog
+                .lastIndex());
+            AppendSuccessful response = new AppendSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(),
+                replicatedLog.lastIndex());
             send(msg.getMember(), response);
 
             // If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
 
             if (msg.getLeaderCommit() > replicatedLog.committedIndex()) {
-                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, msg.getLeaderCommit());
+                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, msg
+                    .getLeaderCommit());
                 for (LogEntry entry : entries) {
                     if (entry.getCommand() instanceof ClusterConfiguration) {
                         logger.info("apply new configuration: {}", entry.getCommand());
@@ -478,7 +477,8 @@ public class Raft extends AbstractLifecycleComponent {
                     } else if (entry.getCommand() instanceof RaftSnapshot) {
                         logger.warn("unexpected raft snapshot in log");
                     } else {
-                        logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
+                        logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg
+                            .getLeaderCommit());
                         registry.apply(entry.getCommand());
                     }
                     replicatedLog.commit(entry.getIndex());
@@ -523,7 +523,8 @@ public class Raft extends AbstractLifecycleComponent {
                 request.getMember().equals(clusterDiscovery.self()) &&
                 replicatedLog.isEmpty()) {
                 logger.info("bootstrap cluster with {}", request.getMember());
-                return gotoLeader(meta().withTerm(meta().getCurrentTerm() + 1).withConfig(new StableClusterConfiguration(request.getMember())));
+                return gotoLeader(meta().withTerm(meta().getCurrentTerm() + 1).withConfig(new
+                    StableClusterConfiguration(request.getMember())));
             }
             send(request.getMember(), new AddServerResponse(
                 AddServerResponse.Status.NOT_LEADER,
@@ -570,7 +571,8 @@ public class Raft extends AbstractLifecycleComponent {
                 meta = meta.withTerm(message.getTerm());
             }
             if (message.getTerm() < meta.getCurrentTerm()) {
-                logger.info("rejecting install snapshot {}, current term is {}", message.getTerm(), meta.getCurrentTerm());
+                logger.info("rejecting install snapshot {}, current term is {}", message.getTerm(), meta
+                    .getCurrentTerm());
                 send(message.getLeader(), new InstallSnapshotRejected(clusterDiscovery.self(), meta.getCurrentTerm()));
                 return stay(meta);
             } else {
@@ -583,8 +585,10 @@ public class Raft extends AbstractLifecycleComponent {
                     registry.apply(streamable);
                 }
 
-                logger.info("response snapshot installed in {} last index {}", meta.getCurrentTerm(), replicatedLog.lastIndex());
-                send(message.getLeader(), new InstallSnapshotSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex()));
+                logger.info("response snapshot installed in {} last index {}", meta.getCurrentTerm(), replicatedLog
+                    .lastIndex());
+                send(message.getLeader(), new InstallSnapshotSuccessful(clusterDiscovery.self(), meta.getCurrentTerm
+                    (), replicatedLog.lastIndex()));
 
                 return stay(meta);
             }
@@ -676,15 +680,18 @@ public class Raft extends AbstractLifecycleComponent {
         public State beginElection() throws IOException {
             resetElectionDeadline();
             RaftMetadata meta = meta();
-            logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta.getCurrentTerm());
-            RequestVote request = new RequestVote(meta.getCurrentTerm(), clusterDiscovery.self(), replicatedLog.lastTerm().orElse(0L), replicatedLog.lastIndex());
+            logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta
+                .getCurrentTerm());
+            RequestVote request = new RequestVote(meta.getCurrentTerm(), clusterDiscovery.self(), replicatedLog
+                .lastTerm().orElse(0L), replicatedLog.lastIndex());
             for (DiscoveryNode member : meta.membersWithout(clusterDiscovery.self())) {
                 logger.info("send request vote to {}", member);
                 send(member, request);
             }
             meta = meta.incVote().withVoteFor(clusterDiscovery.self());
             if (meta.hasMajority()) {
-                logger.info("received vote by {}, won election with {} of {} votes", clusterDiscovery.self(), meta.getVotesReceived(), meta.getConfig().members().size());
+                logger.info("received vote by {}, won election with {} of {} votes", clusterDiscovery.self(), meta
+                    .getVotesReceived(), meta.getConfig().members().size());
                 return gotoLeader(meta.forLeader());
             } else {
                 return stay(meta);
@@ -694,15 +701,18 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(RequestVote message) throws IOException {
             if (message.getTerm() < meta().getCurrentTerm()) {
-                logger.info("rejecting request vote msg by {} in {}, received stale {}.", message.getCandidate(), meta().getCurrentTerm(), message.getTerm());
+                logger.info("rejecting request vote msg by {} in {}, received stale {}.", message.getCandidate(),
+                    meta().getCurrentTerm(), message.getTerm());
                 send(message.getCandidate(), new DeclineCandidate(clusterDiscovery.self(), meta().getCurrentTerm()));
                 return this;
             }
             if (message.getTerm() > meta().getCurrentTerm()) {
-                logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(), meta().getCurrentTerm());
+                logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(),
+                    meta().getCurrentTerm());
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
             }
-            logger.info("rejecting requestVote msg by {} in {}, already voted for {}", message.getCandidate(), meta().getCurrentTerm(), meta().getVotedFor());
+            logger.info("rejecting requestVote msg by {} in {}, already voted for {}", message.getCandidate(), meta()
+                .getCurrentTerm(), meta().getVotedFor());
             send(message.getCandidate(), new DeclineCandidate(clusterDiscovery.self(), meta().getCurrentTerm()));
             return this;
         }
@@ -711,20 +721,24 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(VoteCandidate message) throws IOException {
             RaftMetadata meta = meta();
             if (message.getTerm() < meta.getCurrentTerm()) {
-                logger.info("ignore vote candidate msg by {} in {}, received stale {}.", message.getMember(), meta.getCurrentTerm(), message.getTerm());
+                logger.info("ignore vote candidate msg by {} in {}, received stale {}.", message.getMember(), meta
+                    .getCurrentTerm(), message.getTerm());
                 return this;
             }
             if (message.getTerm() > meta.getCurrentTerm()) {
-                logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(), meta.getCurrentTerm());
+                logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(),
+                    meta.getCurrentTerm());
                 return gotoFollower(meta.withTerm(message.getTerm()).forFollower());
             }
 
             meta = meta.incVote();
             if (meta.hasMajority()) {
-                logger.info("received vote by {}, won election with {} of {} votes", message.getMember(), meta.getVotesReceived(), meta.getConfig().members().size());
+                logger.info("received vote by {}, won election with {} of {} votes", message.getMember(), meta
+                    .getVotesReceived(), meta.getConfig().members().size());
                 return gotoLeader(meta.forLeader());
             } else {
-                logger.info("received vote by {}, have {} of {} votes", message.getMember(), meta.getVotesReceived(), meta.getConfig().members().size());
+                logger.info("received vote by {}, have {} of {} votes", message.getMember(), meta.getVotesReceived(),
+                    meta.getConfig().members().size());
                 return stay(meta);
             }
         }
@@ -732,7 +746,8 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(DeclineCandidate message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
-                logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(), meta().getCurrentTerm());
+                logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(),
+                    meta().getCurrentTerm());
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
             } else {
                 logger.info("candidate is declined by {} in term {}", message.getMember(), meta().getCurrentTerm());
@@ -744,7 +759,8 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(AppendEntries message) throws IOException {
             boolean leaderIsAhead = message.getTerm() >= meta().getCurrentTerm();
             if (leaderIsAhead) {
-                logger.info("reverting to follower, because got append entries from leader in {}, but am in {}", message.getTerm(), meta().getCurrentTerm());
+                logger.info("reverting to follower, because got append entries from leader in {}, but am in {}",
+                    message.getTerm(), meta().getCurrentTerm());
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
             } else {
                 return this;
@@ -755,10 +771,12 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(InstallSnapshot message) throws IOException {
             boolean leaderIsAhead = message.getTerm() >= meta().getCurrentTerm();
             if (leaderIsAhead) {
-                logger.info("reverting to follower, because got install snapshot from leader in {}, but am in {}", message.getTerm(), meta().getCurrentTerm());
+                logger.info("reverting to follower, because got install snapshot from leader in {}, but am in {}",
+                    message.getTerm(), meta().getCurrentTerm());
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
             } else {
-                send(message.getLeader(), new InstallSnapshotRejected(clusterDiscovery.self(), meta().getCurrentTerm()));
+                send(message.getLeader(), new InstallSnapshotRejected(clusterDiscovery.self(), meta().getCurrentTerm
+                    ()));
                 return this;
             }
         }
@@ -810,9 +828,11 @@ public class Raft extends AbstractLifecycleComponent {
 
             final LogEntry entry;
             if (replicatedLog.isEmpty()) {
-                entry = new LogEntry(meta().getConfig(), meta().getCurrentTerm(), replicatedLog.nextIndex(), clusterDiscovery.self());
+                entry = new LogEntry(meta().getConfig(), meta().getCurrentTerm(), replicatedLog.nextIndex(),
+                    clusterDiscovery.self());
             } else {
-                entry = new LogEntry(Noop.INSTANCE, meta().getCurrentTerm(), replicatedLog.nextIndex(), clusterDiscovery.self());
+                entry = new LogEntry(Noop.INSTANCE, meta().getCurrentTerm(), replicatedLog.nextIndex(),
+                    clusterDiscovery.self());
             }
 
             replicatedLog.append(entry);
@@ -823,8 +843,10 @@ public class Raft extends AbstractLifecycleComponent {
 
             ClientMessage clientMessage;
             while ((clientMessage = stashed.poll()) != null) {
-                logger.debug("appending command: [{}] from {} to replicated log", clientMessage.getCmd(), clientMessage.getClient());
-                LogEntry logEntry = new LogEntry(clientMessage.getCmd(), meta().getCurrentTerm(), replicatedLog.nextIndex(), clientMessage.getClient());
+                logger.debug("appending command: [{}] from {} to replicated log", clientMessage.getCmd(),
+                    clientMessage.getClient());
+                LogEntry logEntry = new LogEntry(clientMessage.getCmd(), meta().getCurrentTerm(), replicatedLog
+                    .nextIndex(), clientMessage.getClient());
                 replicatedLog.append(logEntry);
                 matchIndex.put(clusterDiscovery.self(), entry.getIndex());
             }
@@ -835,7 +857,8 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(ClientMessage message) throws IOException {
             logger.debug("appending command: [{}] from {} to replicated log", message.getCmd(), message.getClient());
-            LogEntry entry = new LogEntry(message.getCmd(), meta().getCurrentTerm(), replicatedLog.nextIndex(), message.getClient());
+            LogEntry entry = new LogEntry(message.getCmd(), meta().getCurrentTerm(), replicatedLog.nextIndex(),
+                message.getClient());
             replicatedLog.append(entry);
             matchIndex.put(clusterDiscovery.self(), entry.getIndex());
             sendHeartbeat();
@@ -845,10 +868,13 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(AppendEntries message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
-                logger.info("leader ({}) got append entries from fresher leader ({}), will step down and the leader will keep being: {}", meta().getCurrentTerm(), message.getTerm(), message.getMember());
+                logger.info("leader ({}) got append entries from fresher leader ({}), will step down and the leader " +
+                    "will keep being: {}", meta().getCurrentTerm(), message.getTerm(), message.getMember());
                 return gotoFollower(meta().forFollower()).handle(message);
             } else {
-                logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, will send entries, to force it to step down.", meta().getCurrentTerm(), message.getMember(), message.getTerm());
+                logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, " +
+                        "will send entries, to force it to step down.", meta().getCurrentTerm(), message.getMember(),
+                    message.getTerm());
                 sendEntries(message.getMember());
                 return this;
             }
@@ -866,7 +892,8 @@ public class Raft extends AbstractLifecycleComponent {
                 } else if (nextIndexFor > 0) {
                     nextIndex.decrementFor(message.getMember());
                 }
-                logger.warn("follower {} rejected write, term {}, decrement index to {}", message.getMember(), message.getTerm(), nextIndex.indexFor(message.getMember()));
+                logger.warn("follower {} rejected write, term {}, decrement index to {}", message.getMember(),
+                    message.getTerm(), nextIndex.indexFor(message.getMember()));
                 sendEntries(message.getMember());
                 return this;
             } else {
@@ -899,7 +926,8 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(InstallSnapshot message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
-                logger.info("leader ({}) got install snapshot from fresher leader ({}), will step down and the leader will keep being: {}",
+                logger.info("leader ({}) got install snapshot from fresher leader ({}), will step down and the leader" +
+                        " will keep being: {}",
                     meta().getCurrentTerm(), message.getTerm(), message.getLeader());
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
             } else {
@@ -919,7 +947,8 @@ public class Raft extends AbstractLifecycleComponent {
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
             }
             if (message.getTerm() == meta().getCurrentTerm()) {
-                logger.info("received install snapshot successful[{}], last index[{}]", message.getLastIndex(), replicatedLog.lastIndex());
+                logger.info("received install snapshot successful[{}], last index[{}]", message.getLastIndex(),
+                    replicatedLog.lastIndex());
                 assert (message.getLastIndex() <= replicatedLog.lastIndex());
                 if (message.getLastIndex() > 0) {
                     nextIndex.put(message.getMember(), message.getLastIndex() + 1);
@@ -938,7 +967,8 @@ public class Raft extends AbstractLifecycleComponent {
                 // since there seems to be another leader!
                 return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
             } else if (message.getTerm() == meta().getCurrentTerm()) {
-                logger.info("follower {} rejected write: {}, back out the first index in this term and retry", message.getMember(), message.getTerm());
+                logger.info("follower {} rejected write: {}, back out the first index in this term and retry",
+                    message.getMember(), message.getTerm());
                 if (nextIndex.indexFor(message.getMember()) > 1) {
                     nextIndex.decrementFor(message.getMember());
                 }
@@ -1065,7 +1095,8 @@ public class Raft extends AbstractLifecycleComponent {
                 ImmutableList<LogEntry> entries = replicatedLog.entriesBatchFrom(lastIndex, maxEntries);
                 long prevIndex = Math.max(0, lastIndex - 1);
                 long prevTerm = replicatedLog.termAt(prevIndex);
-                logger.info("send to {} append entries {} prev {}:{} in {} from index:{}", follower, entries.size(), prevTerm, prevIndex, meta.getCurrentTerm(), lastIndex);
+                logger.info("send to {} append entries {} prev {}:{} in {} from index:{}", follower, entries.size(),
+                    prevTerm, prevIndex, meta.getCurrentTerm(), lastIndex);
                 AppendEntries append = new AppendEntries(clusterDiscovery.self(), meta.getCurrentTerm(),
                     prevTerm, prevIndex,
                     entries,
@@ -1077,10 +1108,12 @@ public class Raft extends AbstractLifecycleComponent {
         private State maybeCommitEntry() throws IOException {
             RaftMetadata meta = meta();
             long indexOnMajority;
-            while ((indexOnMajority = matchIndex.consensusForIndex(meta.getConfig())) > replicatedLog.committedIndex()) {
+            while ((indexOnMajority = matchIndex.consensusForIndex(meta.getConfig())) > replicatedLog.committedIndex
+                ()) {
                 logger.debug("index of majority: {}", indexOnMajority);
                 replicatedLog.slice(replicatedLog.committedIndex(), indexOnMajority);
-                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, indexOnMajority);
+                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1,
+                    indexOnMajority);
                 for (LogEntry entry : entries) {
                     logger.debug("committing log at index: {}", entry.getIndex());
                     replicatedLog.commit(entry.getIndex());
@@ -1094,7 +1127,8 @@ public class Raft extends AbstractLifecycleComponent {
                     } else if (entry.getCommand() instanceof Noop) {
                         logger.trace("ignore noop entry");
                     } else {
-                        logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex(), entry.getCommand().getClass(), entry.getClient());
+                        logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex
+                            (), entry.getCommand().getClass(), entry.getClient());
                         Streamable result = registry.apply(entry.getCommand());
                         if (result != null) {
                             send(entry.getClient(), result);

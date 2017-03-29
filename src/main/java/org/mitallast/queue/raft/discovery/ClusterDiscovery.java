@@ -4,22 +4,24 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import org.mitallast.queue.common.component.AbstractComponent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportServer;
 
 import java.util.HashSet;
 import java.util.Set;
 
-public class ClusterDiscovery extends AbstractComponent {
+public class ClusterDiscovery {
+    private final static Logger logger = LogManager.getLogger();
     private final DiscoveryNode self;
     private final ImmutableSet<DiscoveryNode> discoveryNodes;
 
     @Inject
     public ClusterDiscovery(Config config) {
-        super(config.getConfig("raft.discovery"), ClusterDiscovery.class);
-        self = new DiscoveryNode(this.config.getString("host"), this.config.getInt("port"));
-        discoveryNodes = parseDiscovery();
+        Config conf = config.getConfig("raft.discovery");
+        self = new DiscoveryNode(conf.getString("host"), conf.getInt("port"));
+        discoveryNodes = parseDiscovery(conf);
     }
 
     public DiscoveryNode self() {
@@ -30,7 +32,7 @@ public class ClusterDiscovery extends AbstractComponent {
         return discoveryNodes;
     }
 
-    private ImmutableSet<DiscoveryNode> parseDiscovery() {
+    private ImmutableSet<DiscoveryNode> parseDiscovery(Config config) {
         Set<DiscoveryNode> nodes = new HashSet<>();
         nodes.add(self);
 

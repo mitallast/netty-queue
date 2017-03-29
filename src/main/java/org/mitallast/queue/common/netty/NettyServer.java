@@ -31,8 +31,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     protected Channel channel;
     private ServerBootstrap bootstrap;
 
-    public NettyServer(Config config, Class loggerClass) {
-        super(config, loggerClass);
+    public NettyServer(Config config) {
         this.host = config.getString("host");
         this.port = config.getInt("port");
         this.backlog = config.getInt("backlog");

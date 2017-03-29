@@ -1,26 +1,22 @@
 package org.mitallast.queue.common.stream;
 
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import io.netty.buffer.ByteBuf;
-import org.mitallast.queue.common.component.AbstractComponent;
 
 import java.io.*;
 import java.util.Set;
 
-public class InternalStreamService extends AbstractComponent implements StreamableClassRegistry, StreamService {
+public class InternalStreamService implements StreamableClassRegistry, StreamService {
     private final TIntObjectMap<StreamableReader<? extends Streamable>> idToReaderMap = new TIntObjectHashMap<>(100, 0.5f, -1);
     private final TObjectIntMap<Class<? extends Streamable>> classToIdMap = new TObjectIntHashMap<>(100, 0.5f, -1);
 
     @SuppressWarnings("unchecked")
     @Inject
-    public InternalStreamService(Config config, Set<StreamableRegistry> registrySet) {
-        super(config, StreamService.class);
-
+    public InternalStreamService(Set<StreamableRegistry> registrySet) {
         for (StreamableRegistry streamableRegistry : registrySet) {
             register(streamableRegistry.getStreamable(), streamableRegistry.getReader(), streamableRegistry.getId());
         }

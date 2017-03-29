@@ -2,26 +2,24 @@ package org.mitallast.queue.blob;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import com.typesafe.config.Config;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.blob.protocol.BlobRoutingMap;
 import org.mitallast.queue.blob.protocol.PutBlobResource;
 import org.mitallast.queue.blob.protocol.PutBlobResourceResponse;
-import org.mitallast.queue.common.component.AbstractComponent;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.resource.ResourceFSM;
-import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
+import org.mitallast.queue.raft.resource.ResourceFSM;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 
 import java.util.Optional;
 
-public class DistributedStorageFSM extends AbstractComponent implements ResourceFSM {
-
+public class DistributedStorageFSM implements ResourceFSM {
+    private final static Logger logger = LogManager.getLogger();
     private volatile BlobRoutingMap routingMap = new BlobRoutingMap(ImmutableMap.of());
 
     @Inject
-    public DistributedStorageFSM(Config config, ResourceRegistry registry) {
-        super(config, DistributedStorageFSM.class);
+    public DistributedStorageFSM(ResourceRegistry registry) {
         registry.register(this);
         registry.register(PutBlobResource.class, this::handle);
         registry.register(BlobRoutingMap.class, this::handle);

@@ -23,7 +23,7 @@ public class QueryStringDecoder {
      * @throws IllegalArgumentException if the string contains a malformed
      *                                  escape sequence.
      */
-    public static CharSequence decodeComponent(final CharSequence s) {
+    public static String decodeComponent(final String s) {
         if (s == null) {
             return "";
         }

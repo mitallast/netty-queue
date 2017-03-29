@@ -6,7 +6,6 @@ public class RaftRestModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(RaftStateAction.class).asEagerSingleton();
-        bind(RaftLogAction.class).asEagerSingleton();
+        bind(RaftHandler.class).asEagerSingleton();
     }
 }

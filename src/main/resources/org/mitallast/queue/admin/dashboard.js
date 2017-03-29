@@ -55,6 +55,24 @@ $(function () {
                 createBenchmarkResultView(response);
             });
         });
+
+        $('form[action="#crdtAssign"]', context).submit(function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var value = $form.find('input[name=value]').val();
+            $.post("/_crdt/" + value, function(response) {
+                createCrdtValueView();
+            });
+        });
+
+        $('a[href="#crdtAssign"]', context).click(function (e) {
+            e.preventDefault();
+            createCrdtAssignView()
+        });
+        $('a[href="#crdtValue"]', context).click(function (e) {
+            e.preventDefault();
+            createCrdtValueView()
+        });
     }
 
     function renderMain(html) {
@@ -118,6 +136,18 @@ $(function () {
         response.throughput = humanizeBytes(response.throughput)
         var template = Handlebars.compile($("#benchmarkResult").html());
         renderMain(template(response))
+    }
+
+    function createCrdtAssignView(){
+        var template = Handlebars.compile($("#crdtAssign").html());
+        renderMain(template())
+    }
+
+    function createCrdtValueView(){
+        var template = Handlebars.compile($("#crdtValue").html());
+        $.getJSON("/_crdt", function(response) {
+            renderMain(template(response))
+        });
     }
 
     function humanizeBytes(bytes) {

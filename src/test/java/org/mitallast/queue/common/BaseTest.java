@@ -1,16 +1,12 @@
 package org.mitallast.queue.common;
 
-import io.netty.buffer.ByteBuf;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.mitallast.queue.common.concurrent.NamedExecutors;
-import org.mitallast.queue.common.xstream.XStreamBuilder;
-import org.mitallast.queue.common.xstream.XStreamFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -100,17 +96,13 @@ public class BaseTest {
     }
 
     protected Future<Void> submit(Runnable runnable) {
-        return executorService.submit(runnable::run, null);
+        return executorService.submit(runnable, null);
     }
 
     protected void printQps(String metric, long total, long start, long end) {
         long qps = (long) (total / (double) (end - start) * 1000.);
         logger.info(metric + ": " + total + " at " + (end - start) + "ms");
         logger.info(metric + ": " + qps + " qps");
-    }
-
-    protected XStreamBuilder jsonBuilder(ByteBuf buffer) throws IOException {
-        return XStreamFactory.jsonStream().createGenerator(buffer);
     }
 
     public interface Task {

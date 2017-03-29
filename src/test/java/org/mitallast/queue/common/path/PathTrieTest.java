@@ -10,7 +10,7 @@ import java.util.Map;
 public class PathTrieTest {
 
     private PathTrie<String> pathTrie;
-    private Map<String, CharSequence> params;
+    private Map<String, String> params;
 
     @Before
     public void setUp() throws Exception {
@@ -37,7 +37,7 @@ public class PathTrieTest {
         Assert.assertTrue(params.containsKey("named"));
         Assert.assertNotNull(params.get("named"));
         Assert.assertFalse(params.get("named").length() == 0);
-        Assert.assertEquals("foo", params.get("named").toString());
+        Assert.assertEquals("foo", params.get("named"));
     }
 
     @Test
@@ -51,7 +51,7 @@ public class PathTrieTest {
         Assert.assertTrue(params.containsKey("named"));
         Assert.assertNotNull(params.get("named"));
         Assert.assertFalse(params.get("named").length() == 0);
-        Assert.assertEquals("foo", params.get("named").toString());
+        Assert.assertEquals("foo", params.get("named"));
     }
 
     @Test
@@ -82,7 +82,7 @@ public class PathTrieTest {
     }
 
     @Test
-    public void testRoute() {
+    public void testRouteRoot() {
         pathTrie.insert("/", "1");
         pathTrie.insert("/_stats", "2");
         pathTrie.insert("/{queue}", "3");
@@ -93,30 +93,111 @@ public class PathTrieTest {
         params.clear();
         Assert.assertEquals("1", pathTrie.retrieve("/", params));
         Assert.assertTrue(params.isEmpty());
+    }
+
+    @Test
+    public void testRouteStats() {
+        pathTrie.insert("/", "1");
+        pathTrie.insert("/_stats", "2");
+        pathTrie.insert("/{queue}", "3");
+        pathTrie.insert("/{queue}/_stats", "4");
+        pathTrie.insert("/{queue}/message", "5");
+        pathTrie.insert("/{queue}/message/{uuid}", "6");
 
         params.clear();
         Assert.assertEquals("2", pathTrie.retrieve("/_stats", params));
         Assert.assertTrue(params.isEmpty());
+    }
+
+    @Test
+    public void testRouteQueue() {
+        pathTrie.insert("/", "1");
+        pathTrie.insert("/_stats", "2");
+        pathTrie.insert("/{queue}", "3");
+        pathTrie.insert("/{queue}/_stats", "4");
+        pathTrie.insert("/{queue}/message", "5");
+        pathTrie.insert("/{queue}/message/{uuid}", "6");
 
         params.clear();
         Assert.assertEquals("3", pathTrie.retrieve("/queue", params));
         Assert.assertFalse(params.isEmpty());
-        Assert.assertEquals("queue", params.get("queue").toString());
+        Assert.assertEquals("queue", params.get("queue"));
+    }
+
+    @Test
+    public void testRouteQueueStats() {
+        pathTrie.insert("/", "1");
+        pathTrie.insert("/_stats", "2");
+        pathTrie.insert("/{queue}", "3");
+        pathTrie.insert("/{queue}/_stats", "4");
+        pathTrie.insert("/{queue}/message", "5");
+        pathTrie.insert("/{queue}/message/{uuid}", "6");
 
         params.clear();
         Assert.assertEquals("4", pathTrie.retrieve("/queue/_stats", params));
         Assert.assertFalse(params.isEmpty());
-        Assert.assertEquals("queue", params.get("queue").toString());
+        Assert.assertEquals("queue", params.get("queue"));
+    }
+
+    @Test
+    public void testRouteQueueMessage() {
+        pathTrie.insert("/", "1");
+        pathTrie.insert("/_stats", "2");
+        pathTrie.insert("/{queue}", "3");
+        pathTrie.insert("/{queue}/_stats", "4");
+        pathTrie.insert("/{queue}/message", "5");
+        pathTrie.insert("/{queue}/message/{uuid}", "6");
 
         params.clear();
         Assert.assertEquals("5", pathTrie.retrieve("/queue/message", params));
         Assert.assertFalse(params.isEmpty());
-        Assert.assertEquals("queue", params.get("queue").toString());
+        Assert.assertEquals("queue", params.get("queue"));
+    }
+
+    @Test
+    public void testRouteQueueMessageUuid() {
+        System.out.println("testRouteQueueMessageUuid");
+        pathTrie.insert("/", "1");
+        pathTrie.prettyPrint();
+        System.out.println("1--------");
+        System.out.println();
+
+        System.out.println();
+        pathTrie.insert("/_stats", "2");
+        System.out.println("2--------");
+        pathTrie.prettyPrint();
+
+        System.out.println();
+        pathTrie.insert("/{queue}", "3");
+        System.out.println("3--------");
+        pathTrie.prettyPrint();
+
+        System.out.println();
+        pathTrie.insert("/{queue}/_stats", "4");
+        System.out.println("4--------");
+        pathTrie.prettyPrint();
+
+        System.out.println();
+        pathTrie.insert("/{queue}/message", "5");
+        System.out.println("5--------");
+        pathTrie.prettyPrint();
+
+        System.out.println();
+        pathTrie.insert("/{queue}/message/{uuid}", "6");
+        System.out.println("6--------");
+        pathTrie.prettyPrint();
+
+
+        System.out.println();
+
+        pathTrie.prettyPrint();
+        System.out.println();
+
 
         params.clear();
         Assert.assertEquals("6", pathTrie.retrieve("/queue/message/uuid", params));
         Assert.assertFalse(params.isEmpty());
-        Assert.assertEquals("queue", params.get("queue").toString());
-        Assert.assertEquals("uuid", params.get("uuid").toString());
+        Assert.assertEquals("queue", params.get("queue"));
+        Assert.assertEquals("uuid", params.get("uuid"));
     }
 }

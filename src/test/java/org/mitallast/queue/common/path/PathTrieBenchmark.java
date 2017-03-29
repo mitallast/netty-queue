@@ -1,6 +1,5 @@
 package org.mitallast.queue.common.path;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
@@ -10,7 +9,7 @@ import java.util.Map;
 
 public class PathTrieBenchmark extends BaseTest {
     private PathTrie<String> pathTrie;
-    private Map<String, CharSequence> params;
+    private Map<String, String> params;
 
     @Before
     public void setUp() throws Exception {
@@ -25,17 +24,62 @@ public class PathTrieBenchmark extends BaseTest {
     }
 
     @Test
-    public void testRetrieve() throws Exception {
+    public void testRetrieveRoot() throws Exception {
         long start = System.currentTimeMillis();
-        for (int i = 0; i < 100000; i++) {
-            Assert.assertEquals("1", pathTrie.retrieve("/", params));
-            Assert.assertEquals("2", pathTrie.retrieve("/_stats", params));
-            Assert.assertEquals("3", pathTrie.retrieve("/queue", params));
-            Assert.assertEquals("4", pathTrie.retrieve("/queue/_stats", params));
-            Assert.assertEquals("5", pathTrie.retrieve("/queue/message", params));
-            Assert.assertEquals("6", pathTrie.retrieve("/queue/message/uuid", params));
+        for (int i = 0; i < 10000000; i++) {
+            pathTrie.retrieve("/", params);
         }
         long end = System.currentTimeMillis();
-        printQps("retrieve", 100000, start, end);
+        printQps("retrieve /", 10000000, start, end);
+    }
+
+    @Test
+    public void testRetrieveStats() throws Exception {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000000; i++) {
+            pathTrie.retrieve("/_stats", params);
+        }
+        long end = System.currentTimeMillis();
+        printQps("retrieve /_stats", 10000000, start, end);
+    }
+
+    @Test
+    public void testRetrieveQueue() throws Exception {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000000; i++) {
+            pathTrie.retrieve("/queue", params);
+        }
+        long end = System.currentTimeMillis();
+        printQps("retrieve /queue", 10000000, start, end);
+    }
+
+    @Test
+    public void testRetrieveQueueStats() throws Exception {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000000; i++) {
+            pathTrie.retrieve("/queue/_stats", params);
+        }
+        long end = System.currentTimeMillis();
+        printQps("retrieve /queue/_stats", 10000000, start, end);
+    }
+
+    @Test
+    public void testRetrieveQueueMessage() throws Exception {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000000; i++) {
+            pathTrie.retrieve("/queue/message", params);
+        }
+        long end = System.currentTimeMillis();
+        printQps("retrieve /queue/message", 10000000, start, end);
+    }
+
+    @Test
+    public void testRetrieveQueueMessageUuid() throws Exception {
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 10000000; i++) {
+            pathTrie.retrieve("/queue/message/uuid", params);
+        }
+        long end = System.currentTimeMillis();
+        printQps("retrieve /queue/message/uuid", 10000000, start, end);
     }
 }

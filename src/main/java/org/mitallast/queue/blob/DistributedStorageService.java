@@ -107,7 +107,7 @@ public class DistributedStorageService extends AbstractComponent {
     }
 
     public CompletableFuture<GetBlobResourceResponse> getResource(String key) {
-        logger.info("get resource {}", key);
+        logger.info("value resource {}", key);
         CompletableFuture<GetBlobResourceResponse> future = new CompletableFuture<>();
         ImmutableMap<String, ImmutableSet<DiscoveryNode>> routingMap = fsm.getRoutingMap().getRoutingMap();
         if (routingMap.containsKey(key)) {
@@ -118,7 +118,7 @@ public class DistributedStorageService extends AbstractComponent {
 
             DiscoveryNode node = nodes.asList().get((int) (id % nodes.size()));
 
-            logger.info("get resource {} id {} node {}", key, id, node);
+            logger.info("value resource {} id {} node {}", key, id, node);
             try {
                 transportService.connectToNode(node);
                 transportService.channel(node).message(new GetBlobResourceRequest(node, id, key));
@@ -133,7 +133,7 @@ public class DistributedStorageService extends AbstractComponent {
 
     private void handle(GetBlobResourceRequest message) {
         try {
-            logger.info("handle get resource request {} id {}", message.getKey(), message.getId());
+            logger.info("handle value resource request {} id {}", message.getKey(), message.getId());
             InputStream stream = blobStorageService.getObject(message.getKey());
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] bytes = new byte[4096];
@@ -145,13 +145,13 @@ public class DistributedStorageService extends AbstractComponent {
             transportService.connectToNode(message.getNode());
             transportService.channel(message.getNode()).message(response);
         } catch (IOException e) {
-            logger.warn("error get resource {}: {}", message.getKey(), e);
+            logger.warn("error value resource {}: {}", message.getKey(), e);
         }
     }
 
     @SuppressWarnings("unchecked")
     private void handle(GetBlobResourceResponse message) {
-        logger.info("handle get resource response {} id {}", message.getKey(), message.getId());
+        logger.info("handle value resource response {} id {}", message.getKey(), message.getId());
         CompletableFuture completableFuture = requests.get(message.getId());
         if (completableFuture != null) {
             completableFuture.complete(message);

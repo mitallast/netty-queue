@@ -3,6 +3,7 @@ package org.mitallast.queue.common.validation;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public class ValidationException extends RuntimeException implements ValidationBuilder {
 
     private final List<String> validationErrors = new ArrayList<>();

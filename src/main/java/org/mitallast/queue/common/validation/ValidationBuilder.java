@@ -2,6 +2,7 @@ package org.mitallast.queue.common.validation;
 
 import org.mitallast.queue.common.strings.Strings;
 
+@Deprecated
 public interface ValidationBuilder {
     public static ValidationBuilder EMPTY = new ValidationBuilder() {
         @Override

@@ -17,6 +17,8 @@ import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.file.FileModule;
 import org.mitallast.queue.common.stream.StreamModule;
+import org.mitallast.queue.crdt.CrdtModule;
+import org.mitallast.queue.crdt.rest.RestCrdtModule;
 import org.mitallast.queue.raft.RaftModule;
 import org.mitallast.queue.raft.rest.RaftRestModule;
 import org.mitallast.queue.rest.RestModule;
@@ -48,16 +50,22 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
             if (this.config.getBoolean("rest.enabled")) {
                 modules.add(new RaftRestModule());
             }
-            if(this.config.getBoolean("blob.enabled")) {
+            if (this.config.getBoolean("blob.enabled")) {
                 modules.add(new BlobModule());
                 if (this.config.getBoolean("rest.enabled")) {
                     modules.add(new BlobRestModule());
                 }
             }
-            if(this.config.getBoolean("benchmark.enabled")) {
+            if (this.config.getBoolean("benchmark.enabled")) {
                 modules.add(new BenchmarkModule());
                 if (this.config.getBoolean("rest.enabled")) {
                     modules.add(new BenchmarkRestModule());
+                }
+            }
+            if (this.config.getBoolean("crdt.enabled")) {
+                modules.add(new CrdtModule());
+                if (this.config.getBoolean("rest.enabled")) {
+                    modules.add(new RestCrdtModule());
                 }
             }
         }

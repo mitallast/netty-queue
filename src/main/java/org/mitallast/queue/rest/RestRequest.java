@@ -12,11 +12,13 @@ public interface RestRequest {
 
     String getUri();
 
-    Map<String, CharSequence> getParamMap();
+    Map<String, String> getParamMap();
 
-    CharSequence param(String param);
+    String param(String param);
 
     boolean hasParam(String param);
 
     ByteBuf content();
+
+    ResponseBuilder response();
 }

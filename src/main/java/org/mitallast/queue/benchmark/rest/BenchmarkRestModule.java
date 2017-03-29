@@ -5,6 +5,6 @@ import com.google.inject.AbstractModule;
 public class BenchmarkRestModule extends AbstractModule {
     @Override
     protected void configure() {
-        bind(BenchmarkAction.class).asEagerSingleton();
+        bind(BenchmarkHandler.class).asEagerSingleton();
     }
 }

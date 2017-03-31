@@ -63,7 +63,7 @@ public class BaseIntegrationTest extends BaseTest {
     protected Config config() throws Exception {
         int nodeId = nodeCounter.incrementAndGet();
         ImmutableMap<String, Object> config = ImmutableMap.<String, Object>builder()
-                .put("node.name", "node" + nodeId)
+                .put("nodes.name", "nodes" + nodeId)
                 .put("work_dir", testFolder.newFolder().getAbsolutePath())
                 .put("rest.transport.host", "127.0.0.1")
                 .put("rest.transport.port", 18000 + random.nextInt(500))

@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 public class LWWRegister implements CmRDT<LWWRegister> {
 
     public static class SourceAssign implements SourceUpdate {
+
         private final Streamable value;
 
         public SourceAssign(Streamable value) {
@@ -25,9 +26,11 @@ public class LWWRegister implements CmRDT<LWWRegister> {
             stream.writeClass(value.getClass());
             stream.writeStreamable(value);
         }
+
     }
 
     public static class DownstreamAssign implements DownstreamUpdate {
+
         private final Streamable value;
         private final long timestamp;
 
@@ -47,6 +50,7 @@ public class LWWRegister implements CmRDT<LWWRegister> {
             stream.writeStreamable(value);
             stream.writeLong(timestamp);
         }
+
     }
 
     public static class Value implements Query {
@@ -62,9 +66,11 @@ public class LWWRegister implements CmRDT<LWWRegister> {
 
         @Override
         public void writeTo(StreamOutput stream) throws IOException {}
+
     }
 
     public static class ValueResponse implements QueryResponse {
+
         private final Streamable value;
 
         public ValueResponse(Streamable value) {
@@ -96,11 +102,21 @@ public class LWWRegister implements CmRDT<LWWRegister> {
     }
 
     private final Consumer<Streamable> broadcast;
+
     private volatile Streamable value = null;
     private volatile long timestamp = 0;
 
     public LWWRegister(Consumer<Streamable> broadcast) {
         this.broadcast = broadcast;
+    }
+
+    @Override
+    public void update(Streamable event) {
+        if (event instanceof SourceUpdate) {
+            sourceUpdate((SourceUpdate) event);
+        } else if (event instanceof DownstreamUpdate) {
+            downstreamUpdate((DownstreamUpdate) event);
+        }
     }
 
     @Override

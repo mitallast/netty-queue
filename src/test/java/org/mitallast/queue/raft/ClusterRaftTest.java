@@ -1,26 +1,22 @@
 package org.mitallast.queue.raft;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.Multibinder;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.node.InternalNode;
+import org.mitallast.queue.common.BaseClusterTest;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
@@ -31,84 +27,31 @@ import org.mitallast.queue.transport.TransportController;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.mitallast.queue.raft.RaftState.Follower;
 import static org.mitallast.queue.raft.RaftState.Leader;
 
-public class ClusterRaftTest extends BaseTest {
-    private static final int nodesCount = 3;
+public class ClusterRaftTest extends BaseClusterTest {
 
-    private ImmutableList<InternalNode> node;
-    private ImmutableList<Raft> raft;
     private ImmutableList<RegisterClient> client;
     private ImmutableList<RegisterByteClient> byteClient;
 
-    @Before
-    public void setUpNodes() throws Exception {
-        HashSet<Integer> ports = new HashSet<>();
-        while (ports.size() < nodesCount) {
-            ports.add(8800 + random.nextInt(99));
-        }
-
-        String nodeDiscovery = ports.stream().map(port -> "127.0.0.1:" + port).reduce((a, b) -> a + "," + b).orElse("");
-
-        ImmutableList.Builder<InternalNode> builder = ImmutableList.builder();
-        boolean bootstrap = true;
-        for (Integer port : ports) {
-            Config config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-                .put("node.name", "node" + port)
-                .put("node.path", testFolder.newFolder().getAbsolutePath())
-                .put("rest.enabled", false)
-                .put("blob.enabled", false)
-                .put("raft.discovery.host", "127.0.0.1")
-                .put("raft.discovery.port", port)
-                .put("raft.discovery.nodes.0", nodeDiscovery)
-                .put("raft.keep-init-until-found", nodesCount)
-                .put("raft.election-deadline", "1s")
-                .put("raft.heartbeat", "500ms")
-                .put("raft.bootstrap", bootstrap)
-                .put("raft.snapshot-interval", 10000)
-                .put("transport.host", "127.0.0.1")
-                .put("transport.port", port)
-                .put("transport.max_connections", 1)
-                .build());
-            bootstrap = false;
-            builder.add(new InternalNode(config, new TestModule()));
-        }
-        node = builder.build();
-        raft = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(Raft.class)).iterator());
-        client = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterClient.class)).iterator());
-        byteClient = ImmutableList.copyOf(node.stream().map(node -> node.injector().getInstance(RegisterByteClient.class)).iterator());
-
-        ArrayList<Future> futures = new ArrayList<>();
-        for (InternalNode item : this.node) {
-            Future future = submit(() -> {
-                try {
-                    item.start();
-                } catch (IOException e) {
-                    assert false : e;
-                }
-            });
-            futures.add(future);
-        }
-        for (Future future : futures) {
-            future.get(10, TimeUnit.SECONDS);
-        }
+    protected AbstractModule[] testModules() {
+        return new AbstractModule[]{
+            new TestModule()
+        };
     }
 
-    @After
-    public void tearDownNodes() throws Exception {
-        for (InternalNode node : this.node) {
-            node.stop();
-        }
-        for (InternalNode node : this.node) {
-            node.close();
-        }
+    @Before
+    public void setUpNodes() throws Exception {
+        super.setUpNodes();
+        client = Immutable.map(nodes, n -> n.injector().getInstance(RegisterClient.class));
+        byteClient = Immutable.map(nodes, n -> n.injector().getInstance(RegisterByteClient.class));
     }
 
     @Test
@@ -228,23 +171,6 @@ public class ClusterRaftTest extends BaseTest {
         logger.info("data size   : {}MB", totalBytes.divide(BigInteger.valueOf(1024 * 1024)));
         logger.info("total time  : {}ms", end - start);
         logger.info("throughput  : {}MB/s", bytesPerSec.divide(BigInteger.valueOf(1024 * 1024)));
-    }
-
-    private void awaitElection() throws Exception {
-        while (true) {
-            if (raft.stream().anyMatch(raft -> raft.currentState() == Leader)) {
-                if (raft.stream().allMatch(raft -> raft.replicatedLog().committedIndex() == nodesCount)) {
-                    logger.info("leader found, cluster available");
-                    return;
-                }
-            }
-            Thread.sleep(10);
-        }
-    }
-
-    private void assertLeaderElected() throws Exception {
-        Assert.assertEquals(1, raft.stream().filter(raft -> raft.currentState() == Leader).count());
-        Assert.assertEquals(nodesCount - 1, raft.stream().filter(raft -> raft.currentState() == Follower).count());
     }
 
     public static class TestModule extends AbstractModule {

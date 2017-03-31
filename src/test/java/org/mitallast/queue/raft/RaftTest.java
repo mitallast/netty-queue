@@ -106,8 +106,8 @@ public class RaftTest extends BaseTest {
 
         context = new TestRaftContext();
         config = ConfigFactory.defaultReference();
-        override("node.name", "test");
-        override("node.path", testFolder.getRoot().getAbsolutePath());
+        override("nodes.name", "test");
+        override("nodes.path", testFolder.getRoot().getAbsolutePath());
         override("raft.enabled", "true");
         override("raft.bootstrap", "true");
         override("raft.snapshot-interval", "100");

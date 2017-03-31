@@ -3,15 +3,30 @@ package org.mitallast.queue.crdt;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.crdt.commutative.CmRDTService;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
+import org.mitallast.queue.crdt.log.FileReplicatedLog;
+import org.mitallast.queue.crdt.protocol.AppendEntries;
+import org.mitallast.queue.crdt.protocol.AppendRejected;
+import org.mitallast.queue.crdt.protocol.AppendSuccessful;
+import org.mitallast.queue.crdt.replication.Replica;
+import org.mitallast.queue.crdt.replication.Replicator;
+import org.mitallast.queue.crdt.vclock.FileVectorClock;
+import org.mitallast.queue.crdt.log.ReplicatedLog;
+import org.mitallast.queue.crdt.vclock.VectorClock;
 
 import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
 public class CrdtModule extends AbstractModule {
     @Override
     protected void configure() {
-        bind(CmRDTService.class).asEagerSingleton();
+        bind(CrdtService.class).asEagerSingleton();
+        bind(FileReplicatedLog.class).asEagerSingleton();
+        bind(FileVectorClock.class).asEagerSingleton();
+        bind(Replicator.class).asEagerSingleton();
+        bind(Replica.class).asEagerSingleton();
+
+        bind(ReplicatedLog.class).to(FileReplicatedLog.class);
+        bind(VectorClock.class).to(FileVectorClock.class);
 
         Multibinder<StreamableRegistry> binder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 
@@ -20,6 +35,8 @@ public class CrdtModule extends AbstractModule {
         binder.addBinding().toInstance(of(LWWRegister.Value.class, LWWRegister.Value::read, 1002));
         binder.addBinding().toInstance(of(LWWRegister.ValueResponse.class, LWWRegister.ValueResponse::new, 1003));
 
-        binder.addBinding().toInstance(of(LongStreamable.class, LongStreamable::new, 1100));
+        binder.addBinding().toInstance(of(AppendEntries.class, AppendEntries::new, 1004));
+        binder.addBinding().toInstance(of(AppendSuccessful.class, AppendSuccessful::new, 1005));
+        binder.addBinding().toInstance(of(AppendRejected.class, AppendRejected::new, 1006));
     }
 }

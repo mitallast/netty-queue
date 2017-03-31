@@ -18,8 +18,14 @@ public class DataStreamInput extends DataInputStream implements StreamInput {
         this.input = input;
     }
 
+    @Override
     public int available() throws IOException {
         return input.available();
+    }
+
+    @Override
+    public String readText() throws IOException {
+        return readUTF();
     }
 
     @Override
@@ -29,18 +35,10 @@ public class DataStreamInput extends DataInputStream implements StreamInput {
             return Unpooled.EMPTY_BUFFER;
         }
         byte[] bytes = new byte[size];
-        input.read(bytes);
-        return Unpooled.wrappedBuffer(bytes);
-    }
-
-    @Override
-    public ByteBuf readByteBufOrNull() throws IOException {
-        int size = readInt();
-        if (size == 0) {
-            return null;
+        int read = input.read(bytes);
+        if (read != size) {
+            throw new IOException("error read: got " + read + " bytes, expected " + size);
         }
-        byte[] bytes = new byte[size];
-        input.read(bytes);
         return Unpooled.wrappedBuffer(bytes);
     }
 

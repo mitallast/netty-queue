@@ -52,33 +52,6 @@ public class ByteBufStreamOutput extends ByteBufOutputStream implements StreamOu
     }
 
     @Override
-    public void writeByteBufOrNull(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            writeInt(-1);
-        } else {
-            int length = buffer.readableBytes();
-            writeInt(length);
-            if (length > 0) {
-                this.buffer.ensureWritable(length);
-                buffer.readBytes(this.buffer, length);
-            }
-        }
-    }
-
-    @Override
-    public void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException {
-        if (buffer == null) {
-            writeInt(-1);
-        } else {
-            writeInt(length);
-            if (length > 0) {
-                this.buffer.ensureWritable(length);
-                buffer.readBytes(this.buffer, length);
-            }
-        }
-    }
-
-    @Override
     public <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
         classRegistry.writeClass(this, streamableClass);
     }

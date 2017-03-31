@@ -28,7 +28,7 @@ public class PersistentTest extends BaseTest {
     }
 
     private FileService fileService() throws Exception {
-        return new FileService(config());
+        return new FileService(config(), streamService());
     }
 
     private StreamService streamService() throws Exception {

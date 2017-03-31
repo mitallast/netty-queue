@@ -22,19 +22,15 @@ public class ByteBufStreamInput extends ByteBufInputStream implements StreamInpu
     }
 
     @Override
+    public String readText() throws IOException {
+        return readUTF();
+    }
+
+    @Override
     public ByteBuf readByteBuf() throws IOException {
         int size = buffer.readInt();
         if (size == 0) {
             return Unpooled.EMPTY_BUFFER;
-        }
-        return buffer.readSlice(size).retain();
-    }
-
-    @Override
-    public ByteBuf readByteBufOrNull() throws IOException {
-        int size = buffer.readInt();
-        if (size <= 0) {
-            return null;
         }
         return buffer.readSlice(size).retain();
     }

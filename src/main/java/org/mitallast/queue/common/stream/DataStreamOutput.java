@@ -46,26 +46,13 @@ public class DataStreamOutput extends DataOutputStream implements StreamOutput {
     }
 
     @Override
-    public void writeByteBufOrNull(ByteBuf buffer) throws IOException {
-        if (buffer == null) {
-            writeInt(-1);
-        } else {
-            writeByteBuf(buffer);
-        }
-    }
-
-    @Override
-    public void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException {
-        if (buffer == null) {
-            writeInt(-1);
-        } else {
-            writeByteBuf(buffer, length);
-        }
-    }
-
-    @Override
     public <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
         classRegistry.writeClass(this, streamableClass);
+    }
+
+    @Override
+    public void flush() throws IOException {
+        super.flush();
     }
 
     @Override

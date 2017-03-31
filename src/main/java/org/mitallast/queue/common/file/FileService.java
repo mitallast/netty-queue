@@ -3,17 +3,22 @@ package org.mitallast.queue.common.file;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import org.mitallast.queue.common.stream.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public class FileService {
+
+    private final StreamService streamService;
     private final File root;
 
     @Inject
-    public FileService(Config config) throws IOException {
+    public FileService(Config config, StreamService streamService) throws IOException {
+        this.streamService = streamService;
         File path = new File(config.getString("node.path"));
         root = new File(path, config.getString("node.name")).getAbsoluteFile();
         if (!root.exists() && !root.mkdirs()) {
@@ -55,8 +60,8 @@ public class FileService {
     public Stream<Path> resources(String service) throws IOException {
         Path servicePath = service(service).toPath();
         return Files.walk(servicePath)
-                .filter(path -> path.toFile().isFile())
-                .map(servicePath::relativize);
+            .filter(path -> path.toFile().isFile())
+            .map(servicePath::relativize);
     }
 
     public Stream<Path> resources(String service, String prefix) throws IOException {
@@ -64,8 +69,26 @@ public class FileService {
 
         Path servicePath = service(service).toPath();
         return Files.walk(servicePath)
-                .filter(path -> path.toFile().isFile())
-                .map(servicePath::relativize)
-                .filter(matcher::matches);
+            .filter(path -> path.toFile().isFile())
+            .map(servicePath::relativize)
+            .filter(matcher::matches);
+    }
+
+    public <T extends Streamable> Optional<T> read(String service, String key, StreamableReader<T> reader) throws IOException {
+        File resource = resource(service, key);
+        if (resource.length() == 0) {
+            return Optional.empty();
+        } else {
+            try (StreamInput input = streamService.input(resource)) {
+                return Optional.of(input.readStreamable(reader));
+            }
+        }
+    }
+
+    public void write(String service, String key, Streamable streamable) throws IOException {
+        File resource = resource(service, key);
+        try (StreamOutput output = streamService.output(resource)) {
+            output.writeStreamable(streamable);
+        }
     }
 }

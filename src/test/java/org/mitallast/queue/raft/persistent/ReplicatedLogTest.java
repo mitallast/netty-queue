@@ -13,6 +13,7 @@ import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.protocol.LogEntry;
+import org.mitallast.queue.raft.protocol.Noop;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import org.mitallast.queue.transport.DiscoveryNode;
@@ -39,9 +40,9 @@ public class ReplicatedLogTest extends BaseTest {
     private final LogEntry rewriteEntry2 = new LogEntry(new AppendWord("rewrite"), term, 2, node1);
     private final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term, 3, node1);
     private final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term, 4, node1);
-    private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), null);
-    private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), null);
-    private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), null);
+    private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), ImmutableList.of());
+    private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), ImmutableList.of());
+    private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), ImmutableList.of());
 
     private final LogEntry snapshotEntry1 = new LogEntry(snapshot1, term, 1, node1);
     private final LogEntry snapshotEntry2 = new LogEntry(snapshot2, term, 2, node1);
@@ -56,7 +57,7 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     private FileService fileService() throws Exception {
-        return new FileService(config());
+        return new FileService(config(), streamService());
     }
 
     private StreamService streamService() throws Exception {
@@ -254,7 +255,7 @@ public class ReplicatedLogTest extends BaseTest {
 
     @Test
     public void testContainsMatchingEntry1AfterCompaction2() throws Exception {
-        RaftSnapshot snapshot = new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null);
+        RaftSnapshot snapshot = new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), ImmutableList.of());
         ReplicatedLog compacted = log().append(entry1).compactWith(snapshot, node1);
         Assert.assertTrue(compacted.containsMatchingEntry(term2, 2));
     }
@@ -462,7 +463,7 @@ public class ReplicatedLogTest extends BaseTest {
             .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
             .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
             .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term1, 1, clusterConf), null), node1);
+            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term1, 1, clusterConf), ImmutableList.of()), node1);
         Assert.assertEquals(term1, log.termAt(1));
         Assert.assertEquals(term2, log.termAt(2));
         Assert.assertEquals(term3, log.termAt(3));
@@ -474,7 +475,7 @@ public class ReplicatedLogTest extends BaseTest {
             .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
             .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
             .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), null), node1);
+            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term2, 2, clusterConf), ImmutableList.of()), node1);
         Assert.assertEquals(term2, log.termAt(2));
         Assert.assertEquals(term3, log.termAt(3));
     }
@@ -485,7 +486,7 @@ public class ReplicatedLogTest extends BaseTest {
             .append(new LogEntry(new AppendWord("word"), term1, 1, node1))
             .append(new LogEntry(new AppendWord("word"), term2, 2, node1))
             .append(new LogEntry(new AppendWord("word"), term3, 3, node1))
-            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term3, 3, clusterConf), null), node1);
+            .compactWith(new RaftSnapshot(new RaftSnapshotMetadata(term3, 3, clusterConf), ImmutableList.of()), node1);
         Assert.assertEquals(term3, log.termAt(3));
     }
 

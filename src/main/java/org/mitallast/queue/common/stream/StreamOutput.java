@@ -4,13 +4,12 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.Closeable;
 import java.io.DataOutput;
+import java.io.Flushable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
-public interface StreamOutput extends DataOutput, Closeable {
+public interface StreamOutput extends DataOutput, Closeable, Flushable {
 
     @Override
     void write(int b) throws IOException;
@@ -49,49 +48,13 @@ public interface StreamOutput extends DataOutput, Closeable {
         writeUTF(text);
     }
 
-    default void writeTextOrNull(String text) throws IOException {
-        if (text == null || text.isEmpty()) {
-            writeBoolean(false);
-        } else {
-            writeBoolean(true);
-            writeUTF(text);
-        }
-    }
-
-    default void writeUUID(UUID uuid) throws IOException {
-        writeLong(uuid.getMostSignificantBits());
-        writeLong(uuid.getLeastSignificantBits());
-    }
-
-    default void writeUUIDOrNull(UUID uuid) throws IOException {
-        if (uuid != null) {
-            writeLong(uuid.getMostSignificantBits());
-            writeLong(uuid.getLeastSignificantBits());
-        } else {
-            writeLong(0);
-            writeLong(0);
-        }
-    }
-
     default <Type extends Enum<Type>> void writeEnum(Type type) throws IOException {
         writeInt(type.ordinal());
-    }
-
-    default <Type extends Enum<Type>> void writeEnumOrNull(Type type) throws IOException {
-        if (type != null) {
-            writeInt(type.ordinal());
-        } else {
-            writeInt(-1);
-        }
     }
 
     void writeByteBuf(ByteBuf buffer) throws IOException;
 
     void writeByteBuf(ByteBuf buffer, int length) throws IOException;
-
-    void writeByteBufOrNull(ByteBuf buffer) throws IOException;
-
-    void writeByteBufOrNull(ByteBuf buffer, int length) throws IOException;
 
     <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException;
 

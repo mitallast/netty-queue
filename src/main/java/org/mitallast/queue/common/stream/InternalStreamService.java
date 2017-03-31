@@ -73,17 +73,17 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
 
     @Override
     public StreamOutput output(File file) throws IOException {
-        return output(new FileOutputStream(file));
+        return output(file, false);
     }
 
     @Override
     public StreamOutput output(File file, boolean append) throws IOException {
-        return output(new FileOutputStream(file, append));
+        return new DataStreamOutput(this, new BufferedOutputStream(new FileOutputStream(file, append)));
     }
 
     @Override
     public StreamOutput output(OutputStream outputStream) throws IOException {
-        return output(new DataOutputStream(outputStream));
+        return new DataStreamOutput(this, new DataOutputStream(outputStream));
     }
 
     @Override

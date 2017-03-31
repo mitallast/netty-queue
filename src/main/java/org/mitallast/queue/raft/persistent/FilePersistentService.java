@@ -12,9 +12,7 @@ import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -90,7 +88,7 @@ public class FilePersistentService implements PersistentService {
             votedFor = node;
             update = true;
         }
-        if(update) {
+        if (update) {
             writeState();
         }
     }
@@ -112,11 +110,9 @@ public class FilePersistentService implements PersistentService {
                 entries.add(input.readStreamable(LogEntry::new));
             }
         }
-        BufferedOutputStream buffered = new BufferedOutputStream(new FileOutputStream(segmentFile, true), 65536);
-        StreamOutput segmentOutput = streamService.output(buffered);
+        StreamOutput segmentOutput = streamService.output(segmentFile, true);
         return new FileReplicatedLog(
             segmentFile,
-            buffered,
             segmentOutput,
             entries,
             initialCommittedIndex,
@@ -134,21 +130,24 @@ public class FilePersistentService implements PersistentService {
 
     public class FileReplicatedLog implements ReplicatedLog {
         private final ArrayList<LogEntry> entries;
-        private boolean dirty = false;
-        private long start;
+        private volatile boolean dirty = false;
+        private volatile long start;
 
-        private File segmentFile;
-        private BufferedOutputStream buffered;
-        private StreamOutput segmentOutput;
+        private volatile File segmentFile;
+        private volatile StreamOutput segmentOutput;
 
-        private long committedIndex;
+        private volatile long committedIndex;
 
-        public FileReplicatedLog(File segmentFile, BufferedOutputStream buffered, StreamOutput segmentOutput, ArrayList<LogEntry> entries, long committedIndex, long start) throws IOException {
+        public FileReplicatedLog(
+            File segmentFile,
+            StreamOutput segmentOutput,
+            ArrayList<LogEntry> entries,
+            long committedIndex, long start
+        ) throws IOException {
             this.entries = entries;
             this.committedIndex = committedIndex;
             this.start = start;
             this.segmentFile = segmentFile;
-            this.buffered = buffered;
             this.segmentOutput = segmentOutput;
         }
 
@@ -255,10 +254,8 @@ public class FilePersistentService implements PersistentService {
                     }
                 }
                 entries.addAll(append);
-
-                buffered.flush();
-                buffered.close();
                 segmentOutput.close();
+
                 File tmpSegment = temporaryFile();
                 try (StreamOutput output = streamService.output(tmpSegment, false)) {
                     for (LogEntry logEntry : entries) {
@@ -268,13 +265,8 @@ public class FilePersistentService implements PersistentService {
                 Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
                 // recreate file object after move
-                File newSegmentFile = segmentFile(start);
-                BufferedOutputStream newBuffered = new BufferedOutputStream(new FileOutputStream(newSegmentFile, true));
-                StreamOutput newSegmentOutput = streamService.output(newBuffered);
-
-                this.segmentFile = newSegmentFile;
-                this.buffered = newBuffered;
-                this.segmentOutput = newSegmentOutput;
+                this.segmentFile = segmentFile(start);
+                this.segmentOutput = streamService.output(this.segmentFile);
                 dirty = false;
                 return this;
             }
@@ -342,8 +334,6 @@ public class FilePersistentService implements PersistentService {
             }
 
             if (snapshot.getMeta().getLastIncludedIndex() == start) {
-                buffered.flush();
-                buffered.close();
                 segmentOutput.close();
                 File tmpSegment = temporaryFile();
                 try (StreamOutput output = streamService.output(tmpSegment, false)) {
@@ -354,33 +344,23 @@ public class FilePersistentService implements PersistentService {
                 Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
                 // recreate file object after move
-                File newSegmentFile = segmentFile(start);
-                BufferedOutputStream newBuffered = new BufferedOutputStream(new FileOutputStream(newSegmentFile, true));
-                StreamOutput newSegmentOutput = streamService.output(newBuffered);
-
-                this.segmentFile = newSegmentFile;
-                this.buffered = newBuffered;
-                this.segmentOutput = newSegmentOutput;
-                this.start = lastIncludedIndex;
+                segmentFile = segmentFile(start);
+                segmentOutput = streamService.output(segmentFile);
                 dirty = false;
                 return this;
             } else {
-                buffered.flush();
-                buffered.close();
                 segmentOutput.close();
-                File newSegmentFile = segmentFile(snapshot.getMeta().getLastIncludedIndex());
-                BufferedOutputStream newBuffered = new BufferedOutputStream(new FileOutputStream(newSegmentFile, false));
-                StreamOutput newSegmentOutput = streamService.output(newBuffered);
+                File newSegmentFile = segmentFile(lastIncludedIndex);
+                StreamOutput newSegmentOutput = streamService.output(newSegmentFile);
                 for (LogEntry logEntry : entries) {
                     newSegmentOutput.writeStreamable(logEntry);
                 }
-                newBuffered.flush();
+                newSegmentOutput.flush();
                 updateSegment(snapshot.getMeta().getLastIncludedIndex());
 
                 Files.delete(segmentFile.toPath());
 
                 this.segmentFile = newSegmentFile;
-                this.buffered = newBuffered;
                 this.segmentOutput = newSegmentOutput;
                 this.start = lastIncludedIndex;
                 dirty = false;
@@ -400,7 +380,7 @@ public class FilePersistentService implements PersistentService {
 
         private void flush() throws IOException {
             if (dirty) {
-                buffered.flush();
+                segmentOutput.flush();
                 dirty = false;
             }
         }
@@ -408,12 +388,9 @@ public class FilePersistentService implements PersistentService {
         @Override
         public void close() throws IOException {
             flush();
-            buffered.flush();
-            buffered.close();
             segmentOutput.close();
 
             segmentFile = null;
-            buffered = null;
             segmentOutput = null;
         }
 

@@ -52,18 +52,21 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
         try {
             final Class<? extends ServerSocketChannel> channelClass;
             final EventLoopGroup boss;
-            if(Epoll.isAvailable()){
+            final EventLoopGroup worker;
+            if (Epoll.isAvailable()) {
                 logger.info("use epoll");
                 channelClass = EpollServerSocketChannel.class;
-                boss = new EpollEventLoopGroup(threads, threadFactory("boss"));
-            }else {
+                boss = new EpollEventLoopGroup(1, threadFactory("boss"));
+                worker = new EpollEventLoopGroup(threads, threadFactory("worker"));
+            } else {
                 logger.info("use nio");
                 channelClass = NioServerSocketChannel.class;
-                boss = new NioEventLoopGroup(threads, threadFactory("boss"));
+                boss = new NioEventLoopGroup(1, threadFactory("boss"));
+                worker = new NioEventLoopGroup(threads, threadFactory("worker"));
             }
 
             bootstrap = new ServerBootstrap();
-            bootstrap.group(boss)
+            bootstrap.group(boss, worker)
                 .channel(channelClass)
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)

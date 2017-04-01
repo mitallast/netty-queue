@@ -45,30 +45,36 @@ public class ClusterCrdtTest extends BaseClusterTest {
     @Test
     public void testReplicate() throws Exception {
         awaitElection();
-        crdtServices.get(0).createLWWRegister(0);
-        crdtServices.get(1).createLWWRegister(0);
-        crdtServices.get(2).createLWWRegister(0);
 
-        long start = System.currentTimeMillis();
-        long total = 100000;
-        for (long i = 0; i < total; i++) {
-            crdtServices.get((int) (i % nodesCount)).update(0, new LWWRegister.SourceAssign(new TestLong(i)));
-        }
-        while (true) {
-            Thread.sleep(10);
-            if (total / 3 + 1 != vclocks.get(1).get(discoveryNodes.get(0))) {
-                continue;
-            }
-            if (total / 3 + 1 != vclocks.get(2).get(discoveryNodes.get(0))) {
-                continue;
-            }
-            break;
-        }
-        long end = System.currentTimeMillis();
-        printQps("CRDT async", total, start, end);
+        long total = 1000000;
 
-        Assert.assertEquals(total / 3 + 1, vclocks.get(1).get(discoveryNodes.get(0)));
-        Assert.assertEquals(total / 3 + 1, vclocks.get(2).get(discoveryNodes.get(0)));
+        for (int id = 0; id < 10; id++) {
+            crdtServices.get(0).createLWWRegister(id);
+            crdtServices.get(1).createLWWRegister(id);
+            crdtServices.get(2).createLWWRegister(id);
+
+            long expected = (total / 3 + 1) * (id + 1);
+
+            long start = System.currentTimeMillis();
+            for (long i = 0; i < total; i++) {
+                crdtServices.get((int) (i % nodesCount)).update(id, new LWWRegister.SourceAssign(new TestLong(i)));
+            }
+            while (true) {
+                Thread.sleep(10);
+                if (expected != vclocks.get(1).get(discoveryNodes.get(0))) {
+                    continue;
+                }
+                if (expected != vclocks.get(2).get(discoveryNodes.get(0))) {
+                    continue;
+                }
+                break;
+            }
+            long end = System.currentTimeMillis();
+            printQps("CRDT async", total, start, end);
+
+            Assert.assertEquals(expected, vclocks.get(1).get(discoveryNodes.get(0)));
+            Assert.assertEquals(expected, vclocks.get(2).get(discoveryNodes.get(0)));
+        }
     }
 
     public static class TestModule extends AbstractModule {

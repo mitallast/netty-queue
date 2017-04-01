@@ -1,7 +1,6 @@
 package org.mitallast.queue.crdt.vclock;
 
 import com.google.inject.Inject;
-import gnu.trove.impl.sync.TSynchronizedObjectLongMap;
 import gnu.trove.iterator.TObjectLongIterator;
 import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
@@ -31,7 +30,7 @@ public class FileVectorClock implements VectorClock {
     public FileVectorClock(FileService fileService, StreamService streamService) throws IOException {
         this.fileService = fileService;
         this.streamService = streamService;
-        this.vclock = new TSynchronizedObjectLongMap<>(new TObjectLongHashMap<>(7, 0.5f, 0));
+        this.vclock = new TObjectLongHashMap<>(7, 0.5f, 0);
         this.logSize = 0;
 
         this.vclockFile = fileService.resource("crdt", "vclock.log");

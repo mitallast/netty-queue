@@ -284,7 +284,7 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testContainsEntry1AfterCompaction2() throws Exception {
         ReplicatedLog compacted = log().append(entry1).append(entry2).append(entry3).compactWith(snapshot2, node1);
-        logger.info("compacted: {}", compacted);
+        logger.info("shouldCompact: {}", compacted);
         Assert.assertEquals(ImmutableList.of(snapshotEntry2, entry3), compacted.entries());
         Assert.assertFalse(compacted.containsEntryAt(1));
         Assert.assertTrue(compacted.containsEntryAt(2));

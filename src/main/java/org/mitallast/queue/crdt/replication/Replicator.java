@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import gnu.trove.impl.sync.TSynchronizedObjectLongMap;
 import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
 import org.apache.logging.log4j.LogManager;
@@ -14,7 +13,10 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.log.LogEntry;
 import org.mitallast.queue.crdt.log.ReplicatedLog;
-import org.mitallast.queue.crdt.protocol.*;
+import org.mitallast.queue.crdt.protocol.Append;
+import org.mitallast.queue.crdt.protocol.AppendEntries;
+import org.mitallast.queue.crdt.protocol.AppendRejected;
+import org.mitallast.queue.crdt.protocol.AppendSuccessful;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.RaftMetadata;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
@@ -36,13 +38,17 @@ public class Replicator extends AbstractLifecycleComponent {
     private final ClusterDiscovery clusterDiscovery;
     private final TransportService transportService;
     private final ReplicatedLog log;
+
     private final ReentrantLock lock = new ReentrantLock();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final TObjectLongMap<DiscoveryNode> vclock = new TSynchronizedObjectLongMap<>(new TObjectLongHashMap<>());
-    private final TObjectLongMap<DiscoveryNode> replicationTimeout = new TSynchronizedObjectLongMap<>(new TObjectLongHashMap<>());
+    private final TObjectLongMap<DiscoveryNode> vclock = new TObjectLongHashMap<>();
+    private final TObjectLongMap<DiscoveryNode> replicationTimeout = new TObjectLongHashMap<>();
 
     private final long timeout;
     private final Match.Handler<Streamable> handler;
+
+    private final int compactionThreshold;
+    private volatile int lastCompactionSize = 0;
 
     @Inject
     public Replicator(
@@ -59,6 +65,7 @@ public class Replicator extends AbstractLifecycleComponent {
         this.log = log;
 
         timeout = config.getDuration("crdt.timeout", TimeUnit.MILLISECONDS);
+        compactionThreshold = config.getInt("crdt.compactionThreshold");
         handler = Match.<Streamable>handle()
             .when(Append.class, this::append)
             .when(AppendSuccessful.class, this::successful)
@@ -102,6 +109,7 @@ public class Replicator extends AbstractLifecycleComponent {
 
     private void append(Append append) throws IOException {
         log.append(append.id(), append.event());
+        maybeCompact();
         maybeSendEntries();
     }
 
@@ -155,6 +163,13 @@ public class Replicator extends AbstractLifecycleComponent {
                         .send(new AppendEntries(clusterDiscovery.self(), nodeVclock, append));
                 }
             }
+        }
+    }
+
+    private void maybeCompact() throws IOException {
+        if (log.entries().size() > lastCompactionSize + compactionThreshold) {
+            log.compact();
+            lastCompactionSize = log.entries().size();
         }
     }
 

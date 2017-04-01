@@ -120,6 +120,12 @@ public class LWWRegister implements CmRDT<LWWRegister> {
     }
 
     @Override
+    public boolean shouldCompact(Streamable event) {
+        return event instanceof DownstreamAssign &&
+            ((DownstreamAssign) event).timestamp < timestamp;
+    }
+
+    @Override
     public void sourceUpdate(SourceUpdate update) {
         if (update instanceof SourceAssign) {
             assign(((SourceAssign) update).value);

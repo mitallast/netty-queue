@@ -50,7 +50,7 @@ public class ClusterCrdtTest extends BaseClusterTest {
         crdtServices.get(2).createLWWRegister(0);
 
         long start = System.currentTimeMillis();
-        long total = 100000000;
+        long total = 100000;
         for (long i = 0; i < total; i++) {
             crdtServices.get((int) (i % nodesCount)).update(0, new LWWRegister.SourceAssign(new TestLong(i)));
         }
@@ -67,8 +67,8 @@ public class ClusterCrdtTest extends BaseClusterTest {
         long end = System.currentTimeMillis();
         printQps("CRDT async", total, start, end);
 
-        Assert.assertEquals(333334, vclocks.get(1).get(discoveryNodes.get(0)));
-        Assert.assertEquals(333334, vclocks.get(2).get(discoveryNodes.get(0)));
+        Assert.assertEquals(total / 3 + 1, vclocks.get(1).get(discoveryNodes.get(0)));
+        Assert.assertEquals(total / 3 + 1, vclocks.get(2).get(discoveryNodes.get(0)));
     }
 
     public static class TestModule extends AbstractModule {

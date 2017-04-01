@@ -12,6 +12,4 @@ public interface ReplicatedLog {
     void append(LogEntry logEntry) throws IOException;
 
     List<LogEntry> entries();
-
-    void compact() throws IOException;
 }

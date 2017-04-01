@@ -1,6 +1,7 @@
 package org.mitallast.queue.crdt.log;
 
 import com.google.inject.Inject;
+import com.typesafe.config.Config;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.file.FileService;
@@ -21,6 +22,9 @@ public class FileReplicatedLog implements ReplicatedLog {
 
     private final static Logger logger = LogManager.getLogger();
 
+    private final int thresholdAdded;
+    private final int thresholdCompacted;
+
     private final FileService fileService;
     private final StreamService streamService;
     private final Predicate<LogEntry> compactionFilter;
@@ -30,12 +34,19 @@ public class FileReplicatedLog implements ReplicatedLog {
     private volatile File logFile;
     private volatile StreamOutput logOutput;
 
+    private volatile int added = 0;
+    private volatile int compacted = 0;
+
     @Inject
     public FileReplicatedLog(
+        Config config,
         FileService fileService,
         StreamService streamService,
         Predicate<LogEntry> compactionFilter
     ) throws IOException {
+        this.thresholdAdded = config.getInt("crdt.compaction.threshold.added");
+        this.thresholdCompacted = config.getInt("crdt.compaction.threshold.compacted");
+
         this.fileService = fileService;
         this.streamService = streamService;
         this.compactionFilter = compactionFilter;
@@ -59,6 +70,8 @@ public class FileReplicatedLog implements ReplicatedLog {
         }
         LogEntry logEntry = new LogEntry(vclock, id, event);
         append(logEntry);
+        added++;
+        compact();
         return logEntry;
     }
 
@@ -72,24 +85,30 @@ public class FileReplicatedLog implements ReplicatedLog {
         return entries;
     }
 
-    @Override
-    public void compact() throws IOException {
-        int before = entries.size();
-        entries.removeIf(compactionFilter);
-        logger.info("cleanup {} entries: exist {}", before, entries.size());
+    private void compact() throws IOException {
+        if (added >= thresholdAdded) {
+            int before = entries.size();
+            entries.removeIf(compactionFilter);
+            compacted = compacted + (before - entries.size());
 
-        this.logOutput.close();
+            logger.debug("added {} compacted {}", added, compacted);
+            if (compacted >= thresholdCompacted) {
+                this.logOutput.close();
+                long beforeSize = logFile.length();
+                File compactedFile = fileService.temporary("crdt", "event", "log");
+                try (StreamOutput stream = streamService.output(compactedFile)) {
+                    for (LogEntry logEntry : entries) {
+                        stream.writeStreamable(logEntry);
+                    }
+                }
 
-        File compactedFile = fileService.temporary("crdt", "event", "log");
-        try (StreamOutput stream = streamService.output(compactedFile)) {
-            for (LogEntry logEntry : entries) {
-                stream.writeStreamable(logEntry);
+                Files.move(compactedFile.toPath(), logFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                logFile = fileService.resource("crdt", "event.log");
+                logOutput = streamService.output(logFile, true);
+                logger.info("compacted log file: before {} after {} bytes", beforeSize, logFile.length());
+                compacted = 0;
             }
         }
-
-        Files.move(compactedFile.toPath(), logFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-        logFile = fileService.resource("crdt", "event.log");
-        logOutput = streamService.output(logFile, true);
     }
 }

@@ -47,9 +47,6 @@ public class Replicator extends AbstractLifecycleComponent {
     private final long timeout;
     private final Match.Handler<Streamable> handler;
 
-    private final int compactionThreshold;
-    private volatile int lastCompactionSize = 0;
-
     @Inject
     public Replicator(
         Config config,
@@ -65,7 +62,6 @@ public class Replicator extends AbstractLifecycleComponent {
         this.log = log;
 
         timeout = config.getDuration("crdt.timeout", TimeUnit.MILLISECONDS);
-        compactionThreshold = config.getInt("crdt.compactionThreshold");
         handler = Match.<Streamable>handle()
             .when(Append.class, this::append)
             .when(AppendSuccessful.class, this::successful)
@@ -109,7 +105,6 @@ public class Replicator extends AbstractLifecycleComponent {
 
     private void append(Append append) throws IOException {
         log.append(append.id(), append.event());
-        maybeCompact();
         maybeSendEntries();
     }
 
@@ -163,13 +158,6 @@ public class Replicator extends AbstractLifecycleComponent {
                         .send(new AppendEntries(clusterDiscovery.self(), nodeVclock, append));
                 }
             }
-        }
-    }
-
-    private void maybeCompact() throws IOException {
-        if (log.entries().size() > lastCompactionSize + compactionThreshold) {
-            log.compact();
-            lastCompactionSize = log.entries().size();
         }
     }
 

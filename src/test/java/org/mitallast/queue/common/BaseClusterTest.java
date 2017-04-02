@@ -40,8 +40,8 @@ public abstract class BaseClusterTest extends BaseTest {
         boolean bootstrap = true;
         for (Integer port : ports) {
             Config config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-                .put("nodes.name", "nodes" + port)
-                .put("nodes.path", testFolder.newFolder().getAbsolutePath())
+                .put("node.name", "node" + port)
+                .put("node.path", testFolder.newFolder().getAbsolutePath())
                 .put("rest.enabled", false)
                 .put("raft.discovery.host", "127.0.0.1")
                 .put("raft.discovery.port", port)

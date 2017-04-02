@@ -15,6 +15,7 @@ public class DefaultCompactionFilter implements Predicate<LogEntry> {
 
     @Override
     public boolean test(LogEntry logEntry) {
-        return crdtService.shouldCompact(logEntry);
+        return crdtService.crdt(logEntry.id())
+            .shouldCompact(logEntry.event());
     }
 }

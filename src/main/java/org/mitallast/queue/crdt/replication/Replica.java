@@ -64,7 +64,7 @@ public class Replica {
         if (localVclock == message.prevVclock()) {
             logger.debug("append entries vclock:{}", localVclock);
             for (LogEntry logEntry : message.entries()) {
-                crdtService.update(logEntry.id(), logEntry.event());
+                crdtService.crdt(logEntry.id()).update(logEntry.event());
                 localVclock = Math.max(localVclock, logEntry.vclock());
             }
             vclock.put(message.member(), localVclock);

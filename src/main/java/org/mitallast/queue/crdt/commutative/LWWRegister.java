@@ -5,6 +5,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class LWWRegister implements CmRDT<LWWRegister> {
@@ -53,58 +54,10 @@ public class LWWRegister implements CmRDT<LWWRegister> {
 
     }
 
-    public static class Value implements Query {
-
-        public static final Value INSTANCE = new Value();
-
-        public static Value read(StreamInput stream) throws IOException {
-            return INSTANCE;
-        }
-
-        private Value() {
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) throws IOException {}
-
-    }
-
-    public static class ValueResponse implements QueryResponse {
-
-        private final Streamable value;
-
-        public ValueResponse(Streamable value) {
-            this.value = value;
-        }
-
-        public ValueResponse(StreamInput stream) throws IOException {
-            if (stream.readBoolean()) {
-                this.value = stream.readStreamable();
-            } else {
-                this.value = null;
-            }
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) throws IOException {
-            if (value == null) {
-                stream.writeBoolean(false);
-            } else {
-                stream.writeBoolean(true);
-                stream.writeClass(value.getClass());
-                stream.writeStreamableOrNull(value);
-            }
-        }
-
-        public Streamable value() {
-            return value;
-        }
-    }
-
     private final Consumer<Streamable> broadcast;
 
-    private volatile Streamable value = null;
-    private volatile long timestamp = 0;
+    private Streamable value = null;
+    private long timestamp = 0;
 
     public LWWRegister(Consumer<Streamable> broadcast) {
         this.broadcast = broadcast;
@@ -136,28 +89,24 @@ public class LWWRegister implements CmRDT<LWWRegister> {
     public void downstreamUpdate(DownstreamUpdate update) {
         if (update instanceof DownstreamAssign) {
             DownstreamAssign set = (DownstreamAssign) update;
-            if (set.timestamp > timestamp) {
-                value = set.value;
-                timestamp = set.timestamp;
+            synchronized (this) {
+                if (set.timestamp > timestamp) {
+                    value = set.value;
+                    timestamp = set.timestamp;
+                }
             }
         }
     }
 
     public void assign(Streamable value) {
-        this.value = value;
-        this.timestamp = System.currentTimeMillis();
+        synchronized (this) {
+            this.value = value;
+            this.timestamp = System.currentTimeMillis();
+        }
         broadcast.accept(new DownstreamAssign(value, timestamp));
     }
 
-    @Override
-    public QueryResponse query(Query query) {
-        if (query instanceof Value) {
-            return new ValueResponse(value());
-        }
-        return null;
-    }
-
-    public Streamable value() {
-        return value;
+    public Optional<Streamable> value() {
+        return Optional.ofNullable(value);
     }
 }

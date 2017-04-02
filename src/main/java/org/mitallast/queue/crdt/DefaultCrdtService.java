@@ -1,19 +1,14 @@
 package org.mitallast.queue.crdt;
 
 import com.google.inject.Inject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.collection.ImmutableLongMap;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
-import org.mitallast.queue.crdt.log.LogEntry;
 import org.mitallast.queue.crdt.protocol.Append;
 import org.mitallast.queue.crdt.replication.Replicator;
 
 import java.util.concurrent.locks.ReentrantLock;
 
 public class DefaultCrdtService implements CrdtService {
-    private final static Logger logger = LogManager.getLogger();
 
     private final Replicator replicator;
     private final ReentrantLock lock = new ReentrantLock();
@@ -26,36 +21,40 @@ public class DefaultCrdtService implements CrdtService {
     }
 
     @Override
-    public void createLWWRegister(long id) {
+    public LWWRegister createLWWRegister(long id) {
         lock.lock();
         try {
+            if (crdtMap.containsKey(id)) {
+                throw new IllegalArgumentException("CRDT " + id + " already registered");
+            }
+            LWWRegister crdt = new LWWRegister(event -> replicator.handle(new Append(id, event)));
             crdtMap = ImmutableLongMap.<Crdt>builder()
                 .putAll(crdtMap)
-                .put(id, new LWWRegister(event -> replicator.handle(new Append(id, event))))
+                .put(id, crdt)
                 .build();
+            return crdt;
         } finally {
             lock.unlock();
         }
     }
 
     @Override
-    public void update(long id, Streamable event) {
+    public Crdt crdt(long id) {
         Crdt crdt = crdtMap.get(id);
         if (crdt == null) {
-            logger.warn("crdt {} does not exist", id);
-        } else {
-            crdt.update(event);
+            throw new IllegalArgumentException("CRDT " + id + " not registered");
         }
+        return crdt;
     }
 
     @Override
-    public boolean shouldCompact(LogEntry logEntry) {
-        Crdt crdt = crdtMap.get(logEntry.id());
-        if (crdt == null) {
-            logger.warn("crdt {} does not exist", logEntry.id());
-            return false;
+    @SuppressWarnings("unchecked")
+    public <T extends Crdt> T crdt(long id, Class<T> type) {
+        Crdt crdt = crdt(id);
+        if (type.isInstance(crdt)) {
+            return (T) crdt;
         } else {
-            return crdt.shouldCompact(logEntry.event());
+            throw new IllegalArgumentException("CRDT " + id + " does not LWWRegister, actual " + crdt.getClass().getSimpleName());
         }
     }
 }

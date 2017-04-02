@@ -48,7 +48,7 @@ public class ClusterCrdtTest extends BaseClusterTest {
 
         long total = 1000000;
 
-        for (int id = 0; id < 10; id++) {
+        for (int id = 0; id < 3; id++) {
             crdtServices.get(0).createLWWRegister(id);
             crdtServices.get(1).createLWWRegister(id);
             crdtServices.get(2).createLWWRegister(id);
@@ -57,23 +57,27 @@ public class ClusterCrdtTest extends BaseClusterTest {
 
             long start = System.currentTimeMillis();
             for (long i = 0; i < total; i++) {
-                crdtServices.get((int) (i % nodesCount)).update(id, new LWWRegister.SourceAssign(new TestLong(i)));
+                crdtServices.get((int) (i % nodesCount))
+                    .crdt(id, LWWRegister.class)
+                    .assign(new TestLong(i));
             }
-            while (true) {
-                Thread.sleep(10);
+            for (int w = 0; w < 10; w++) {
                 if (expected != vclocks.get(1).get(discoveryNodes.get(0))) {
+                    Thread.sleep(10);
                     continue;
                 }
                 if (expected != vclocks.get(2).get(discoveryNodes.get(0))) {
+                    Thread.sleep(10);
                     continue;
                 }
                 break;
             }
             long end = System.currentTimeMillis();
-            printQps("CRDT async", total, start, end);
 
             Assert.assertEquals(expected, vclocks.get(1).get(discoveryNodes.get(0)));
             Assert.assertEquals(expected, vclocks.get(2).get(discoveryNodes.get(0)));
+
+            printQps("CRDT async", total, start, end);
         }
     }
 

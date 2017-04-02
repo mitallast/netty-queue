@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -27,13 +28,15 @@ import java.util.Map;
 
 public class JsonService {
 
-    private final ObjectMapper mapper;
+    protected final static ObjectMapper mapper;
 
-    @Inject
-    public JsonService() {
+    static {
         SimpleModule module = new SimpleModule();
         module.addSerializer(Config.class, new ConfigSerializer());
         module.addDeserializer(Config.class, new ConfigDeserializer());
+        module.addSerializer(Errors.class, new ErrorsSerializer());
+        module.addSerializer(JsonStreamable.class, new JsonStreamableSerializer());
+        module.addDeserializer(JsonStreamable.class, new JsonStreamableDeserializer());
 
         mapper = new ObjectMapper();
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
@@ -151,6 +154,22 @@ public class JsonService {
                 }
                 gen.writeEndObject();
             }
+        }
+    }
+
+    private static class JsonStreamableSerializer extends JsonSerializer<JsonStreamable> {
+
+        @Override
+        public void serialize(JsonStreamable value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+            gen.writeTree(value.json());
+        }
+    }
+
+    private static class JsonStreamableDeserializer extends JsonDeserializer<JsonStreamable> {
+        @Override
+        public JsonStreamable deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            JsonNode treeNode = p.readValueAsTree();
+            return new JsonStreamable(treeNode);
         }
     }
 }

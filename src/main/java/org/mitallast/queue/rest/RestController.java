@@ -160,6 +160,28 @@ public class RestController {
             return request -> request.response().status(HttpResponseStatus.NOT_FOUND).empty();
         }
 
+        public Consumer<RestRequest> ok() {
+            return request -> request.response().status(HttpResponseStatus.OK).empty();
+        }
+
+        public Consumer<RestRequest> created() {
+            return request -> request.response().status(HttpResponseStatus.CREATED).empty();
+        }
+
+        public Consumer<RestRequest> badRequest() {
+            return request -> request.response().status(HttpResponseStatus.BAD_REQUEST).empty();
+        }
+
+        public BiConsumer<RestRequest, Boolean> either(Consumer<RestRequest> right, Consumer<RestRequest> left) {
+            return (request, value) -> {
+                if (value) {
+                    right.accept(request);
+                } else {
+                    left.accept(request);
+                }
+            };
+        }
+
         public BiConsumer<RestRequest, String> text() {
             return (request, response) -> request.response().text(response);
         }

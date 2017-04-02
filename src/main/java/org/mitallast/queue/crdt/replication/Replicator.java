@@ -25,7 +25,6 @@ import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -134,30 +133,21 @@ public class Replicator extends AbstractLifecycleComponent {
     }
 
     private void maybeSendEntries(DiscoveryNode member) throws IOException {
-        List<LogEntry> entries = log.entries();
-        if (!entries.isEmpty()) {
-            LogEntry last = entries.get(entries.size() - 1);
-            long nodeVclock = vclock.get(member);
-            if (last.vclock() > nodeVclock) {
-                long nodeTimeout = replicationTimeout.get(member);
-                if (nodeTimeout < System.currentTimeMillis()) {
-                    ImmutableList.Builder<LogEntry> builder = ImmutableList.builder();
-                    for (int i = entries.size() - 1; i >= 0; i--) {
-                        LogEntry logEntry = entries.get(i);
-                        if (logEntry.vclock() > nodeVclock) {
-                            builder.add(logEntry);
-                        } else {
-                            break;
-                        }
-                    }
-                    ImmutableList<LogEntry> append = builder.build().reverse();
-                    logger.debug("send append {} vclock={}", member, nodeVclock);
-                    replicationTimeout.put(member, System.currentTimeMillis() + timeout);
-                    transportService.connectToNode(member);
-                    transportService.channel(member)
-                        .send(new AppendEntries(clusterDiscovery.self(), nodeVclock, append));
-                }
-            }
+        long nodeTimeout = replicationTimeout.get(member);
+        if (nodeTimeout < System.currentTimeMillis()) {
+            sendEntries(member);
+        }
+    }
+
+    private void sendEntries(DiscoveryNode member) throws IOException {
+        long nodeVclock = vclock.get(member);
+        ImmutableList<LogEntry> append = log.entriesFrom(nodeVclock);
+        if (!append.isEmpty()) {
+            logger.debug("send append {} vclock={}", member, nodeVclock);
+            replicationTimeout.put(member, System.currentTimeMillis() + timeout);
+            transportService.connectToNode(member);
+            transportService.channel(member)
+                .send(new AppendEntries(clusterDiscovery.self(), nodeVclock, append));
         }
     }
 

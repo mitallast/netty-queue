@@ -5,6 +5,6 @@ import com.google.inject.AbstractModule;
 public class RestCrdtModule extends AbstractModule {
     @Override
     protected void configure() {
-        bind(RestCrdtHandler.class).asEagerSingleton();
+        bind(RestLWWRegister.class).asEagerSingleton();
     }
 }

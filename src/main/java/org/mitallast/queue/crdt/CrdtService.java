@@ -1,13 +1,12 @@
 package org.mitallast.queue.crdt;
 
-import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.crdt.log.LogEntry;
+import org.mitallast.queue.crdt.commutative.LWWRegister;
 
 public interface CrdtService {
 
-    void createLWWRegister(long id);
+    LWWRegister createLWWRegister(long id);
 
-    void update(long id, Streamable event);
+    Crdt crdt(long id);
 
-    boolean shouldCompact(LogEntry logEntry);
+    <T extends Crdt> T crdt(long id, Class<T> type);
 }

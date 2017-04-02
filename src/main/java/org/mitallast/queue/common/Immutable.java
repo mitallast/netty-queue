@@ -5,6 +5,7 @@ import com.google.common.collect.*;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
+import org.mitallast.queue.crdt.log.FileReplicatedLog;
 
 import java.util.*;
 import java.util.function.Function;
@@ -175,9 +176,13 @@ public final class Immutable {
     }
 
     public static <V> ImmutableList<V> subtract(Iterable<V> list, V v) {
+        return filterNot(list, item -> item.equals(v));
+    }
+
+    public static <V> ImmutableList<V> filterNot(Iterable<V> list, Predicate<V> predicate) {
         ImmutableList.Builder<V> builder = ImmutableList.builder();
         for (V item : list) {
-            if (!item.equals(v)) {
+            if (!predicate.test(item)) {
                 builder.add(item);
             }
         }

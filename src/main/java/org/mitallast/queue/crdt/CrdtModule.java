@@ -41,8 +41,6 @@ public class CrdtModule extends AbstractModule {
 
         binder.addBinding().toInstance(of(LWWRegister.SourceAssign.class, LWWRegister.SourceAssign::new, 1000));
         binder.addBinding().toInstance(of(LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign::new, 1001));
-        binder.addBinding().toInstance(of(LWWRegister.Value.class, LWWRegister.Value::read, 1002));
-        binder.addBinding().toInstance(of(LWWRegister.ValueResponse.class, LWWRegister.ValueResponse::new, 1003));
 
         binder.addBinding().toInstance(of(AppendEntries.class, AppendEntries::new, 1004));
         binder.addBinding().toInstance(of(AppendSuccessful.class, AppendSuccessful::new, 1005));

@@ -9,13 +9,7 @@ public interface CmRDT<T extends CmRDT<T>> extends Crdt {
 
     interface DownstreamUpdate extends Streamable {}
 
-    interface Query extends Streamable {}
-
-    interface QueryResponse extends Streamable {}
-
     void sourceUpdate(SourceUpdate update);
 
     void downstreamUpdate(DownstreamUpdate update);
-
-    QueryResponse query(Query query);
 }

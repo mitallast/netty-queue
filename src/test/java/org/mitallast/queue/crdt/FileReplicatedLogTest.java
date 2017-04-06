@@ -44,12 +44,15 @@ public class FileReplicatedLogTest extends BaseTest {
 
     @Test
     public void append() throws Exception {
-        long total = 100000;
+        long total = 4000000;
+        long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
             LogEntry append = log.append(i, new TestLong(i));
             assert append.vclock() == i + 1;
             assert append.id() == i;
         }
+        long end = System.currentTimeMillis();
+        printQps("append single thread", total, start, end);
         ImmutableList<LogEntry> logEntries = log.entriesFrom(0);
         assert logEntries.size() == total;
         long prev = 1;
@@ -61,13 +64,16 @@ public class FileReplicatedLogTest extends BaseTest {
 
     @Test
     public void appendConcurrent() throws Exception {
-        long total = 100000;
+        long total = 4000000;
+        long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < total; i += concurrency) {
                 LogEntry append = log.append(i, new TestLong(i));
                 assert append.id() == i;
             }
         });
+        long end = System.currentTimeMillis();
+        printQps("append concurrent", total, start, end);
         assert log.entriesFrom(0).size() == total;
         long prev = 1;
         for (LogEntry logEntry : log.entriesFrom(0)) {

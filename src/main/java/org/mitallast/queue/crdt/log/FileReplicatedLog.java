@@ -103,8 +103,7 @@ public class FileReplicatedLog implements ReplicatedLog {
     public ImmutableList<LogEntry> entriesFrom(long nodeVclock) {
         ImmutableList.Builder<LogEntry> builder = null;
         for (Segment segment : segments.reverse()) {
-            segment.lock.lock();
-            try {
+            synchronized (segment.entries) {
                 for (int i = segment.entries.size() - 1; i >= 0; i--) {
                     LogEntry logEntry = segment.entries.get(i);
                     if (logEntry.vclock() > nodeVclock) {
@@ -120,8 +119,6 @@ public class FileReplicatedLog implements ReplicatedLog {
                         }
                     }
                 }
-            } finally {
-                segment.lock.unlock();
             }
         }
         if (builder == null) {
@@ -167,7 +164,6 @@ public class FileReplicatedLog implements ReplicatedLog {
     }
 
     class Segment {
-        private final ReentrantLock lock = new ReentrantLock();
         private final ArrayList<LogEntry> entries = new ArrayList<>();
         private final long offset;
         private final File logFile;
@@ -194,8 +190,7 @@ public class FileReplicatedLog implements ReplicatedLog {
         }
 
         private LogEntry append(long id, Streamable event) throws IOException {
-            lock.lock();
-            try {
+            synchronized (entries) {
                 if (isFull()) {
                     return null;
                 }
@@ -203,10 +198,7 @@ public class FileReplicatedLog implements ReplicatedLog {
                 logOutput.writeStreamable(logEntry);
                 entries.add(logEntry);
                 added = added + 1;
-                compact();
                 return logEntry;
-            } finally {
-                lock.unlock();
             }
         }
 
@@ -219,11 +211,9 @@ public class FileReplicatedLog implements ReplicatedLog {
         }
 
         private void compact() {
-            lock.lock();
-            try {
+            synchronized (entries) {
                 entries.removeIf(compactionFilter);
-            } finally {
-                lock.unlock();
+
             }
         }
 

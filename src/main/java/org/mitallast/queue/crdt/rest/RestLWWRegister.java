@@ -23,12 +23,12 @@ public class RestLWWRegister {
                 controller.response().created(),
                 controller.response().badRequest()
             ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/:id/lww-register");
+            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register");
 
         controller.handler(this::value)
             .param(controller.param().toLong("id"))
             .response(controller.response().optionalJson())
-            .handle(HttpMethod.GET, "_crdt/:id/lww-register/value");
+            .handle(HttpMethod.GET, "_crdt/{id}/lww-register/value");
 
         controller.handler(this::assign)
             .param(controller.param().toLong("id"))
@@ -37,7 +37,7 @@ public class RestLWWRegister {
                 controller.response().ok(),
                 controller.response().badRequest()
             ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/:id/lww-register/value");
+            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/value");
     }
 
     public boolean create(long id) {
@@ -50,7 +50,7 @@ public class RestLWWRegister {
     }
 
     public boolean assign(long id, JsonStreamable value) {
-        crdtService.createLWWRegister(id).assign(value);
+        crdtService.crdt(id, LWWRegister.class).assign(value);
         return true;
     }
 }

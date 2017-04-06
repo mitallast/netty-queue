@@ -37,6 +37,8 @@
                 <li><a href="#blobList">Blob resources</a></li>
                 <li><a href="#putBlob">Put blob</a></li>
                 <li><a href="#startBenchmark">Start benchmark</a></li>
+                <li><a href="#crdtCreate">Create CmRDT</a></li>
+                <li><a href="#crdtAssign">Put CmRDT</a></li>
             </ul>
         </div>
     </div>
@@ -51,8 +53,8 @@
                 <li><a href="#blobList">Blob resources</a></li>
                 <li><a href="#putBlob">Put blob</a></li>
                 <li><a href="#startBenchmark">Start benchmark</a></li>
+                <li><a href="#crdtCreate">Create CmRDT</a></li>
                 <li><a href="#crdtAssign">Put CmRDT</a></li>
-                <li><a href="#crdtValue">Get CmRDT</a></li>
             </ul>
         </div>
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"></div>
@@ -258,20 +260,34 @@
         <button type="submit" class="btn btn-default">Submit</button>
     </form>
 </script>
+<script id="crdtCreate" type="text/x-handlebars-template">
+    <h2 class="page-header">Create CmRDT LWWRegister</h2>
+    <form action="#crdtCreate">
+        <div class="form-group">
+            <label for="value">id</label>
+            <input class="form-control" type="number" name="id" id="id" placeholder="id" value="{{id}}">
+        </div>
+        <button type="submit" class="btn btn-default">Create</button>
+    </form>
+</script>
 <script id="crdtAssign" type="text/x-handlebars-template">
     <h2 class="page-header">Put CmRDT LWWRegister value</h2>
     <form action="#crdtAssign">
         <div class="form-group">
-            <label for="value">Value</label>
-            <input class="form-control" type="number" name="value" id="value" placeholder="value" value="{{value}}">
+            <label for="value">id</label>
+            <input class="form-control" type="number" name="id" id="id" placeholder="id"">
         </div>
-        <button type="submit" class="btn btn-default">Submit</button>
+        <div class="form-group">
+            <label for="value">Value</label>
+            <textarea class="form-control" name="value" id="value" placeholder="value" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-default">Update</button>
     </form>
 </script>
 <script id="crdtValue" type="text/x-handlebars-template">
     <h2 class="page-header">Get CmRDT LWWRegister value</h2>
 
-    <p>value={{value}}</p>
+    <pre>{{value}}</pre>
 </script>
 </body>
 </html>

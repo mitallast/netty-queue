@@ -56,22 +56,32 @@ $(function () {
             });
         });
 
-        $('form[action="#crdtAssign"]', context).submit(function(e) {
+        $('form[action="#crdtCreate"]', context).submit(function(e) {
             e.preventDefault();
             var $form = $(this);
-            var value = $form.find('input[name=value]').val();
-            $.post("/_crdt/" + value, function(response) {
-                createCrdtValueView();
+            var id = $form.find('input[name=id]').val();
+            $.post("/_crdt/" + id +"/lww-register", function(response) {
+                createCrdtValueView(id);
             });
         });
 
+        $('form[action="#crdtAssign"]', context).submit(function(e) {
+            e.preventDefault();
+            var $form = $(this);
+            var id = $form.find('input[name=id]').val();
+            var value = $form.find('textarea[name=value]').val();
+            $.post("/_crdt/" + id + "/lww-register/value", value, function(response) {
+                createCrdtValueView(id);
+            });
+        });
+
+        $('a[href="#crdtCreate"]', context).click(function (e) {
+            e.preventDefault();
+            createCrdtCreateView()
+        });
         $('a[href="#crdtAssign"]', context).click(function (e) {
             e.preventDefault();
             createCrdtAssignView()
-        });
-        $('a[href="#crdtValue"]', context).click(function (e) {
-            e.preventDefault();
-            createCrdtValueView()
         });
     }
 
@@ -138,15 +148,20 @@ $(function () {
         renderMain(template(response))
     }
 
+    function createCrdtCreateView(){
+        var template = Handlebars.compile($("#crdtCreate").html());
+        renderMain(template())
+    }
+
     function createCrdtAssignView(){
         var template = Handlebars.compile($("#crdtAssign").html());
         renderMain(template())
     }
 
-    function createCrdtValueView(){
+    function createCrdtValueView(id){
         var template = Handlebars.compile($("#crdtValue").html());
-        $.getJSON("/_crdt", function(response) {
-            renderMain(template(response))
+        $.getJSON("/_crdt/" + id + "/lww-register/value", function(response) {
+            renderMain(template({value:JSON.stringify(response)}))
         });
     }
 

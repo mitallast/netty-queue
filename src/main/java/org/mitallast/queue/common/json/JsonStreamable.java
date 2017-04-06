@@ -8,6 +8,7 @@ import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public class JsonStreamable implements Streamable {
     private final JsonNode json;
@@ -21,14 +22,30 @@ public class JsonStreamable implements Streamable {
         json = JsonService.mapper.readTree(new InputStream() {
             @Override
             public int read() throws IOException {
-                return stream.readInt();
+                return stream.read();
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                stream.read(b, off, len);
+                return len;
             }
         });
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        JsonService.mapper.writeValue(stream, json);
+        JsonService.mapper.writeValue(new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                stream.write(b);
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) throws IOException {
+                stream.write(b, off, len);
+            }
+        }, json);
     }
 
     public JsonNode json() {

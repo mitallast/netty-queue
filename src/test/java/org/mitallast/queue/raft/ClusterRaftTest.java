@@ -220,6 +220,9 @@ public class ClusterRaftTest extends BaseClusterTest {
 
         public Streamable handle(RegisterByteSet set) {
             logger.debug("prev value: {} new value: {}", value, set.buff);
+            if (buff != null) {
+                buff.release();
+            }
             buff = set.buff;
             return new RegisterByteOK(set.requestId);
         }

@@ -49,11 +49,12 @@ public class ClusterCrdtTest extends BaseClusterTest {
         long total = 1000000;
 
         for (int id = 0; id < 3; id++) {
-            crdtServices.get(0).createLWWRegister(id);
-            crdtServices.get(1).createLWWRegister(id);
-            crdtServices.get(2).createLWWRegister(id);
 
-            long expected = (total / 3 + 1) * (id + 1);
+            for (int i = 0; i < nodesCount; i++) {
+                crdtServices.get(i).createLWWRegister(id);
+            }
+
+            long expected = (total / nodesCount + 1) * (id + 1);
 
             long start = System.currentTimeMillis();
             for (long i = 0; i < total; i++) {

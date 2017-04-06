@@ -6,7 +6,7 @@ public class StreamableRegistry<T extends Streamable> {
     private final StreamableReader<T> reader;
 
     public static <T extends Streamable> StreamableRegistry of(Class<T> streamable, StreamableReader<T> reader, int id) {
-        return new StreamableRegistry<T>(id, streamable, reader);
+        return new StreamableRegistry<>(id, streamable, reader);
     }
 
     private StreamableRegistry(int id, Class<T> streamable, StreamableReader<T> reader) {

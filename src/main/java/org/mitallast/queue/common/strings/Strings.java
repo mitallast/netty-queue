@@ -1,9 +1,5 @@
 package org.mitallast.queue.common.strings;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
-
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,12 +107,6 @@ public class Strings {
 
     public static String toString(CharSequence charSequence) {
         return charSequence == null ? null : charSequence.toString();
-    }
-
-    public static ByteBuf toByteBuf(String string) {
-        ByteBuf buffer = Unpooled.buffer(string.length() * 3);
-        ByteBufUtil.writeUtf8(buffer, string);
-        return buffer;
     }
 
     public static boolean isEmpty(String string) {

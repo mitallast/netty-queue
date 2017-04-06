@@ -26,7 +26,7 @@ public class PutBlobResourceRequest implements Streamable {
         key = stream.readText();
         int size = stream.readInt();
         byte[] bytes = new byte[size];
-        stream.readFully(bytes);
+        stream.read(bytes);
         data = bytes;
     }
 

@@ -2,18 +2,15 @@ package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class DataStreamOutput extends DataOutputStream implements StreamOutput {
+public class DataStreamOutput extends StreamOutput {
 
-    private final StreamableClassRegistry classRegistry;
     private final OutputStream output;
 
     public DataStreamOutput(StreamableClassRegistry classRegistry, OutputStream output) {
-        super(output);
-        this.classRegistry = classRegistry;
+        super(classRegistry);
         this.output = output;
     }
 
@@ -23,41 +20,22 @@ public class DataStreamOutput extends DataOutputStream implements StreamOutput {
     }
 
     @Override
-    public void write(byte[] b) throws IOException {
-        output.write(b);
-    }
-
-    @Override
     public void write(byte[] b, int off, int len) throws IOException {
         output.write(b, off, len);
     }
 
     @Override
-    public void writeByteBuf(ByteBuf buffer) throws IOException {
-        writeByteBuf(buffer, buffer.readableBytes());
-    }
-
-    @Override
     public void writeByteBuf(ByteBuf buffer, int length) throws IOException {
-        writeInt(length);
-        if (length > 0) {
-            buffer.readBytes(this, length);
-        }
-    }
-
-    @Override
-    public <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
-        classRegistry.writeClass(this, streamableClass);
-    }
-
-    @Override
-    public void flush() throws IOException {
-        super.flush();
+        buffer.readBytes(output, length);
     }
 
     @Override
     public void close() throws IOException {
-        output.flush();
         output.close();
+    }
+
+    @Override
+    public void flush() throws IOException {
+        output.flush();
     }
 }

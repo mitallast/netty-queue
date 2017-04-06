@@ -103,20 +103,25 @@ public class FileReplicatedLog implements ReplicatedLog {
     public ImmutableList<LogEntry> entriesFrom(long nodeVclock) {
         ImmutableList.Builder<LogEntry> builder = null;
         for (Segment segment : segments.reverse()) {
-            for (int i = segment.entries.size() - 1; i >= 0; i--) {
-                LogEntry logEntry = segment.entries.get(i);
-                if (logEntry.vclock() > nodeVclock) {
-                    if (builder == null) {
-                        builder = ImmutableList.builder();
-                    }
-                    builder.add(logEntry);
-                } else {
-                    if (builder == null) {
-                        return ImmutableList.of();
+            segment.lock.lock();
+            try {
+                for (int i = segment.entries.size() - 1; i >= 0; i--) {
+                    LogEntry logEntry = segment.entries.get(i);
+                    if (logEntry.vclock() > nodeVclock) {
+                        if (builder == null) {
+                            builder = ImmutableList.builder();
+                        }
+                        builder.add(logEntry);
                     } else {
-                        return builder.build().reverse();
+                        if (builder == null) {
+                            return ImmutableList.of();
+                        } else {
+                            return builder.build().reverse();
+                        }
                     }
                 }
+            } finally {
+                segment.lock.unlock();
             }
         }
         if (builder == null) {

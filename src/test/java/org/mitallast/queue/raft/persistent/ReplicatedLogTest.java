@@ -50,8 +50,8 @@ public class ReplicatedLogTest extends BaseTest {
 
     private Config config() {
         return ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("nodes.name", "test")
-            .put("nodes.path", testFolder.getRoot().getAbsolutePath())
+            .put("node.name", "test")
+            .put("node.path", testFolder.getRoot().getAbsolutePath())
             .put("raft.enabled", true)
             .build());
     }
@@ -505,10 +505,11 @@ public class ReplicatedLogTest extends BaseTest {
         ReplicatedLog log = log();
         AppendWord cmd = new AppendWord("hello world");
         DiscoveryNode client = new DiscoveryNode("localhost", 8800);
+        final LogEntry entry = new LogEntry(cmd, term, 0, client);
+        final long total = 5000000;
         final long start = System.currentTimeMillis();
-        final long total = 3000000;
         for (int i = 0; i < total; i++) {
-            log = log.append(new LogEntry(cmd, term, i, client));
+            log = log.append(entry);
         }
         final long end = System.currentTimeMillis();
         printQps("append", total, start, end);

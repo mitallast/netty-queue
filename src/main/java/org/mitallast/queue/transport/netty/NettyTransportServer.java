@@ -54,7 +54,7 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     private class TransportServerHandler extends SimpleChannelInboundHandler<Streamable> {
 
         public TransportServerHandler() {
-            super(false);
+            super(true);
         }
 
         @Override

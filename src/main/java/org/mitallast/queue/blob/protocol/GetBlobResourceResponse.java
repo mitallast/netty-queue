@@ -22,7 +22,7 @@ public class GetBlobResourceResponse implements Streamable {
         key = stream.readText();
         int size = stream.readInt();
         data = new byte[size];
-        stream.readFully(data);
+        stream.read(data);
     }
 
     public long getId() {

@@ -18,7 +18,7 @@ public class StreamBenchmark extends BaseTest {
 
     @Override
     protected int max() {
-        return 100000;
+        return 10000000;
     }
 
     @Before

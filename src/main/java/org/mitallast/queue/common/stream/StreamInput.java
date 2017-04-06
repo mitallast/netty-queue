@@ -3,56 +3,101 @@ package org.mitallast.queue.common.stream;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.ByteBuf;
+import io.netty.util.CharsetUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
 
-public interface StreamInput extends Closeable {
+public abstract class StreamInput implements Closeable {
+    private final StreamableClassRegistry classRegistry;
+    private byte[] buffer = new byte[64];
 
-    int available() throws IOException;
+    protected StreamInput(StreamableClassRegistry classRegistry) {
+        this.classRegistry = classRegistry;
+    }
 
-    void readFully(byte[] b) throws IOException;
+    public abstract int available() throws IOException;
 
-    void readFully(byte[] b, int off, int len) throws IOException;
+    public abstract int read() throws IOException;
 
-    int skipBytes(int n) throws IOException;
+    public final void read(byte[] b) throws IOException {
+        read(b, 0, b.length);
+    }
 
-    boolean readBoolean() throws IOException;
+    public abstract void read(byte[] b, int off, int len) throws IOException;
 
-    byte readByte() throws IOException;
+    public abstract void skipBytes(int n) throws IOException;
 
-    int readUnsignedByte() throws IOException;
+    public boolean readBoolean() throws IOException {
+        return read() == 1;
+    }
 
-    short readShort() throws IOException;
+    public byte readByte() throws IOException {
+        return (byte) read();
+    }
 
-    int readUnsignedShort() throws IOException;
+    public short readShort() throws IOException {
+        return (short) readUnsignedShort();
+    }
 
-    char readChar() throws IOException;
+    public int readUnsignedShort() throws IOException {
+        read(buffer, 0, 2);
+        return ((int) buffer[0] & 0xff) << 8 | (int) buffer[1] & 0xff;
+    }
 
-    int readInt() throws IOException;
+    public int readInt() throws IOException {
+        read(buffer, 0, 4);
+        return ((int) buffer[0] & 0xff) << 24 |
+            ((int) buffer[1] & 0xff) << 16 |
+            ((int) buffer[2] & 0xff) << 8 |
+            (int) buffer[3] & 0xff;
+    }
 
-    long readLong() throws IOException;
+    public long readLong() throws IOException {
+        read(buffer, 0, 8);
+        return ((long) buffer[0] & 0xff) << 56 |
+            ((long) buffer[1] & 0xff) << 48 |
+            ((long) buffer[2] & 0xff) << 40 |
+            ((long) buffer[3] & 0xff) << 32 |
+            ((long) buffer[4] & 0xff) << 24 |
+            ((long) buffer[5] & 0xff) << 16 |
+            ((long) buffer[6] & 0xff) << 8 |
+            (long) buffer[7] & 0xff;
+    }
 
-    float readFloat() throws IOException;
+    public float readFloat() throws IOException {
+        return Float.intBitsToFloat(readInt());
+    }
 
-    double readDouble() throws IOException;
+    public double readDouble() throws IOException {
+        return Double.longBitsToDouble(readLong());
+    }
 
-    String readText() throws IOException;
+    public final String readText() throws IOException {
+        int bytes = readUnsignedShort();
+        if (buffer == null || buffer.length < bytes) {
+            buffer = new byte[bytes];
+        }
+        read(buffer, 0, bytes);
+        return new String(buffer, 0, bytes, CharsetUtil.UTF_8);
+    }
 
-    default <Type extends Enum<Type>> Type readEnum(Class<Type> enumClass) throws IOException {
-        int ord = readInt();
+    public final <Type extends Enum<Type>> Type readEnum(Class<Type> enumClass) throws IOException {
+        int ord = readUnsignedShort();
         return enumClass.getEnumConstants()[ord];
     }
 
-    ByteBuf readByteBuf() throws IOException;
+    public abstract ByteBuf readByteBuf() throws IOException;
 
-    <T extends Streamable> T readStreamable() throws IOException;
+    public final <T extends Streamable> T readStreamable() throws IOException {
+        return classRegistry.readStreamable(this);
+    }
 
-    default <T extends Streamable> T readStreamable(StreamableReader<T> reader) throws IOException {
+    public final <T extends Streamable> T readStreamable(StreamableReader<T> reader) throws IOException {
         return reader.read(this);
     }
 
-    default <T extends Streamable> T readStreamableOrNull(StreamableReader<T> reader) throws IOException {
+    public final <T extends Streamable> T readStreamableOrNull(StreamableReader<T> reader) throws IOException {
         if (readBoolean()) {
             return reader.read(this);
         } else {
@@ -60,7 +105,7 @@ public interface StreamInput extends Closeable {
         }
     }
 
-    default <T extends Streamable> ImmutableList<T> readStreamableList(StreamableReader<T> reader) throws IOException {
+    public final <T extends Streamable> ImmutableList<T> readStreamableList(StreamableReader<T> reader) throws IOException {
         int size = readInt();
         if (size == 0) {
             return ImmutableList.of();
@@ -75,7 +120,7 @@ public interface StreamInput extends Closeable {
         }
     }
 
-    default <T extends Streamable> ImmutableSet<T> readStreamableSet(StreamableReader<T> reader) throws IOException {
+    public final <T extends Streamable> ImmutableSet<T> readStreamableSet(StreamableReader<T> reader) throws IOException {
         int size = readInt();
         if (size == 0) {
             return ImmutableSet.of();

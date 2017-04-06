@@ -20,7 +20,7 @@ public class BenchmarkRequest implements Streamable {
         int size = stream.readInt();
         if (size > 0) {
             this.data = new byte[size];
-            stream.readFully(this.data);
+            stream.read(this.data);
         } else {
             this.data = new byte[0];
         }

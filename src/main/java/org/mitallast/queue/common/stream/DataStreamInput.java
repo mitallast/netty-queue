@@ -3,18 +3,14 @@ package org.mitallast.queue.common.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class DataStreamInput extends DataInputStream implements StreamInput {
-
-    private final StreamableClassRegistry classRegistry;
+public class DataStreamInput extends StreamInput {
     private final InputStream input;
 
     public DataStreamInput(StreamableClassRegistry classRegistry, InputStream input) {
-        super(input);
-        this.classRegistry = classRegistry;
+        super(classRegistry);
         this.input = input;
     }
 
@@ -24,8 +20,22 @@ public class DataStreamInput extends DataInputStream implements StreamInput {
     }
 
     @Override
-    public String readText() throws IOException {
-        return readUTF();
+    public int read() throws IOException {
+        return input.read();
+    }
+
+    @Override
+    public void read(byte[] b, int off, int len) throws IOException {
+        if (input.read(b, off, len) != len) {
+            throw new IOException("Unexpected EOF");
+        }
+    }
+
+    @Override
+    public void skipBytes(int n) throws IOException {
+        if (input.skip(n) != n) {
+            throw new IOException("Unexpected EOF");
+        }
     }
 
     @Override
@@ -40,11 +50,6 @@ public class DataStreamInput extends DataInputStream implements StreamInput {
             throw new IOException("error read: got " + read + " bytes, expected " + size);
         }
         return Unpooled.wrappedBuffer(bytes);
-    }
-
-    @Override
-    public <T extends Streamable> T readStreamable() throws IOException {
-        return classRegistry.readStreamable(this);
     }
 
     @Override

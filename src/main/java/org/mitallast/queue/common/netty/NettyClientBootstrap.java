@@ -68,8 +68,8 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
             .option(ChannelOption.SO_SNDBUF, sndBuf)
             .option(ChannelOption.SO_RCVBUF, rcvBuf)
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
-            .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-            .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator())
+            .option(ChannelOption.ALLOCATOR, new PooledByteBufAllocator(true))
+            .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(65536))
             .handler(channelInitializer());
     }
 

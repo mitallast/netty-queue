@@ -43,7 +43,11 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
     @SuppressWarnings("unchecked")
     public <T extends Streamable> T readStreamable(StreamInput stream) throws IOException {
         int id = stream.readInt();
-        return (T) idToReaderMap.get(id).read(stream);
+        StreamableReader<T> reader = (StreamableReader<T>) idToReaderMap.get(id);
+        if (reader == null) {
+            throw new IllegalArgumentException("Streamable " + id + " not registered");
+        }
+        return reader.read(stream);
     }
 
     @Override
@@ -52,18 +56,8 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
     }
 
     @Override
-    public StreamInput input(ByteBuf buffer, int size) {
-        return new ByteBufStreamInput(this, buffer, size);
-    }
-
-    @Override
     public StreamInput input(File file) throws IOException {
-        return input(new FileInputStream(file));
-    }
-
-    @Override
-    public StreamInput input(InputStream inputStream) throws IOException {
-        return new DataStreamInput(this, inputStream);
+        return new DataStreamInput(this, new BufferedInputStream(new FileInputStream(file), 65536));
     }
 
     @Override
@@ -79,15 +73,5 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
     @Override
     public StreamOutput output(File file, boolean append) throws IOException {
         return new DataStreamOutput(this, new BufferedOutputStream(new FileOutputStream(file, append), 65536));
-    }
-
-    @Override
-    public StreamOutput output(OutputStream outputStream) throws IOException {
-        return new DataStreamOutput(this, new DataOutputStream(outputStream));
-    }
-
-    @Override
-    public StreamOutput output(DataOutputStream dataOutput) throws IOException {
-        return new DataStreamOutput(this, dataOutput);
     }
 }

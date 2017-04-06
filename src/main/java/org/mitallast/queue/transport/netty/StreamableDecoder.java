@@ -22,31 +22,29 @@ public class StreamableDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-        while (true) {
-            if (buffer.readableBytes() < Integer.BYTES) {
-                break;
-            }
-
-            int readerIndex = buffer.readerIndex();
-            final int size = buffer.getInt(readerIndex);
-
-            if (buffer.readableBytes() < size + Integer.BYTES) {
-                break;
-            }
-            buffer.skipBytes(Integer.BYTES);
-            int start = buffer.readerIndex();
-            final Streamable message;
-            try (StreamInput input = streamService.input(buffer)) {
-                message = input.readStreamable();
-            }
-            int readSize = buffer.readerIndex() - start;
-            if (readSize < size) {
-                logger.warn("error reading message, expected {} read {}, skip bytes", size, readSize);
-                buffer.readerIndex(buffer.readerIndex() + size - readSize);
-            } else if (readSize > size) {
-                logger.warn("error reading message, expected {} read {}", size, readSize);
-            }
-            out.add(message);
+        if (buffer.readableBytes() < Integer.BYTES) {
+            return;
         }
+
+        int readerIndex = buffer.readerIndex();
+        final int size = buffer.getInt(readerIndex);
+
+        if (buffer.readableBytes() < size + Integer.BYTES) {
+            return;
+        }
+        buffer.skipBytes(Integer.BYTES);
+        int start = buffer.readerIndex();
+        final Streamable message;
+        try (StreamInput input = streamService.input(buffer)) {
+            message = input.readStreamable();
+        }
+        int readSize = buffer.readerIndex() - start;
+        if (readSize < size) {
+            logger.warn("error reading message, expected {} read {}, skip bytes", size, readSize);
+            buffer.readerIndex(buffer.readerIndex() + size - readSize);
+        } else if (readSize > size) {
+            logger.warn("error reading message, expected {} read {}", size, readSize);
+        }
+        out.add(message);
     }
 }

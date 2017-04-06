@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.*;
 
 public class BaseTest {
@@ -43,10 +42,6 @@ public class BaseTest {
 
     protected final int total() {
         return max() * concurrency();
-    }
-
-    protected UUID randomUUID() {
-        return UUIDs.generateRandom();
     }
 
     protected void executeConcurrent(Task task) throws Exception {

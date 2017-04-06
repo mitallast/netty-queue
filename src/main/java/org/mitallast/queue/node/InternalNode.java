@@ -10,7 +10,6 @@ import org.mitallast.queue.benchmark.BenchmarkModule;
 import org.mitallast.queue.benchmark.rest.BenchmarkRestModule;
 import org.mitallast.queue.blob.BlobModule;
 import org.mitallast.queue.blob.rest.BlobRestModule;
-import org.mitallast.queue.common.UUIDs;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
@@ -25,6 +24,7 @@ import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.transport.TransportModule;
 
 import java.io.IOException;
+import java.util.UUID;
 
 public class InternalNode extends AbstractLifecycleComponent implements Node {
 
@@ -101,7 +101,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     }
 
     private static Config prepareConfig(Config config) {
-        String name = UUIDs.generateRandom().toString().substring(0, 8);
+        String name = UUID.randomUUID().toString().substring(0, 8);
         Config fallback = ConfigFactory.parseMap(ImmutableMap.of("node.name", name));
         return config.withFallback(fallback).withFallback(ConfigFactory.defaultReference());
     }

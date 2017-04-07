@@ -18,43 +18,6 @@ $(function () {
             e.preventDefault();
             createRaftLogView()
         });
-        $('a[href="#blobList"]', context).click(function (e) {
-            e.preventDefault();
-            createBlobListView()
-        });
-
-        $('a[href="#putBlob"]', context).click(function (e) {
-            e.preventDefault();
-            createPutBlobView()
-        });
-        $('button[data-resource-id]', context).click(function (e) {
-            e.preventDefault();
-            createGetBlobView($(this).data('resource-id'))
-        })
-        $('form[action="#putBlob"]', context).submit(function(e) {
-            e.preventDefault();
-            var $form = $(this);
-            var key = $form.find('input[name=key]').val();
-            var data = $form.find('textarea[name=data]').val();
-            $.post("/_blob/" + key, data, function(response) {
-                createBlobListView();
-            });
-        });
-
-        $('a[href="#startBenchmark"]', context).click(function (e) {
-            e.preventDefault();
-            createStartBenchmarkView()
-        });
-        $('form[action="#startBenchmark"]', context).submit(function(e) {
-            e.preventDefault();
-            var $form = $(this);
-            var requests = $form.find('input[name=requests]').val();
-            var dataSize = $form.find('input[name=dataSize]').val();
-
-            $.getJSON("/_benchmark?requests="+requests+"&dataSize="+dataSize, function(response) {
-                createBenchmarkResultView(response);
-            });
-        });
 
         $('form[action="#crdtCreate"]', context).submit(function(e) {
             e.preventDefault();
@@ -79,6 +42,7 @@ $(function () {
             e.preventDefault();
             createCrdtCreateView()
         });
+
         $('a[href="#crdtAssign"]', context).click(function (e) {
             e.preventDefault();
             createCrdtAssignView()
@@ -117,35 +81,6 @@ $(function () {
             renderMain(template(data));
             refresh = setTimeout(createRaftLogView, 100);
         });
-    }
-
-    function createBlobListView() {
-        var template = Handlebars.compile($("#blobList").html());
-        $.getJSON("/_blob", function (data) {
-            renderMain(template(data));
-        });
-    }
-
-    function createPutBlobView() {
-        var template = Handlebars.compile($("#putBlob").html());
-        renderMain(template({"key": "", "data": ""}))
-    }
-
-    function createGetBlobView(key) {
-        var template = Handlebars.compile($("#putBlob").html());
-        $.get("/_blob/" + key, function(data) {
-            renderMain(template({"key": key, "data":data}))
-        });
-    }
-
-    function createStartBenchmarkView() {
-        renderMain($("#startBenchmark").html())
-    }
-
-    function createBenchmarkResultView(response) {
-        response.throughput = humanizeBytes(response.throughput)
-        var template = Handlebars.compile($("#benchmarkResult").html());
-        renderMain(template(response))
     }
 
     function createCrdtCreateView(){

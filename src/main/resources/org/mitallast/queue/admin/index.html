@@ -34,9 +34,6 @@
                 <li><a href="#settings">Settings</a></li>
                 <li><a href="#raftState">Raft state</a></li>
                 <li><a href="#raftLog">Raft log</a></li>
-                <li><a href="#blobList">Blob resources</a></li>
-                <li><a href="#putBlob">Put blob</a></li>
-                <li><a href="#startBenchmark">Start benchmark</a></li>
                 <li><a href="#crdtCreate">Create CmRDT</a></li>
                 <li><a href="#crdtAssign">Put CmRDT</a></li>
             </ul>
@@ -50,9 +47,6 @@
                 <li><a href="#settings">Settings</a></li>
                 <li><a href="#raftState">Raft state</a></li>
                 <li><a href="#raftLog">Raft log</a></li>
-                <li><a href="#blobList">Blob resources</a></li>
-                <li><a href="#putBlob">Put blob</a></li>
-                <li><a href="#startBenchmark">Start benchmark</a></li>
                 <li><a href="#crdtCreate">Create CmRDT</a></li>
                 <li><a href="#crdtAssign">Put CmRDT</a></li>
             </ul>
@@ -62,36 +56,8 @@
 </div>
 <script id="settings" type="text/x-handlebars-template">
     <h1 class="page-header">Settings</h1>
-
     <p>raft: enabled={{raft}}</p>
-    <p>blob: enabled={{blob}}</p>
-    <p>benchmark: enabled={{benchmark}}</p>
-</script>
-<script id="startBenchmark" type="text/x-handlebars-template">
-    <h1 class="page-header">Start benchmark</h1>
-
-    <form action="#startBenchmark">
-        <div class="form-group">
-            <label for="requests">Requests</label>
-            <input class="form-control" type="number" name="requests" id="requests" value="100000">
-        </div>
-        <div class="form-group">
-            <label for="dataSize">Data size</label>
-            <input class="form-control" type="number" name="dataSize" id="dataSize" value="4096">
-        </div>
-        <button type="submit" class="btn btn-default">Run</button>
-    </form>
-</script>
-<script id="benchmarkResult" type="text/x-handlebars-template">
-    <h1 class="page-header">Benchmark results</h1>
-
-    <p>requests: {{requests}}</p>
-    <p>data size: {{dataSize}}</p>
-    <p>start: {{start}}</p>
-    <p>end: {{end}}</p>
-    <p>duration: {{duration}}ms</p>
-    <p>throughput: {{throughput}}</p>
-    <p>qps: {{qps}}</p>
+    <p>crdt: enabled={{crdt}}</p>
 </script>
 <script id="raftState" type="text/x-handlebars-template">
     <h1 class="page-header">Raft state</h1>
@@ -209,56 +175,6 @@
     <p>No members found</p>
     {{/if}}
 
-</script>
-<script id="blobList" type="text/x-handlebars-template">
-    <h2 class="page-header">Blob resources</h2>
-
-    {{#if resources}}
-    <h3 class="sub-header">Entries:</h3>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>key</th>
-                <th>nodes</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            {{#each resources}}
-            <tr>
-                <td><a href="/_blob/{{key}}">{{key}}</a></td>
-                <td>
-                    {{#each nodes}}
-                    <p>{{host}}:{{port}}</p>
-                    {{/each}}
-                </td>
-                <td>
-                    <button data-resource-id="{{key}}" class="btn btn-default">edit</button>
-                </td>
-            </tr>
-            {{/each}}
-            </tbody>
-        </table>
-    </div>
-    {{else}}
-    <p>No resources found</p>
-    {{/if}}
-</script>
-<script id="putBlob" type="text/x-handlebars-template">
-    <h2 class="page-header">Create resource</h2>
-
-    <form action="#putBlob">
-        <div class="form-group">
-            <label for="putBlobKey">Resource key</label>
-            <input class="form-control" type="text" name="key" id="putBlobKey" placeholder="some/key" value="{{key}}">
-        </div>
-        <div class="form-group">
-            <label for="putBlobData">Resource data</label>
-            <textarea class="form-control" rows="10" name="data" id="putBlobData">{{data}}</textarea>
-        </div>
-        <button type="submit" class="btn btn-default">Submit</button>
-    </form>
 </script>
 <script id="crdtCreate" type="text/x-handlebars-template">
     <h2 class="page-header">Create CmRDT LWWRegister</h2>

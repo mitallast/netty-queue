@@ -6,10 +6,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import org.mitallast.queue.benchmark.BenchmarkModule;
-import org.mitallast.queue.benchmark.rest.BenchmarkRestModule;
-import org.mitallast.queue.blob.BlobModule;
-import org.mitallast.queue.blob.rest.BlobRestModule;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
@@ -50,18 +46,6 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
             modules.add(new RaftModule());
             if (config.getBoolean("rest.enabled")) {
                 modules.add(new RaftRestModule());
-            }
-            if (config.getBoolean("blob.enabled")) {
-                modules.add(new BlobModule());
-                if (config.getBoolean("rest.enabled")) {
-                    modules.add(new BlobRestModule());
-                }
-            }
-            if (config.getBoolean("benchmark.enabled")) {
-                modules.add(new BenchmarkModule());
-                if (config.getBoolean("rest.enabled")) {
-                    modules.add(new BenchmarkRestModule());
-                }
             }
             if (config.getBoolean("crdt.enabled")) {
                 modules.add(new CrdtModule());

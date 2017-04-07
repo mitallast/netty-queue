@@ -22,8 +22,6 @@ public class SettingsAction {
     public ImmutableMap<String, Boolean> settings() {
         return ImmutableMap.of(
             "raft", config.getBoolean("raft.enabled"),
-            "blob", config.getBoolean("blob.enabled"),
-            "benchmark", config.getBoolean("benchmark.enabled"),
             "crdt", config.getBoolean("crdt.enabled")
         );
     }

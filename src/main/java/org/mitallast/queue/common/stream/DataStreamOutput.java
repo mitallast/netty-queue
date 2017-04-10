@@ -26,6 +26,7 @@ public class DataStreamOutput extends StreamOutput {
 
     @Override
     public void writeByteBuf(ByteBuf buffer, int length) throws IOException {
+        writeInt(length);
         buffer.readBytes(output, length);
     }
 

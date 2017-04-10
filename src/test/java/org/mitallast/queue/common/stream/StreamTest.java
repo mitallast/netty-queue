@@ -5,9 +5,11 @@ import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.json.JsonStreamable;
 
 import java.io.IOException;
 
@@ -20,7 +22,9 @@ public class StreamTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        streamService = new InternalStreamService(ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 1)));
+        streamService = new InternalStreamService(ImmutableSet.of(
+            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 1)
+        ));
         buffer = Unpooled.buffer();
     }
 
@@ -39,6 +43,24 @@ public class StreamTest extends BaseTest {
         input = streamService.input(buffer);
         TestStreamable streamable = input.readStreamable();
         TestStreamable streamable2 = input.readStreamable();
+    }
+
+    @Test
+    public void testJson() throws Exception {
+        output = streamService.output(buffer);
+        JsonStreamable json = new JsonStreamable("{}");
+        output.writeStreamable(json);
+        output.writeStreamable(json);
+        output.writeStreamable(json);
+        output.close();
+
+        input = streamService.input(buffer);
+        JsonStreamable json2;
+        json2 = input.readStreamable(JsonStreamable::new);
+        json2 = input.readStreamable(JsonStreamable::new);
+        json2 = input.readStreamable(JsonStreamable::new);
+
+        Assert.assertEquals(json.json(), json2.json());
     }
 
     public static class TestStreamable implements Streamable {

@@ -5,10 +5,11 @@ import com.google.common.collect.*;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
-import org.mitallast.queue.crdt.log.FileReplicatedLog;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
 public final class Immutable {
@@ -138,10 +139,14 @@ public final class Immutable {
     }
 
     public static <K, V> ImmutableMap<K, V> compose(ImmutableMap<K, V> map, K k, V v) {
-        return ImmutableMap.<K, V>builder()
-            .putAll(map)
-            .put(k, v)
-            .build();
+        ImmutableMap.Builder<K, V> builder = ImmutableMap.builder();
+        map.forEach((key, value) -> {
+            if (!key.equals(k)) {
+                builder.put(key, value);
+            }
+        });
+        builder.put(k, v);
+        return builder.build();
     }
 
     public static <K, V> ImmutableMap<K, V> subtract(ImmutableMap<K, V> map, K k) {
@@ -175,12 +180,26 @@ public final class Immutable {
             .build();
     }
 
-    public static <V> ImmutableList<V> subtract(Iterable<V> list, V v) {
+    public static <V> ImmutableList<V> subtract(ImmutableList<V> list, V v) {
         return filterNot(list, item -> item.equals(v));
     }
 
-    public static <V> ImmutableList<V> filterNot(Iterable<V> list, Predicate<V> predicate) {
+    public static <V> ImmutableList<V> filterNot(ImmutableList<V> list, Predicate<V> predicate) {
         ImmutableList.Builder<V> builder = ImmutableList.builder();
+        for (V item : list) {
+            if (!predicate.test(item)) {
+                builder.add(item);
+            }
+        }
+        return builder.build();
+    }
+
+    public static <V> ImmutableSet<V> subtract(ImmutableSet<V> set, V value) {
+        return filterNot(set, item -> item.equals(value));
+    }
+
+    public static <V> ImmutableSet<V> filterNot(ImmutableSet<V> list, Predicate<V> predicate) {
+        ImmutableSet.Builder<V> builder = ImmutableSet.builder();
         for (V item : list) {
             if (!predicate.test(item)) {
                 builder.add(item);
@@ -217,6 +236,33 @@ public final class Immutable {
                 default:
                     throw new IllegalArgumentException("Unexpected entry type");
             }
+        }
+        return builder.build();
+    }
+
+    public static <K, V> ImmutableMultimap<K, V> compose(ImmutableMultimap<K, V> multimap, K key, V value) {
+        ImmutableMultimap.Builder<K, V> builder = ImmutableMultimap.builder();
+        for (Map.Entry<K, V> entry : multimap.entries()) {
+            builder.put(entry.getKey(), entry.getValue());
+        }
+        builder.put(key, value);
+        return builder.build();
+    }
+
+    public static <K, V> ImmutableMultimap<K, V> subtract(ImmutableMultimap<K, V> multimap, K key, V value) {
+        ImmutableMultimap.Builder<K, V> builder = ImmutableMultimap.builder();
+        for (Map.Entry<K, V> entry : multimap.entries()) {
+            if (!entry.getKey().equals(key) || !entry.getValue().equals(value)) {
+                builder.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return builder.build();
+    }
+
+    public static <V> ImmutableList<V> generate(int max, IntFunction<V> generator) {
+        ImmutableList.Builder<V> builder = ImmutableList.builder();
+        for (int i = 0; i < max; i++) {
+            builder.add(generator.apply(i));
         }
         return builder.build();
     }

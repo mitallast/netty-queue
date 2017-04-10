@@ -6,5 +6,6 @@ public class RestCrdtModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(RestLWWRegister.class).asEagerSingleton();
+        bind(RestCrdtRouting.class).asEagerSingleton();
     }
 }

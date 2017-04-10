@@ -61,7 +61,6 @@ public class ByteBufStreamOutput extends StreamOutput {
     public void writeByteBuf(ByteBuf buffer, int length) throws IOException {
         writeInt(length);
         if (length > 0) {
-            this.buffer.ensureWritable(length);
             buffer.readBytes(this.buffer, length);
         }
     }

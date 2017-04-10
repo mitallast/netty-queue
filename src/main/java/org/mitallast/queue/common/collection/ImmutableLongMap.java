@@ -1,5 +1,7 @@
 package org.mitallast.queue.common.collection;
 
+import org.mitallast.queue.crdt.Crdt;
+
 public interface ImmutableLongMap<V> {
 
     public final static ImmutableLongMap EMPTY = new ImmutableLongMap<Object>() {
@@ -34,16 +36,16 @@ public interface ImmutableLongMap<V> {
         }
     };
 
-    public static <V> ImmutableLongMapBuilder<V> builder() {
+    static <V> ImmutableLongMapBuilder<V> builder() {
         return new ImmutableLongOpenMapBuilder<V>();
     }
 
-    public static <V> ImmutableLongMapBuilder<V> builder(long emptyKey) {
+    static <V> ImmutableLongMapBuilder<V> builder(long emptyKey) {
         return new ImmutableLongOpenMapBuilder<V>(emptyKey);
     }
 
     @SuppressWarnings("unchecked")
-    public static <V> ImmutableLongMap<V> empty() {
+    static <V> ImmutableLongMap<V> empty() {
         return EMPTY;
     }
 
@@ -59,7 +61,17 @@ public interface ImmutableLongMap<V> {
 
     void forEach(LongMapConsumer<V> consumer);
 
-    public static interface LongMapConsumer<V> {
+    default ImmutableLongMap<V> remove(long removeKey) {
+        ImmutableLongMapBuilder<V> builder = builder(emptyKey());
+        forEach((key, value) -> {
+            if (key != removeKey) {
+                builder.put(key, value);
+            }
+        });
+        return builder.build();
+    }
+
+    interface LongMapConsumer<V> {
         void accept(long key, V value);
     }
 }

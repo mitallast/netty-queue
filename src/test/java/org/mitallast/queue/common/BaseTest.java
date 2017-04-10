@@ -1,11 +1,10 @@
 package org.mitallast.queue.common;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import org.mitallast.queue.common.concurrent.NamedExecutors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +13,7 @@ import java.util.concurrent.*;
 
 public class BaseTest {
 
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
+    protected final Logger logger = LogManager.getLogger();
 
     protected final Random random = new Random();
 
@@ -23,7 +22,7 @@ public class BaseTest {
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
 
-    private ExecutorService executorService = Executors.newCachedThreadPool(NamedExecutors.newThreadFactory("test"));
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
     @After
     public void tearDownExecutorService() throws Exception {

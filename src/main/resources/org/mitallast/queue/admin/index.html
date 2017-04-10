@@ -9,14 +9,11 @@
 
     <title>Queue Admin Page</title>
 
-    <link href="/resources/webjars/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/resources/webjars/bootstrap/3.3.7-1/css/bootstrap.min.css" rel="stylesheet">
     <link href="/admin/dashboard.css" rel="stylesheet">
-    <script src="/resources/webjars/jquery/2.1.4/jquery.min.js"></script>
-    <script src="/resources/webjars/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-    <script src="/resources/webjars/handlebars/3.0.0-1/handlebars.min.js"></script>
-    <script src="/admin/dashboard.js"></script>
 </head>
-<body>
+<body ng-app="admin">
+
 <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
         <div class="navbar-header">
@@ -29,181 +26,213 @@
             </button>
             <a class="navbar-brand" href="#">Queue Admin Page</a>
         </div>
-        <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav navbar-right visible-xs">
-                <li><a href="#settings">Settings</a></li>
-                <li><a href="#raftState">Raft state</a></li>
-                <li><a href="#raftLog">Raft log</a></li>
-                <li><a href="#crdtCreate">Create CmRDT</a></li>
-                <li><a href="#crdtAssign">Put CmRDT</a></li>
-            </ul>
-        </div>
     </div>
 </nav>
+
 <div class="container-fluid">
     <div class="row">
-        <div class="col-sm-3 col-md-2 hidden-xs sidebar">
-            <ul class="nav nav-sidebar">
-                <li><a href="#settings">Settings</a></li>
-                <li><a href="#raftState">Raft state</a></li>
-                <li><a href="#raftLog">Raft log</a></li>
-                <li><a href="#crdtCreate">Create CmRDT</a></li>
-                <li><a href="#crdtAssign">Put CmRDT</a></li>
+        <div class="col-sm-3 col-md-2 sidebar" ng-controller="SidebarCtrl">
+            <ul class="nav nav-sidebar" ng-repeat="menu in menus">
+                <li ng-repeat="link in menu" ng-class="activeClass(link.href)">
+                    <a href="#{{link.href}}">{{link.title}}</a>
+                </li>
             </ul>
         </div>
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"></div>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main" ng-view></div>
     </div>
 </div>
-<script id="settings" type="text/x-handlebars-template">
+
+<script id="/settings.html" type="text/ng-template">
     <h1 class="page-header">Settings</h1>
-    <p>raft: enabled={{raft}}</p>
-    <p>crdt: enabled={{crdt}}</p>
+    <p>raft: enabled={{settings.raft}}</p>
+    <p>crdt: enabled={{settings.crdt}}</p>
 </script>
-<script id="raftState" type="text/x-handlebars-template">
+<script id="/raft/state.html" type="text/ng-template">
     <h1 class="page-header">Raft state</h1>
 
-    <p>current term: {{currentTerm}}</p>
-    <p>is transitioning: {{config.isTransitioning}}</p>
+    <p>current term: {{state.currentTerm}}</p>
+    <p>is transitioning: {{state.config.isTransitioning}}</p>
 
-    {{#if config.members}}
-    <h3 class="sub-header">Members:</h3>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>host</th>
-                <th>port</th>
-            </tr>
-            </thead>
-            <tbody>
-            {{#each config.members}}
-            <tr>
-                <td>{{host}}</td>
-                <td>{{port}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        </table>
+    <div ng-if="state.config.members">
+        <h5>Members:</h5>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>host</th>
+                    <th>port</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="member in state.config.members">
+                    <td>{{member.host}}</td>
+                    <td>{{member.port}}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-    {{else}}
-    <p>No members found</p>
-    {{/if}}
+    <p ng-if="!state.config.members">No members found</p>
 
-    {{#if config.oldMembers}}
-    <h5>Old members:</h5>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>host</th>
-                <th>port</th>
-            </tr>
-            </thead>
-            <tbody>
-            {{#each config.oldMembers}}
-            <tr>
-                <td>{{host}}</td>
-                <td>{{port}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        </table>
+    <div ng-if="state.config.oldMembers">
+        <h5>Old members:</h5>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>host</th>
+                    <th>port</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="member in state.config.oldMembers">
+                    <td>{{member.host}}</td>
+                    <td>{{member.port}}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-    {{/if}}
 
-    {{#if config.newMembers}}
-    <h5>Old members:</h5>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>host</th>
-                <th>port</th>
-            </tr>
-            </thead>
-            <tbody>
-            {{#each config.newMembers}}
-            <tr>
-                <td>{{host}}</td>
-                <td>{{port}}</td>
-            </tr>
-            {{/each}}
-            </tbody>
-        </table>
+    <div ng-if="state.config.newMembers">
+        <h5>New members:</h5>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>host</th>
+                    <th>port</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="member in state.config.newMembers">
+                    <td>{{member.host}}</td>
+                    <td>{{member.port}}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-    {{/if}}
 
-    {{#if votedFor}}
-    <p>voted for: {{votedFor.host}}:{{votedFor.port}}</p>
-    {{/if}}
+    <p ng-if="state.votedFor">voted for: {{state.votedFor.host}}:{{state.votedFor.port}}</p>
 
-    <p>votes received: {{votesReceived}}</p>
-
+    <p ng-if="state.votesReceived">votes received: {{state.votesReceived}}</p>
 </script>
-<script id="raftLog" type="text/x-handlebars-template">
+<script id="/raft/log.html" type="text/ng-template">
     <h1 class="page-header">Raft state</h1>
 
-    <p>committed index: {{committedIndex}}</p>
+    <p>committed index: {{log.committedIndex}}</p>
 
-    {{#if entries}}
-    <h3 class="sub-header">Entries:</h3>
+    <div ng-if="log.entries">
+        <h3 class="sub-header">Entries:</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>term</th>
+                    <th>index</th>
+                    <th>command</th>
+                    <th>client</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="entry in log.entries" ng-class="{'success':committed(entry)}">
+                    <td>{{entry.term}}</td>
+                    <td>{{entry.index}}</td>
+                    <td>{{entry.command}}</td>
+                    <td ng-if="entry.client">
+                        {{entry.client.host}}:{{entry.client.port}}
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p ng-if="!log.entries">No log found</p>
+</script>
+
+<script id="/crdt/routing.html" type="text/ng-template">
+    <h2 class="page-header">CRDT Routing</h2>
+
+    <h5>Members:</h5>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
             <tr>
-                <th>term</th>
-                <th>index</th>
-                <th>command</th>
-                <th>client</th>
+                <th>host</th>
+                <th>port</th>
             </tr>
             </thead>
             <tbody>
-            {{#each entries}}
-            <tr class="{{#if committed}}success{{/if}}">
-                <td>{{term}}</td>
-                <td>{{index}}</td>
-                <td>{{command}}</td>
+            <tr ng-repeat="member in routing.members">
+                <td>{{member.host}}</td>
+                <td>{{member.port}}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h5>Resources</h5>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>type</th>
+                <th>id</th>
+                <th>replicas</th>
+                <th>nodes</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="crdt in routing.resources">
+                <td>{{crdt.type}}</td>
+                <td>{{crdt.id}}</td>
+                <td>{{crdt.replicas}}</td>
                 <td>
-                    {{#if client}} {{client.host}}:{{client.port}} {{/if}}
+                    <span ng-repeat="node in crdt.nodes">
+                        {{node.host}}:{{node.port}}
+                    </span>
                 </td>
             </tr>
-            {{/each}}
             </tbody>
         </table>
     </div>
-    {{else}}
-    <p>No members found</p>
-    {{/if}}
 
 </script>
-<script id="crdtCreate" type="text/x-handlebars-template">
+<script id="/crdt/create.html" type="text/ng-template">
     <h2 class="page-header">Create CmRDT LWWRegister</h2>
-    <form action="#crdtCreate">
+    <form ng-submit="create()">
         <div class="form-group">
-            <label for="value">id</label>
-            <input class="form-control" type="number" name="id" id="id" placeholder="id" value="{{id}}">
+            <label for="create-id">id</label> <input class="form-control" type="number" ng-model="id" id="create-id" placeholder="id">
         </div>
         <button type="submit" class="btn btn-default">Create</button>
     </form>
 </script>
-<script id="crdtAssign" type="text/x-handlebars-template">
-    <h2 class="page-header">Put CmRDT LWWRegister value</h2>
-    <form action="#crdtAssign">
+<script id="/crdt/update.html" type="text/ng-template">
+    <h2 class="page-header">Update CmRDT LWWRegister value</h2>
+    <form ng-submit="update()">
         <div class="form-group">
-            <label for="value">id</label>
-            <input class="form-control" type="number" name="id" id="id" placeholder="id"">
+            <label for="update-id">id</label> <input class="form-control" ng-model="id" type="number" id="update-id" placeholder="id">
         </div>
         <div class="form-group">
-            <label for="value">Value</label>
-            <textarea class="form-control" name="value" id="value" placeholder="value" rows="3"></textarea>
+            <label for="value">Value</label> <textarea class="form-control" ng-model="value" id="value" rows="3"></textarea>
         </div>
         <button type="submit" class="btn btn-default">Update</button>
     </form>
 </script>
-<script id="crdtValue" type="text/x-handlebars-template">
+<script id="/crdt/value.html" type="text/ng-template">
     <h2 class="page-header">Get CmRDT LWWRegister value</h2>
 
     <pre>{{value}}</pre>
 </script>
+
+<script src="/resources/webjars/jquery/1.11.1/jquery.min.js"></script>
+<script src="/resources/webjars/bootstrap/3.3.7-1/js/bootstrap.min.js"></script>
+<script src="/resources/webjars/angularjs/1.6.1/angular.min.js"></script>
+<script src="/resources/webjars/angularjs/1.6.1/angular-route.min.js"></script>
+<script src="/resources/webjars/angular-websocket/2.0.0/dist/angular-websocket.min.js"></script>
+
+<script src="/admin/dashboard.js"></script>
 </body>
 </html>

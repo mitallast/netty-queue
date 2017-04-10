@@ -10,6 +10,7 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.component.ModulesBuilder;
+import org.mitallast.queue.common.events.EventBusModule;
 import org.mitallast.queue.common.file.FileModule;
 import org.mitallast.queue.common.json.JsonModule;
 import org.mitallast.queue.common.stream.StreamModule;
@@ -38,6 +39,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         modules.add(new FileModule());
         modules.add(new StreamModule());
         modules.add(new JsonModule());
+        modules.add(new EventBusModule());
         modules.add(new TransportModule());
         if (config.getBoolean("rest.enabled")) {
             modules.add(new RestModule());

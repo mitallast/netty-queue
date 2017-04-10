@@ -1,104 +1,137 @@
-$(function () {
-    var $main = $(".main");
-    initActions(window.document);
-    createRaftClusterView();
+(function(){
+    'strict';
 
-    var refresh= null;
-
-    function initActions(context) {
-        $('a[href="#settings"]', context).click(function(e) {
-            e.preventDefault();
-            createSettingsView();
-        });
-        $('a[href="#raftState"]', context).click(function (e) {
-            e.preventDefault();
-            createRaftClusterView()
-        });
-        $('a[href="#raftLog"]', context).click(function (e) {
-            e.preventDefault();
-            createRaftLogView()
-        });
-
-        $('form[action="#crdtCreate"]', context).submit(function(e) {
-            e.preventDefault();
-            var $form = $(this);
-            var id = $form.find('input[name=id]').val();
-            $.post("/_crdt/" + id +"/lww-register", function(response) {
-                createCrdtValueView(id);
+    angular.module('admin', ['ngRoute', 'ngWebSocket'])
+    .config(['$routeProvider', '$locationProvider', function($routeProvider, $locationProvider){
+        $locationProvider.html5Mode(false);
+        $locationProvider.hashPrefix("");
+        $routeProvider
+            .when('/', {
+                redirectTo: '/settings'
+            })
+            .when('/settings', {
+                templateUrl: '/settings.html',
+                controller: 'SettingsCtrl'
+            })
+            .when('/raft/state', {
+                templateUrl: '/raft/state.html',
+                controller: 'RaftStateCtrl'
+            })
+            .when('/raft/log', {
+                templateUrl: '/raft/log.html',
+                controller: 'RaftLogCtrl'
+            })
+            .when('/crdt/create', {
+                templateUrl: '/crdt/create.html',
+                controller: 'CrdtCreateCtrl'
+            })
+            .when('/crdt/routing', {
+                templateUrl: '/crdt/routing.html',
+                controller: 'CrdtRoutingCtrl'
+            })
+            .when('/crdt/:id/update', {
+                templateUrl: '/crdt/update.html',
+                controller: 'CrdtUpdateCtrl'
+            })
+            .when('/crdt/:id/value', {
+                templateUrl: '/crdt/value.html',
+                controller: 'CrdtValueCtrl'
+            })
+            .otherwise({
+                redirectTo: '/'
             });
+    }])
+    .controller('SidebarCtrl', function($scope, $location){
+        $scope.menus = [
+            [
+                {href:'settings', title:'Settings'},
+            ],
+            [
+                {href:'raft/state', title:'Raft State'},
+                {href:'raft/log', title:'Raft Log'},
+            ],
+            [
+                {href:'crdt/routing', title:'Crdt Routing'},
+                {href:'crdt/create', title:'Crdt Create'},
+                {href:'crdt/0/update', title:'Crdt 0 Update'},
+                {href:'crdt/0/value', title:'Crdt 0 Value'},
+            ],
+        ];
+        $scope.activeClass = function(page){
+            var current = $location.path().substring(1);
+            return page === current ? "active" : "";
+        };
+    })
+    .controller('SettingsCtrl', function($scope, $http){
+        $http.get('/_settings')
+        .then(function(response){
+            $scope.settings = response.data;
         });
-
-        $('form[action="#crdtAssign"]', context).submit(function(e) {
-            e.preventDefault();
-            var $form = $(this);
-            var id = $form.find('input[name=id]').val();
-            var value = $form.find('textarea[name=value]').val();
-            $.post("/_crdt/" + id + "/lww-register/value", value, function(response) {
-                createCrdtValueView(id);
-            });
+    })
+    .controller('RaftStateCtrl', function($scope, $http){
+        $http.get('/_raft/state')
+        .then(function(response){
+            $scope.state = response.data;
         });
-
-        $('a[href="#crdtCreate"]', context).click(function (e) {
-            e.preventDefault();
-            createCrdtCreateView()
+    })
+    .controller('RaftLogCtrl', function($scope, $http){
+        $scope.committed = function(entry){
+            return entry.index <= $scope.log.committedIndex;
+        };
+        $http.get('/_raft/log')
+        .then(function(response){
+            $scope.log = response.data;
         });
-
-        $('a[href="#crdtAssign"]', context).click(function (e) {
-            e.preventDefault();
-            createCrdtAssignView()
-        });
-    }
-
-    function renderMain(html) {
-        if(refresh != null){
-            clearTimeout(refresh);
-            refresh = null;
-        }
-        $main.html(html);
-        initActions($main);
-    }
-
-    function createSettingsView() {
-        var template = Handlebars.compile($("#settings").html());
-        $.getJSON("/_settings", function (data) {
-            renderMain(template(data));
-        });
-    }
-
-    function createRaftClusterView() {
-        var template = Handlebars.compile($("#raftState").html());
-        $.getJSON("/_raft/state", function (data) {
-            renderMain(template(data));
-        });
-    }
-
-    function createRaftLogView() {
-        var template = Handlebars.compile($("#raftLog").html());
-        $.getJSON("/_raft/log", function (data) {
-            $.each(data.entries, function(key, value) {
-                value.committed = value.index <= data.committedIndex;
-            });
-            renderMain(template(data));
-            refresh = setTimeout(createRaftLogView, 100);
-        });
-    }
-
-    function createCrdtCreateView(){
-        var template = Handlebars.compile($("#crdtCreate").html());
-        renderMain(template())
-    }
-
-    function createCrdtAssignView(){
-        var template = Handlebars.compile($("#crdtAssign").html());
-        renderMain(template())
-    }
-
-    function createCrdtValueView(id){
-        var template = Handlebars.compile($("#crdtValue").html());
-        $.getJSON("/_crdt/" + id + "/lww-register/value", function(response) {
-            renderMain(template({value:JSON.stringify(response)}))
-        });
-    }
+    })
+    .controller('CrdtRoutingCtrl', function($scope, $http){
+        $scope.routing = {}
+        $http.get('/_crdt/routing')
+        .then(function(response){
+            $scope.routing = response.data;
+        })
+    })
+    .controller('CrdtCreateCtrl', function($scope, $http, $location){
+        $scope.id = 0;
+        $scope.create = function() {
+            $http.put('/_crdt/' + $scope.id + '/lww-register', $scope.dag)
+            .then(
+                function(response){
+                    $location.path('/crdt/' + $scope.id + '/value')
+                },
+                function(response){
+                    $scope.errors = response.data;
+                }
+            );
+        };
+    })
+    .controller('CrdtUpdateCtrl', function($scope, $http, $routeParams){
+        $scope.id = parseInt($routeParams.id);
+        $scope.value = '{}'
+        $scope.update = function() {
+            $http.put('/_crdt/' + $scope.id + '/lww-register/value', $scope.value)
+            .then(
+                function(response){
+                    $location.path('/crdt/' + $scope.id + '/value')
+                },
+                function(response){
+                    $scope.errors = response.data;
+                }
+            );
+        };
+    })
+    .controller('CrdtValueCtrl', function($scope, $http, $routeParams){
+        $scope.id = parseInt($routeParams.id);
+        $scope.value = null;
+        $http.get('/_crdt/' + $scope.id + '/lww-register/value')
+        .then(
+            function(response){
+                $scope.value = response.data;
+            },
+            function(response){
+                $scope.errors = response.data
+            }
+        );
+    })
 
     function humanizeBytes(bytes) {
         var units = ["B/s","KB/s","MB/s","GB/s","TB/s","PB/s"];
@@ -116,4 +149,4 @@ $(function () {
         }
         return bytes.toFixed(3) + " " + units[unit];
     }
-});
+})();

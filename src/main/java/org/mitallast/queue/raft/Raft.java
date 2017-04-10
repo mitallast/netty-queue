@@ -8,10 +8,14 @@ import org.apache.logging.log4j.CloseableThreadContext;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.Match;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
+import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
+import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
+import org.mitallast.queue.raft.event.ServerAdded;
+import org.mitallast.queue.raft.event.ServerRemoved;
 import org.mitallast.queue.raft.persistent.PersistentService;
 import org.mitallast.queue.raft.persistent.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
@@ -19,7 +23,6 @@ import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
-import org.slf4j.MDC;
 
 import java.io.IOError;
 import java.io.IOException;
@@ -44,6 +47,7 @@ public class Raft extends AbstractLifecycleComponent {
     private final int snapshotInterval;
     private final int maxEntries;
     private final RaftContext context;
+    private final EventBus eventBus;
     private final ConcurrentLinkedQueue<ClientMessage> stashed;
     private final ReentrantLock lock;
     private volatile Optional<DiscoveryNode> recentlyContactedByLeader;
@@ -77,7 +81,8 @@ public class Raft extends AbstractLifecycleComponent {
         ClusterDiscovery clusterDiscovery,
         PersistentService persistentService,
         ResourceRegistry registry,
-        RaftContext context
+        RaftContext context,
+        EventBus eventBus
     ) throws IOException {
         this.transportService = transportService;
         this.transportController = transportController;
@@ -86,6 +91,7 @@ public class Raft extends AbstractLifecycleComponent {
         this.replicatedLog = persistentService.openLog();
         this.registry = registry;
         this.context = context;
+        this.eventBus = eventBus;
 
         stashed = new ConcurrentLinkedQueue<>();
         lock = new ReentrantLock();
@@ -128,7 +134,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (state == null) {
                 return;
             }
-            try (final CloseableThreadContext.Instance ctx = CloseableThreadContext.push(state.state().name())) {
+            try (final CloseableThreadContext.Instance ignored = CloseableThreadContext.push(state.state().name())) {
                 state = mapper.apply(event);
             }
         } catch (IOException e) {
@@ -187,9 +193,36 @@ public class Raft extends AbstractLifecycleComponent {
         private State(RaftMetadata meta) throws IOException {
             this.meta = meta;
             persistentService.updateState(meta.getCurrentTerm(), meta.getVotedFor());
+            state = this;
         }
 
         protected State stay(RaftMetadata meta) throws IOException {
+            if (!meta.getConfig().isTransitioning()) {
+                if (this.meta.getConfig().isTransitioning()) {
+                    JointConsensusClusterConfiguration joint = (JointConsensusClusterConfiguration) this.meta.getConfig();
+                    for (DiscoveryNode node : joint.getOldMembers()) {
+                        if (!meta.members().contains(node)) {
+                            eventBus.trigger(new ServerRemoved(node));
+                        }
+                    }
+                    for (DiscoveryNode node : meta.members()) {
+                        if (!joint.getOldMembers().contains(node)) {
+                            eventBus.trigger(new ServerAdded(node));
+                        }
+                    }
+                } else if (this.meta.members().size() != meta.members().size()) {
+                    for (DiscoveryNode node : this.meta.members()) {
+                        if (!meta.members().contains(node)) {
+                            eventBus.trigger(new ServerRemoved(node));
+                        }
+                    }
+                    for (DiscoveryNode node : meta.members()) {
+                        if (!this.meta.members().contains(node)) {
+                            eventBus.trigger(new ServerAdded(node));
+                        }
+                    }
+                }
+            }
             this.meta = meta;
             persistentService.updateState(meta.getCurrentTerm(), meta.getVotedFor());
             return this;
@@ -302,14 +335,9 @@ public class Raft extends AbstractLifecycleComponent {
             return this;
         }
 
-        private State gotoCandidate(RaftMetadata meta) throws IOException {
+        private State gotoCandidate() throws IOException {
             resetElectionDeadline();
-            return new CandidateState(meta).beginElection();
-        }
-
-        private State gotoLeader(RaftMetadata meta) throws IOException {
-            context.cancelTimer(RaftContext.ELECTION_TIMEOUT);
-            return new LeaderState(meta).elected();
+            return new CandidateState(this.meta().forNewElection()).beginElection();
         }
 
         public FollowerState resetElectionDeadline() throws IOException {
@@ -355,6 +383,7 @@ public class Raft extends AbstractLifecycleComponent {
         }
 
         @Override
+        @SuppressWarnings("ConstantConditions")
         public State handle(ClientMessage message) throws IOException {
             if (recentlyContactedByLeader.isPresent()) {
                 send(recentlyContactedByLeader.get(), message);
@@ -512,7 +541,7 @@ public class Raft extends AbstractLifecycleComponent {
                 }
                 return this;
             } else {
-                return gotoCandidate(meta().forNewElection());
+                return gotoCandidate();
             }
         }
 
@@ -523,9 +552,8 @@ public class Raft extends AbstractLifecycleComponent {
             if (bootstrap && meta().getConfig().members().isEmpty() &&
                 request.getMember().equals(clusterDiscovery.self()) &&
                 replicatedLog.isEmpty()) {
-                logger.info("bootstrap cluster with {}", request.getMember());
-                return gotoLeader(meta().withTerm(meta().getCurrentTerm() + 1).withConfig(new
-                    StableClusterConfiguration(request.getMember())));
+                context.cancelTimer(RaftContext.ELECTION_TIMEOUT);
+                return new LeaderState(this.meta().forLeader()).selfJoin();
             }
             send(request.getMember(), new AddServerResponse(
                 AddServerResponse.Status.NOT_LEADER,
@@ -595,6 +623,7 @@ public class Raft extends AbstractLifecycleComponent {
             }
         }
 
+        @SuppressWarnings("ConstantConditions")
         private void unstash() throws IOException {
             if (recentlyContactedByLeader.isPresent()) {
                 DiscoveryNode leader = recentlyContactedByLeader.get();
@@ -625,13 +654,13 @@ public class Raft extends AbstractLifecycleComponent {
             return this;
         }
 
-        private FollowerState gotoFollower(RaftMetadata meta) throws IOException {
-            return new FollowerState(meta).resetElectionDeadline();
+        private FollowerState gotoFollower() throws IOException {
+            return new FollowerState(this.meta().forFollower()).resetElectionDeadline();
         }
 
-        public State gotoLeader(RaftMetadata meta) throws IOException {
+        public State gotoLeader() throws IOException {
             context.cancelTimer(RaftContext.ELECTION_TIMEOUT);
-            return new LeaderState(meta).elected();
+            return new LeaderState(this.meta().forLeader()).elected();
         }
 
         @Override
@@ -658,7 +687,7 @@ public class Raft extends AbstractLifecycleComponent {
             return this;
         }
 
-        public CandidateState resetElectionDeadline() throws IOException {
+        private void resetElectionDeadline() throws IOException {
             logger.debug("reset election deadline");
             long timeout = new Random().nextInt((int) (electionDeadline / 2)) + electionDeadline;
             context.setTimer(RaftContext.ELECTION_TIMEOUT, timeout, () -> {
@@ -675,10 +704,9 @@ public class Raft extends AbstractLifecycleComponent {
                     lock.unlock();
                 }
             });
-            return this;
         }
 
-        public State beginElection() throws IOException {
+        private State beginElection() throws IOException {
             resetElectionDeadline();
             RaftMetadata meta = meta();
             logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta
@@ -693,7 +721,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (meta.hasMajority()) {
                 logger.info("received vote by {}, won election with {} of {} votes", clusterDiscovery.self(), meta
                     .getVotesReceived(), meta.getConfig().members().size());
-                return gotoLeader(meta.forLeader());
+                return stay(meta).gotoLeader();
             } else {
                 return stay(meta);
             }
@@ -710,7 +738,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (message.getTerm() > meta().getCurrentTerm()) {
                 logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(),
                     meta().getCurrentTerm());
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
+                return stay(meta().withTerm(message.getTerm())).gotoFollower().handle(message);
             }
             logger.info("rejecting requestVote msg by {} in {}, already voted for {}", message.getCandidate(), meta()
                 .getCurrentTerm(), meta().getVotedFor());
@@ -729,14 +757,14 @@ public class Raft extends AbstractLifecycleComponent {
             if (message.getTerm() > meta.getCurrentTerm()) {
                 logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(),
                     meta.getCurrentTerm());
-                return gotoFollower(meta.withTerm(message.getTerm()).forFollower());
+                return stay(meta.withTerm(message.getTerm())).gotoFollower();
             }
 
             meta = meta.incVote();
             if (meta.hasMajority()) {
                 logger.info("received vote by {}, won election with {} of {} votes", message.getMember(), meta
                     .getVotesReceived(), meta.getConfig().members().size());
-                return gotoLeader(meta.forLeader());
+                return stay(meta).gotoLeader();
             } else {
                 logger.info("received vote by {}, have {} of {} votes", message.getMember(), meta.getVotesReceived(),
                     meta.getConfig().members().size());
@@ -749,7 +777,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (message.getTerm() > meta().getCurrentTerm()) {
                 logger.info("received newer {}, current term is {}, revert to follower state.", message.getTerm(),
                     meta().getCurrentTerm());
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
+                return stay(meta().withTerm(message.getTerm())).gotoFollower();
             } else {
                 logger.info("candidate is declined by {} in term {}", message.getMember(), meta().getCurrentTerm());
                 return this;
@@ -762,7 +790,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (leaderIsAhead) {
                 logger.info("reverting to follower, because got append entries from leader in {}, but am in {}",
                     message.getTerm(), meta().getCurrentTerm());
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
+                return stay(meta().withTerm(message.getTerm())).gotoFollower().handle(message);
             } else {
                 return this;
             }
@@ -774,10 +802,9 @@ public class Raft extends AbstractLifecycleComponent {
             if (leaderIsAhead) {
                 logger.info("reverting to follower, because got install snapshot from leader in {}, but am in {}",
                     message.getTerm(), meta().getCurrentTerm());
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
+                return stay(meta().withTerm(message.getTerm())).gotoFollower().handle(message);
             } else {
-                send(message.getLeader(), new InstallSnapshotRejected(clusterDiscovery.self(), meta().getCurrentTerm
-                    ()));
+                send(message.getLeader(), new InstallSnapshotRejected(clusterDiscovery.self(), meta().getCurrentTerm()));
                 return this;
             }
         }
@@ -805,9 +832,46 @@ public class Raft extends AbstractLifecycleComponent {
             return this;
         }
 
-        private State gotoFollower(RaftMetadata meta) throws IOException {
+        private State gotoFollower() throws IOException {
             context.cancelTimer(RaftContext.SEND_HEARTBEAT);
-            return new FollowerState(meta).resetElectionDeadline();
+            return new FollowerState(this.meta().forFollower()).resetElectionDeadline();
+        }
+
+        public State selfJoin() throws IOException {
+            logger.info("bootstrap cluster with {}", clusterDiscovery.self());
+            RaftMetadata meta = meta()
+                .withTerm(meta().getCurrentTerm() + 1)
+                .withConfig(new StableClusterConfiguration(clusterDiscovery.self()));
+
+            nextIndex = new LogIndexMap(replicatedLog.lastIndex() + 1);
+            matchIndex = new LogIndexMap(0);
+            replicationIndex = ImmutableMap.of();
+            final LogEntry entry;
+            if (replicatedLog.isEmpty()) {
+                entry = new LogEntry(meta.getConfig(), meta.getCurrentTerm(), replicatedLog.nextIndex(),
+                    clusterDiscovery.self());
+            } else {
+                entry = new LogEntry(Noop.INSTANCE, meta.getCurrentTerm(), replicatedLog.nextIndex(),
+                    clusterDiscovery.self());
+            }
+
+            replicatedLog.append(entry);
+            matchIndex.put(clusterDiscovery.self(), entry.getIndex());
+
+            sendHeartbeat();
+            startHeartbeat();
+
+            ClientMessage clientMessage;
+            while ((clientMessage = stashed.poll()) != null) {
+                logger.debug("appending command: [{}] from {} to replicated log", clientMessage.getCmd(),
+                    clientMessage.getClient());
+                LogEntry logEntry = new LogEntry(clientMessage.getCmd(), meta.getCurrentTerm(), replicatedLog
+                    .nextIndex(), clientMessage.getClient());
+                replicatedLog.append(logEntry);
+                matchIndex.put(clusterDiscovery.self(), entry.getIndex());
+            }
+
+            return stay(meta).maybeCommitEntry();
         }
 
         public State elected() throws IOException {
@@ -871,7 +935,7 @@ public class Raft extends AbstractLifecycleComponent {
             if (message.getTerm() > meta().getCurrentTerm()) {
                 logger.info("leader ({}) got append entries from fresher leader ({}), will step down and the leader " +
                     "will keep being: {}", meta().getCurrentTerm(), message.getTerm(), message.getMember());
-                return gotoFollower(meta().forFollower()).handle(message);
+                return gotoFollower().handle(message);
             } else {
                 logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, " +
                         "will send entries, to force it to step down.", meta().getCurrentTerm(), message.getMember(),
@@ -884,7 +948,7 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(AppendRejected message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
+                return stay(meta().withTerm(message.getTerm())).gotoFollower();
             }
             if (message.getTerm() == meta().getCurrentTerm()) {
                 long nextIndexFor = nextIndex.indexFor(message.getMember());
@@ -906,7 +970,7 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(AppendSuccessful message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
+                return stay(meta().withTerm(message.getTerm())).gotoFollower();
             }
             if (message.getTerm() == meta().getCurrentTerm()) {
                 logger.info("received append successful {} in term: {}", message, meta().getCurrentTerm());
@@ -930,7 +994,7 @@ public class Raft extends AbstractLifecycleComponent {
                 logger.info("leader ({}) got install snapshot from fresher leader ({}), will step down and the leader" +
                         " will keep being: {}",
                     meta().getCurrentTerm(), message.getTerm(), message.getLeader());
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
+                return stay(meta().withTerm(message.getTerm())).gotoFollower().handle(message);
             } else {
                 logger.info("rejecting install snapshot {}, current term is {}",
                     message.getTerm(), meta().getCurrentTerm());
@@ -945,7 +1009,7 @@ public class Raft extends AbstractLifecycleComponent {
         @Override
         public State handle(InstallSnapshotSuccessful message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
+                return stay(meta().withTerm(message.getTerm())).gotoFollower();
             }
             if (message.getTerm() == meta().getCurrentTerm()) {
                 logger.info("received install snapshot successful[{}], last index[{}]", message.getLastIndex(),
@@ -966,7 +1030,7 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(InstallSnapshotRejected message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
                 // since there seems to be another leader!
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower());
+                return stay(meta().withTerm(message.getTerm())).gotoFollower();
             } else if (message.getTerm() == meta().getCurrentTerm()) {
                 logger.info("follower {} rejected write: {}, back out the first index in this term and retry",
                     message.getMember(), message.getTerm());
@@ -992,6 +1056,13 @@ public class Raft extends AbstractLifecycleComponent {
                 ));
                 return stay(meta);
             } else {
+                if (meta.members().contains(request.getMember())) {
+                    send(request.getMember(), new AddServerResponse(
+                        AddServerResponse.Status.OK,
+                        Optional.of(clusterDiscovery.self())
+                    ));
+                    return stay(meta);
+                }
                 StableClusterConfiguration config = new StableClusterConfiguration(
                     Immutable.compose(meta.members(), request.getMember())
                 );
@@ -1024,7 +1095,7 @@ public class Raft extends AbstractLifecycleComponent {
         public State handle(RequestVote message) throws IOException {
             if (message.getTerm() > meta().getCurrentTerm()) {
                 logger.info("received newer {}, current term is {}", message.getTerm(), meta().getCurrentTerm());
-                return gotoFollower(meta().withTerm(message.getTerm()).forFollower()).handle(message);
+                return stay(meta().withTerm(message.getTerm())).gotoFollower().handle(message);
             } else {
                 logger.warn("rejecting vote for {}, and {}, currentTerm: {}, received stale term number {}",
                     message.getCandidate(), message.getTerm(),
@@ -1123,7 +1194,7 @@ public class Raft extends AbstractLifecycleComponent {
                         logger.info("apply new configuration, old: {}, new: {}", meta.getConfig(), config);
                         meta = meta.withConfig(config);
                         if (!meta.getConfig().containsOnNewState(clusterDiscovery.self())) {
-                            return gotoFollower(meta.forFollower());
+                            return stay(meta).gotoFollower();
                         }
                     } else if (entry.getCommand() instanceof Noop) {
                         logger.trace("ignore noop entry");

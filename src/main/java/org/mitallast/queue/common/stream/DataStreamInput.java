@@ -1,6 +1,7 @@
 package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 
 import java.io.IOException;
@@ -44,12 +45,9 @@ public class DataStreamInput extends StreamInput {
         if (size == 0) {
             return Unpooled.EMPTY_BUFFER;
         }
-        byte[] bytes = new byte[size];
-        int read = input.read(bytes);
-        if (read != size) {
-            throw new IOException("error read: got " + read + " bytes, expected " + size);
-        }
-        return Unpooled.wrappedBuffer(bytes);
+        ByteBuf buffer = PooledByteBufAllocator.DEFAULT.buffer(size);
+        buffer.writeBytes(input, size);
+        return buffer;
     }
 
     @Override

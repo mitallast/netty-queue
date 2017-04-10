@@ -6,6 +6,7 @@ import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.protocol.Append;
 import org.mitallast.queue.crdt.replication.Replicator;
 
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class DefaultCrdtService implements CrdtService {
@@ -21,18 +22,32 @@ public class DefaultCrdtService implements CrdtService {
     }
 
     @Override
-    public LWWRegister createLWWRegister(long id) {
+    public boolean createLWWRegister(long id) {
         lock.lock();
         try {
             if (crdtMap.containsKey(id)) {
-                throw new IllegalArgumentException("CRDT " + id + " already registered");
+                return false;
             }
             LWWRegister crdt = new LWWRegister(event -> replicator.handle(new Append(id, event)));
             crdtMap = ImmutableLongMap.<Crdt>builder()
                 .putAll(crdtMap)
                 .put(id, crdt)
                 .build();
-            return crdt;
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public boolean remove(long id) {
+        lock.lock();
+        try {
+            if (crdtMap.containsKey(id)) {
+                return false;
+            }
+            crdtMap = crdtMap.remove(id);
+            return true;
         } finally {
             lock.unlock();
         }
@@ -45,6 +60,11 @@ public class DefaultCrdtService implements CrdtService {
             throw new IllegalArgumentException("CRDT " + id + " not registered");
         }
         return crdt;
+    }
+
+    @Override
+    public Optional<Crdt> crdtOpt(long id) {
+        return Optional.ofNullable(crdtMap.get(id));
     }
 
     @Override

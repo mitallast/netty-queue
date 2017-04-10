@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UTFDataFormatException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -142,7 +143,7 @@ public abstract class StreamOutput extends OutputStream {
         }
     }
 
-    public final <T extends Streamable> void writeStreamableList(List<T> streamable) throws IOException {
+    public final <T extends Streamable> void writeStreamableList(Collection<T> streamable) throws IOException {
         int size = streamable.size();
         writeInt(size);
         if (size > 0) {

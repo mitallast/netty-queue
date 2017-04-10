@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
+import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.file.FileModule;
 import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
@@ -77,6 +78,9 @@ public class RaftTest extends BaseTest {
     @Mock
     private ResourceRegistry registry;
 
+    @Mock
+    private EventBus eventBus;
+
     private TestRaftContext context;
 
     private Config config;
@@ -106,8 +110,8 @@ public class RaftTest extends BaseTest {
 
         context = new TestRaftContext();
         config = ConfigFactory.defaultReference();
-        override("nodes.name", "test");
-        override("nodes.path", testFolder.getRoot().getAbsolutePath());
+        override("node.name", "test");
+        override("node.path", testFolder.getRoot().getAbsolutePath());
         override("raft.enabled", "true");
         override("raft.bootstrap", "true");
         override("raft.snapshot-interval", "100");
@@ -149,7 +153,8 @@ public class RaftTest extends BaseTest {
             injector.getInstance(ClusterDiscovery.class),
             persistentService,
             registry,
-            context
+            context,
+            eventBus
         );
         raft.start();
     }
@@ -1127,8 +1132,8 @@ public class RaftTest extends BaseTest {
         verify(transportChannel3).send(appendEntries(node1, 2, 2, 2, 2, stableEntry));
         appendSuccessful(node2, 2, 3);
         appendSuccessful(node3, 2, 3);
-        Assert.assertEquals(stable, raft.currentMeta().getConfig());
         expectFollower();
+        Assert.assertEquals(stable, raft.currentMeta().getConfig());
     }
 
     @Test

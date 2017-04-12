@@ -26,4 +26,9 @@ public class AddServer implements Streamable {
     public DiscoveryNode node() {
         return node;
     }
+
+    @Override
+    public String toString() {
+        return "AddServer{" + node + '}';
+    }
 }

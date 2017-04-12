@@ -9,38 +9,30 @@ import org.mitallast.queue.crdt.routing.ResourceType;
 import java.io.IOException;
 
 public class AddResource implements Streamable {
-    private final ResourceType type;
     private final long id;
-    private final int replicas;
+    private final ResourceType type;
 
-    public AddResource(ResourceType type, long id, int replicas) {
-        this.type = type;
+    public AddResource(long id, ResourceType type) {
         this.id = id;
-        this.replicas = replicas;
+        this.type = type;
     }
 
     public AddResource(StreamInput stream) throws IOException {
-        type = stream.readEnum(ResourceType.class);
         id = stream.readLong();
-        replicas = stream.readInt();
+        type = stream.readEnum(ResourceType.class);
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeEnum(type);
         stream.writeLong(id);
-        stream.writeInt(replicas);
-    }
-
-    public ResourceType type() {
-        return type;
+        stream.writeEnum(type);
     }
 
     public long id() {
         return id;
     }
 
-    public int replicas() {
-        return replicas;
+    public ResourceType type() {
+        return type;
     }
 }

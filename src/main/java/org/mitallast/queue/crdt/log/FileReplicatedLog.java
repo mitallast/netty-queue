@@ -2,6 +2,7 @@ package org.mitallast.queue.crdt.log;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import com.typesafe.config.Config;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,6 +32,7 @@ public class FileReplicatedLog implements ReplicatedLog {
     private final FileService fileService;
     private final StreamService streamService;
     private final Predicate<LogEntry> compactionFilter;
+    private final String serviceName;
 
     private final ExecutorService compaction = Executors.newSingleThreadExecutor();
     private final ReentrantLock segmentsLock = new ReentrantLock();
@@ -45,16 +47,18 @@ public class FileReplicatedLog implements ReplicatedLog {
         Config config,
         FileService fileService,
         StreamService streamService,
-        Predicate<LogEntry> compactionFilter
+        @Assisted Predicate<LogEntry> compactionFilter,
+        @Assisted int index
     ) throws IOException {
         this.segmentSize = config.getInt("crdt.segment.size");
 
         this.fileService = fileService;
         this.streamService = streamService;
         this.compactionFilter = compactionFilter;
+        this.serviceName = String.format("crdt/%d/log", index);
 
-        fileService.service("crdt").mkdir();
-        long[] offsets = fileService.resources("crdt", "regex:event.[0-9]+.log")
+        fileService.service(serviceName).mkdir();
+        long[] offsets = fileService.resources(serviceName, "regex:event.[0-9]+.log")
             .map(path -> path.getFileName().toString())
             .map(name -> name.substring(5, name.length() - 5))
             .mapToLong(Long::parseLong)
@@ -128,7 +132,28 @@ public class FileReplicatedLog implements ReplicatedLog {
         }
     }
 
-    void startGC() {
+    @Override
+    public void close() throws IOException {
+        segmentsLock.lock();
+        try {
+            compaction.shutdownNow();
+            for (Segment segment : segments) {
+                synchronized (segment.entries) {
+                    segment.close();
+                }
+            }
+        } finally {
+            segmentsLock.unlock();
+        }
+    }
+
+    @Override
+    public void delete() throws IOException {
+        close();
+        fileService.delete(serviceName);
+    }
+
+    private void startGC() {
         compaction.execute(() -> {
             logger.debug("start full GC");
             for (Segment segment : segments) {
@@ -163,7 +188,7 @@ public class FileReplicatedLog implements ReplicatedLog {
         });
     }
 
-    class Segment {
+    private class Segment {
         private final ArrayList<LogEntry> entries = new ArrayList<>();
         private final long offset;
         private final File logFile;
@@ -173,7 +198,7 @@ public class FileReplicatedLog implements ReplicatedLog {
 
         private Segment(long offset) throws IOException {
             this.offset = offset;
-            this.logFile = fileService.resource("crdt", "event." + offset + ".log");
+            this.logFile = fileService.resource(serviceName, "event." + offset + ".log");
             this.logOutput = streamService.output(logFile, true);
 
             if (logFile.length() > 0) {
@@ -213,7 +238,6 @@ public class FileReplicatedLog implements ReplicatedLog {
         private void compact() {
             synchronized (entries) {
                 entries.removeIf(compactionFilter);
-
             }
         }
 

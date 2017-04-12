@@ -5,6 +5,7 @@ import io.netty.handler.codec.http.HttpMethod;
 import org.mitallast.queue.common.json.JsonStreamable;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.CrdtService;
+import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.routing.ResourceType;
 import org.mitallast.queue.crdt.routing.fsm.AddResource;
@@ -13,6 +14,7 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.rest.RestController;
 
+import java.io.IOException;
 import java.util.Optional;
 
 public class RestLWWRegister {
@@ -21,7 +23,12 @@ public class RestLWWRegister {
     private final CrdtService crdtService;
 
     @Inject
-    public RestLWWRegister(RestController controller, ClusterDiscovery clusterDiscovery, Raft raft, CrdtService crdtService) {
+    public RestLWWRegister(
+        RestController controller,
+        ClusterDiscovery clusterDiscovery,
+        Raft raft,
+        CrdtService crdtService
+    ) {
         this.clusterDiscovery = clusterDiscovery;
         this.raft = raft;
         this.crdtService = crdtService;
@@ -50,16 +57,28 @@ public class RestLWWRegister {
     }
 
     public boolean create(long id) {
-        raft.apply(new ClientMessage(clusterDiscovery.self(), new AddResource(ResourceType.LWWRegister, id, 2)));
+        raft.apply(new ClientMessage(clusterDiscovery.self(), new AddResource(id, ResourceType.LWWRegister)));
         return true;
     }
 
     public Optional<Streamable> value(long id) {
-        return crdtService.crdt(id, LWWRegister.class).value();
+        Bucket bucket = crdtService.bucket(id);
+        if (bucket == null) {
+            return Optional.empty();
+        } else {
+            return bucket.registry().crdtOpt(id, LWWRegister.class).flatMap(LWWRegister::value);
+        }
     }
 
-    public boolean assign(long id, JsonStreamable value) {
-        crdtService.crdt(id, LWWRegister.class).assign(value);
+    public boolean assign(long id, JsonStreamable value) throws IOException {
+        Bucket bucket = crdtService.bucket(id);
+        if (bucket == null) {
+            return false;
+        }
+        Optional<LWWRegister> lwwRegisterOpt = bucket.registry().crdtOpt(id, LWWRegister.class);
+        if (lwwRegisterOpt.isPresent()) {
+            lwwRegisterOpt.get().assign(value);
+        }
         return true;
     }
 }

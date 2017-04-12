@@ -7,7 +7,6 @@ import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
@@ -68,7 +67,7 @@ public final class Immutable {
         return builder.build();
     }
 
-    public static <V, T> ImmutableList<T> map(Collection<V> list, Function<V, T> mapper) {
+    public static <V, T> ImmutableList<T> map(ImmutableList<V> list, Function<V, T> mapper) {
         ImmutableList.Builder<T> builder = ImmutableList.builder();
         for (V v : list) {
             builder.add(mapper.apply(v));
@@ -178,6 +177,20 @@ public final class Immutable {
             .addAll(set)
             .add(v)
             .build();
+    }
+
+    public static <V> ImmutableList<V> replace(ImmutableList<V> list, int index, V value) {
+        ImmutableList.Builder<V> builder = ImmutableList.builder();
+        for (int i = 0; i < list.size(); i++) {
+            final V item;
+            if (i == index) {
+                item = value;
+            } else {
+                item = list.get(i);
+            }
+            builder.add(item);
+        }
+        return builder.build();
     }
 
     public static <V> ImmutableList<V> subtract(ImmutableList<V> list, V v) {

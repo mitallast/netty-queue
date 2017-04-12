@@ -79,8 +79,8 @@ public class LogEntry implements Streamable {
     @Override
     public String toString() {
 
-        return "LogEntry{term=" + term + ',' + index +
-            ',' + (command instanceof ClusterConfiguration ? command : command.getClass().getSimpleName()) +
+        return "{" + term + ':' + index +
+            ',' + command +
             ',' + client +
             '}';
     }

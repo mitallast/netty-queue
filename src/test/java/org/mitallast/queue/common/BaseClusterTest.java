@@ -51,6 +51,8 @@ public abstract class BaseClusterTest extends BaseTest {
                 .put("raft.heartbeat", "500ms")
                 .put("raft.bootstrap", bootstrap)
                 .put("raft.snapshot-interval", 10000)
+                .put("crdt.buckets", nodesCount)
+                .put("crdt.replicas", nodesCount)
                 .put("transport.host", "127.0.0.1")
                 .put("transport.port", port)
                 .put("transport.max_connections", 1)
@@ -94,7 +96,8 @@ public abstract class BaseClusterTest extends BaseTest {
     protected final void awaitElection() throws Exception {
         while (true) {
             if (raft.stream().anyMatch(raft -> raft.currentState() == Leader)) {
-                if (raft.stream().allMatch(raft -> raft.replicatedLog().committedIndex() == nodesCount)) {
+                if (raft.stream().noneMatch(raft -> raft.currentMeta().getConfig().isTransitioning()) &&
+                    raft.stream().allMatch(raft -> raft.currentMeta().getConfig().members().size() == nodesCount)) {
                     logger.info("leader found, cluster available");
                     return;
                 }

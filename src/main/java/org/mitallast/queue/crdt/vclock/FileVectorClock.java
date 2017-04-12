@@ -1,6 +1,7 @@
 package org.mitallast.queue.crdt.vclock;
 
 import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 import gnu.trove.iterator.TObjectLongIterator;
 import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
@@ -21,19 +22,25 @@ public class FileVectorClock implements VectorClock {
     private final StreamService streamService;
     private final TObjectLongMap<DiscoveryNode> vclock;
     private final ReentrantLock writeLock = new ReentrantLock();
+    private final String serviceName;
 
     private volatile File vclockFile;
     private volatile StreamOutput vclockOutput;
     private volatile int logSize;
 
     @Inject
-    public FileVectorClock(FileService fileService, StreamService streamService) throws IOException {
+    public FileVectorClock(
+        FileService fileService,
+        StreamService streamService,
+        @Assisted int index
+    ) throws IOException {
         this.fileService = fileService;
         this.streamService = streamService;
         this.vclock = new TObjectLongHashMap<>(7, 0.5f, 0);
         this.logSize = 0;
+        this.serviceName = String.format("crdt/%d/vclock", index);
 
-        this.vclockFile = fileService.resource("crdt", "vclock.log");
+        this.vclockFile = fileService.resource(serviceName, "vclock.log");
         this.vclockOutput = streamService.output(vclockFile, true);
 
         if (vclockFile.length() > 0) {
@@ -59,7 +66,7 @@ public class FileVectorClock implements VectorClock {
             if (logSize > vclock.size() + 1000000) {
                 vclockOutput.close();
 
-                File tmp = fileService.temporary("crdt", "vclock", "log");
+                File tmp = fileService.temporary(serviceName, "vclock", "log");
                 try (StreamOutput stream = streamService.output(tmp)) {
                     TObjectLongIterator<DiscoveryNode> iterator = vclock.iterator();
                     while (iterator.hasNext()) {
@@ -71,7 +78,7 @@ public class FileVectorClock implements VectorClock {
 
                 Files.move(tmp.toPath(), vclockFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-                this.vclockFile = fileService.resource("crdt", "vclock.log");
+                this.vclockFile = fileService.resource(serviceName, "vclock.log");
                 this.vclockOutput = streamService.output(vclockFile, true);
             }
         } finally {
@@ -87,5 +94,26 @@ public class FileVectorClock implements VectorClock {
     @Override
     public TObjectLongMap<DiscoveryNode> getAll() {
         return vclock;
+    }
+
+    @Override
+    public void close() throws IOException {
+        writeLock.lock();
+        try {
+            vclockFile = null;
+            if (vclockOutput != null) {
+                vclockOutput.close();
+                vclockOutput = null;
+            }
+            logSize = 0;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    @Override
+    public void delete() throws IOException {
+        close();
+        fileService.delete(serviceName);
     }
 }

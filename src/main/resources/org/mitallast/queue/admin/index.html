@@ -173,24 +173,22 @@
         </table>
     </div>
 
-    <h5>Resources</h5>
+    <h5>Buckets</h5>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
             <tr>
-                <th>type</th>
-                <th>id</th>
-                <th>replicas</th>
-                <th>nodes</th>
+                <th>index</th>
+                <th>resources</th>
+                <th>members</th>
             </tr>
             </thead>
             <tbody>
-            <tr ng-repeat="crdt in routing.resources">
-                <td>{{crdt.type}}</td>
-                <td>{{crdt.id}}</td>
-                <td>{{crdt.replicas}}</td>
+            <tr ng-repeat="bucket in routing.buckets">
+                <td>{{bucket.index}}</td>
+                <td>{{bucket.resources}}</td>
                 <td>
-                    <span ng-repeat="node in crdt.nodes">
+                    <span ng-repeat="node in bucket.members">
                         {{node.host}}:{{node.port}}
                     </span>
                 </td>

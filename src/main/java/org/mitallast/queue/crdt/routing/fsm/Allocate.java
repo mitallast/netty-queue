@@ -8,30 +8,35 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.io.IOException;
 
 public class Allocate implements Streamable {
-    private final long resource;
+    private final int bucket;
     private final DiscoveryNode node;
 
-    public Allocate(long resource, DiscoveryNode node) {
-        this.resource = resource;
+    public Allocate(int bucket, DiscoveryNode node) {
+        this.bucket = bucket;
         this.node = node;
     }
 
     public Allocate(StreamInput stream) throws IOException {
-        resource = stream.readLong();
+        bucket = stream.readInt();
         node = stream.readStreamable(DiscoveryNode::new);
     }
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeLong(resource);
+        stream.writeInt(bucket);
         stream.writeStreamable(node);
     }
 
-    public long resource() {
-        return resource;
+    public int bucket() {
+        return bucket;
     }
 
     public DiscoveryNode node() {
         return node;
+    }
+
+    @Override
+    public String toString() {
+        return "Allocate{bucket=" + bucket + ", " + node + '}';
     }
 }

@@ -3,10 +3,10 @@ package org.mitallast.queue.crdt.commutative;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.crdt.replication.Replicator;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 public class LWWRegister implements CmRDT<LWWRegister> {
 
@@ -54,17 +54,19 @@ public class LWWRegister implements CmRDT<LWWRegister> {
 
     }
 
-    private final Consumer<Streamable> broadcast;
+    private final long id;
+    private final Replicator replicator;
 
     private Streamable value = null;
     private long timestamp = 0;
 
-    public LWWRegister(Consumer<Streamable> broadcast) {
-        this.broadcast = broadcast;
+    public LWWRegister(long id, Replicator replicator) {
+        this.id = id;
+        this.replicator = replicator;
     }
 
     @Override
-    public void update(Streamable event) {
+    public void update(Streamable event) throws IOException {
         if (event instanceof SourceUpdate) {
             sourceUpdate((SourceUpdate) event);
         } else if (event instanceof DownstreamUpdate) {
@@ -79,14 +81,14 @@ public class LWWRegister implements CmRDT<LWWRegister> {
     }
 
     @Override
-    public void sourceUpdate(SourceUpdate update) {
+    public void sourceUpdate(SourceUpdate update) throws IOException {
         if (update instanceof SourceAssign) {
             assign(((SourceAssign) update).value);
         }
     }
 
     @Override
-    public void downstreamUpdate(DownstreamUpdate update) {
+    public void downstreamUpdate(DownstreamUpdate update) throws IOException {
         if (update instanceof DownstreamAssign) {
             DownstreamAssign set = (DownstreamAssign) update;
             synchronized (this) {
@@ -98,12 +100,12 @@ public class LWWRegister implements CmRDT<LWWRegister> {
         }
     }
 
-    public void assign(Streamable value) {
+    public void assign(Streamable value) throws IOException {
         synchronized (this) {
             this.value = value;
             this.timestamp = System.currentTimeMillis();
         }
-        broadcast.accept(new DownstreamAssign(value, timestamp));
+        replicator.append(id, new DownstreamAssign(value, timestamp));
     }
 
     public Optional<Streamable> value() {

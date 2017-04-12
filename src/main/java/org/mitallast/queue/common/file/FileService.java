@@ -8,6 +8,7 @@ import org.mitallast.queue.common.stream.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -34,7 +35,6 @@ public class FileService {
         return servicePath.toFile();
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public File resource(String service, String key) throws IOException {
         Path servicePath = service(service).toPath();
 
@@ -44,9 +44,13 @@ public class FileService {
         File resource = filePath.toFile();
         if (!resource.exists()) {
             if (!resource.getParentFile().exists()) {
-                resource.getParentFile().mkdirs();
+                if (!resource.getParentFile().mkdirs()) {
+                    throw new IOException("Error create directory " + resource.getParentFile());
+                }
             }
-            resource.createNewFile();
+            if (!resource.createNewFile()) {
+                throw new IOException("Error create file " + resource);
+            }
         }
         return resource;
     }
@@ -68,6 +72,9 @@ public class FileService {
         PathMatcher matcher = FileSystems.getDefault().getPathMatcher(prefix);
 
         Path servicePath = service(service).toPath();
+        if (!servicePath.toFile().exists()) {
+            return Stream.empty();
+        }
         return Files.walk(servicePath)
             .filter(path -> path.toFile().isFile())
             .map(servicePath::relativize)
@@ -89,6 +96,24 @@ public class FileService {
         File resource = resource(service, key);
         try (StreamOutput output = streamService.output(resource)) {
             output.writeStreamable(streamable);
+        }
+    }
+
+    public void delete(String service) throws IOException {
+        Iterator<File> iterator = Files.walk(service(service).toPath())
+            .map(Path::toFile)
+            .sorted((o1, o2) -> -o1.compareTo(o2))
+            .iterator();
+
+        while (iterator.hasNext()) {
+            File next = iterator.next();
+            delete(next);
+        }
+    }
+
+    public void delete(File file) throws IOException {
+        if (file.exists() && !file.delete()) {
+            throw new IOException("Error delete file " + file);
         }
     }
 }

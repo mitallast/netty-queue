@@ -1,16 +1,18 @@
 package org.mitallast.queue.crdt;
 
-import java.util.Optional;
+import com.google.common.collect.ImmutableCollection;
+import org.mitallast.queue.crdt.bucket.Bucket;
+import org.mitallast.queue.crdt.routing.RoutingTable;
 
 public interface CrdtService {
 
-    boolean createLWWRegister(long id);
+    RoutingTable routingTable();
 
-    boolean remove(long id);
+    boolean contains(int index);
 
-    Crdt crdt(long id);
+    Bucket bucket(int index);
 
-    Optional<Crdt> crdtOpt(long id);
+    Bucket bucket(long resourceId);
 
-    <T extends Crdt> T crdt(long id, Class<T> type);
+    ImmutableCollection<Bucket> buckets();
 }

@@ -400,7 +400,7 @@ public class FilePersistentService implements PersistentService {
                 "entries=" + entries +
                 ", committedIndex=" + committedIndex +
                 ", start=" + start +
-                ", file=" + segmentFile + " (" + segmentFile.length() + " bytes)" +
+                ", file=" + segmentFile.toPath().getFileName() + " (" + segmentFile.length() + " bytes)" +
                 '}';
         }
     }

@@ -8,17 +8,31 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.io.IOException;
 
 public class AppendSuccessful implements Streamable {
+    private final int bucket;
     private final DiscoveryNode member;
     private final long vclock;
 
+    public AppendSuccessful(int bucket, DiscoveryNode member, long vclock) {
+        this.bucket = bucket;
+        this.member = member;
+        this.vclock = vclock;
+    }
+
     public AppendSuccessful(StreamInput stream) throws IOException {
+        bucket = stream.readInt();
         member = stream.readStreamable(DiscoveryNode::new);
         vclock = stream.readLong();
     }
 
-    public AppendSuccessful(DiscoveryNode member, long vclock) {
-        this.member = member;
-        this.vclock = vclock;
+    @Override
+    public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeInt(bucket);
+        stream.writeStreamable(member);
+        stream.writeLong(vclock);
+    }
+
+    public int bucket() {
+        return bucket;
     }
 
     public DiscoveryNode member() {
@@ -30,15 +44,10 @@ public class AppendSuccessful implements Streamable {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamable(member);
-        stream.writeLong(vclock);
-    }
-
-    @Override
     public String toString() {
         return "AppendSuccessful{" +
-            "member=" + member +
+            "bucket=" + bucket +
+            ", member=" + member +
             ", vclock=" + vclock +
             '}';
     }

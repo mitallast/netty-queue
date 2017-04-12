@@ -1,27 +1,32 @@
 package org.mitallast.queue.crdt;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.TypeLiteral;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
 import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.crdt.bucket.Bucket;
+import org.mitallast.queue.crdt.bucket.BucketFactory;
+import org.mitallast.queue.crdt.bucket.DefaultBucket;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
-import org.mitallast.queue.crdt.log.DefaultCompactionFilter;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
-import org.mitallast.queue.crdt.log.LogEntry;
+import org.mitallast.queue.crdt.log.ReplicatedLog;
+import org.mitallast.queue.crdt.log.ReplicatedLogFactory;
 import org.mitallast.queue.crdt.protocol.AppendEntries;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
+import org.mitallast.queue.crdt.registry.CrdtRegistry;
+import org.mitallast.queue.crdt.registry.CrdtRegistryFactory;
+import org.mitallast.queue.crdt.registry.DefaultCrdtRegistry;
+import org.mitallast.queue.crdt.replication.DefaultReplicator;
 import org.mitallast.queue.crdt.replication.Replica;
 import org.mitallast.queue.crdt.replication.Replicator;
+import org.mitallast.queue.crdt.replication.ReplicatorFactory;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingTable;
-import org.mitallast.queue.crdt.routing.RoutingService;
 import org.mitallast.queue.crdt.routing.fsm.*;
 import org.mitallast.queue.crdt.vclock.FileVectorClock;
-import org.mitallast.queue.crdt.log.ReplicatedLog;
 import org.mitallast.queue.crdt.vclock.VectorClock;
-
-import java.util.function.Predicate;
+import org.mitallast.queue.crdt.vclock.VectorClockFactory;
 
 import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
@@ -29,22 +34,39 @@ public class CrdtModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(DefaultCrdtService.class).asEagerSingleton();
-        bind(DefaultCompactionFilter.class).asEagerSingleton();
-        bind(FileReplicatedLog.class).asEagerSingleton();
-        bind(FileVectorClock.class).asEagerSingleton();
-        bind(Replicator.class).asEagerSingleton();
-        bind(Replica.class).asEagerSingleton();
-
-        bind(ReplicatedLog.class).to(FileReplicatedLog.class);
-        bind(VectorClock.class).to(FileVectorClock.class);
         bind(CrdtService.class).to(DefaultCrdtService.class);
 
-        bind(new TypeLiteral<Predicate<LogEntry>>() {}).to(DefaultCompactionFilter.class);
+        // routing
 
-        // shard
-
-        bind(RoutingService.class).asEagerSingleton();
         bind(RoutingTableFSM.class).asEagerSingleton();
+
+        // bucket
+
+        install(new FactoryModuleBuilder()
+            .implement(ReplicatedLog.class, FileReplicatedLog.class)
+            .build(ReplicatedLogFactory.class));
+
+        install(new FactoryModuleBuilder()
+            .implement(VectorClock.class, FileVectorClock.class)
+            .build(VectorClockFactory.class));
+
+        install(new FactoryModuleBuilder()
+            .implement(CrdtRegistry.class, DefaultCrdtRegistry.class)
+            .build(CrdtRegistryFactory.class));
+
+        install(new FactoryModuleBuilder()
+            .implement(Bucket.class, DefaultBucket.class)
+            .build(BucketFactory.class));
+
+        // replication
+
+        install(new FactoryModuleBuilder()
+            .implement(Replicator.class, DefaultReplicator.class)
+            .build(ReplicatorFactory.class));
+
+        bind(Replica.class).asEagerSingleton();
+
+        // protocol
 
         Multibinder<StreamableRegistry> binder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 

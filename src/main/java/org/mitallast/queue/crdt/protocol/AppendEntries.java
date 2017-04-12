@@ -10,17 +10,20 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import java.io.IOException;
 
 public class AppendEntries implements Streamable {
+    private final int bucket;
     private final DiscoveryNode member;
     private final long prevVclock;
     private final ImmutableList<LogEntry> entries;
 
-    public AppendEntries(DiscoveryNode member, long prevVclock, ImmutableList<LogEntry> entries) {
+    public AppendEntries(int bucket, DiscoveryNode member, long prevVclock, ImmutableList<LogEntry> entries) {
+        this.bucket = bucket;
         this.member = member;
         this.prevVclock = prevVclock;
         this.entries = entries;
     }
 
     public AppendEntries(StreamInput stream) throws IOException {
+        this.bucket = stream.readInt();
         this.member = stream.readStreamable(DiscoveryNode::new);
         this.prevVclock = stream.readLong();
         this.entries = stream.readStreamableList(LogEntry::new);
@@ -28,9 +31,14 @@ public class AppendEntries implements Streamable {
 
     @Override
     public void writeTo(StreamOutput stream) throws IOException {
+        stream.writeInt(bucket);
         stream.writeStreamable(member);
         stream.writeLong(prevVclock);
         stream.writeStreamableList(entries);
+    }
+
+    public int bucket() {
+        return bucket;
     }
 
     public DiscoveryNode member() {

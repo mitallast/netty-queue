@@ -29,6 +29,7 @@ import org.mitallast.queue.transport.TransportController;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -60,9 +61,9 @@ public class DefaultCrdtService implements CrdtService {
 
         this.lock = new ReentrantLock();
 
-        eventBus.subscribe(ServerAdded.class, this::handle);
-        eventBus.subscribe(ServerRemoved.class, this::handle);
-        eventBus.subscribe(RoutingTableChanged.class, this::handle);
+        eventBus.subscribe(ServerAdded.class, this::handle, ForkJoinPool.commonPool());
+        eventBus.subscribe(ServerRemoved.class, this::handle, ForkJoinPool.commonPool());
+        eventBus.subscribe(RoutingTableChanged.class, this::handle, ForkJoinPool.commonPool());
 
         transportController.registerMessageHandler(AppendSuccessful.class, this::successful);
         transportController.registerMessageHandler(AppendRejected.class, this::rejected);
@@ -164,12 +165,15 @@ public class DefaultCrdtService implements CrdtService {
             if (routingBucket.members().contains(discovery.self())) {
                 Bucket bucket = getOrCreate(routingBucket.index());
                 for (Resource resource : routingBucket.resources().values()) {
-                    switch (resource.type()) {
-                        case LWWRegister:
-                            bucket.registry().createLWWRegister(resource.id());
-                            break;
-                        default:
-                            logger.warn("unexpected type: {}", resource.type());
+                    if (!bucket.registry().crdtOpt(resource.id()).isPresent()) {
+                        logger.info("allocate resource {}:{}", resource.id(), resource.type());
+                        switch (resource.type()) {
+                            case LWWRegister:
+                                bucket.registry().createLWWRegister(resource.id());
+                                break;
+                            default:
+                                logger.warn("unexpected type: {}", resource.type());
+                        }
                     }
                 }
             } else {
@@ -193,6 +197,7 @@ public class DefaultCrdtService implements CrdtService {
 
     private void deleteIfExists(int index) throws IOException {
         if (contains(index)) {
+            logger.info("delete bucket {}", index);
             Bucket bucket = bucket(index);
             buckets = Immutable.subtract(buckets, index);
             bucket.close();

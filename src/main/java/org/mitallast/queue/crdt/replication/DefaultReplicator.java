@@ -119,6 +119,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
             maybeSendEntries(message.member());
         } finally {
             lock.unlock();
+
         }
     }
 

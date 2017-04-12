@@ -1,6 +1,8 @@
 package org.mitallast.queue.crdt.bucket;
 
 import com.google.inject.assistedinject.Assisted;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.crdt.log.DefaultCompactionFilter;
 import org.mitallast.queue.crdt.log.ReplicatedLog;
 import org.mitallast.queue.crdt.log.ReplicatedLogFactory;
@@ -15,6 +17,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 
 public class DefaultBucket implements Bucket {
+    private final Logger logger;
     private final int index;
     private final CrdtRegistry registry;
     private final ReplicatedLog log;
@@ -30,6 +33,7 @@ public class DefaultBucket implements Bucket {
         ReplicatorFactory replicatorFactory
     ) throws IOException {
         this.index = index;
+        logger = LogManager.getLogger("replicator[" + index + "]");
         vclock = vclockFactory.create(index);
         replicator = replicatorFactory.create(this);
         registry = crdtRegistryFactory.create(index, replicator);
@@ -65,6 +69,7 @@ public class DefaultBucket implements Bucket {
 
     @Override
     public void close() throws IOException {
+        logger.info("close");
         replicator.stop();
         log.close();
         vclock.close();
@@ -72,6 +77,7 @@ public class DefaultBucket implements Bucket {
 
     @Override
     public void delete() throws IOException {
+        logger.info("delete");
         log.delete();
         vclock.delete();
     }

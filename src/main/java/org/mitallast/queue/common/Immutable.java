@@ -5,6 +5,7 @@ import com.google.common.collect.*;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigList;
 import com.typesafe.config.ConfigValue;
+import org.mitallast.queue.common.events.DefaultEventBus;
 
 import java.util.*;
 import java.util.function.Function;
@@ -262,8 +263,29 @@ public final class Immutable {
         return builder.build();
     }
 
+    public static <K, V> ImmutableSetMultimap<K, V> compose(ImmutableSetMultimap<K, V> multimap, K key, V value) {
+        ImmutableSetMultimap.Builder<K, V> builder = ImmutableSetMultimap.builder();
+        for (Map.Entry<K, V> entry : multimap.entries()) {
+            if (!entry.getKey().equals(key) || !entry.getValue().equals(value)) {
+                builder.put(entry.getKey(), entry.getValue());
+            }
+        }
+        builder.put(key, value);
+        return builder.build();
+    }
+
     public static <K, V> ImmutableMultimap<K, V> subtract(ImmutableMultimap<K, V> multimap, K key, V value) {
         ImmutableMultimap.Builder<K, V> builder = ImmutableMultimap.builder();
+        for (Map.Entry<K, V> entry : multimap.entries()) {
+            if (!entry.getKey().equals(key) || !entry.getValue().equals(value)) {
+                builder.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return builder.build();
+    }
+
+    public static <K, V> ImmutableSetMultimap<K, V> subtract(ImmutableSetMultimap<K, V> multimap, K key, V value) {
+        ImmutableSetMultimap.Builder<K, V> builder = ImmutableSetMultimap.builder();
         for (Map.Entry<K, V> entry : multimap.entries()) {
             if (!entry.getKey().equals(key) || !entry.getValue().equals(value)) {
                 builder.put(entry.getKey(), entry.getValue());

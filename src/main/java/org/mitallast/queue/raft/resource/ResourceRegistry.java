@@ -26,10 +26,10 @@ public class ResourceRegistry {
     }
 
     @SuppressWarnings("unchecked")
-    public Streamable apply(Streamable event) throws IOException {
+    public Streamable apply(long index, Streamable event) throws IOException {
         ResourceHandler handler = handlers.get(event.getClass());
         if (handler != null) {
-            return handler.apply(event);
+            return handler.apply(index, event);
         } else {
             logger.warn("resource handler not found: {}", event);
             return null;
@@ -46,6 +46,6 @@ public class ResourceRegistry {
 
     @FunctionalInterface
     public interface ResourceHandler<T> {
-        Streamable apply(T event) throws IOException;
+        Streamable apply(long index, T event) throws IOException;
     }
 }

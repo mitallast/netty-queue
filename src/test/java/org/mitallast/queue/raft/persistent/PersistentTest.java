@@ -21,7 +21,6 @@ public class PersistentTest extends BaseTest {
 
     private Config config() {
         return ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("node.name", "test")
             .put("node.path", testFolder.getRoot().getAbsolutePath())
             .put("raft.enabled", true)
             .build());

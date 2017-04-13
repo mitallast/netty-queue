@@ -36,10 +36,10 @@ public class ReplicatedLogTest extends BaseTest {
     private final LogEntry entry1 = new LogEntry(new AppendWord("word"), term, 1, node1);
     private final LogEntry entry2 = new LogEntry(new AppendWord("word"), term, 2, node1);
     private final LogEntry entry3 = new LogEntry(new AppendWord("word"), term, 3, node1);
-    private final LogEntry rewriteEntry1 = new LogEntry(new AppendWord("rewrite"), term, 1, node1);
-    private final LogEntry rewriteEntry2 = new LogEntry(new AppendWord("rewrite"), term, 2, node1);
-    private final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term, 3, node1);
-    private final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term, 4, node1);
+    private final LogEntry rewriteEntry1 = new LogEntry(new AppendWord("rewrite"), term2, 1, node1);
+    private final LogEntry rewriteEntry2 = new LogEntry(new AppendWord("rewrite"), term2, 2, node1);
+    private final LogEntry rewriteEntry3 = new LogEntry(new AppendWord("rewrite"), term2, 3, node1);
+    private final LogEntry rewriteEntry4 = new LogEntry(new AppendWord("rewrite"), term2, 4, node1);
     private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), ImmutableList.of());
     private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), ImmutableList.of());
     private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), ImmutableList.of());
@@ -50,9 +50,9 @@ public class ReplicatedLogTest extends BaseTest {
 
     private Config config() {
         return ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("node.name", "test")
             .put("node.path", testFolder.getRoot().getAbsolutePath())
             .put("raft.enabled", true)
+            .put("transport.port", 8800)
             .build());
     }
 
@@ -412,7 +412,7 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testAppendWithIndex0() throws Exception {
         ReplicatedLog prev = log().append(entry1).append(entry2).append(entry3);
-        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry1), 0);
+        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry1));
 
         Assert.assertEquals(ImmutableList.of(rewriteEntry1), rewrite.entries());
         Assert.assertEquals(prev.committedIndex(), rewrite.committedIndex());
@@ -421,7 +421,7 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testAppendWithIndex1() throws Exception {
         ReplicatedLog prev = log().append(entry1).append(entry2).append(entry3);
-        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry2), 1);
+        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry2));
 
         Assert.assertEquals(ImmutableList.of(entry1, rewriteEntry2), rewrite.entries());
         Assert.assertEquals(prev.committedIndex(), rewrite.committedIndex());
@@ -430,7 +430,7 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testAppendWithIndex2() throws Exception {
         ReplicatedLog prev = log().append(entry1).append(entry2).append(entry3);
-        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry3), 2);
+        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry3));
 
         Assert.assertEquals(ImmutableList.of(entry1, entry2, rewriteEntry3), rewrite.entries());
         Assert.assertEquals(prev.committedIndex(), rewrite.committedIndex());
@@ -439,7 +439,7 @@ public class ReplicatedLogTest extends BaseTest {
     @Test
     public void testAppendWithIndex3() throws Exception {
         ReplicatedLog prev = log().append(entry1).append(entry2).append(entry3);
-        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry4), 3);
+        ReplicatedLog rewrite = prev.append(ImmutableList.of(rewriteEntry4));
 
         Assert.assertEquals(ImmutableList.of(entry1, entry2, entry3, rewriteEntry4), rewrite.entries());
         Assert.assertEquals(prev.committedIndex(), rewrite.committedIndex());
@@ -505,10 +505,10 @@ public class ReplicatedLogTest extends BaseTest {
         ReplicatedLog log = log();
         AppendWord cmd = new AppendWord("hello world");
         DiscoveryNode client = new DiscoveryNode("localhost", 8800);
-        final LogEntry entry = new LogEntry(cmd, term, 0, client);
         final long total = 5000000;
         final long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
+            final LogEntry entry = new LogEntry(cmd, term, i + 1, client);
             log = log.append(entry);
         }
         final long end = System.currentTimeMillis();

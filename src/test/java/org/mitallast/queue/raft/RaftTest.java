@@ -106,11 +106,10 @@ public class RaftTest extends BaseTest {
         when(transportService.channel(node3)).thenReturn(transportChannel3);
         when(transportService.channel(node4)).thenReturn(transportChannel4);
         when(transportService.channel(node5)).thenReturn(transportChannel5);
-        when(registry.apply(TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
+        when(registry.apply(0, TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
 
         context = new TestRaftContext();
         config = ConfigFactory.defaultReference();
-        override("node.name", "test");
         override("node.path", testFolder.getRoot().getAbsolutePath());
         override("raft.enabled", "true");
         override("raft.bootstrap", "true");
@@ -253,7 +252,7 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testFollowerRejectVoteIfAlreadyVoted() throws Exception {
-        appendClusterConf();
+        override("raft.bootstrap", "false");
         start();
         requestVote(1, node2, 1, 1);
         requestVote(1, node3, 1, 1);
@@ -270,7 +269,7 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testFollowerAcceptVoteIfTermIsNewer() throws Exception {
-        appendClusterConf();
+        override("raft.bootstrap", "false");
         start();
         requestVote(2, node2, 1, 1);
         Assert.assertEquals(node2, raft.currentMeta().getVotedFor().orElse(null));
@@ -279,7 +278,7 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testFollowerRejectAppendEntriesIfTermIsOld() throws Exception {
-        appendClusterConf();
+        override("raft.bootstrap", "false");
         start();
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, 1, 1, node2);
         raft.apply(appendEntries(node2, 1, 1, 0, 0, logEntry));
@@ -288,7 +287,7 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testFollowerRejectAppendEntriesIfLogEmptyAndTermNotMatch() throws Exception {
-        appendClusterConf();
+        override("raft.bootstrap", "false");
         start();
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, 1, 1, node2);
         raft.apply(appendEntries(node2, 0, 1, 0, 0, logEntry));
@@ -297,7 +296,7 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testFollowerRejectAppendEntriesIfLogEmptyAndIndexNotMatch() throws Exception {
-        appendClusterConf();
+        override("raft.bootstrap", "false");
         start();
         LogEntry logEntry = new LogEntry(Noop.INSTANCE, 1, 1, node2);
         raft.apply(appendEntries(node2, 1, 0, 1, 0, logEntry));
@@ -306,10 +305,10 @@ public class RaftTest extends BaseTest {
 
     @Test
     public void testFollowerAppendEntriesIfLogEmpty() throws Exception {
-        appendClusterConf();
+        override("raft.bootstrap", "false");
         start();
-        LogEntry logEntry = new LogEntry(Noop.INSTANCE, 1, 2, node2);
-        raft.apply(appendEntries(node2, 1, 1, 1, 0, logEntry));
+        LogEntry logEntry = new LogEntry(Noop.INSTANCE, 1, 1, node2);
+        raft.apply(appendEntries(node2, 1, 0, 0, 0, logEntry));
         Assert.assertTrue(raft.replicatedLog().contains(logEntry));
     }
 

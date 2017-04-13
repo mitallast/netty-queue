@@ -460,8 +460,9 @@ public class Raft extends AbstractLifecycleComponent {
             try {
                 // 2) Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (5.3)
                 if (!replicatedLog.containsMatchingEntry(message.getPrevLogTerm(), message.getPrevLogIndex())) {
-                    logger.warn("rejecting write (inconsistent log): {}:{} {} ", message.getPrevLogTerm(), message
-                        .getPrevLogIndex(), replicatedLog);
+                    logger.warn("rejecting write (inconsistent log): {}:{} {} ",
+                        message.getPrevLogTerm(), message.getPrevLogIndex(),
+                        replicatedLog);
                     send(message.getMember(), new AppendRejected(clusterDiscovery.self(), meta.getCurrentTerm(),
                         replicatedLog.lastIndex()));
                     return stay(meta);
@@ -483,21 +484,17 @@ public class Raft extends AbstractLifecycleComponent {
 
                 // Append any new entries not already in the log
 
-                long prevIndex = msg.getEntries().get(0).getIndex() - 1;
-                logger.debug("append({}, {})", msg.getEntries(), prevIndex);
-                replicatedLog.append(msg.getEntries(), prevIndex);
+                logger.debug("append({})", msg.getEntries());
+                replicatedLog.append(msg.getEntries());
             }
-            logger.debug("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog
-                .lastIndex());
-            AppendSuccessful response = new AppendSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(),
-                replicatedLog.lastIndex());
+            logger.debug("response append successful term:{} lastIndex:{}", meta.getCurrentTerm(), replicatedLog.lastIndex());
+            AppendSuccessful response = new AppendSuccessful(clusterDiscovery.self(), meta.getCurrentTerm(), replicatedLog.lastIndex());
             send(msg.getMember(), response);
 
             // If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
 
             if (msg.getLeaderCommit() > replicatedLog.committedIndex()) {
-                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, msg
-                    .getLeaderCommit());
+                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, msg.getLeaderCommit());
                 for (LogEntry entry : entries) {
                     if (entry.getCommand() instanceof ClusterConfiguration) {
                         logger.info("apply new configuration: {}", entry.getCommand());
@@ -507,9 +504,8 @@ public class Raft extends AbstractLifecycleComponent {
                     } else if (entry.getCommand() instanceof RaftSnapshot) {
                         logger.warn("unexpected raft snapshot in log");
                     } else {
-                        logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg
-                            .getLeaderCommit());
-                        registry.apply(entry.getCommand());
+                        logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
+                        registry.apply(entry.getIndex(), entry.getCommand());
                     }
                     replicatedLog.commit(entry.getIndex());
                 }
@@ -611,7 +607,7 @@ public class Raft extends AbstractLifecycleComponent {
                 meta = meta.withConfig(message.getSnapshot().getMeta().getConfig());
                 replicatedLog.compactWith(message.getSnapshot(), clusterDiscovery.self());
                 for (Streamable streamable : message.getSnapshot().getData()) {
-                    registry.apply(streamable);
+                    registry.apply(message.getSnapshot().getMeta().getLastIncludedIndex(), streamable);
                 }
 
                 logger.info("response snapshot installed in {} last index {}", meta.getCurrentTerm(), replicatedLog
@@ -1201,7 +1197,7 @@ public class Raft extends AbstractLifecycleComponent {
                     } else {
                         logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex
                             (), entry.getCommand().getClass(), entry.getClient());
-                        Streamable result = registry.apply(entry.getCommand());
+                        Streamable result = registry.apply(entry.getIndex(), entry.getCommand());
                         if (result != null) {
                             send(entry.getClient(), result);
                         }

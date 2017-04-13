@@ -28,7 +28,6 @@ public class FileReplicatedLogTest extends BaseTest {
             StreamableRegistry.of(TestLong.class, TestLong::new, 1)
         ));
         config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("node.name", "test")
             .put("node.path", testFolder.newFolder().getAbsolutePath())
             .build()).withFallback(ConfigFactory.defaultReference());
         log = new FileReplicatedLog(

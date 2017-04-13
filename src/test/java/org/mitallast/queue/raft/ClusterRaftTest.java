@@ -208,17 +208,17 @@ public class ClusterRaftTest extends BaseClusterTest {
             registry.register(RegisterByteGet.class, this::handle);
         }
 
-        public Streamable handle(RegisterSet registerSet) {
+        public Streamable handle(long index, RegisterSet registerSet) {
             logger.debug("prev value: {} new value: {}", value, registerSet.value);
             value = registerSet.value;
             return new RegisterValue(registerSet.requestId, value);
         }
 
-        public Streamable handle(RegisterGet message) {
+        public Streamable handle(long index, RegisterGet message) {
             return new RegisterValue(message.requestId, value);
         }
 
-        public Streamable handle(RegisterByteSet set) {
+        public Streamable handle(long index, RegisterByteSet set) {
             logger.debug("prev value: {} new value: {}", value, set.buff);
             if (buff != null) {
                 buff.release();
@@ -227,7 +227,7 @@ public class ClusterRaftTest extends BaseClusterTest {
             return new RegisterByteOK(set.requestId);
         }
 
-        public Streamable handle(RegisterByteGet message) {
+        public Streamable handle(long index, RegisterByteGet message) {
             return new RegisterByteValue(message.requestId, buff);
         }
 

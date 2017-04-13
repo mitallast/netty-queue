@@ -38,8 +38,6 @@ public interface ReplicatedLog extends Closeable {
 
     ReplicatedLog append(ImmutableList<LogEntry> entries) throws IOException;
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries, long prevIndex) throws IOException;
-
     ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) throws IOException;
 
     ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);

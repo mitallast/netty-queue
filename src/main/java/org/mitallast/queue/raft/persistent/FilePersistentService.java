@@ -1,5 +1,6 @@
 package org.mitallast.queue.raft.persistent;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
@@ -194,7 +195,7 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public boolean containsMatchingEntry(long otherPrevTerm, long otherPrevIndex) {
-            return (otherPrevTerm == 0 && otherPrevIndex == 0 && entries.isEmpty()) ||
+            return (otherPrevTerm == 0 && otherPrevIndex == 0) ||
                 (!isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) && termAt(otherPrevIndex) == otherPrevTerm);
         }
 
@@ -205,7 +206,7 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public long lastIndex() {
-            return (entries.isEmpty()) ? 1 : last().getIndex();
+            return entries.isEmpty() ? 1 : last().getIndex();
         }
 
         @Override
@@ -220,6 +221,8 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public ReplicatedLog commit(long committedIndex) throws IOException {
+            Preconditions.checkArgument(this.committedIndex <= committedIndex, "commit index cannot be less than current commit");
+            Preconditions.checkArgument(lastIndex() >= committedIndex, "commit index cannot be greater than last index");
             this.committedIndex = committedIndex;
             flush();
             return this;
@@ -227,6 +230,19 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public ReplicatedLog append(LogEntry entry) throws IOException {
+            Preconditions.checkArgument(entry.getIndex() > committedIndex, "entry index should be > committed index");
+            Preconditions.checkArgument(entry.getIndex() >= start, "entry index should be >= start index");
+
+            if (entry.getIndex() <= length()) { // if contains
+                LogEntry contains = get(entry.getIndex());
+                if (contains.getTerm() == entry.getTerm()) { // if term matches, entry already contains in log
+                    return this;
+                } else {
+                    long prev = entry.getIndex() - 1;
+                    truncate(prev);
+                }
+            }
+
             dirty = true;
             segmentOutput.writeStreamable(entry);
             this.entries.add(entry);
@@ -235,41 +251,37 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public ReplicatedLog append(ImmutableList<LogEntry> entries) throws IOException {
-            dirty = true;
             for (LogEntry entry : entries) {
-                segmentOutput.writeStreamable(entry);
+                append(entry);
             }
-            this.entries.addAll(entries);
             return this;
         }
 
-        @Override
-        public ReplicatedLog append(ImmutableList<LogEntry> append, long prevIndex) throws IOException {
-            if (prevIndex == lastIndex()) {
-                return append(append);
-            } else {
-                for (int i = entries.size() - 1; i >= 0; i--) {
-                    if (entries.get(i).getIndex() > prevIndex) {
-                        entries.remove(i);
-                    }
-                }
-                entries.addAll(append);
-                segmentOutput.close();
+        /**
+         * truncate index exclusive truncate index
+         */
+        private void truncate(long truncateIndex) throws IOException {
+            Preconditions.checkArgument(truncateIndex >= committedIndex, "truncate index should be > committed index %d", committedIndex);
+            Preconditions.checkArgument(truncateIndex < lastIndex(), "truncate index should be < last index");
 
-                File tmpSegment = temporaryFile();
-                try (StreamOutput output = streamService.output(tmpSegment, false)) {
-                    for (LogEntry logEntry : entries) {
-                        output.writeStreamable(logEntry);
-                    }
+            for (int i = entries.size() - 1; i >= 0; i--) {
+                if (entries.get(i).getIndex() > truncateIndex) {
+                    entries.remove(i);
                 }
-                Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-                // recreate file object after move
-                this.segmentFile = segmentFile(start);
-                this.segmentOutput = streamService.output(this.segmentFile);
-                dirty = false;
-                return this;
             }
+            segmentOutput.close();
+            File tmpSegment = temporaryFile();
+            try (StreamOutput output = streamService.output(tmpSegment, false)) {
+                for (LogEntry logEntry : entries) {
+                    output.writeStreamable(logEntry);
+                }
+            }
+            Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            // recreate file object after move
+            this.segmentFile = segmentFile(start);
+            this.segmentOutput = streamService.output(this.segmentFile);
+            dirty = false;
         }
 
         @Override

@@ -212,6 +212,16 @@ public final class Immutable {
         return filterNot(set, item -> item.equals(value));
     }
 
+    public static <V> ImmutableSet<V> filter(ImmutableSet<V> list, Predicate<V> predicate) {
+        ImmutableSet.Builder<V> builder = ImmutableSet.builder();
+        for (V item : list) {
+            if (predicate.test(item)) {
+                builder.add(item);
+            }
+        }
+        return builder.build();
+    }
+
     public static <V> ImmutableSet<V> filterNot(ImmutableSet<V> list, Predicate<V> predicate) {
         ImmutableSet.Builder<V> builder = ImmutableSet.builder();
         for (V item : list) {

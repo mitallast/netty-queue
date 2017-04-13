@@ -58,14 +58,6 @@ public class RoutingBucket implements Streamable {
         );
     }
 
-    public RoutingBucket withoutMember(DiscoveryNode node) {
-        return new RoutingBucket(
-            index,
-            Immutable.subtract(members, node),
-            resources
-        );
-    }
-
     public RoutingBucket withResource(Resource resource) {
         return new RoutingBucket(
             index,
@@ -88,5 +80,13 @@ public class RoutingBucket implements Streamable {
 
     public Resource resource(long id) {
         return resources.get(id);
+    }
+
+    public RoutingBucket filterMembers(ImmutableSet<DiscoveryNode> members) {
+        return new RoutingBucket(
+            index,
+            Immutable.filter(this.members, members::contains),
+            resources
+        );
     }
 }

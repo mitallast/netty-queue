@@ -60,7 +60,7 @@ public class FileReplicatedLog implements ReplicatedLog {
         fileService.service(serviceName).mkdir();
         long[] offsets = fileService.resources(serviceName, "regex:event.[0-9]+.log")
             .map(path -> path.getFileName().toString())
-            .map(name -> name.substring(5, name.length() - 5))
+            .map(name -> name.substring(6, name.length() - 4))
             .mapToLong(Long::parseLong)
             .sorted()
             .toArray();

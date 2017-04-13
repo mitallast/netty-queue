@@ -1,6 +1,7 @@
 package org.mitallast.queue.crdt.routing;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
@@ -11,14 +12,14 @@ import java.io.IOException;
 
 public class RoutingTable implements Streamable {
     private final int replicas;
-    private final ImmutableList<DiscoveryNode> members;
+    private final ImmutableSet<DiscoveryNode> members;
     private final ImmutableList<RoutingBucket> buckets;
 
     public RoutingTable(int replicas, int buckets) {
-        this(replicas, ImmutableList.of(), Immutable.generate(buckets, RoutingBucket::new));
+        this(replicas, ImmutableSet.of(), Immutable.generate(buckets, RoutingBucket::new));
     }
 
-    public RoutingTable(int replicas, ImmutableList<DiscoveryNode> members, ImmutableList<RoutingBucket> buckets) {
+    public RoutingTable(int replicas, ImmutableSet<DiscoveryNode> members, ImmutableList<RoutingBucket> buckets) {
         this.replicas = replicas;
         this.members = members;
         this.buckets = buckets;
@@ -26,7 +27,7 @@ public class RoutingTable implements Streamable {
 
     public RoutingTable(StreamInput stream) throws IOException {
         replicas = stream.readInt();
-        members = stream.readStreamableList(DiscoveryNode::new);
+        members = stream.readStreamableSet(DiscoveryNode::new);
         buckets = stream.readStreamableList(RoutingBucket::new);
     }
 
@@ -41,7 +42,7 @@ public class RoutingTable implements Streamable {
         return replicas;
     }
 
-    public ImmutableList<DiscoveryNode> members() {
+    public ImmutableSet<DiscoveryNode> members() {
         return members;
     }
 
@@ -80,28 +81,20 @@ public class RoutingTable implements Streamable {
         );
     }
 
-    public RoutingTable withMember(DiscoveryNode node) {
-        return new RoutingTable(
-            replicas,
-            Immutable.compose(members, node),
-            buckets
-        );
-    }
-
-    public RoutingTable withoutMember(DiscoveryNode node) {
-        return new RoutingTable(
-            replicas,
-            Immutable.subtract(members, node),
-            Immutable.map(buckets, bucket -> bucket.withoutMember(node))
-        );
-    }
-
-    public RoutingTable withMember(int bucket, DiscoveryNode node) {
+    public RoutingTable withBucketMember(int bucket, DiscoveryNode node) {
         RoutingBucket updated = buckets.get(bucket).withMember(node);
         return new RoutingTable(
             replicas,
             members,
             Immutable.replace(buckets, bucket, updated)
+        );
+    }
+
+    public RoutingTable withMembers(ImmutableSet<DiscoveryNode> members) {
+        return new RoutingTable(
+            replicas,
+            members,
+            Immutable.map(buckets, bucket -> bucket.filterMembers(members))
         );
     }
 }

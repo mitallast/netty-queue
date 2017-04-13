@@ -3,19 +3,19 @@ package org.mitallast.queue.crdt.routing.event;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 
 public class RoutingTableChanged {
-    private final RoutingTable prev;
-    private final RoutingTable next;
+    private final long index;
+    private final RoutingTable routingTable;
 
-    public RoutingTableChanged(RoutingTable prev, RoutingTable next) {
-        this.prev = prev;
-        this.next = next;
+    public RoutingTableChanged(long index, RoutingTable routingTable) {
+        this.index = index;
+        this.routingTable = routingTable;
     }
 
-    public RoutingTable prev() {
-        return prev;
+    public long index() {
+        return index;
     }
 
-    public RoutingTable next() {
-        return next;
+    public RoutingTable routingTable() {
+        return routingTable;
     }
 }

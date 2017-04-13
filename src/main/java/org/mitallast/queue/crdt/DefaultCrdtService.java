@@ -3,6 +3,7 @@ package org.mitallast.queue.crdt;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.Immutable;
@@ -15,21 +16,20 @@ import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged;
-import org.mitallast.queue.crdt.routing.fsm.AddServer;
 import org.mitallast.queue.crdt.routing.fsm.Allocate;
 import org.mitallast.queue.crdt.routing.fsm.RoutingTableFSM;
+import org.mitallast.queue.crdt.routing.fsm.UpdateMembers;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
-import org.mitallast.queue.raft.event.ServerAdded;
-import org.mitallast.queue.raft.event.ServerRemoved;
+import org.mitallast.queue.raft.event.MembersChanged;
 import org.mitallast.queue.raft.protocol.ClientMessage;
-import org.mitallast.queue.raft.protocol.RemoveServer;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -43,6 +43,7 @@ public class DefaultCrdtService implements CrdtService {
     private final BucketFactory bucketFactory;
 
     private final ReentrantLock lock;
+    private volatile long lastApplied = 0;
     private volatile ImmutableMap<Integer, Bucket> buckets = ImmutableMap.of();
 
     @Inject
@@ -61,9 +62,9 @@ public class DefaultCrdtService implements CrdtService {
 
         this.lock = new ReentrantLock();
 
-        eventBus.subscribe(ServerAdded.class, this::handle, ForkJoinPool.commonPool());
-        eventBus.subscribe(ServerRemoved.class, this::handle, ForkJoinPool.commonPool());
-        eventBus.subscribe(RoutingTableChanged.class, this::handle, ForkJoinPool.commonPool());
+        Executor executor = Executors.newSingleThreadExecutor();
+        eventBus.subscribe(MembersChanged.class, this::handle, executor);
+        eventBus.subscribe(RoutingTableChanged.class, this::handle, executor);
 
         transportController.registerMessageHandler(AppendSuccessful.class, this::successful);
         transportController.registerMessageHandler(AppendRejected.class, this::rejected);
@@ -117,26 +118,23 @@ public class DefaultCrdtService implements CrdtService {
         return buckets.values();
     }
 
-    private void handle(ServerAdded added) {
+    private void handle(MembersChanged event) {
         if (raft.currentState() == Leader) {
-            logger.info("server added");
-            raft.apply(new ClientMessage(discovery.self(), new AddServer(added.node())));
-        }
-    }
-
-    private void handle(ServerRemoved removed) {
-        if (raft.currentState() == Leader) {
-            logger.info("server removed");
-            raft.apply(new ClientMessage(discovery.self(), new RemoveServer(removed.node())));
+            logger.info("members changed");
+            raft.apply(new ClientMessage(discovery.self(), new UpdateMembers(event.members())));
         }
     }
 
     private void handle(RoutingTableChanged changed) {
         lock.lock();
         try {
+            if (changed.index() <= lastApplied) {
+                return;
+            }
+            lastApplied = changed.index();
             logger.info("routing table changed");
-            processAsLeader(changed.next());
-            processBuckets(changed.next());
+            processAsLeader(changed.routingTable());
+            processBuckets(changed.routingTable());
         } finally {
             lock.unlock();
         }
@@ -144,10 +142,11 @@ public class DefaultCrdtService implements CrdtService {
 
     private void processAsLeader(RoutingTable routingTable) {
         if (raft.currentState() == Leader) {
-            ImmutableList<DiscoveryNode> members = routingTable.members();
+            ImmutableSet<DiscoveryNode> members = routingTable.members();
             for (RoutingBucket routingBucket : routingTable.buckets()) {
                 if (routingBucket.members().size() < routingTable.replicas()) {
-                    ImmutableList<DiscoveryNode> available = Immutable.filterNot(members, member -> routingBucket.members().contains(member));
+                    ImmutableSet<DiscoveryNode> bucketMembers = routingBucket.members();
+                    ImmutableList<DiscoveryNode> available = Immutable.filterNot(members, bucketMembers::contains).asList();
                     if (!available.isEmpty()) {
                         DiscoveryNode node = available.get(ThreadLocalRandom.current().nextInt(available.size()));
                         logger.info("allocate bucket {} {} {}", routingBucket.index(), node);

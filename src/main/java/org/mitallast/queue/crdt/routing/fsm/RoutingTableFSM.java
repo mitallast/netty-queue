@@ -52,8 +52,7 @@ public class RoutingTableFSM implements ResourceFSM {
         registry.register(this);
         registry.register(AddResource.class, this::handle);
         registry.register(RemoveResource.class, this::handle);
-        registry.register(AddServer.class, this::handle);
-        registry.register(RemoveServer.class, this::handle);
+        registry.register(UpdateMembers.class, this::handle);
         registry.register(Allocate.class, this::handle);
         registry.register(RoutingTable.class, this::handle);
     }
@@ -73,18 +72,17 @@ public class RoutingTableFSM implements ResourceFSM {
 
     private void persist(long index, RoutingTable routingTable) throws IOException {
         Preconditions.checkArgument(index > lastApplied);
-        RoutingTable prev = this.routingTable;
         this.lastApplied = index;
         this.routingTable = routingTable;
         try (StreamOutput output = streamService.output(file)) {
             output.writeLong(lastApplied);
             output.writeStreamable(routingTable);
         }
-        eventBus.trigger(new RoutingTableChanged(prev, routingTable));
+        eventBus.trigger(new RoutingTableChanged(index, routingTable));
     }
 
     private Streamable handle(long index, RoutingTable routingTable) throws IOException {
-        if (index < lastApplied) {
+        if (index <= lastApplied) {
             return null;
         }
         persist(index, routingTable);
@@ -92,7 +90,7 @@ public class RoutingTableFSM implements ResourceFSM {
     }
 
     private AddResourceResponse handle(long index, AddResource request) throws IOException {
-        if (index < lastApplied) {
+        if (index <= lastApplied) {
             return null;
         }
         if (routingTable.hasResource(request.id())) {
@@ -107,7 +105,7 @@ public class RoutingTableFSM implements ResourceFSM {
     }
 
     private RemoveResourceResponse handle(long index, RemoveResource request) throws IOException {
-        if (index < lastApplied) {
+        if (index <= lastApplied) {
             return null;
         }
         if (routingTable.hasResource(request.id())) {
@@ -117,33 +115,21 @@ public class RoutingTableFSM implements ResourceFSM {
         return new RemoveResourceResponse(request.type(), request.id(), false);
     }
 
-    private Streamable handle(long index, AddServer server) throws IOException {
-        if (index < lastApplied) {
+    private Streamable handle(long index, UpdateMembers updateMembers) throws IOException {
+        if (index <= lastApplied) {
             return null;
         }
-        if (!routingTable.members().contains(server.node())) {
-            persist(index, routingTable.withMember(server.node()));
-        }
-        return null;
-    }
-
-    private Streamable handle(long index, RemoveServer server) throws IOException {
-        if (index < lastApplied) {
-            return null;
-        }
-        if (!routingTable.members().contains(server.node())) {
-            persist(index, routingTable.withoutMember(server.node()));
-        }
+        persist(index, routingTable.withMembers(updateMembers.members()));
         return null;
     }
 
     private Streamable handle(long index, Allocate allocate) throws IOException {
-        if (index < lastApplied) {
+        if (index <= lastApplied) {
             return null;
         }
         RoutingBucket bucket = routingTable.bucket(allocate.bucket());
         if (!bucket.members().contains(allocate.node())) {
-            persist(index, routingTable.withMember(allocate.bucket(), allocate.node()));
+            persist(index, routingTable.withBucketMember(allocate.bucket(), allocate.node()));
         }
         return null;
     }

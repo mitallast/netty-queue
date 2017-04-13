@@ -11,11 +11,9 @@ import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
-import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
-import org.mitallast.queue.raft.event.ServerAdded;
-import org.mitallast.queue.raft.event.ServerRemoved;
+import org.mitallast.queue.raft.event.MembersChanged;
 import org.mitallast.queue.raft.persistent.PersistentService;
 import org.mitallast.queue.raft.persistent.ReplicatedLog;
 import org.mitallast.queue.raft.protocol.*;
@@ -197,34 +195,12 @@ public class Raft extends AbstractLifecycleComponent {
         }
 
         protected State stay(RaftMetadata meta) throws IOException {
-            if (!meta.getConfig().isTransitioning()) {
-                if (this.meta.getConfig().isTransitioning()) {
-                    JointConsensusClusterConfiguration joint = (JointConsensusClusterConfiguration) this.meta.getConfig();
-                    for (DiscoveryNode node : joint.getOldMembers()) {
-                        if (!meta.members().contains(node)) {
-                            eventBus.trigger(new ServerRemoved(node));
-                        }
-                    }
-                    for (DiscoveryNode node : meta.members()) {
-                        if (!joint.getOldMembers().contains(node)) {
-                            eventBus.trigger(new ServerAdded(node));
-                        }
-                    }
-                } else if (this.meta.members().size() != meta.members().size()) {
-                    for (DiscoveryNode node : this.meta.members()) {
-                        if (!meta.members().contains(node)) {
-                            eventBus.trigger(new ServerRemoved(node));
-                        }
-                    }
-                    for (DiscoveryNode node : meta.members()) {
-                        if (!this.meta.members().contains(node)) {
-                            eventBus.trigger(new ServerAdded(node));
-                        }
-                    }
-                }
-            }
+            RaftMetadata prev = this.meta;
             this.meta = meta;
             persistentService.updateState(meta.getCurrentTerm(), meta.getVotedFor());
+            if (prev.getConfig() != meta.getConfig() && !meta.getConfig().isTransitioning()) {
+                eventBus.trigger(new MembersChanged(meta.members()));
+            }
             return this;
         }
 
@@ -705,10 +681,9 @@ public class Raft extends AbstractLifecycleComponent {
         private State beginElection() throws IOException {
             resetElectionDeadline();
             RaftMetadata meta = meta();
-            logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta
-                .getCurrentTerm());
-            RequestVote request = new RequestVote(meta.getCurrentTerm(), clusterDiscovery.self(), replicatedLog
-                .lastTerm().orElse(0L), replicatedLog.lastIndex());
+            logger.info("initializing election (among {} nodes) for {}", meta.getConfig().members().size(), meta.getCurrentTerm());
+            RequestVote request = new RequestVote(meta.getCurrentTerm(), clusterDiscovery.self(),
+                replicatedLog.lastTerm().orElse(0L), replicatedLog.lastIndex());
             for (DiscoveryNode member : meta.membersWithout(clusterDiscovery.self())) {
                 logger.info("send request vote to {}", member);
                 send(member, request);

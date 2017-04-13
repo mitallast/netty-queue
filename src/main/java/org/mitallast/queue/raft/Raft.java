@@ -549,7 +549,7 @@ public class Raft extends AbstractLifecycleComponent {
                 request.getMember().equals(clusterDiscovery.self()) &&
                 replicatedLog.isEmpty()) {
                 context.cancelTimer(RaftContext.ELECTION_TIMEOUT);
-                return new LeaderState(this.meta().forLeader()).selfJoin();
+                return new LeaderState(this.meta()).selfJoin();
             }
             send(request.getMember(), new AddServerResponse(
                 AddServerResponse.Status.NOT_LEADER,
@@ -656,7 +656,7 @@ public class Raft extends AbstractLifecycleComponent {
 
         public State gotoLeader() throws IOException {
             context.cancelTimer(RaftContext.ELECTION_TIMEOUT);
-            return new LeaderState(this.meta().forLeader()).elected();
+            return new LeaderState(this.meta()).elected();
         }
 
         @Override
@@ -715,8 +715,8 @@ public class Raft extends AbstractLifecycleComponent {
             }
             meta = meta.incVote().withVoteFor(clusterDiscovery.self());
             if (meta.hasMajority()) {
-                logger.info("received vote by {}, won election with {} of {} votes", clusterDiscovery.self(), meta
-                    .getVotesReceived(), meta.getConfig().members().size());
+                logger.info("received vote by {}, won election with {} of {} votes", clusterDiscovery.self(),
+                    meta.getVotesReceived(), meta.getConfig().members().size());
                 return stay(meta).gotoLeader();
             } else {
                 return stay(meta);
@@ -758,8 +758,8 @@ public class Raft extends AbstractLifecycleComponent {
 
             meta = meta.incVote();
             if (meta.hasMajority()) {
-                logger.info("received vote by {}, won election with {} of {} votes", message.getMember(), meta
-                    .getVotesReceived(), meta.getConfig().members().size());
+                logger.info("received vote by {}, won election with {} of {} votes", message.getMember(),
+                    meta.getVotesReceived(), meta.getConfig().members().size());
                 return stay(meta).gotoLeader();
             } else {
                 logger.info("received vote by {}, have {} of {} votes", message.getMember(), meta.getVotesReceived(),

@@ -67,6 +67,10 @@ public class RaftMetadata {
         return new RaftMetadata(currentTerm + 1, config);
     }
 
+    public RaftMetadata forFollower() {
+        return new RaftMetadata(currentTerm, config);
+    }
+
     public RaftMetadata withTerm(long term) {
         return new RaftMetadata(term, config, votedFor, votesReceived);
     }
@@ -93,13 +97,5 @@ public class RaftMetadata {
 
     public RaftMetadata incVote() {
         return new RaftMetadata(currentTerm, config, votedFor, votesReceived + 1);
-    }
-
-    public RaftMetadata forLeader() {
-        return new RaftMetadata(currentTerm, config);
-    }
-
-    public RaftMetadata forFollower() {
-        return new RaftMetadata(currentTerm, config);
     }
 }

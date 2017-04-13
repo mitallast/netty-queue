@@ -21,7 +21,7 @@ public class FileService {
     public FileService(Config config, StreamService streamService) throws IOException {
         this.streamService = streamService;
         File path = new File(config.getString("node.path"));
-        root = new File(path, config.getString("node.name")).getAbsoluteFile();
+        root = new File(path, config.getString("transport.port")).getAbsoluteFile();
         if (!root.exists() && !root.mkdirs()) {
             throw new IOException("error create directory: " + root);
         }

@@ -1,6 +1,5 @@
 package org.mitallast.queue.node;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -22,15 +21,14 @@ import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.transport.TransportModule;
 
 import java.io.IOException;
-import java.util.UUID;
 
 public class InternalNode extends AbstractLifecycleComponent implements Node {
 
     private final Config config;
     private final Injector injector;
 
-    public InternalNode(Config rawConfig, AbstractModule... plugins) {
-        config = prepareConfig(rawConfig);
+    public InternalNode(Config conf, AbstractModule... plugins) {
+        config = conf.withFallback(ConfigFactory.defaultReference());
 
         logger.info("initializing...");
 
@@ -86,11 +84,5 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     @Override
     protected void doClose() throws IOException {
         injector.getInstance(LifecycleService.class).close();
-    }
-
-    private static Config prepareConfig(Config config) {
-        String name = UUID.randomUUID().toString().substring(0, 8);
-        Config fallback = ConfigFactory.parseMap(ImmutableMap.of("node.name", name));
-        return config.withFallback(fallback).withFallback(ConfigFactory.defaultReference());
     }
 }

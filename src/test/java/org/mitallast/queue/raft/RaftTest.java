@@ -107,10 +107,14 @@ public class RaftTest extends BaseTest {
         when(transportService.channel(node4)).thenReturn(transportChannel4);
         when(transportService.channel(node5)).thenReturn(transportChannel5);
         when(registry.apply(0, TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
+        when(registry.apply(1, TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
+        when(registry.apply(2, TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
+        when(registry.apply(3, TestFSMMessage.INSTANCE)).thenReturn(TestFSMMessage.INSTANCE);
 
         context = new TestRaftContext();
         config = ConfigFactory.defaultReference();
         override("node.path", testFolder.getRoot().getAbsolutePath());
+        override("crdt.enabled", "false");
         override("raft.enabled", "true");
         override("raft.bootstrap", "true");
         override("raft.snapshot-interval", "100");
@@ -545,7 +549,7 @@ public class RaftTest extends BaseTest {
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
         expectLeader();
-        Assert.assertFalse(raft.currentMeta().hasMajority());
+        Assert.assertTrue(raft.currentMeta().hasMajority());
     }
 
     @Test
@@ -719,6 +723,7 @@ public class RaftTest extends BaseTest {
         voteCandidate(node2, 2);
         voteCandidate(node3, 2);
         expectLeader();
+        expectTerm(2);
     }
 
     @Test
@@ -966,13 +971,17 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderSendResponseToRemoteClient() throws Exception {
         becameLeader();
+        verify(transportChannel2).send(appendEntries(node1, 2, 1, 1, 0, noop(2, 2, node1)));
+        verify(transportChannel3).send(appendEntries(node1, 2, 1, 1, 0, noop(2, 2, node1)));
         raft.apply(new AppendSuccessful(node2, 2, 2));
         raft.apply(new AppendSuccessful(node3, 2, 2));
 
         raft.apply(new ClientMessage(node2, TestFSMMessage.INSTANCE));
+        verify(transportChannel2).send(appendEntries(node1, 2, 2, 2, 2, new LogEntry(TestFSMMessage.INSTANCE, 2, 3, node2)));
+        verify(transportChannel3).send(appendEntries(node1, 2, 2, 2, 2, new LogEntry(TestFSMMessage.INSTANCE, 2, 3, node2)));
         raft.apply(new AppendSuccessful(node2, 2, 3));
         raft.apply(new AppendSuccessful(node3, 2, 3));
-
+//
         Assert.assertEquals(3, raft.replicatedLog().committedIndex());
         verify(transportChannel2).send(TestFSMMessage.INSTANCE);
     }
@@ -1022,8 +1031,8 @@ public class RaftTest extends BaseTest {
             raft.apply(new ClientMessage(node1, Noop.INSTANCE));
         }
 
-        verify(transportChannel2).send(appendEntries(node1, 2, 1, 1, 0, new LogEntry(Noop.INSTANCE, 2, 2, node1)));
-        verify(transportChannel3).send(appendEntries(node1, 2, 1, 1, 0, new LogEntry(Noop.INSTANCE, 2, 2, node1)));
+        verify(transportChannel2).send(appendEntries(node1, 2, 1, 1, 0, noop(2, 2, node1)));
+        verify(transportChannel3).send(appendEntries(node1, 2, 1, 1, 0, noop(2, 2, node1)));
         // commit index 1
         appendSuccessful(node2, 2, 100);
         appendSuccessful(node3, 2, 100);

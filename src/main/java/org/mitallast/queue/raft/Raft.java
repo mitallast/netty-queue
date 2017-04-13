@@ -1151,12 +1151,18 @@ public class Raft extends AbstractLifecycleComponent {
         private State maybeCommitEntry() throws IOException {
             RaftMetadata meta = meta();
             long indexOnMajority;
-            while ((indexOnMajority = matchIndex.consensusForIndex(meta.getConfig())) > replicatedLog.committedIndex
-                ()) {
+            while ((indexOnMajority = matchIndex.consensusForIndex(meta.getConfig())) > replicatedLog.committedIndex()) {
                 logger.debug("index of majority: {}", indexOnMajority);
-                replicatedLog.slice(replicatedLog.committedIndex(), indexOnMajority);
-                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1,
-                    indexOnMajority);
+                ImmutableList<LogEntry> entries = replicatedLog.slice(replicatedLog.committedIndex() + 1, indexOnMajority);
+                // 3.6.2 To eliminate problems like the one in Figure 3.7, Raft never commits log entries
+                // from previous terms by counting replicas. Only log entries from the leader’s current
+                // term are committed by counting replicas; once an entry from the current term has been
+                // committed in this way, then all prior entries are committed indirectly because of
+                // the Log Matching Property.
+                if (entries.get(entries.size() - 1).getTerm() != meta.getCurrentTerm()) {
+                    logger.warn("do not commit prev term");
+                    return stay(meta);
+                }
                 for (LogEntry entry : entries) {
                     logger.debug("committing log at index: {}", entry.getIndex());
                     replicatedLog.commit(entry.getIndex());
@@ -1170,8 +1176,8 @@ public class Raft extends AbstractLifecycleComponent {
                     } else if (entry.getCommand() instanceof Noop) {
                         logger.trace("ignore noop entry");
                     } else {
-                        logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex
-                            (), entry.getCommand().getClass(), entry.getClient());
+                        logger.debug("applying command[index={}]: {}, will send result to client: {}", entry.getIndex(),
+                            entry.getCommand().getClass().getSimpleName(), entry.getClient());
                         Streamable result = registry.apply(entry.getIndex(), entry.getCommand());
                         if (result != null) {
                             send(entry.getClient(), result);

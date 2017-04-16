@@ -1,16 +1,16 @@
 package org.mitallast.queue.raft.event;
 
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.Set;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class MembersChanged {
-    private final ImmutableSet<DiscoveryNode> members;
+    private final Set<DiscoveryNode> members;
 
-    public MembersChanged(ImmutableSet<DiscoveryNode> members) {
+    public MembersChanged(Set<DiscoveryNode> members) {
         this.members = members;
     }
 
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return members;
     }
 }

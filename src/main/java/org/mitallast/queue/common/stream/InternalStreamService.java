@@ -31,17 +31,17 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
     }
 
     @Override
-    public <T extends Streamable> void writeClass(StreamOutput stream, Class<T> streamableClass) throws IOException {
+    public <T extends Streamable> void writeClass(StreamOutput stream, Class<T> streamableClass) {
         int id = classToIdMap.get(streamableClass);
         if (id < 0) {
-            throw new IOException("Class not registered: " + streamableClass);
+            throw new StreamException("Class not registered: " + streamableClass);
         }
         stream.writeInt(id);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends Streamable> T readStreamable(StreamInput stream) throws IOException {
+    public <T extends Streamable> T readStreamable(StreamInput stream) {
         int id = stream.readInt();
         StreamableReader<T> reader = (StreamableReader<T>) idToReaderMap.get(id);
         if (reader == null) {
@@ -56,8 +56,12 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
     }
 
     @Override
-    public StreamInput input(File file) throws IOException {
-        return new DataStreamInput(this, new BufferedInputStream(new FileInputStream(file), 65536));
+    public StreamInput input(File file) {
+        try {
+            return new DataStreamInput(this, new BufferedInputStream(new FileInputStream(file), 65536));
+        } catch (FileNotFoundException e) {
+            throw new StreamException(e);
+        }
     }
 
     @Override
@@ -66,12 +70,16 @@ public class InternalStreamService implements StreamableClassRegistry, StreamSer
     }
 
     @Override
-    public StreamOutput output(File file) throws IOException {
+    public StreamOutput output(File file) {
         return output(file, false);
     }
 
     @Override
-    public StreamOutput output(File file, boolean append) throws IOException {
-        return new DataStreamOutput(this, new BufferedOutputStream(new FileOutputStream(file, append), 65536));
+    public StreamOutput output(File file, boolean append) {
+        try {
+            return new DataStreamOutput(this, new BufferedOutputStream(new FileOutputStream(file, append), 65536));
+        } catch (FileNotFoundException e) {
+            throw new StreamException(e);
+        }
     }
 }

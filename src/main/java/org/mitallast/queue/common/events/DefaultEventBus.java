@@ -1,7 +1,7 @@
 package org.mitallast.queue.common.events;
 
-import com.google.common.collect.ImmutableSetMultimap;
-import org.mitallast.queue.common.Immutable;
+import javaslang.collection.HashMultimap;
+import javaslang.collection.Multimap;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.ReentrantLock;
@@ -9,12 +9,12 @@ import java.util.function.Consumer;
 
 public class DefaultEventBus implements EventBus {
     private final ReentrantLock lock = new ReentrantLock();
-    private volatile ImmutableSetMultimap<Class, Listener> consumers = ImmutableSetMultimap.of();
+    private volatile Multimap<Class, Listener> consumers = HashMultimap.withSet().empty();
 
     public <Event> void subscribe(Class<Event> eventClass, Consumer<Event> consumer) {
         lock.lock();
         try {
-            consumers = Immutable.compose(consumers, eventClass, new Listener<>(consumer));
+            consumers = consumers.put(eventClass, new Listener<>(consumer));
         } finally {
             lock.unlock();
         }
@@ -24,7 +24,7 @@ public class DefaultEventBus implements EventBus {
     public <Event> void subscribe(Class<Event> eventClass, Consumer<Event> consumer, Executor executor) {
         lock.lock();
         try {
-            consumers = Immutable.compose(consumers, eventClass, new AsyncListener<>(consumer, executor));
+            consumers = consumers.put(eventClass, new AsyncListener<>(consumer, executor));
         } finally {
             lock.unlock();
         }
@@ -34,7 +34,7 @@ public class DefaultEventBus implements EventBus {
     public <Event> void unsubscribe(Class<Event> eventClass, Consumer<Event> consumer) {
         lock.lock();
         try {
-            consumers = Immutable.subtract(consumers, eventClass, new Listener<>(consumer));
+            consumers = consumers.remove(eventClass, new Listener<>(consumer));
         } finally {
             lock.unlock();
         }
@@ -43,13 +43,13 @@ public class DefaultEventBus implements EventBus {
     @Override
     @SuppressWarnings("unchecked")
     public <Event> void trigger(Event event) {
-        consumers.get(event.getClass()).forEach(consumer -> consumer.accept(event));
+        consumers.get(event.getClass()).forEach(consumers -> consumers.forEach(consumer -> consumer.accept(event)));
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <Event> void trigger(Class<Event> eventClass, Event event) {
-        consumers.get(eventClass).forEach(consumer -> consumer.accept(event));
+        consumers.get(eventClass).forEach(consumers -> consumers.forEach(consumer -> consumer.accept(event)));
     }
 
     private static class Listener<Event> {

@@ -1,10 +1,10 @@
 package org.mitallast.queue.crdt;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import javaslang.collection.HashMap;
+import javaslang.collection.HashSet;
+import javaslang.collection.Vector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,8 +14,6 @@ import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
 import org.mitallast.queue.crdt.log.LogEntry;
 
-import java.io.IOException;
-
 public class FileReplicatedLogTest extends BaseTest {
 
     InternalStreamService streamService;
@@ -24,12 +22,11 @@ public class FileReplicatedLogTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        streamService = new InternalStreamService(ImmutableSet.of(
+        streamService = new InternalStreamService(HashSet.of(
             StreamableRegistry.of(TestLong.class, TestLong::new, 1)
-        ));
-        config = ConfigFactory.parseMap(ImmutableMap.<String, Object>builder()
-            .put("node.path", testFolder.newFolder().getAbsolutePath())
-            .build()).withFallback(ConfigFactory.defaultReference());
+        ).toJavaSet());
+        config = ConfigFactory.parseMap(HashMap.of("node.path", testFolder.newFolder().getAbsolutePath()).toJavaMap())
+            .withFallback(ConfigFactory.defaultReference());
         log = new FileReplicatedLog(
             config,
             new FileService(
@@ -53,7 +50,7 @@ public class FileReplicatedLogTest extends BaseTest {
         }
         long end = System.currentTimeMillis();
         printQps("append single thread", total, start, end);
-        ImmutableList<LogEntry> logEntries = log.entriesFrom(0);
+        Vector<LogEntry> logEntries = log.entriesFrom(0);
         assert logEntries.size() == total;
         long prev = 1;
         for (LogEntry logEntry : logEntries) {
@@ -89,12 +86,12 @@ public class FileReplicatedLogTest extends BaseTest {
             this.value = value;
         }
 
-        public TestLong(StreamInput stream) throws IOException {
+        public TestLong(StreamInput stream) {
             this.value = stream.readLong();
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(value);
         }
     }

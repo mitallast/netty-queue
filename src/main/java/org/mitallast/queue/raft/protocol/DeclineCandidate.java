@@ -5,13 +5,11 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class DeclineCandidate implements Streamable {
     private final DiscoveryNode member;
     private final long term;
 
-    public DeclineCandidate(StreamInput stream) throws IOException {
+    public DeclineCandidate(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
     }
@@ -30,7 +28,7 @@ public class DeclineCandidate implements Streamable {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeStreamable(member);
         stream.writeLong(term);
     }

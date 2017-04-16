@@ -1,52 +1,51 @@
 package org.mitallast.queue.crdt.routing;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import org.mitallast.queue.common.Immutable;
+import javaslang.collection.HashSet;
+import javaslang.collection.Set;
+import javaslang.collection.Vector;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
 
 public class RoutingTable implements Streamable {
     private final int replicas;
-    private final ImmutableSet<DiscoveryNode> members;
-    private final ImmutableList<RoutingBucket> buckets;
+    private final Set<DiscoveryNode> members;
+    private final Vector<RoutingBucket> buckets;
 
     public RoutingTable(int replicas, int buckets) {
-        this(replicas, ImmutableSet.of(), Immutable.generate(buckets, RoutingBucket::new));
+        this(replicas, HashSet.empty(), Vector.range(0, buckets).map(RoutingBucket::new));
     }
 
-    public RoutingTable(int replicas, ImmutableSet<DiscoveryNode> members, ImmutableList<RoutingBucket> buckets) {
+    public RoutingTable(int replicas, Set<DiscoveryNode> members, Vector<RoutingBucket> buckets) {
         this.replicas = replicas;
         this.members = members;
         this.buckets = buckets;
     }
 
-    public RoutingTable(StreamInput stream) throws IOException {
+    public RoutingTable(StreamInput stream) {
         replicas = stream.readInt();
-        members = stream.readStreamableSet(DiscoveryNode::new);
-        buckets = stream.readStreamableList(RoutingBucket::new);
+        members = stream.readSet(DiscoveryNode::new);
+        buckets = stream.readVector(RoutingBucket::new);
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeInt(replicas);
-        stream.writeStreamableList(members);
-        stream.writeStreamableList(buckets);
+        stream.writeSet(members);
+        stream.writeVector(buckets);
     }
 
     public int replicas() {
         return replicas;
     }
 
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return members;
     }
 
-    public ImmutableList<RoutingBucket> buckets() {
+    public Vector<RoutingBucket> buckets() {
         return buckets;
     }
 
@@ -68,7 +67,7 @@ public class RoutingTable implements Streamable {
         return new RoutingTable(
             replicas,
             members,
-            Immutable.replace(buckets, bucket.index(), bucket)
+            buckets.update(bucket.index(), bucket)
         );
     }
 
@@ -77,7 +76,7 @@ public class RoutingTable implements Streamable {
         return new RoutingTable(
             replicas,
             members,
-            Immutable.replace(buckets, bucket.index(), bucket)
+            buckets.update(bucket.index(), bucket)
         );
     }
 
@@ -86,15 +85,15 @@ public class RoutingTable implements Streamable {
         return new RoutingTable(
             replicas,
             members,
-            Immutable.replace(buckets, bucket, updated)
+            buckets.update(bucket, updated)
         );
     }
 
-    public RoutingTable withMembers(ImmutableSet<DiscoveryNode> members) {
+    public RoutingTable withMembers(Set<DiscoveryNode> members) {
         return new RoutingTable(
             replicas,
             members,
-            Immutable.map(buckets, bucket -> bucket.filterMembers(members))
+            buckets.map(bucket -> bucket.filterMembers(members))
         );
     }
 }

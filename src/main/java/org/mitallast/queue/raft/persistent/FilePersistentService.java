@@ -1,8 +1,9 @@
 package org.mitallast.queue.raft.persistent;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import javaslang.collection.Vector;
+import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.file.FileService;
@@ -14,11 +15,6 @@ import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Optional;
 
 public class FilePersistentService implements PersistentService {
     private final static Logger logger = LogManager.getLogger();
@@ -32,39 +28,39 @@ public class FilePersistentService implements PersistentService {
 
     private long segment;
     private long currentTerm;
-    private Optional<DiscoveryNode> votedFor;
+    private Option<DiscoveryNode> votedFor;
 
     @Inject
-    public FilePersistentService(FileService fileService, StreamService streamService) throws IOException {
+    public FilePersistentService(FileService fileService, StreamService streamService) {
         this.fileService = fileService;
         this.streamService = streamService;
         this.stateFile = fileService.resource("raft", "state.bin");
         readState();
     }
 
-    private void readState() throws IOException {
+    private void readState() {
         if (stateFile.length() == 0) {
             segment = initialIndex;
             currentTerm = 0;
-            votedFor = Optional.empty();
+            votedFor = Option.none();
             writeState();
             logger.info("initialize state: segment={} term={} voted={}", segment, currentTerm, votedFor);
         } else {
             try (StreamInput input = streamService.input(stateFile)) {
                 segment = input.readLong();
                 currentTerm = input.readLong();
-                votedFor = Optional.ofNullable(input.readStreamableOrNull(DiscoveryNode::new));
+                votedFor = input.readOpt(DiscoveryNode::new);
                 logger.info("read state: segment={} term={} voted={}", segment, currentTerm, votedFor);
             }
         }
     }
 
-    private void writeState() throws IOException {
+    private void writeState() {
         try (StreamOutput output = streamService.output(stateFile)) {
             logger.info("write state: segment={} term={} voted={}", segment, currentTerm, votedFor);
             output.writeLong(segment);
             output.writeLong(currentTerm);
-            output.writeStreamableOrNull(votedFor.orElse(null));
+            output.writeOpt(votedFor);
         }
     }
 
@@ -74,12 +70,12 @@ public class FilePersistentService implements PersistentService {
     }
 
     @Override
-    public Optional<DiscoveryNode> votedFor() {
+    public Option<DiscoveryNode> votedFor() {
         return votedFor;
     }
 
     @Override
-    public void updateState(long newTerm, Optional<DiscoveryNode> node) throws IOException {
+    public void updateState(long newTerm, Option<DiscoveryNode> node) {
         boolean update = false;
         if (currentTerm != newTerm) {
             currentTerm = newTerm;
@@ -94,7 +90,7 @@ public class FilePersistentService implements PersistentService {
         }
     }
 
-    private void updateSegment(long segment) throws IOException {
+    private void updateSegment(long segment) {
         if (this.segment != segment) {
             this.segment = segment;
             writeState();
@@ -102,13 +98,13 @@ public class FilePersistentService implements PersistentService {
     }
 
     @Override
-    public ReplicatedLog openLog() throws IOException {
+    public ReplicatedLog openLog() {
         logger.info("open log: segment={}", segment);
         final File segmentFile = segmentFile(segment);
-        ArrayList<LogEntry> entries = new ArrayList<>();
+        Vector<LogEntry> entries = Vector.empty();
         try (StreamInput input = streamService.input(segmentFile)) {
             while (input.available() > 0) {
-                entries.add(input.readStreamable(LogEntry::new));
+                entries = entries.append(input.readStreamable(LogEntry::new));
             }
         }
         StreamOutput segmentOutput = streamService.output(segmentFile, true);
@@ -121,16 +117,16 @@ public class FilePersistentService implements PersistentService {
         );
     }
 
-    private File segmentFile(long segment) throws IOException {
+    private File segmentFile(long segment) {
         return fileService.resource("raft", segment + ".log");
     }
 
-    private File temporaryFile() throws IOException {
+    private File temporaryFile() {
         return fileService.temporary("raft", "log.", ".tmp");
     }
 
     public class FileReplicatedLog implements ReplicatedLog {
-        private final ArrayList<LogEntry> entries;
+        private volatile Vector<LogEntry> entries;
         private volatile boolean dirty = false;
         private volatile long start;
 
@@ -142,9 +138,9 @@ public class FilePersistentService implements PersistentService {
         public FileReplicatedLog(
             File segmentFile,
             StreamOutput segmentOutput,
-            ArrayList<LogEntry> entries,
+            Vector<LogEntry> entries,
             long committedIndex, long start
-        ) throws IOException {
+        ) {
             this.entries = entries;
             this.committedIndex = committedIndex;
             this.start = start;
@@ -163,8 +159,8 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public ImmutableList<LogEntry> entries() {
-            return ImmutableList.copyOf(entries);
+        public Vector<LogEntry> entries() {
+            return entries;
         }
 
         @Override
@@ -200,8 +196,8 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public Optional<Long> lastTerm() {
-            return (entries.isEmpty()) ? Optional.empty() : Optional.of(last().getTerm());
+        public Option<Long> lastTerm() {
+            return (entries.isEmpty()) ? Option.none() : Option.some(last().getTerm());
         }
 
         @Override
@@ -220,7 +216,7 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public ReplicatedLog commit(long committedIndex) throws IOException {
+        public ReplicatedLog commit(long committedIndex) {
             Preconditions.checkArgument(this.committedIndex <= committedIndex, "commit index cannot be less than current commit");
             Preconditions.checkArgument(lastIndex() >= committedIndex, "commit index cannot be greater than last index");
             this.committedIndex = committedIndex;
@@ -229,7 +225,7 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public ReplicatedLog append(LogEntry entry) throws IOException {
+        public ReplicatedLog append(LogEntry entry) {
             Preconditions.checkArgument(entry.getIndex() > committedIndex, "entry index should be > committed index");
             Preconditions.checkArgument(entry.getIndex() >= start, "entry index should be >= start index");
 
@@ -245,12 +241,12 @@ public class FilePersistentService implements PersistentService {
 
             dirty = true;
             segmentOutput.writeStreamable(entry);
-            this.entries.add(entry);
+            entries = entries.append(entry);
             return this;
         }
 
         @Override
-        public ReplicatedLog append(ImmutableList<LogEntry> entries) throws IOException {
+        public ReplicatedLog append(Vector<LogEntry> entries) {
             for (LogEntry entry : entries) {
                 append(entry);
             }
@@ -260,15 +256,12 @@ public class FilePersistentService implements PersistentService {
         /**
          * truncate index exclusive truncate index
          */
-        private void truncate(long truncateIndex) throws IOException {
+        private void truncate(long truncateIndex) {
             Preconditions.checkArgument(truncateIndex >= committedIndex, "truncate index should be > committed index %d", committedIndex);
             Preconditions.checkArgument(truncateIndex < lastIndex(), "truncate index should be < last index");
 
-            for (int i = entries.size() - 1; i >= 0; i--) {
-                if (entries.get(i).getIndex() > truncateIndex) {
-                    entries.remove(i);
-                }
-            }
+            entries = entries.dropRightUntil(entry -> entry.getIndex() <= truncateIndex);
+
             segmentOutput.close();
             File tmpSegment = temporaryFile();
             try (StreamOutput output = streamService.output(tmpSegment, false)) {
@@ -276,7 +269,7 @@ public class FilePersistentService implements PersistentService {
                     output.writeStreamable(logEntry);
                 }
             }
-            Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            fileService.move(tmpSegment, segmentFile);
 
             // recreate file object after move
             this.segmentFile = segmentFile(start);
@@ -285,32 +278,32 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany) {
-            ImmutableList<LogEntry> toSend = slice(fromIncluding, fromIncluding + howMany);
+        public Vector<LogEntry> entriesBatchFrom(long fromIncluding, int howMany) {
+            Vector<LogEntry> toSend = slice(fromIncluding, fromIncluding + howMany);
             if (toSend.isEmpty()) {
                 return toSend;
             } else {
                 long batchTerm = toSend.get(0).getTerm();
-                ImmutableList.Builder<LogEntry> builder = ImmutableList.builder();
+                Vector<LogEntry> builder = Vector.empty();
                 for (LogEntry logEntry : toSend) {
                     if (logEntry.getTerm() == batchTerm) {
-                        builder.add(logEntry);
+                        builder = builder.append(logEntry);
                     } else {
                         break;
                     }
                 }
-                return builder.build();
+                return builder;
             }
         }
 
         @Override
-        public ImmutableList<LogEntry> slice(long from, long until) {
+        public Vector<LogEntry> slice(long from, long until) {
             int fromIndex = (int) (from - start);
             int toIndex = (int) (until - start + 1);
             if (fromIndex >= entries.size()) {
-                return ImmutableList.of();
+                return Vector.empty();
             }
-            return ImmutableList.copyOf(entries.subList(Math.max(0, fromIndex), Math.min(toIndex, entries.size())));
+            return entries.subSequence(Math.max(0, fromIndex), Math.min(toIndex, entries.size()));
         }
 
         @Override
@@ -330,19 +323,17 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) throws IOException {
+        public ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) {
             long lastIncludedIndex = snapshot.getMeta().getLastIncludedIndex();
             LogEntry snapshotEntry = snapshot.toEntry(node);
 
             if (entries.isEmpty()) {
-                entries.add(snapshotEntry);
+                entries = Vector.of(snapshotEntry);
             } else {
-                if (entries.get(0).getIndex() <= lastIncludedIndex) {
-                    entries.set(0, snapshotEntry);
-                } else {
+                if (entries.get(0).getIndex() > lastIncludedIndex) {
                     throw new IllegalArgumentException("snapshot too old");
                 }
-                entries.removeIf(entry -> entry != snapshotEntry && entry.getIndex() <= lastIncludedIndex);
+                entries = entries.dropUntil(entry -> entry.getIndex() > lastIncludedIndex).prepend(snapshotEntry);
             }
 
             if (snapshot.getMeta().getLastIncludedIndex() == start) {
@@ -353,7 +344,7 @@ public class FilePersistentService implements PersistentService {
                         output.writeStreamable(logEntry);
                     }
                 }
-                Files.move(tmpSegment.toPath(), segmentFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                fileService.move(tmpSegment, segmentFile);
 
                 // recreate file object after move
                 segmentFile = segmentFile(start);
@@ -370,7 +361,7 @@ public class FilePersistentService implements PersistentService {
                 newSegmentOutput.flush();
                 updateSegment(snapshot.getMeta().getLastIncludedIndex());
 
-                Files.delete(segmentFile.toPath());
+                fileService.delete(segmentFile);
 
                 this.segmentFile = newSegmentFile;
                 this.segmentOutput = newSegmentOutput;
@@ -390,7 +381,7 @@ public class FilePersistentService implements PersistentService {
             return (RaftSnapshot) entries.get(0).getCommand();
         }
 
-        private void flush() throws IOException {
+        private void flush() {
             if (dirty) {
                 segmentOutput.flush();
                 dirty = false;
@@ -398,7 +389,7 @@ public class FilePersistentService implements PersistentService {
         }
 
         @Override
-        public void close() throws IOException {
+        public void close() {
             flush();
             segmentOutput.close();
 

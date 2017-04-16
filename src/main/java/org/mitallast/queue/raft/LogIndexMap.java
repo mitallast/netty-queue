@@ -1,17 +1,16 @@
 package org.mitallast.queue.raft;
 
-import com.google.common.collect.ImmutableSet;
+import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
+import javaslang.collection.Set;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 public class LogIndexMap {
     private final TObjectLongMap<DiscoveryNode> backing;
+    private final TLongArrayList indexes = new TLongArrayList(64);
 
     public LogIndexMap(long defaultIndex) {
         this.backing = new TObjectLongHashMap<>(64, 0.5f, defaultIndex);
@@ -52,16 +51,15 @@ public class LogIndexMap {
         }
     }
 
-    private long indexOnMajority(ImmutableSet<DiscoveryNode> include) {
+    private long indexOnMajority(Set<DiscoveryNode> include) {
         if (include.isEmpty()) {
             return 0;
         }
+        indexes.resetQuick();
+        include.forEach(node -> indexes.add(indexFor(node)));
+        indexes.sort();
         int index = ceiling(include.size(), 2) - 1;
-        List<Long> sorted = include.stream()
-            .map(this::indexFor)
-            .sorted()
-            .collect(Collectors.toList());
-        return sorted.get(index);
+        return indexes.get(index);
     }
 
     private int ceiling(int numerator, int divisor) {

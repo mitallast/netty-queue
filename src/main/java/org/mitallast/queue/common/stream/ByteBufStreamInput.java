@@ -3,8 +3,6 @@ package org.mitallast.queue.common.stream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-import java.io.IOException;
-
 public class ByteBufStreamInput extends StreamInput {
     private final ByteBuf buffer;
 
@@ -14,67 +12,67 @@ public class ByteBufStreamInput extends StreamInput {
     }
 
     @Override
-    public int available() throws IOException {
+    public int available() {
         return buffer.readableBytes();
     }
 
     @Override
-    public int read() throws IOException {
+    public int read() {
         return buffer.readUnsignedByte();
     }
 
     @Override
-    public void read(byte[] b, int off, int len) throws IOException {
+    public void read(byte[] b, int off, int len) {
         buffer.readBytes(b, off, len);
     }
 
     @Override
-    public void skipBytes(int n) throws IOException {
+    public void skipBytes(int n) {
         buffer.skipBytes(n);
     }
 
     @Override
-    public boolean readBoolean() throws IOException {
+    public boolean readBoolean() {
         return buffer.readBoolean();
     }
 
     @Override
-    public byte readByte() throws IOException {
+    public byte readByte() {
         return buffer.readByte();
     }
 
     @Override
-    public short readShort() throws IOException {
+    public short readShort() {
         return buffer.readShort();
     }
 
     @Override
-    public int readUnsignedShort() throws IOException {
+    public int readUnsignedShort() {
         return buffer.readUnsignedShort();
     }
 
     @Override
-    public int readInt() throws IOException {
+    public int readInt() {
         return buffer.readInt();
     }
 
     @Override
-    public long readLong() throws IOException {
+    public long readLong() {
         return buffer.readLong();
     }
 
     @Override
-    public float readFloat() throws IOException {
+    public float readFloat() {
         return buffer.readFloat();
     }
 
     @Override
-    public double readDouble() throws IOException {
+    public double readDouble() {
         return buffer.readDouble();
     }
 
     @Override
-    public ByteBuf readByteBuf() throws IOException {
+    public ByteBuf readByteBuf() {
         int size = readInt();
         if (size == 0) {
             return Unpooled.EMPTY_BUFFER;
@@ -83,5 +81,5 @@ public class ByteBufStreamInput extends StreamInput {
     }
 
     @Override
-    public void close() throws IOException {}
+    public void close() {}
 }

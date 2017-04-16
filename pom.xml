@@ -150,6 +150,12 @@
             <scope>compile</scope>
         </dependency>
 
+        <dependency>
+            <groupId>io.javaslang</groupId>
+            <artifactId>javaslang</artifactId>
+            <version>2.1.0-alpha</version>
+        </dependency>
+
         <!-- webjars -->
 
         <dependency>

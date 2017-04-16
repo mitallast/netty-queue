@@ -1,14 +1,13 @@
 
 package org.mitallast.queue.raft.persistent;
 
-import com.google.common.collect.ImmutableList;
+import javaslang.collection.Vector;
+import javaslang.control.Option;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.util.Optional;
 
 public interface ReplicatedLog extends Closeable {
 
@@ -16,7 +15,7 @@ public interface ReplicatedLog extends Closeable {
 
     boolean contains(LogEntry entry);
 
-    ImmutableList<LogEntry> entries();
+    Vector<LogEntry> entries();
 
     int committedEntries();
 
@@ -24,7 +23,7 @@ public interface ReplicatedLog extends Closeable {
 
     boolean containsMatchingEntry(long otherPrevTerm, long otherPrevIndex);
 
-    Optional<Long> lastTerm();
+    Option<Long> lastTerm();
 
     long lastIndex();
 
@@ -32,17 +31,17 @@ public interface ReplicatedLog extends Closeable {
 
     long nextIndex();
 
-    ReplicatedLog commit(long committedIndex) throws IOException;
+    ReplicatedLog commit(long committedIndex);
 
-    ReplicatedLog append(LogEntry entry) throws IOException;
+    ReplicatedLog append(LogEntry entry);
 
-    ReplicatedLog append(ImmutableList<LogEntry> entries) throws IOException;
+    ReplicatedLog append(Vector<LogEntry> entries);
 
-    ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) throws IOException;
+    ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node);
 
-    ImmutableList<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);
+    Vector<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);
 
-    ImmutableList<LogEntry> slice(long from, long until);
+    Vector<LogEntry> slice(long from, long until);
 
     boolean containsEntryAt(long index);
 
@@ -53,5 +52,5 @@ public interface ReplicatedLog extends Closeable {
     RaftSnapshot snapshot();
 
     @Override
-    void close() throws IOException;
+    void close();
 }

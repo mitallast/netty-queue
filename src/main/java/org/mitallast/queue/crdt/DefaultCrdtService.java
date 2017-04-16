@@ -1,12 +1,8 @@
 package org.mitallast.queue.crdt;
 
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.bucket.BucketFactory;
@@ -27,7 +23,6 @@ import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 
 import javax.inject.Inject;
-import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -44,7 +39,7 @@ public class DefaultCrdtService implements CrdtService {
 
     private final ReentrantLock lock;
     private volatile long lastApplied = 0;
-    private volatile ImmutableMap<Integer, Bucket> buckets = ImmutableMap.of();
+    private volatile Map<Integer, Bucket> buckets = HashMap.empty();
 
     @Inject
     public DefaultCrdtService(
@@ -73,22 +68,14 @@ public class DefaultCrdtService implements CrdtService {
     private void successful(AppendSuccessful message) {
         Bucket bucket = bucket(message.bucket());
         if (bucket != null) {
-            try {
-                bucket.replicator().successful(message);
-            } catch (IOException e) {
-                logger.error("error handle append successful", e);
-            }
+            bucket.replicator().successful(message);
         }
     }
 
     private void rejected(AppendRejected message) {
         Bucket bucket = bucket(message.bucket());
         if (bucket != null) {
-            try {
-                bucket.replicator().rejected(message);
-            } catch (IOException e) {
-                logger.error("error handle append rejected", e);
-            }
+            bucket.replicator().rejected(message);
         }
     }
 
@@ -104,7 +91,7 @@ public class DefaultCrdtService implements CrdtService {
 
     @Override
     public Bucket bucket(int index) {
-        return buckets.get(index);
+        return buckets.getOrElse(index, null);
     }
 
     @Override
@@ -114,7 +101,7 @@ public class DefaultCrdtService implements CrdtService {
     }
 
     @Override
-    public ImmutableCollection<Bucket> buckets() {
+    public Seq<Bucket> buckets() {
         return buckets.values();
     }
 
@@ -142,11 +129,11 @@ public class DefaultCrdtService implements CrdtService {
 
     private void processAsLeader(RoutingTable routingTable) {
         if (raft.currentState() == Leader) {
-            ImmutableSet<DiscoveryNode> members = routingTable.members();
+            Set<DiscoveryNode> members = routingTable.members();
             for (RoutingBucket routingBucket : routingTable.buckets()) {
                 if (routingBucket.members().size() < routingTable.replicas()) {
-                    ImmutableSet<DiscoveryNode> bucketMembers = routingBucket.members();
-                    ImmutableList<DiscoveryNode> available = Immutable.filterNot(members, bucketMembers::contains).asList();
+                    Set<DiscoveryNode> bucketMembers = routingBucket.members();
+                    Vector<DiscoveryNode> available = members.diff(bucketMembers).toVector();
                     if (!available.isEmpty()) {
                         DiscoveryNode node = available.get(ThreadLocalRandom.current().nextInt(available.size()));
                         logger.info("allocate bucket {} {} {}", routingBucket.index(), node);
@@ -164,7 +151,7 @@ public class DefaultCrdtService implements CrdtService {
             if (routingBucket.members().contains(discovery.self())) {
                 Bucket bucket = getOrCreate(routingBucket.index());
                 for (Resource resource : routingBucket.resources().values()) {
-                    if (!bucket.registry().crdtOpt(resource.id()).isPresent()) {
+                    if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
                         logger.info("allocate resource {}:{}", resource.id(), resource.type());
                         switch (resource.type()) {
                             case LWWRegister:
@@ -176,11 +163,7 @@ public class DefaultCrdtService implements CrdtService {
                     }
                 }
             } else {
-                try {
-                    deleteIfExists(routingBucket.index());
-                } catch (IOException e) {
-                    logger.error("error delete bucket {}", routingBucket.index());
-                }
+                deleteIfExists(routingBucket.index());
             }
         }
     }
@@ -189,16 +172,16 @@ public class DefaultCrdtService implements CrdtService {
         Bucket bucket = bucket(index);
         if (bucket == null) {
             bucket = bucketFactory.create(index);
-            buckets = Immutable.compose(buckets, index, bucket);
+            buckets = buckets.put(index, bucket);
         }
         return bucket;
     }
 
-    private void deleteIfExists(int index) throws IOException {
+    private void deleteIfExists(int index) {
         if (contains(index)) {
             logger.info("delete bucket {}", index);
             Bucket bucket = bucket(index);
-            buckets = Immutable.subtract(buckets, index);
+            buckets = buckets.remove(index);
             bucket.close();
             bucket.delete();
         }

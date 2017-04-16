@@ -3,10 +3,7 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
-
-import java.io.IOException;
 
 public class LogEntry implements Streamable {
     private final long term;
@@ -14,18 +11,27 @@ public class LogEntry implements Streamable {
     private final Streamable command;
     private final DiscoveryNode client;
 
-    public LogEntry(StreamInput stream) throws IOException {
+    public LogEntry(Streamable command, long term, long index, DiscoveryNode client) {
+        this.command = command;
+        this.term = term;
+        this.index = index;
+        this.client = client;
+    }
+
+    public LogEntry(StreamInput stream) {
         term = stream.readLong();
         index = stream.readLong();
         command = stream.readStreamable();
         client = stream.readStreamable(DiscoveryNode::new);
     }
 
-    public LogEntry(Streamable command, long term, long index, DiscoveryNode client) {
-        this.command = command;
-        this.term = term;
-        this.index = index;
-        this.client = client;
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeLong(term);
+        stream.writeLong(index);
+        stream.writeClass(command.getClass());
+        stream.writeStreamable(command);
+        stream.writeStreamable(client);
     }
 
     public long getTerm() {
@@ -42,15 +48,6 @@ public class LogEntry implements Streamable {
 
     public Streamable getCommand() {
         return command;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeLong(term);
-        stream.writeLong(index);
-        stream.writeClass(command.getClass());
-        stream.writeStreamable(command);
-        stream.writeStreamable(client);
     }
 
     @Override

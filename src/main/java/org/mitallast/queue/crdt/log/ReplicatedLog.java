@@ -1,16 +1,18 @@
 package org.mitallast.queue.crdt.log;
 
-import com.google.common.collect.ImmutableList;
+import javaslang.collection.Vector;
 import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public interface ReplicatedLog extends Closeable {
 
-    LogEntry append(long id, Streamable event) throws IOException;
+    LogEntry append(long id, Streamable event);
 
-    ImmutableList<LogEntry> entriesFrom(long nodeVclock);
+    Vector<LogEntry> entriesFrom(long nodeVclock);
 
-    void delete() throws IOException;
+    void delete();
+
+    @Override
+    void close();
 }

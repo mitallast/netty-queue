@@ -4,8 +4,6 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 
-import java.io.IOException;
-
 public class LogEntry implements Streamable {
     private final long vclock;
     private final long id;
@@ -17,14 +15,14 @@ public class LogEntry implements Streamable {
         this.event = event;
     }
 
-    public LogEntry(StreamInput stream) throws IOException {
+    public LogEntry(StreamInput stream) {
         this.vclock = stream.readLong();
         this.id = stream.readLong();
         this.event = stream.readStreamable();
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeLong(vclock);
         stream.writeLong(id);
         stream.writeClass(event.getClass());

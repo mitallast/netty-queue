@@ -1,22 +1,22 @@
 package org.mitallast.queue.raft;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.Multibinder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import javaslang.collection.Vector;
+import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mitallast.queue.common.Immutable;
+import org.mitallast.queue.common.BaseClusterTest;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.common.BaseClusterTest;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
@@ -24,10 +24,8 @@ import org.mitallast.queue.raft.resource.ResourceFSM;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 import org.mitallast.queue.transport.TransportController;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,8 +36,8 @@ import static org.mitallast.queue.raft.RaftState.Leader;
 
 public class ClusterRaftTest extends BaseClusterTest {
 
-    private ImmutableList<RegisterClient> client;
-    private ImmutableList<RegisterByteClient> byteClient;
+    private Vector<RegisterClient> client;
+    private Vector<RegisterByteClient> byteClient;
 
     protected AbstractModule[] testModules() {
         return new AbstractModule[]{
@@ -50,8 +48,8 @@ public class ClusterRaftTest extends BaseClusterTest {
     @Before
     public void setUpNodes() throws Exception {
         super.setUpNodes();
-        client = Immutable.map(nodes, n -> n.injector().getInstance(RegisterClient.class));
-        byteClient = Immutable.map(nodes, n -> n.injector().getInstance(RegisterByteClient.class));
+        client = nodes.map(n -> n.injector().getInstance(RegisterClient.class));
+        byteClient = nodes.map(n -> n.injector().getInstance(RegisterByteClient.class));
     }
 
     @Test
@@ -86,15 +84,17 @@ public class ClusterRaftTest extends BaseClusterTest {
             Assert.assertEquals("hello world " + i, value);
         }
 
-        // bench
-        final long total = 10000;
-        final long start = System.currentTimeMillis();
-        for (int i = 0; i < total; i++) {
-            String value = client.get(leader).set("hello world " + i).get();
-            Assert.assertEquals("hello world " + i, value);
+        for (int t = 0; t < 3; t++) {
+            // bench
+            final long total = 10000;
+            final long start = System.currentTimeMillis();
+            for (int i = 0; i < total; i++) {
+                String value = client.get(leader).set("hello world " + i).get();
+                Assert.assertEquals("hello world " + i, value);
+            }
+            final long end = System.currentTimeMillis();
+            printQps("raft command rpc", total, start, end);
         }
-        final long end = System.currentTimeMillis();
-        printQps("raft command rpc", total, start, end);
     }
 
     @Test
@@ -113,21 +113,22 @@ public class ClusterRaftTest extends BaseClusterTest {
             Assert.assertEquals("hello world " + i, value);
         }
 
-        final int total = 200000;
-        final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
-        final long start = System.currentTimeMillis();
-        for (int i = 0; i < total; i++) {
-            CompletableFuture<String> future = client.get(leader).set("hello world " + i);
-            futures.add(future);
+        for (int t = 0; t < 3; t++) {
+            final int total = 200000;
+            final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
+            final long start = System.currentTimeMillis();
+            for (int i = 0; i < total; i++) {
+                CompletableFuture<String> future = client.get(leader).set("hello world " + i);
+                futures.add(future);
+            }
+            for (int i = 0; i < total; i++) {
+                CompletableFuture<String> future = futures.get(i);
+                String value = future.get();
+                Assert.assertEquals("hello world " + i, value);
+            }
+            final long end = System.currentTimeMillis();
+            printQps("raft command rpc", total, start, end);
         }
-        for (int i = 0; i < total; i++) {
-            CompletableFuture<String> future = futures.get(i);
-            String value = future.get();
-            Assert.assertEquals("hello world " + i, value);
-        }
-
-        final long end = System.currentTimeMillis();
-        printQps("raft command rpc", total, start, end);
     }
 
     @Test
@@ -148,29 +149,31 @@ public class ClusterRaftTest extends BaseClusterTest {
             byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes)).get();
         }
 
-        final int total = 200000;
-        final ArrayList<CompletableFuture<RegisterByteOK>> futures = new ArrayList<>(total);
-        final long start = System.currentTimeMillis();
-        for (int i = 0; i < total; i++) {
-            CompletableFuture<RegisterByteOK> future = byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes));
-            futures.add(future);
+        for(int t=0;t<3;t++) {
+            final int total = 200000;
+            final ArrayList<CompletableFuture<RegisterByteOK>> futures = new ArrayList<>(total);
+            final long start = System.currentTimeMillis();
+            for (int i = 0; i < total; i++) {
+                CompletableFuture<RegisterByteOK> future = byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes));
+                futures.add(future);
+            }
+            for (int i = 0; i < total; i++) {
+                futures.get(i).get();
+            }
+            final long end = System.currentTimeMillis();
+
+
+            BigInteger totalBytes = BigInteger.valueOf(bytes.length).multiply(BigInteger.valueOf(total));
+            BigInteger bytesPerSec = totalBytes
+                .multiply(BigInteger.valueOf(1000)) // to sec
+                .divide(BigInteger.valueOf(end - start)); // duration in ms
+
+            logger.info("messages    : {}", total);
+            logger.info("message size: {}", bytes.length);
+            logger.info("data size   : {}MB", totalBytes.divide(BigInteger.valueOf(1024 * 1024)));
+            logger.info("total time  : {}ms", end - start);
+            logger.info("throughput  : {}MB/s", bytesPerSec.divide(BigInteger.valueOf(1024 * 1024)));
         }
-        for (int i = 0; i < total; i++) {
-            futures.get(i).get();
-        }
-        final long end = System.currentTimeMillis();
-
-
-        BigInteger totalBytes = BigInteger.valueOf(bytes.length).multiply(BigInteger.valueOf(total));
-        BigInteger bytesPerSec = totalBytes
-            .multiply(BigInteger.valueOf(1000)) // to sec
-            .divide(BigInteger.valueOf(end - start)); // duration in ms
-
-        logger.info("messages    : {}", total);
-        logger.info("message size: {}", bytes.length);
-        logger.info("data size   : {}MB", totalBytes.divide(BigInteger.valueOf(1024 * 1024)));
-        logger.info("total time  : {}ms", end - start);
-        logger.info("throughput  : {}MB/s", bytesPerSec.divide(BigInteger.valueOf(1024 * 1024)));
     }
 
     public static class TestModule extends AbstractModule {
@@ -232,8 +235,8 @@ public class ClusterRaftTest extends BaseClusterTest {
         }
 
         @Override
-        public Optional<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-            return Optional.empty();
+        public Option<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+            return Option.none();
         }
     }
 
@@ -241,7 +244,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         private final long requestId;
         private final String value;
 
-        public RegisterSet(StreamInput streamInput) throws IOException {
+        public RegisterSet(StreamInput streamInput) {
             this.requestId = streamInput.readLong();
             this.value = streamInput.readText();
         }
@@ -252,7 +255,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
             stream.writeText(value);
         }
@@ -268,7 +271,7 @@ public class ClusterRaftTest extends BaseClusterTest {
     public static class RegisterGet implements Streamable {
         private final long requestId;
 
-        public RegisterGet(StreamInput streamInput) throws IOException {
+        public RegisterGet(StreamInput streamInput) {
             requestId = streamInput.readLong();
         }
 
@@ -277,7 +280,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
         }
 
@@ -294,7 +297,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         private final long requestId;
         private final String value;
 
-        public RegisterValue(StreamInput streamInput) throws IOException {
+        public RegisterValue(StreamInput streamInput) {
             this.requestId = streamInput.readLong();
             this.value = streamInput.readText();
         }
@@ -305,7 +308,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
             stream.writeText(value);
         }
@@ -328,13 +331,13 @@ public class ClusterRaftTest extends BaseClusterTest {
             this.buff = buff;
         }
 
-        public RegisterByteSet(StreamInput stream) throws IOException {
+        public RegisterByteSet(StreamInput stream) {
             requestId = stream.readLong();
             buff = stream.readByteBuf();
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
             stream.writeByteBuf(buff);
         }
@@ -347,12 +350,12 @@ public class ClusterRaftTest extends BaseClusterTest {
             this.requestId = requestId;
         }
 
-        public RegisterByteOK(StreamInput stream) throws IOException {
+        public RegisterByteOK(StreamInput stream) {
             requestId = stream.readLong();
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
         }
     }
@@ -364,12 +367,12 @@ public class ClusterRaftTest extends BaseClusterTest {
             this.requestId = requestId;
         }
 
-        public RegisterByteGet(StreamInput stream) throws IOException {
+        public RegisterByteGet(StreamInput stream) {
             requestId = stream.readLong();
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
         }
     }
@@ -383,13 +386,13 @@ public class ClusterRaftTest extends BaseClusterTest {
             this.buff = buff;
         }
 
-        public RegisterByteValue(StreamInput stream) throws IOException {
+        public RegisterByteValue(StreamInput stream) {
             requestId = stream.readLong();
             buff = stream.readByteBuf();
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(requestId);
             stream.writeByteBuf(buff);
         }

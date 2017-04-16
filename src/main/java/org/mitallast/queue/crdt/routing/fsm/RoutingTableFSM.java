@@ -2,6 +2,7 @@ package org.mitallast.queue.crdt.routing.fsm;
 
 import com.google.common.base.Preconditions;
 import com.typesafe.config.Config;
+import javaslang.control.Option;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.file.FileService;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -18,8 +19,6 @@ import org.mitallast.queue.raft.resource.ResourceRegistry;
 
 import javax.inject.Inject;
 import java.io.File;
-import java.io.IOException;
-import java.util.Optional;
 
 public class RoutingTableFSM implements ResourceFSM {
     private final EventBus eventBus;
@@ -36,7 +35,7 @@ public class RoutingTableFSM implements ResourceFSM {
         ResourceRegistry registry,
         FileService fileService,
         StreamService streamService
-    ) throws IOException {
+    ) {
         this.eventBus = eventBus;
         this.streamService = streamService;
         this.file = fileService.resource("crdt", "routing.bin");
@@ -61,7 +60,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return routingTable;
     }
 
-    private void restore() throws IOException {
+    private void restore() {
         if (file.length() > 0) {
             try (StreamInput input = streamService.input(file)) {
                 lastApplied = input.readLong();
@@ -70,7 +69,7 @@ public class RoutingTableFSM implements ResourceFSM {
         }
     }
 
-    private void persist(long index, RoutingTable routingTable) throws IOException {
+    private void persist(long index, RoutingTable routingTable) {
         Preconditions.checkArgument(index > lastApplied);
         this.lastApplied = index;
         this.routingTable = routingTable;
@@ -81,7 +80,7 @@ public class RoutingTableFSM implements ResourceFSM {
         eventBus.trigger(new RoutingTableChanged(index, routingTable));
     }
 
-    private Streamable handle(long index, RoutingTable routingTable) throws IOException {
+    private Streamable handle(long index, RoutingTable routingTable) {
         if (index <= lastApplied) {
             return null;
         }
@@ -89,7 +88,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private AddResourceResponse handle(long index, AddResource request) throws IOException {
+    private AddResourceResponse handle(long index, AddResource request) {
         if (index <= lastApplied) {
             return null;
         }
@@ -104,7 +103,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return new AddResourceResponse(request.type(), request.id(), true);
     }
 
-    private RemoveResourceResponse handle(long index, RemoveResource request) throws IOException {
+    private RemoveResourceResponse handle(long index, RemoveResource request) {
         if (index <= lastApplied) {
             return null;
         }
@@ -115,7 +114,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return new RemoveResourceResponse(request.type(), request.id(), false);
     }
 
-    private Streamable handle(long index, UpdateMembers updateMembers) throws IOException {
+    private Streamable handle(long index, UpdateMembers updateMembers) {
         if (index <= lastApplied) {
             return null;
         }
@@ -123,7 +122,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private Streamable handle(long index, Allocate allocate) throws IOException {
+    private Streamable handle(long index, Allocate allocate) {
         if (index <= lastApplied) {
             return null;
         }
@@ -135,7 +134,7 @@ public class RoutingTableFSM implements ResourceFSM {
     }
 
     @Override
-    public Optional<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-        return Optional.of(routingTable);
+    public Option<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+        return Option.some(routingTable);
     }
 }

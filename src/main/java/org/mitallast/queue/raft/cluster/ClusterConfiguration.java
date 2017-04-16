@@ -1,12 +1,12 @@
 package org.mitallast.queue.raft.cluster;
 
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.Set;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public interface ClusterConfiguration extends Streamable {
 
-    ImmutableSet<DiscoveryNode> members();
+    Set<DiscoveryNode> members();
 
     boolean isTransitioning();
 

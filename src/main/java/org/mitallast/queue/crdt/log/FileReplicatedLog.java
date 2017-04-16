@@ -1,12 +1,11 @@
 package org.mitallast.queue.crdt.log;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.typesafe.config.Config;
+import javaslang.collection.Vector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.file.FileService;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
@@ -14,8 +13,6 @@ import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +33,7 @@ public class FileReplicatedLog implements ReplicatedLog {
 
     private final ExecutorService compaction = Executors.newSingleThreadExecutor();
     private final ReentrantLock segmentsLock = new ReentrantLock();
-    private volatile ImmutableList<Segment> segments = ImmutableList.of();
+    private volatile Vector<Segment> segments = Vector.empty();
     private volatile Segment lastSegment;
 
     private final AtomicLong vclock = new AtomicLong(0);
@@ -49,7 +46,7 @@ public class FileReplicatedLog implements ReplicatedLog {
         StreamService streamService,
         @Assisted Predicate<LogEntry> compactionFilter,
         @Assisted int index
-    ) throws IOException {
+    ) {
         this.segmentSize = config.getInt("crdt.segment.size");
 
         this.fileService = fileService;
@@ -66,16 +63,16 @@ public class FileReplicatedLog implements ReplicatedLog {
             .toArray();
 
         for (int i = 0; i < offsets.length; i++) {
-            segments = Immutable.append(segments, new Segment(i));
+            segments = segments.append(new Segment(i));
         }
         if (segments.isEmpty()) {
-            segments = Immutable.append(segments, new Segment(vclock.get()));
+            segments = segments.append(new Segment(vclock.get()));
         }
         lastSegment = segments.get(segments.size() - 1);
     }
 
     @Override
-    public LogEntry append(long id, Streamable event) throws IOException {
+    public LogEntry append(long id, Streamable event) {
         while (true) {
             LogEntry append = lastSegment.append(id, event);
             if (append != null) {
@@ -86,7 +83,7 @@ public class FileReplicatedLog implements ReplicatedLog {
             try {
                 if (lastSegment.isFull()) {
                     lastSegment = new Segment(vclock.get());
-                    segments = Immutable.append(segments, lastSegment);
+                    segments = segments.append(lastSegment);
                     logger.debug("created segment {}", lastSegment.offset);
                     append = lastSegment.append(id, event);
                     if (append != null) {
@@ -104,36 +101,25 @@ public class FileReplicatedLog implements ReplicatedLog {
     }
 
     @Override
-    public ImmutableList<LogEntry> entriesFrom(long nodeVclock) {
-        ImmutableList.Builder<LogEntry> builder = null;
+    public Vector<LogEntry> entriesFrom(long nodeVclock) {
+        Vector<LogEntry> builder = Vector.empty();
         for (Segment segment : segments.reverse()) {
             synchronized (segment.entries) {
                 for (int i = segment.entries.size() - 1; i >= 0; i--) {
                     LogEntry logEntry = segment.entries.get(i);
                     if (logEntry.vclock() > nodeVclock) {
-                        if (builder == null) {
-                            builder = ImmutableList.builder();
-                        }
-                        builder.add(logEntry);
+                        builder = builder.append(logEntry);
                     } else {
-                        if (builder == null) {
-                            return ImmutableList.of();
-                        } else {
-                            return builder.build().reverse();
-                        }
+                        return builder.reverse();
                     }
                 }
             }
         }
-        if (builder == null) {
-            return ImmutableList.of();
-        } else {
-            return builder.build().reverse();
-        }
+        return builder.reverse();
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         segmentsLock.lock();
         try {
             compaction.shutdownNow();
@@ -148,7 +134,7 @@ public class FileReplicatedLog implements ReplicatedLog {
     }
 
     @Override
-    public void delete() throws IOException {
+    public void delete() {
         close();
         fileService.delete(serviceName);
     }
@@ -165,22 +151,14 @@ public class FileReplicatedLog implements ReplicatedLog {
                     segment.compact();
                     if (segment.isGarbage()) {
                         logger.debug("remove segment {}", segment.offset);
-                        try {
-                            segment.close();
-                        } catch (IOException e) {
-                            logger.error("error close segment", e);
-                        }
-                        try {
-                            Files.deleteIfExists(segment.logFile.toPath());
-                        } catch (IOException e) {
-                            logger.error("error delete segment file", e);
-                        }
+                        segment.close();
+                        fileService.delete(segment.logFile);
                     }
                 }
             }
             segmentsLock.lock();
             try {
-                segments = Immutable.filterNot(segments, Segment::isGarbage);
+                segments = segments.filter(segment -> !segment.isGarbage());
             } finally {
                 segmentsLock.unlock();
             }
@@ -196,7 +174,7 @@ public class FileReplicatedLog implements ReplicatedLog {
 
         private volatile int added = 0;
 
-        private Segment(long offset) throws IOException {
+        private Segment(long offset) {
             this.offset = offset;
             this.logFile = fileService.resource(serviceName, "event." + offset + ".log");
             this.logOutput = streamService.output(logFile, true);
@@ -214,7 +192,7 @@ public class FileReplicatedLog implements ReplicatedLog {
             }
         }
 
-        private LogEntry append(long id, Streamable event) throws IOException {
+        private LogEntry append(long id, Streamable event) {
             synchronized (entries) {
                 if (isFull()) {
                     return null;
@@ -241,7 +219,7 @@ public class FileReplicatedLog implements ReplicatedLog {
             }
         }
 
-        private void close() throws IOException {
+        private void close() {
             logOutput.close();
         }
     }

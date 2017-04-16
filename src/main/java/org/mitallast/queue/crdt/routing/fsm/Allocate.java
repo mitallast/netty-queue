@@ -5,8 +5,6 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class Allocate implements Streamable {
     private final int bucket;
     private final DiscoveryNode node;
@@ -16,13 +14,13 @@ public class Allocate implements Streamable {
         this.node = node;
     }
 
-    public Allocate(StreamInput stream) throws IOException {
+    public Allocate(StreamInput stream) {
         bucket = stream.readInt();
         node = stream.readStreamable(DiscoveryNode::new);
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
         stream.writeStreamable(node);
     }

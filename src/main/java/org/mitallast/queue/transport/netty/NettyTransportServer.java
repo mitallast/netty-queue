@@ -3,7 +3,6 @@ package org.mitallast.queue.transport.netty;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
-import io.netty.channel.socket.SocketChannel;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
@@ -35,14 +34,13 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     }
 
     @Override
-    protected ChannelInitializer<SocketChannel> channelInitializer() {
+    protected ChannelInitializer channelInitializer() {
         return new TransportServerInitializer();
     }
 
-    private class TransportServerInitializer extends ChannelInitializer<SocketChannel> {
-
+    private class TransportServerInitializer extends ChannelInitializer {
         @Override
-        protected void initChannel(SocketChannel ch) throws Exception {
+        protected void initChannel(Channel ch) throws Exception {
             ChannelPipeline pipeline = ch.pipeline();
             pipeline.addLast(new StreamableDecoder(streamService));
             pipeline.addLast(new StreamableEncoder(streamService));

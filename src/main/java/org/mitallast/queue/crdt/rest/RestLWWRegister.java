@@ -2,6 +2,7 @@ package org.mitallast.queue.crdt.rest;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
+import javaslang.control.Option;
 import org.mitallast.queue.common.json.JsonStreamable;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.CrdtService;
@@ -13,9 +14,6 @@ import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.rest.RestController;
-
-import java.io.IOException;
-import java.util.Optional;
 
 public class RestLWWRegister {
     private final ClusterDiscovery clusterDiscovery;
@@ -61,22 +59,22 @@ public class RestLWWRegister {
         return true;
     }
 
-    public Optional<Streamable> value(long id) {
+    public Option<Streamable> value(long id) {
         Bucket bucket = crdtService.bucket(id);
         if (bucket == null) {
-            return Optional.empty();
+            return Option.none();
         } else {
             return bucket.registry().crdtOpt(id, LWWRegister.class).flatMap(LWWRegister::value);
         }
     }
 
-    public boolean assign(long id, JsonStreamable value) throws IOException {
+    public boolean assign(long id, JsonStreamable value) {
         Bucket bucket = crdtService.bucket(id);
         if (bucket == null) {
             return false;
         }
-        Optional<LWWRegister> lwwRegisterOpt = bucket.registry().crdtOpt(id, LWWRegister.class);
-        if (lwwRegisterOpt.isPresent()) {
+        Option<LWWRegister> lwwRegisterOpt = bucket.registry().crdtOpt(id, LWWRegister.class);
+        if (lwwRegisterOpt.isDefined()) {
             lwwRegisterOpt.get().assign(value);
         }
         return true;

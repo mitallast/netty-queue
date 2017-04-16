@@ -1,9 +1,9 @@
 package org.mitallast.queue.raft.rest;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
-import org.mitallast.queue.common.Immutable;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.RaftMetadata;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
@@ -25,12 +25,12 @@ public class RaftHandler {
             .handle(HttpMethod.GET, "_raft/state");
     }
 
-    public ImmutableMap<String, Object> log() {
+    public Map<String, Object> log() {
         ReplicatedLog log = raft.replicatedLog();
 
-        return ImmutableMap.of(
+        return HashMap.of(
             "committedIndex", log.committedIndex(),
-            "entries", Immutable.map(log.entries(), entry -> ImmutableMap.of(
+            "entries", log.entries().map(entry -> HashMap.of(
                 "term", entry.getTerm(),
                 "index", entry.getIndex(),
                 "command", entry.getCommand().getClass().getSimpleName(),
@@ -39,24 +39,25 @@ public class RaftHandler {
         );
     }
 
-    public ImmutableMap<String, Object> state() {
+    public Map<String, Object> state() {
         RaftMetadata meta = raft.currentMeta();
-        ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        builder.put("currentTerm", meta.getCurrentTerm());
-        builder.put("config", config(meta));
-        meta.getVotedFor().ifPresent(votedFor -> builder.put("votedFor", votedFor));
-        return builder.build();
+        return HashMap.of(
+            "currentTerm", meta.getCurrentTerm(),
+            "config", config(meta),
+            "votedFor", meta.getVotedFor()
+        );
     }
 
-    private ImmutableMap<String, Object> config(RaftMetadata meta) {
-        ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-        builder.put("isTransitioning", meta.getConfig().isTransitioning());
-        builder.put("members", meta.getConfig().members());
+    private Map<String, Object> config(RaftMetadata meta) {
+        Map<String, Object> config = HashMap.of(
+            "isTransitioning", meta.getConfig().isTransitioning(),
+            "members", meta.getConfig().members()
+        );
         if (meta.getConfig().isTransitioning()) {
             JointConsensusClusterConfiguration jointConf = (JointConsensusClusterConfiguration) meta.getConfig();
-            builder.put("oldMembers", jointConf.getOldMembers());
-            builder.put("newMembers", jointConf.getNewMembers());
+            config = config.put("oldMembers", jointConf.getOldMembers());
+            config = config.put("newMembers", jointConf.getNewMembers());
         }
-        return builder.build();
+        return config;
     }
 }

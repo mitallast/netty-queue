@@ -1,39 +1,43 @@
 package org.mitallast.queue.raft.cluster;
 
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.Set;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class JointConsensusClusterConfiguration implements ClusterConfiguration {
-    private final ImmutableSet<DiscoveryNode> oldMembers;
-    private final ImmutableSet<DiscoveryNode> newMembers;
-    private final ImmutableSet<DiscoveryNode> members;
+    private final Set<DiscoveryNode> oldMembers;
+    private final Set<DiscoveryNode> newMembers;
+    private final Set<DiscoveryNode> members;
 
-    public JointConsensusClusterConfiguration(StreamInput stream) throws IOException {
-        oldMembers = stream.readStreamableSet(DiscoveryNode::new);
-        newMembers = stream.readStreamableSet(DiscoveryNode::new);
-        members = ImmutableSet.<DiscoveryNode>builder().addAll(oldMembers).addAll(newMembers).build();
+    public JointConsensusClusterConfiguration(StreamInput stream) {
+        oldMembers = stream.readSet(DiscoveryNode::new);
+        newMembers = stream.readSet(DiscoveryNode::new);
+        members = oldMembers.addAll(newMembers);
     }
 
-    public JointConsensusClusterConfiguration(ImmutableSet<DiscoveryNode> oldMembers, ImmutableSet<DiscoveryNode> newMembers) {
+    public JointConsensusClusterConfiguration(Set<DiscoveryNode> oldMembers, Set<DiscoveryNode> newMembers) {
         this.oldMembers = oldMembers;
         this.newMembers = newMembers;
-        this.members = ImmutableSet.<DiscoveryNode>builder().addAll(oldMembers).addAll(newMembers).build();
+        this.members = oldMembers.addAll(newMembers);
     }
 
-    public ImmutableSet<DiscoveryNode> getOldMembers() {
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeSet(oldMembers);
+        stream.writeSet(newMembers);
+    }
+
+    public Set<DiscoveryNode> getOldMembers() {
         return oldMembers;
     }
 
-    public ImmutableSet<DiscoveryNode> getNewMembers() {
+    public Set<DiscoveryNode> getNewMembers() {
         return newMembers;
     }
 
     @Override
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return members;
     }
 
@@ -56,12 +60,6 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
     @Override
     public boolean containsOnNewState(DiscoveryNode member) {
         return newMembers.contains(member);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamableSet(oldMembers);
-        stream.writeStreamableSet(newMembers);
     }
 
     @Override

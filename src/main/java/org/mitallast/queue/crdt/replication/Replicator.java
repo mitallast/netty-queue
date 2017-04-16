@@ -5,10 +5,11 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
 
-import java.io.IOException;
-
 public interface Replicator extends LifecycleComponent {
-    void append(long id, Streamable event) throws IOException;
-    void successful(AppendSuccessful message) throws IOException;
-    void rejected(AppendRejected message) throws IOException;
+
+    void append(long id, Streamable event);
+
+    void successful(AppendSuccessful message);
+
+    void rejected(AppendRejected message);
 }

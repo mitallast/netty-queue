@@ -5,20 +5,24 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class InstallSnapshotRejected implements Streamable {
     private final DiscoveryNode member;
     private final long term;
 
-    public InstallSnapshotRejected(StreamInput stream) throws IOException {
+    public InstallSnapshotRejected(DiscoveryNode member, long term) {
+        this.member = member;
+        this.term = term;
+    }
+
+    public InstallSnapshotRejected(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
     }
 
-    public InstallSnapshotRejected(DiscoveryNode member, long term) {
-        this.member = member;
-        this.term = term;
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeStreamable(member);
+        stream.writeLong(term);
     }
 
     public DiscoveryNode getMember() {
@@ -45,11 +49,5 @@ public class InstallSnapshotRejected implements Streamable {
         int result = member.hashCode();
         result = 31 * result + (int) (term ^ (term >>> 32));
         return result;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
     }
 }

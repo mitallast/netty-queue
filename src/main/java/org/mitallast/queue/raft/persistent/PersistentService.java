@@ -1,17 +1,15 @@
 package org.mitallast.queue.raft.persistent;
 
+import javaslang.control.Option;
 import org.mitallast.queue.transport.DiscoveryNode;
-
-import java.io.IOException;
-import java.util.Optional;
 
 public interface PersistentService {
 
     long currentTerm();
 
-    Optional<DiscoveryNode> votedFor();
+    Option<DiscoveryNode> votedFor();
 
-    void updateState(long newTerm, Optional<DiscoveryNode> node) throws IOException;
+    void updateState(long newTerm, Option<DiscoveryNode> node);
 
-    ReplicatedLog openLog() throws IOException;
+    ReplicatedLog openLog();
 }

@@ -15,28 +15,48 @@ public class DataStreamOutput extends StreamOutput {
     }
 
     @Override
-    public void write(int b) throws IOException {
-        output.write(b);
+    public void write(int b) {
+        try {
+            output.write(b);
+        } catch (IOException e) {
+            throw new StreamException(e);
+        }
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-        output.write(b, off, len);
+    public void write(byte[] b, int off, int len) {
+        try {
+            output.write(b, off, len);
+        } catch (IOException e) {
+            throw new StreamException(e);
+        }
     }
 
     @Override
-    public void writeByteBuf(ByteBuf buffer, int length) throws IOException {
+    public void writeByteBuf(ByteBuf buffer, int length) {
         writeInt(length);
-        buffer.readBytes(output, length);
+        try {
+            buffer.readBytes(output, length);
+        } catch (IOException e) {
+            throw new StreamException(e);
+        }
     }
 
     @Override
-    public void close() throws IOException {
-        output.close();
+    public void close() {
+        try {
+            output.close();
+        } catch (IOException e) {
+            throw new StreamException(e);
+        }
     }
 
     @Override
-    public void flush() throws IOException {
-        output.flush();
+    public void flush() {
+        try {
+            output.flush();
+        } catch (IOException e) {
+            throw new StreamException(e);
+        }
     }
 }

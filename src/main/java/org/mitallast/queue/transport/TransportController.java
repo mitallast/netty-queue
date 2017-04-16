@@ -1,27 +1,25 @@
 package org.mitallast.queue.transport;
 
-import com.google.common.collect.ImmutableMap;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.stream.Streamable;
-
-import java.util.function.Consumer;
 
 public class TransportController {
     private final static Logger logger = LogManager.getLogger();
 
-    private volatile ImmutableMap<Class, Consumer> handlerMap = ImmutableMap.of();
+    private volatile Map<Class, TransportHandler> handlerMap = HashMap.empty();
 
-    public synchronized <Message extends Streamable> void registerMessageHandler(Class requestClass, Consumer<Message> handler) {
-        handlerMap = Immutable.compose(handlerMap, requestClass, handler);
+    public synchronized <Message extends Streamable> void registerMessageHandler(Class requestClass, TransportHandler<Message> handler) {
+        handlerMap = handlerMap.put(requestClass, handler);
     }
 
     @SuppressWarnings("unchecked")
     public void dispatch(Streamable message) {
-        Consumer handler = handlerMap.get(message.getClass());
+        TransportHandler handler = handlerMap.getOrElse(message.getClass(), null);
         if (handler != null) {
-            handler.accept(message);
+            handler.handle(message);
         } else {
             logger.error("handler not found for {}, close channel", message.getClass());
         }

@@ -1,13 +1,13 @@
 package org.mitallast.queue.transport.netty;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.DefaultThreadFactory;
-import org.mitallast.queue.common.Immutable;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
@@ -17,18 +17,17 @@ import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class NettyTransportService extends NettyClientBootstrap implements TransportService {
-    private final ReentrantLock connectionLock;
+    private final ReentrantLock connectionLock = new ReentrantLock();
     private final int maxConnections;
     private final TransportController transportController;
     private final StreamService streamService;
     private final DefaultEventExecutor executor;
-    private volatile ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes;
+    private volatile Map<DiscoveryNode, NodeChannel> connectedNodes = HashMap.empty();
 
     @Inject
     public NettyTransportService(Config config, TransportController transportController, StreamService streamService) {
@@ -36,8 +35,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         this.transportController = transportController;
         this.streamService = streamService;
         maxConnections = config.getInt("transport.max_connections");
-        connectedNodes = ImmutableMap.of();
-        connectionLock = new ReentrantLock();
         executor = new DefaultEventExecutor(new DefaultThreadFactory("connect"));
     }
 
@@ -57,11 +54,6 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                     }
 
                     @Override
-                    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-                        ctx.flush();
-                    }
-
-                    @Override
                     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                         logger.error("unexpected exception {}", ctx, cause);
                         ctx.close();
@@ -72,8 +64,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    protected void doStop() throws IOException {
-        ImmutableMap<DiscoveryNode, NodeChannel> connectedNodes = this.connectedNodes;
+    protected void doStop() {
         connectedNodes.keySet().forEach(this::disconnectFromNode);
         executor.shutdownGracefully();
         super.doStop();
@@ -83,16 +74,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     public void connectToNode(DiscoveryNode node) {
         checkIsStarted();
         Preconditions.checkNotNull(node);
-        if (connectedNodes.get(node) != null) {
+        if (connectedNodes.getOrElse(node, null) != null) {
             return;
         }
         connectionLock.lock();
         try {
-            if (connectedNodes.get(node) != null) {
+            if (connectedNodes.getOrElse(node, null) != null) {
                 return;
             }
             NodeChannel nodeChannel = new NodeChannel(node);
-            connectedNodes = Immutable.compose(connectedNodes, node, nodeChannel);
+            connectedNodes = connectedNodes.put(node, nodeChannel);
             nodeChannel.open();
             logger.info("connected to node {}", node);
         } finally {
@@ -105,26 +96,35 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         Preconditions.checkNotNull(node);
         connectionLock.lock();
         try {
-            NodeChannel nodeChannel = connectedNodes.get(node);
+            NodeChannel nodeChannel = connectedNodes.getOrElse(node, null);
             if (nodeChannel == null) {
                 return;
             }
             logger.info("disconnect from node {}", node);
             nodeChannel.close();
-            connectedNodes = Immutable.subtract(connectedNodes, node);
+            connectedNodes = connectedNodes.remove(node);
         } finally {
             connectionLock.unlock();
         }
     }
 
-    @Override
-    public TransportChannel channel(DiscoveryNode node) {
+    private TransportChannel channel(DiscoveryNode node) {
         Preconditions.checkNotNull(node);
-        NodeChannel nodeChannel = connectedNodes.get(node);
+        NodeChannel nodeChannel = connectedNodes.getOrElse(node, null);
         if (nodeChannel == null) {
             throw new IllegalArgumentException("Not connected to node: " + node);
         }
         return nodeChannel;
+    }
+
+    @Override
+    public void send(DiscoveryNode node, Streamable message) {
+        try {
+            connectToNode(node);
+            channel(node).send(message);
+        } catch (Exception e) {
+            logger.error("error send message", e);
+        }
     }
 
     private class NodeChannel implements TransportChannel, Closeable {
@@ -182,7 +182,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public void send(Streamable message) throws IOException {
+        public void send(Streamable message) {
             Channel channel = channel();
             channel.writeAndFlush(message, channel.voidPromise());
         }
@@ -195,7 +195,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             }
         }
 
-        private Channel channel() throws IOException {
+        private Channel channel() {
             int index = (int) channelCounter.get() % channels.length;
             channelCounter.set(index + 1);
             int loopIndex = index;
@@ -207,7 +207,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 }
                 index = (index + 1) % channels.length;
             } while (index != loopIndex);
-            throw new IOException("error connect to " + node);
+            throw new RuntimeException("error connect to " + node);
         }
     }
 }

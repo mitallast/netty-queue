@@ -5,14 +5,12 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class AppendRejected implements Streamable {
     private final DiscoveryNode member;
     private final long term;
     private final long lastIndex;
 
-    public AppendRejected(StreamInput stream) throws IOException {
+    public AppendRejected(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
         lastIndex = stream.readLong();
@@ -25,7 +23,7 @@ public class AppendRejected implements Streamable {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeStreamable(member);
         stream.writeLong(term);
         stream.writeLong(lastIndex);

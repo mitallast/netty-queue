@@ -1,48 +1,36 @@
 package org.mitallast.queue.raft.protocol;
 
-import com.google.common.collect.ImmutableList;
+import javaslang.collection.Vector;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class RaftSnapshot implements Streamable {
     private final RaftSnapshotMetadata meta;
-    private final ImmutableList<Streamable> data;
+    private final Vector<Streamable> data;
 
-    public RaftSnapshot(RaftSnapshotMetadata meta, ImmutableList<Streamable> data) {
+    public RaftSnapshot(RaftSnapshotMetadata meta, Vector<Streamable> data) {
         this.meta = meta;
         this.data = data;
     }
 
-    public RaftSnapshot(StreamInput stream) throws IOException {
+    public RaftSnapshot(StreamInput stream) {
         meta = stream.readStreamable(RaftSnapshotMetadata::new);
-        int size = stream.readInt();
-        ImmutableList.Builder<Streamable> builder = ImmutableList.builder();
-        for (int i = 0; i < size; i++) {
-            Streamable streamable = stream.readStreamable();
-            builder.add(streamable);
-        }
-        data = builder.build();
+        data = stream.readVector();
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeStreamable(meta);
-        stream.writeInt(data.size());
-        for (Streamable item : data) {
-            stream.writeClass(item.getClass());
-            stream.writeStreamable(item);
-        }
+        stream.writeTypedVector(data);
     }
 
     public RaftSnapshotMetadata getMeta() {
         return meta;
     }
 
-    public ImmutableList<Streamable> getData() {
+    public Vector<Streamable> getData() {
         return data;
     }
 

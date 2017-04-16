@@ -1,15 +1,12 @@
 package org.mitallast.queue.common.stream;
 
-import com.google.common.collect.ImmutableSet;
-import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import javaslang.collection.HashSet;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-
-import java.io.IOException;
 
 public class StreamBenchmark extends BaseTest {
     private ByteBuf buffer;
@@ -23,7 +20,8 @@ public class StreamBenchmark extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        StreamService streamService = new InternalStreamService(ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
+        StreamService streamService = new InternalStreamService(HashSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123))
+            .toJavaSet());
         buffer = Unpooled.buffer();
         output = streamService.output(buffer);
         output.writeClass(TestStreamable.class);
@@ -75,11 +73,11 @@ public class StreamBenchmark extends BaseTest {
         public TestStreamable() {
         }
 
-        public TestStreamable(StreamInput stream) throws IOException {
+        public TestStreamable(StreamInput stream) {
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
 
         }
     }

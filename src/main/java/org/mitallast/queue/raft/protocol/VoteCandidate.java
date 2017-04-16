@@ -5,20 +5,24 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class VoteCandidate implements Streamable {
     private final DiscoveryNode member;
     private final long term;
 
-    public VoteCandidate(StreamInput stream) throws IOException {
+    public VoteCandidate(DiscoveryNode member, long term) {
+        this.member = member;
+        this.term = term;
+    }
+
+    public VoteCandidate(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
     }
 
-    public VoteCandidate(DiscoveryNode member, long term) {
-        this.member = member;
-        this.term = term;
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeStreamable(member);
+        stream.writeLong(term);
     }
 
     public DiscoveryNode getMember() {
@@ -27,12 +31,6 @@ public class VoteCandidate implements Streamable {
 
     public long getTerm() {
         return term;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
     }
 
     @Override

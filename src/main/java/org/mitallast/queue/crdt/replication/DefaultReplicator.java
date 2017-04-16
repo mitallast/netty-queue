@@ -1,12 +1,12 @@
 package org.mitallast.queue.crdt.replication;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.typesafe.config.Config;
 import gnu.trove.map.TObjectLongMap;
 import gnu.trove.map.hash.TObjectLongHashMap;
+import javaslang.collection.Set;
+import javaslang.collection.Vector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
@@ -23,7 +23,6 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportService;
 
-import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +50,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
         ClusterDiscovery clusterDiscovery,
         TransportService transportService,
         @Assisted Bucket bucket
-    ) throws IOException {
+    ) {
         this.raft = raft;
         this.clusterDiscovery = clusterDiscovery;
         this.transportService = transportService;
@@ -60,21 +59,18 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
         timeout = config.getDuration("crdt.timeout", TimeUnit.MILLISECONDS);
     }
 
-    private void initialize() throws IOException {
+    private void initialize() {
         RaftMetadata meta = raft.currentMeta();
-        ImmutableSet<DiscoveryNode> members = meta.membersWithout(clusterDiscovery.self());
+        Set<DiscoveryNode> members = meta.membersWithout(clusterDiscovery.self());
         for (DiscoveryNode member : members) {
             replicationTimeout.put(member, System.currentTimeMillis() + timeout);
-            AppendEntries appendEntries = new AppendEntries(bucket.index(), clusterDiscovery.self(), 0, ImmutableList.of());
-            transportService.connectToNode(member);
-            transportService.channel(member).send(appendEntries);
+            AppendEntries appendEntries = new AppendEntries(bucket.index(), clusterDiscovery.self(), 0, Vector.empty());
+            transportService.send(member, appendEntries);
         }
         scheduler.scheduleWithFixedDelay(() -> {
             lock.lock();
             try {
                 maybeSendEntries();
-            } catch (IOException e) {
-                logger.error("error send entries", e);
             } finally {
                 lock.unlock();
             }
@@ -82,7 +78,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     }
 
     @Override
-    public void append(long id, Streamable event) throws IOException {
+    public void append(long id, Streamable event) {
         lock.lock();
         try {
             bucket.log().append(id, event);
@@ -93,7 +89,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     }
 
     @Override
-    public void successful(AppendSuccessful message) throws IOException {
+    public void successful(AppendSuccessful message) {
         lock.lock();
         try {
             logger.debug("append successful {} vclock={}", message.member(), message.vclock());
@@ -108,7 +104,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     }
 
     @Override
-    public void rejected(AppendRejected message) throws IOException {
+    public void rejected(AppendRejected message) {
         lock.lock();
         try {
             logger.warn("append rejected {} vclock={}", message.member(), message.vclock());
@@ -123,35 +119,33 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
         }
     }
 
-    private void maybeSendEntries() throws IOException {
-        ImmutableSet<DiscoveryNode> members = raft.currentMeta().membersWithout(clusterDiscovery.self());
+    private void maybeSendEntries() {
+        Set<DiscoveryNode> members = raft.currentMeta().membersWithout(clusterDiscovery.self());
         for (DiscoveryNode member : members) {
             maybeSendEntries(member);
         }
     }
 
-    private void maybeSendEntries(DiscoveryNode member) throws IOException {
+    private void maybeSendEntries(DiscoveryNode member) {
         long nodeTimeout = replicationTimeout.get(member);
         if (nodeTimeout < System.currentTimeMillis()) {
             sendEntries(member);
         }
     }
 
-    private void sendEntries(DiscoveryNode member) throws IOException {
+    private void sendEntries(DiscoveryNode member) {
         long nodeVclock = vclock.get(member);
         ReplicatedLog log = bucket.log();
-        ImmutableList<LogEntry> append = log.entriesFrom(nodeVclock);
+        Vector<LogEntry> append = log.entriesFrom(nodeVclock);
         if (!append.isEmpty()) {
             logger.debug("send append {} vclock={}", member, nodeVclock);
             replicationTimeout.put(member, System.currentTimeMillis() + timeout);
-            transportService.connectToNode(member);
-            transportService.channel(member)
-                .send(new AppendEntries(bucket.index(), clusterDiscovery.self(), nodeVclock, append));
+            transportService.send(member, new AppendEntries(bucket.index(), clusterDiscovery.self(), nodeVclock, append));
         }
     }
 
     @Override
-    protected void doStart() throws IOException {
+    protected void doStart() {
         lock.lock();
         try {
             initialize();
@@ -161,12 +155,8 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     }
 
     @Override
-    protected void doStop() throws IOException {
-
-    }
+    protected void doStop() {}
 
     @Override
-    protected void doClose() throws IOException {
-
-    }
+    protected void doClose() {}
 }

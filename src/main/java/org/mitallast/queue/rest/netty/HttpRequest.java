@@ -21,7 +21,10 @@ import org.mitallast.queue.rest.ResponseBuilder;
 import org.mitallast.queue.rest.RestRequest;
 
 import javax.activation.MimetypesFileTypeMap;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -244,7 +247,7 @@ public class HttpRequest implements RestRequest {
                     try {
                         file(new File(url.toURI()));
                     } catch (URISyntaxException e) {
-                        throw new IOError(e);
+                        throw new RuntimeException(e);
                     }
                 case "jar":
                     try {
@@ -265,7 +268,7 @@ public class HttpRequest implements RestRequest {
                             file(resourcePath, contentLength, lastModified, stream);
                         }
                     } catch (IOException | URISyntaxException e) {
-                        throw new IOError(e);
+                        throw new RuntimeException(e);
                     }
                     break;
                 default:
@@ -285,7 +288,7 @@ public class HttpRequest implements RestRequest {
                             file(url.getPath(), contentLength, lastModified, stream);
                         }
                     } catch (IOException e) {
-                        throw new IOError(e);
+                        throw new RuntimeException(e);
                     }
             }
         }
@@ -332,7 +335,7 @@ public class HttpRequest implements RestRequest {
                         write.addListener(ChannelFutureListener.CLOSE);
                     }
                 } catch (IOException e) {
-                    throw new IOError(e);
+                    throw new RuntimeException(e);
                 }
             }
         }

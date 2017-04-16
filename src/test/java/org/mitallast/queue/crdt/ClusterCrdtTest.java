@@ -1,12 +1,11 @@
 package org.mitallast.queue.crdt;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
+import javaslang.collection.Vector;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseClusterTest;
-import org.mitallast.queue.common.Immutable;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -19,20 +18,18 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
 public class ClusterCrdtTest extends BaseClusterTest {
 
-    private ImmutableList<CrdtService> crdtServices;
-    private ImmutableList<DiscoveryNode> discoveryNodes;
+    private Vector<CrdtService> crdtServices;
+    private Vector<DiscoveryNode> discoveryNodes;
 
     @Override
     public void setUpNodes() throws Exception {
         super.setUpNodes();
-        crdtServices = Immutable.map(nodes, n -> n.injector().getInstance(CrdtService.class));
-        discoveryNodes = Immutable.map(nodes, n -> n.injector().getInstance(ClusterDiscovery.class).self());
+        crdtServices = nodes.map(n -> n.injector().getInstance(CrdtService.class));
+        discoveryNodes = nodes.map(n -> n.injector().getInstance(ClusterDiscovery.class).self());
     }
 
     @Override
@@ -90,7 +87,7 @@ public class ClusterCrdtTest extends BaseClusterTest {
                 if (crdtService.routingTable().bucket(id).members().size() < nodesCount) {
                     allocated = false;
                 }
-                if (!crdtService.bucket(id).registry().crdtOpt(id).isPresent()) {
+                if (crdtService.bucket(id).registry().crdtOpt(id).isEmpty()) {
                     allocated = false;
                 }
             }
@@ -120,12 +117,12 @@ public class ClusterCrdtTest extends BaseClusterTest {
             this.value = value;
         }
 
-        public TestLong(StreamInput stream) throws IOException {
+        public TestLong(StreamInput stream) {
             this.value = stream.readLong();
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(value);
         }
     }

@@ -3,8 +3,6 @@ package org.mitallast.queue.common.component;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-
 public abstract class AbstractLifecycleComponent implements LifecycleComponent {
     protected final Logger logger = LogManager.getLogger(getClass());
     private final Lifecycle lifecycle = new Lifecycle();
@@ -36,7 +34,7 @@ public abstract class AbstractLifecycleComponent implements LifecycleComponent {
     }
 
     @Override
-    public void start() throws IOException {
+    public void start() {
         if (!lifecycle.canMoveToStarted()) {
             logger.warn("Can't move to started, " + lifecycle.state());
             return;
@@ -49,10 +47,10 @@ public abstract class AbstractLifecycleComponent implements LifecycleComponent {
         logger.info("started");
     }
 
-    protected abstract void doStart() throws IOException;
+    protected abstract void doStart();
 
     @Override
-    public void stop() throws IOException {
+    public void stop() {
         if (!lifecycle.canMoveToStopped()) {
             logger.warn("Can't move to stopped, it's a " + lifecycle.state());
             return;
@@ -63,10 +61,10 @@ public abstract class AbstractLifecycleComponent implements LifecycleComponent {
         logger.debug("stopped");
     }
 
-    protected abstract void doStop() throws IOException;
+    protected abstract void doStop();
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         if (lifecycle.started()) {
             stop();
         }
@@ -80,6 +78,6 @@ public abstract class AbstractLifecycleComponent implements LifecycleComponent {
         logger.info("closed");
     }
 
-    protected abstract void doClose() throws IOException;
+    protected abstract void doClose();
 }
 

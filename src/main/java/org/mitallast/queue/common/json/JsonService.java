@@ -16,13 +16,10 @@ import com.typesafe.config.ConfigRenderOptions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
-import org.mitallast.queue.common.error.Errors;
 
-import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 public class JsonService {
 
@@ -32,7 +29,6 @@ public class JsonService {
         SimpleModule module = new SimpleModule();
         module.addSerializer(Config.class, new ConfigSerializer());
         module.addDeserializer(Config.class, new ConfigDeserializer());
-        module.addSerializer(Errors.class, new ErrorsSerializer());
         module.addSerializer(JsonStreamable.class, new JsonStreamableSerializer());
         module.addDeserializer(JsonStreamable.class, new JsonStreamableDeserializer());
 
@@ -47,7 +43,7 @@ public class JsonService {
         try (OutputStream out = new ByteBufOutputStream(buf)) {
             serialize(out, json);
         } catch (IOException e) {
-            throw new IOError(e);
+            e.printStackTrace();
         }
     }
 
@@ -55,7 +51,7 @@ public class JsonService {
         try {
             return mapper.writeValueAsString(json);
         } catch (JsonProcessingException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -63,7 +59,7 @@ public class JsonService {
         try {
             mapper.writeValue(out, json);
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -75,7 +71,7 @@ public class JsonService {
         try (InputStream input = new ByteBufInputStream(buf)) {
             return deserialize(input, type);
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -83,7 +79,7 @@ public class JsonService {
         try {
             return mapper.readValue(input, type);
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -91,7 +87,7 @@ public class JsonService {
         try {
             return mapper.readValue(data, type);
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -99,7 +95,7 @@ public class JsonService {
         try (InputStream input = new ByteBufInputStream(buf)) {
             return deserialize(input, type);
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -107,7 +103,7 @@ public class JsonService {
         try {
             return mapper.readValue(input, type);
         } catch (IOException e) {
-            throw new IOError(e);
+            throw new JsonException(e);
         }
     }
 
@@ -126,32 +122,6 @@ public class JsonService {
         public Config deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             String json = p.readValueAsTree().toString();
             return ConfigFactory.parseString(json);
-        }
-    }
-
-    private static class ErrorsSerializer extends JsonSerializer<Errors> {
-
-        @Override
-        public void serialize(Errors value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-            if (value.valid()) {
-                gen.writeNull();
-            } else {
-                gen.writeStartObject();
-                if (!value.errors().isEmpty()) {
-                    for (Map.Entry<String, String> entry : value.errors().entrySet()) {
-                        gen.writeStringField(entry.getKey(), entry.getValue());
-                    }
-                }
-                if (!value.nested().isEmpty()) {
-                    for (Map.Entry<String, Errors> entry : value.nested().entrySet()) {
-                        if (!entry.getValue().valid()) {
-                            gen.writeFieldName(entry.getKey());
-                            serialize(entry.getValue(), gen, serializers);
-                        }
-                    }
-                }
-                gen.writeEndObject();
-            }
         }
     }
 

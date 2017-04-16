@@ -2,8 +2,6 @@ package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
 
-import java.io.IOException;
-
 public class ByteBufStreamOutput extends StreamOutput {
     private final ByteBuf buffer;
 
@@ -13,52 +11,52 @@ public class ByteBufStreamOutput extends StreamOutput {
     }
 
     @Override
-    public void write(int b) throws IOException {
+    public void write(int b) {
         buffer.writeByte(b);
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException {
+    public void write(byte[] b, int off, int len) {
         buffer.writeBytes(b, off, len);
     }
 
     @Override
-    public void writeBoolean(boolean v) throws IOException {
+    public void writeBoolean(boolean v) {
         buffer.writeBoolean(v);
     }
 
     @Override
-    public void writeUnsignedShort(int v) throws IOException {
+    public void writeUnsignedShort(int v) {
         buffer.writeShort(v);
     }
 
     @Override
-    public void writeShort(short v) throws IOException {
+    public void writeShort(short v) {
         buffer.writeShort(v);
     }
 
     @Override
-    public void writeInt(int v) throws IOException {
+    public void writeInt(int v) {
         buffer.writeInt(v);
     }
 
     @Override
-    public void writeLong(long v) throws IOException {
+    public void writeLong(long v) {
         buffer.writeLong(v);
     }
 
     @Override
-    public void writeFloat(float v) throws IOException {
+    public void writeFloat(float v) {
         buffer.writeFloat(v);
     }
 
     @Override
-    public void writeDouble(double v) throws IOException {
+    public void writeDouble(double v) {
         buffer.writeDouble(v);
     }
 
     @Override
-    public void writeByteBuf(ByteBuf buffer, int length) throws IOException {
+    public void writeByteBuf(ByteBuf buffer, int length) {
         writeInt(length);
         if (length > 0) {
             buffer.readBytes(this.buffer, length);
@@ -66,8 +64,8 @@ public class ByteBufStreamOutput extends StreamOutput {
     }
 
     @Override
-    public void flush() throws IOException {}
+    public void flush() {}
 
     @Override
-    public void close() throws IOException {}
+    public void close() {}
 }

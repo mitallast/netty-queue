@@ -5,23 +5,28 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class InstallSnapshotSuccessful implements Streamable {
     private final DiscoveryNode member;
     private final long term;
     private final long lastIndex;
 
-    public InstallSnapshotSuccessful(StreamInput stream) throws IOException {
+    public InstallSnapshotSuccessful(DiscoveryNode member, long term, long lastIndex) {
+        this.member = member;
+        this.term = term;
+        this.lastIndex = lastIndex;
+    }
+
+    public InstallSnapshotSuccessful(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
         lastIndex = stream.readLong();
     }
 
-    public InstallSnapshotSuccessful(DiscoveryNode member, long term, long lastIndex) {
-        this.member = member;
-        this.term = term;
-        this.lastIndex = lastIndex;
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeStreamable(member);
+        stream.writeLong(term);
+        stream.writeLong(lastIndex);
     }
 
     public DiscoveryNode getMember() {
@@ -54,13 +59,6 @@ public class InstallSnapshotSuccessful implements Streamable {
         result = 31 * result + (int) (term ^ (term >>> 32));
         result = 31 * result + (int) (lastIndex ^ (lastIndex >>> 32));
         return result;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
-        stream.writeLong(lastIndex);
     }
 
     @Override

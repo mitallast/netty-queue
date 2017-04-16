@@ -1,30 +1,29 @@
 package org.mitallast.queue.crdt.routing.fsm;
 
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.Set;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
 
 public class UpdateMembers implements Streamable {
-    private final ImmutableSet<DiscoveryNode> members;
+    private final Set<DiscoveryNode> members;
 
-    public UpdateMembers(ImmutableSet<DiscoveryNode> members) {
+    public UpdateMembers(Set<DiscoveryNode> members) {
         this.members = members;
     }
 
-    public UpdateMembers(StreamInput stream) throws IOException {
-        members = stream.readStreamableSet(DiscoveryNode::new);
+    public UpdateMembers(StreamInput stream) {
+        members = stream.readSet(DiscoveryNode::new);
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamableSet(members);
+    public void writeTo(StreamOutput stream) {
+        stream.writeSet(members);
     }
 
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return members;
     }
 }

@@ -4,8 +4,6 @@ import com.typesafe.config.Config;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 
-import java.io.IOException;
-
 public abstract class NettyClient extends NettyClientBootstrap {
 
     protected final String host;
@@ -19,7 +17,7 @@ public abstract class NettyClient extends NettyClientBootstrap {
     }
 
     @Override
-    protected void doStart() throws IOException {
+    protected void doStart() {
         super.doStart();
         try {
             channel = connect(host, port).sync().channel();
@@ -33,7 +31,7 @@ public abstract class NettyClient extends NettyClientBootstrap {
     }
 
     @Override
-    protected void doStop() throws IOException {
+    protected void doStop() {
         channel.close().awaitUninterruptibly();
         super.doStop();
     }

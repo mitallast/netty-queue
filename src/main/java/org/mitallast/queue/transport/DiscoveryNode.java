@@ -5,13 +5,11 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 
-import java.io.IOException;
-
 public class DiscoveryNode implements Streamable {
     private final String host;
     private final int port;
 
-    public DiscoveryNode(StreamInput stream) throws IOException {
+    public DiscoveryNode(StreamInput stream) {
         host = stream.readText();
         port = stream.readInt();
     }
@@ -31,7 +29,7 @@ public class DiscoveryNode implements Streamable {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeText(host);
         stream.writeInt(port);
     }

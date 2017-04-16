@@ -7,17 +7,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.error.MaybeErrors;
 import org.mitallast.queue.common.json.JsonService;
 import org.mitallast.queue.common.path.PathTrie;
 import org.mitallast.queue.rest.netty.HttpRequest;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -66,7 +64,7 @@ public class RestController {
         }
     }
 
-    private void executeHandler(RestRequest request) throws IOException {
+    private void executeHandler(RestRequest request)  {
         final RestHandler handler = getHandler(request);
         if (handler != null) {
             handler.handleRequest(request);
@@ -195,12 +193,8 @@ public class RestController {
             return (request, t) -> request.response().json(t);
         }
 
-        public <T> BiConsumer<RestRequest, Optional<T>> optionalJson() {
+        public <T> BiConsumer<RestRequest, Option<T>> optionalJson() {
             return optional(json());
-        }
-
-        public <T> BiConsumer<RestRequest, MaybeErrors<T>> maybeJson() {
-            return maybe(json());
         }
 
         public <T> BiConsumer<RestRequest, CompletableFuture<T>> futureJson() {
@@ -215,7 +209,7 @@ public class RestController {
             return (request, file) -> request.response().file(file);
         }
 
-        public BiConsumer<RestRequest, Optional<URL>> optionalUrl() {
+        public BiConsumer<RestRequest, Option<URL>> optionalUrl() {
             return optional(url());
         }
 
@@ -223,29 +217,17 @@ public class RestController {
             return (request, file) -> request.response().file(file);
         }
 
-        public <T> BiConsumer<RestRequest, Optional<T>> optional(BiConsumer<RestRequest, T> mapper) {
+        public <T> BiConsumer<RestRequest, Option<T>> optional(BiConsumer<RestRequest, T> mapper) {
             return optional(mapper, notFound());
         }
 
-        public <T> BiConsumer<RestRequest, Optional<T>> optional(BiConsumer<RestRequest, T> mapper,
+        public <T> BiConsumer<RestRequest, Option<T>> optional(BiConsumer<RestRequest, T> mapper,
                                                                  Consumer<RestRequest> empty) {
             return (request, optional) -> {
-                if (optional.isPresent()) {
+                if (optional.isDefined()) {
                     mapper.accept(request, optional.get());
                 } else {
                     empty.accept(request);
-                }
-            };
-        }
-
-        public <T> BiConsumer<RestRequest, MaybeErrors<T>> maybe(BiConsumer<RestRequest, T> mapper) {
-            return (request, maybeErrors) -> {
-                if (maybeErrors.valid()) {
-                    mapper.accept(request, maybeErrors.value());
-                } else {
-                    request.response()
-                        .status(HttpResponseStatus.NOT_ACCEPTABLE)
-                        .json(maybeErrors.errors());
                 }
             };
         }
@@ -410,7 +392,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request) throws IOException {
+        public void handleRequest(RestRequest request)  {
             R response = handler.handleRequest();
             responseMapper.accept(request, response);
         }
@@ -432,7 +414,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request) throws IOException {
+        public void handleRequest(RestRequest request)  {
             P1 param1 = param1mapper.apply(request);
             R response = handler.handleRequest(param1);
             responseMapper.accept(request, response);
@@ -458,7 +440,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request) throws IOException {
+        public void handleRequest(RestRequest request)  {
             P1 param1 = param1mapper.apply(request);
             P2 param2 = param2mapper.apply(request);
             R response = handler.handleRequest(param1, param2);
@@ -488,7 +470,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request) throws IOException {
+        public void handleRequest(RestRequest request)  {
             P1 param1 = param1mapper.apply(request);
             P2 param2 = param2mapper.apply(request);
             P3 param3 = param3mapper.apply(request);
@@ -518,18 +500,18 @@ public class RestController {
     // function handler
 
     public interface FunctionHandler<R> {
-        R handleRequest() throws IOException;
+        R handleRequest() ;
     }
 
     public interface Function1Handler<R, P1> {
-        R handleRequest(P1 p1) throws IOException;
+        R handleRequest(P1 p1) ;
     }
 
     public interface Function2Handler<R, P1, P2> {
-        R handleRequest(P1 p1, P2 p2) throws IOException;
+        R handleRequest(P1 p1, P2 p2) ;
     }
 
     public interface Function3Handler<R, P1, P2, P3> {
-        R handleRequest(P1 p1, P2 p2, P3 p3) throws IOException;
+        R handleRequest(P1 p1, P2 p2, P3 p3) ;
     }
 }

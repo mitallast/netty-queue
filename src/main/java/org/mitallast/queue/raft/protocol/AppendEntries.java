@@ -1,12 +1,10 @@
 package org.mitallast.queue.raft.protocol;
 
-import com.google.common.collect.ImmutableList;
+import javaslang.collection.Vector;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
-
-import java.io.IOException;
 
 public class AppendEntries implements Streamable {
     private final DiscoveryNode member;
@@ -14,24 +12,34 @@ public class AppendEntries implements Streamable {
     private final long prevLogTerm;
     private final long prevLogIndex;
     private final long leaderCommit;
-    private final ImmutableList<LogEntry> entries;
+    private final Vector<LogEntry> entries;
 
-    public AppendEntries(StreamInput stream) throws IOException {
+    public AppendEntries(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
         prevLogTerm = stream.readLong();
         prevLogIndex = stream.readLong();
         leaderCommit = stream.readLong();
-        entries = stream.readStreamableList(LogEntry::new);
+        entries = stream.readVector(LogEntry::new);
     }
 
-    public AppendEntries(DiscoveryNode member, long term, long prevLogTerm, long prevLogIndex, ImmutableList<LogEntry> entries, long leaderCommit) {
+    public AppendEntries(DiscoveryNode member, long term, long prevLogTerm, long prevLogIndex, Vector<LogEntry> entries, long leaderCommit) {
         this.member = member;
         this.term = term;
         this.prevLogTerm = prevLogTerm;
         this.prevLogIndex = prevLogIndex;
         this.leaderCommit = leaderCommit;
         this.entries = entries;
+    }
+
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeStreamable(member);
+        stream.writeLong(term);
+        stream.writeLong(prevLogTerm);
+        stream.writeLong(prevLogIndex);
+        stream.writeLong(leaderCommit);
+        stream.writeVector(entries);
     }
 
     public DiscoveryNode getMember() {
@@ -54,18 +62,8 @@ public class AppendEntries implements Streamable {
         return leaderCommit;
     }
 
-    public ImmutableList<LogEntry> getEntries() {
+    public Vector<LogEntry> getEntries() {
         return entries;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
-        stream.writeLong(prevLogTerm);
-        stream.writeLong(prevLogIndex);
-        stream.writeLong(leaderCommit);
-        stream.writeStreamableList(entries);
     }
 
     @Override

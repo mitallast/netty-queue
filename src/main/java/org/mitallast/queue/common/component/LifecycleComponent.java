@@ -1,7 +1,5 @@
 package org.mitallast.queue.common.component;
 
-import java.io.IOException;
-
 public interface LifecycleComponent {
 
     Lifecycle lifecycle();
@@ -12,9 +10,9 @@ public interface LifecycleComponent {
 
     void checkIsClosed() throws IllegalStateException;
 
-    void start() throws IOException;
+    void start();
 
-    void stop() throws IOException;
+    void stop();
 
-    void close() throws IOException;
+    void close();
 }

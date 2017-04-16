@@ -1,11 +1,12 @@
 package org.mitallast.queue.common;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.netty.util.ResourceLeakDetector;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
 import org.junit.After;
 import org.junit.Before;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -14,7 +15,6 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.node.InternalNode;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
@@ -47,12 +47,8 @@ public class BaseIntegrationTest extends BaseTest {
     public void tearDownNodes() throws Exception {
         List<Future<Void>> futures = nodes.stream()
             .map(node -> submit(() -> {
-                try {
-                    node.stop();
-                    node.close();
-                } catch (IOException e) {
-                    assert false : e;
-                }
+                node.stop();
+                node.close();
             }))
             .collect(Collectors.toList());
         for (Future<Void> future : futures) {
@@ -62,15 +58,14 @@ public class BaseIntegrationTest extends BaseTest {
 
     protected Config config() throws Exception {
         int nodeId = nodeCounter.incrementAndGet();
-        ImmutableMap<String, Object> config = ImmutableMap.<String, Object>builder()
-                .put("nodes.name", "nodes" + nodeId)
-                .put("work_dir", testFolder.newFolder().getAbsolutePath())
-                .put("rest.transport.host", "127.0.0.1")
-                .put("rest.transport.port", 18000 + random.nextInt(500))
-                .put("transport.host", "127.0.0.1")
-                .put("transport.port", 20000 + random.nextInt(500))
-                .build();
-        return ConfigFactory.parseMap(config).withFallback(ConfigFactory.defaultReference());
+        return ConfigFactory.parseMap(HashMap.ofEntries(
+            Map.entry("nodes.name", "nodes" + nodeId),
+            Map.entry("work_dir", testFolder.newFolder().getAbsolutePath()),
+            Map.entry("rest.transport.host", "127.0.0.1"),
+            Map.entry("rest.transport.port", 18000 + random.nextInt(500)),
+            Map.entry("transport.host", "127.0.0.1"),
+            Map.entry("transport.port", 20000 + random.nextInt(500))
+        ).toJavaMap()).withFallback(ConfigFactory.defaultReference());
     }
 
     public class TestModule extends AbstractModule {
@@ -87,7 +82,7 @@ public class BaseIntegrationTest extends BaseTest {
 
         private final long value;
 
-        public TestStreamable(StreamInput streamInput) throws IOException {
+        public TestStreamable(StreamInput streamInput) {
             this.value = streamInput.readLong();
         }
 
@@ -96,7 +91,7 @@ public class BaseIntegrationTest extends BaseTest {
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(value);
         }
 

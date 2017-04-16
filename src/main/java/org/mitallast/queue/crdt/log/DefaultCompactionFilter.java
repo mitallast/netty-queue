@@ -1,10 +1,8 @@
 package org.mitallast.queue.crdt.log;
 
-import org.mitallast.queue.crdt.Crdt;
 import org.mitallast.queue.crdt.registry.CrdtRegistry;
 
 import javax.inject.Inject;
-import java.util.Optional;
 import java.util.function.Predicate;
 
 public class DefaultCompactionFilter implements Predicate<LogEntry> {
@@ -17,7 +15,8 @@ public class DefaultCompactionFilter implements Predicate<LogEntry> {
 
     @Override
     public boolean test(LogEntry logEntry) {
-        Optional<Crdt> crdt = crdtRegistry.crdtOpt(logEntry.id());
-        return !crdt.isPresent() || crdt.get().shouldCompact(logEntry.event());
+        return crdtRegistry.crdtOpt(logEntry.id())
+            .map(crdt -> crdt.shouldCompact(logEntry.event()))
+            .getOrElse(true);
     }
 }

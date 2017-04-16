@@ -1,10 +1,9 @@
 package org.mitallast.queue.raft;
 
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.Set;
+import javaslang.control.Option;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.transport.DiscoveryNode;
-
-import java.util.Optional;
 
 public class RaftMetadata {
     /**
@@ -15,18 +14,18 @@ public class RaftMetadata {
     /**
      * candidateId that received vote in current term (or null if none)
      */
-    private final Optional<DiscoveryNode> votedFor;
+    private final Option<DiscoveryNode> votedFor;
     private final int votesReceived;
 
     public RaftMetadata(long currentTerm, ClusterConfiguration config) {
-        this(currentTerm, config, Optional.empty());
+        this(currentTerm, config, Option.none());
     }
 
-    public RaftMetadata(long currentTerm, ClusterConfiguration config, Optional<DiscoveryNode> votedFor) {
+    public RaftMetadata(long currentTerm, ClusterConfiguration config, Option<DiscoveryNode> votedFor) {
         this(currentTerm, config, votedFor, 0);
     }
 
-    public RaftMetadata(long currentTerm, ClusterConfiguration config, Optional<DiscoveryNode> votedFor, int votesReceived) {
+    public RaftMetadata(long currentTerm, ClusterConfiguration config, Option<DiscoveryNode> votedFor, int votesReceived) {
         this.currentTerm = currentTerm;
         this.config = config;
         this.votedFor = votedFor;
@@ -41,7 +40,7 @@ public class RaftMetadata {
         return config;
     }
 
-    public Optional<DiscoveryNode> getVotedFor() {
+    public Option<DiscoveryNode> getVotedFor() {
         return votedFor;
     }
 
@@ -49,18 +48,16 @@ public class RaftMetadata {
         return votesReceived;
     }
 
-    public ImmutableSet<DiscoveryNode> membersWithout(DiscoveryNode member) {
-        return ImmutableSet.<DiscoveryNode>builder()
-            .addAll(config.members().stream().filter(node -> !node.equals(member)).iterator())
-            .build();
+    public Set<DiscoveryNode> membersWithout(DiscoveryNode member) {
+        return config.members().remove(member);
     }
 
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return config.members();
     }
 
     public boolean canVoteIn(long term) {
-        return !votedFor.isPresent() && term == currentTerm;
+        return votedFor.isEmpty() && term == currentTerm;
     }
 
     public RaftMetadata forNewElection() {
@@ -75,8 +72,8 @@ public class RaftMetadata {
         return new RaftMetadata(term, config, votedFor, votesReceived);
     }
 
-    public RaftMetadata withTerm(Optional<Long> term) {
-        if (term.filter(newTerm -> newTerm > currentTerm).isPresent()) {
+    public RaftMetadata withTerm(Option<Long> term) {
+        if (term.forAll(newTerm -> newTerm > currentTerm)) {
             return new RaftMetadata(term.get(), config, votedFor, votesReceived);
         } else {
             return this;
@@ -84,7 +81,7 @@ public class RaftMetadata {
     }
 
     public RaftMetadata withVoteFor(DiscoveryNode candidate) {
-        return new RaftMetadata(currentTerm, config, Optional.of(candidate), votesReceived);
+        return new RaftMetadata(currentTerm, config, Option.some(candidate), votesReceived);
     }
 
     public RaftMetadata withConfig(ClusterConfiguration config) {

@@ -5,14 +5,12 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class InstallSnapshot implements Streamable {
     private final DiscoveryNode leader;
     private final long term;
     private final RaftSnapshot snapshot;
 
-    public InstallSnapshot(StreamInput stream) throws IOException {
+    public InstallSnapshot(StreamInput stream) {
         leader = stream.readStreamable(DiscoveryNode::new);
         term = stream.readLong();
         snapshot = stream.readStreamable(RaftSnapshot::new);
@@ -37,7 +35,7 @@ public class InstallSnapshot implements Streamable {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeStreamable(leader);
         stream.writeLong(term);
         stream.writeStreamable(snapshot);

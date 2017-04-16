@@ -12,9 +12,6 @@ import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FileVectorClock implements VectorClock {
@@ -33,7 +30,7 @@ public class FileVectorClock implements VectorClock {
         FileService fileService,
         StreamService streamService,
         @Assisted int index
-    ) throws IOException {
+    ) {
         this.fileService = fileService;
         this.streamService = streamService;
         this.vclock = new TObjectLongHashMap<>(7, 0.5f, 0);
@@ -56,7 +53,7 @@ public class FileVectorClock implements VectorClock {
     }
 
     @Override
-    public void put(DiscoveryNode node, long nodeVclock) throws IOException {
+    public void put(DiscoveryNode node, long nodeVclock) {
         writeLock.lock();
         try {
             vclock.put(node, nodeVclock);
@@ -76,7 +73,9 @@ public class FileVectorClock implements VectorClock {
                     }
                 }
 
-                Files.move(tmp.toPath(), vclockFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                fileService.move(tmp, vclockFile);
+
+                //Files.move(tmp.toPath(), vclockFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
                 this.vclockFile = fileService.resource(serviceName, "vclock.log");
                 this.vclockOutput = streamService.output(vclockFile, true);
@@ -92,12 +91,7 @@ public class FileVectorClock implements VectorClock {
     }
 
     @Override
-    public TObjectLongMap<DiscoveryNode> getAll() {
-        return vclock;
-    }
-
-    @Override
-    public void close() throws IOException {
+    public void close() {
         writeLock.lock();
         try {
             vclockFile = null;
@@ -112,7 +106,7 @@ public class FileVectorClock implements VectorClock {
     }
 
     @Override
-    public void delete() throws IOException {
+    public void delete() {
         close();
         fileService.delete(serviceName);
     }

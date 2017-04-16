@@ -9,12 +9,10 @@ import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 
-import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
 
 public abstract class NettyServer extends AbstractLifecycleComponent {
@@ -29,7 +27,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final int rcvBuf;
     private final int threads;
     protected Channel channel;
-    private ServerBootstrap bootstrap;
+    protected ServerBootstrap bootstrap;
 
     public NettyServer(Config config) {
         this.host = config.getString("host");
@@ -48,7 +46,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doStart() throws IOException {
+    protected void doStart() {
         try {
             final Class<? extends ServerSocketChannel> channelClass;
             final EventLoopGroup boss;
@@ -68,6 +66,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
             bootstrap = new ServerBootstrap();
             bootstrap.group(boss, worker)
                 .channel(channelClass)
+                .handler(channelInitializer())
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)
                 .option(ChannelOption.SO_REUSEADDR, reuseAddress)
@@ -84,21 +83,21 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
                 .channel();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException(e);
+            throw new RuntimeException(e);
         }
     }
 
-    protected abstract ChannelInitializer<SocketChannel> channelInitializer();
+    protected abstract ChannelInitializer channelInitializer();
 
     @Override
-    protected void doStop() throws IOException {
+    protected void doStop() {
         try {
             if (channel != null) {
                 channel.close().sync();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException(e);
+            throw new RuntimeException(e);
         }
         bootstrap.config().group().shutdownGracefully();
         channel = null;
@@ -106,7 +105,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doClose() throws IOException {
+    protected void doClose() {
 
     }
 }

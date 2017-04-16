@@ -3,13 +3,13 @@ package org.mitallast.queue.common.file;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import javaslang.control.Option;
 import org.mitallast.queue.common.stream.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.Iterator;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 public class FileService {
@@ -18,24 +18,23 @@ public class FileService {
     private final File root;
 
     @Inject
-    public FileService(Config config, StreamService streamService) throws IOException {
+    public FileService(Config config, StreamService streamService) {
         this.streamService = streamService;
         File path = new File(config.getString("node.path"));
         root = new File(path, config.getString("transport.port")).getAbsoluteFile();
         if (!root.exists() && !root.mkdirs()) {
-            throw new IOException("error create directory: " + root);
+            throw new FileException("error create directory: " + root);
         }
     }
 
-    public File service(String service) throws IOException {
+    public File service(String service) {
         Path rootPath = root.toPath().normalize();
         Path servicePath = Paths.get(root.getPath(), service).normalize();
         Preconditions.checkArgument(servicePath.startsWith(rootPath), "service path");
-
         return servicePath.toFile();
     }
 
-    public File resource(String service, String key) throws IOException {
+    public File resource(String service, String key) {
         Path servicePath = service(service).toPath();
 
         Path filePath = Paths.get(servicePath.toString(), key).normalize();
@@ -45,75 +44,109 @@ public class FileService {
         if (!resource.exists()) {
             if (!resource.getParentFile().exists()) {
                 if (!resource.getParentFile().mkdirs()) {
-                    throw new IOException("Error create directory " + resource.getParentFile());
+                    throw new FileException("Error create directory " + resource.getParentFile());
                 }
             }
-            if (!resource.createNewFile()) {
-                throw new IOException("Error create file " + resource);
+            try {
+                if (!resource.createNewFile()) {
+                    throw new FileException("Error create file " + resource);
+                }
+            } catch (IOException e) {
+                throw new FileException(e);
             }
         }
         return resource;
     }
 
-    public File temporary(String service, String prefix, String suffix) throws IOException {
+    public File temporary(String service, String prefix, String suffix) {
         Path servicePath = service(service).toPath();
-
-        return Files.createTempFile(servicePath, prefix, suffix).toFile();
+        try {
+            return Files.createTempFile(servicePath, prefix, suffix).toFile();
+        } catch (IOException e) {
+            throw new FileException(e);
+        }
     }
 
-    public Stream<Path> resources(String service) throws IOException {
+    public Stream<Path> resources(String service) {
         Path servicePath = service(service).toPath();
-        return Files.walk(servicePath)
-            .filter(path -> path.toFile().isFile())
-            .map(servicePath::relativize);
+        if (!servicePath.toFile().exists()) {
+            return Stream.empty();
+        }
+        try {
+            return Files.walk(servicePath)
+                .filter(path -> path.toFile().isFile())
+                .map(servicePath::relativize);
+        } catch (IOException e) {
+            throw new FileException(e);
+        }
     }
 
-    public Stream<Path> resources(String service, String prefix) throws IOException {
+    public Stream<Path> resources(String service, String prefix) {
         PathMatcher matcher = FileSystems.getDefault().getPathMatcher(prefix);
 
         Path servicePath = service(service).toPath();
         if (!servicePath.toFile().exists()) {
             return Stream.empty();
         }
-        return Files.walk(servicePath)
-            .filter(path -> path.toFile().isFile())
-            .map(servicePath::relativize)
-            .filter(matcher::matches);
+        try {
+            return Files.walk(servicePath)
+                .filter(path -> path.toFile().isFile())
+                .map(servicePath::relativize)
+                .filter(matcher::matches);
+        } catch (IOException e) {
+            throw new FileException(e);
+        }
     }
 
-    public <T extends Streamable> Optional<T> read(String service, String key, StreamableReader<T> reader) throws IOException {
+    public <T extends Streamable> Option<T> read(String service, String key, StreamableReader<T> reader) {
         File resource = resource(service, key);
         if (resource.length() == 0) {
-            return Optional.empty();
+            return Option.none();
         } else {
             try (StreamInput input = streamService.input(resource)) {
-                return Optional.of(input.readStreamable(reader));
+                return Option.some(input.readStreamable(reader));
             }
         }
     }
 
-    public void write(String service, String key, Streamable streamable) throws IOException {
+    public void write(String service, String key, Streamable streamable) {
         File resource = resource(service, key);
         try (StreamOutput output = streamService.output(resource)) {
             output.writeStreamable(streamable);
         }
     }
 
-    public void delete(String service) throws IOException {
-        Iterator<File> iterator = Files.walk(service(service).toPath())
-            .map(Path::toFile)
-            .sorted((o1, o2) -> -o1.compareTo(o2))
-            .iterator();
+    public void delete(String service) {
+        Path servicePath = service(service).toPath();
+        if (!servicePath.toFile().exists()) {
+            return;
+        }
+        try {
+            Iterator<File> iterator = Files.walk(servicePath)
+                .map(Path::toFile)
+                .sorted((o1, o2) -> -o1.compareTo(o2))
+                .iterator();
+            while (iterator.hasNext()) {
+                File next = iterator.next();
+                delete(next);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-        while (iterator.hasNext()) {
-            File next = iterator.next();
-            delete(next);
+    }
+
+    public void delete(File file) {
+        if (file.exists() && !file.delete()) {
+            throw new FileException("Error delete file " + file);
         }
     }
 
-    public void delete(File file) throws IOException {
-        if (file.exists() && !file.delete()) {
-            throw new IOException("Error delete file " + file);
+    public void move(File tmp, File dest) {
+        try {
+            Files.move(tmp.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new FileException("Error move file " + dest);
         }
     }
 }

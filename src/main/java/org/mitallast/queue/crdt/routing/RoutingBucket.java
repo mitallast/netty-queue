@@ -1,59 +1,58 @@
 package org.mitallast.queue.crdt.routing;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import org.mitallast.queue.common.Immutable;
+import javaslang.collection.HashMap;
+import javaslang.collection.HashSet;
+import javaslang.collection.Map;
+import javaslang.collection.Set;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class RoutingBucket implements Streamable {
     private final int index;
-    private final ImmutableSet<DiscoveryNode> members;
-    private final ImmutableMap<Long, Resource> resources;
+    private final Set<DiscoveryNode> members;
+    private final Map<Long, Resource> resources;
 
     public RoutingBucket(int index) {
-        this(index, ImmutableSet.of(), ImmutableMap.of());
+        this(index, HashSet.empty(), HashMap.empty());
     }
 
-    public RoutingBucket(int index, ImmutableSet<DiscoveryNode> members, ImmutableMap<Long, Resource> resources) {
+    public RoutingBucket(int index, Set<DiscoveryNode> members, Map<Long, Resource> resources) {
         this.index = index;
         this.members = members;
         this.resources = resources;
     }
 
-    public RoutingBucket(StreamInput stream) throws IOException {
+    public RoutingBucket(StreamInput stream) {
         index = stream.readInt();
-        members = stream.readStreamableSet(DiscoveryNode::new);
-        resources = Immutable.group(stream.readStreamableList(Resource::new), Resource::id);
+        members = stream.readSet(DiscoveryNode::new);
+        resources = stream.readSeq(Resource::new).toMap(Resource::id, r -> r);
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeInt(index);
-        stream.writeStreamableSet(members);
-        stream.writeStreamableList(resources.values());
+        stream.writeSet(members);
+        stream.writeSeq(resources.values());
     }
 
     public int index() {
         return index;
     }
 
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return members;
     }
 
-    public ImmutableMap<Long, Resource> resources() {
+    public Map<Long, Resource> resources() {
         return resources;
     }
 
     public RoutingBucket withMember(DiscoveryNode node) {
         return new RoutingBucket(
             index,
-            Immutable.compose(members, node),
+            members.add(node),
             resources
         );
     }
@@ -62,7 +61,7 @@ public class RoutingBucket implements Streamable {
         return new RoutingBucket(
             index,
             members,
-            Immutable.compose(resources, resource.id(), resource)
+            resources.put(resource.id(), resource)
         );
     }
 
@@ -70,7 +69,7 @@ public class RoutingBucket implements Streamable {
         return new RoutingBucket(
             index,
             members,
-            Immutable.subtract(resources, resource)
+            resources.remove(resource)
         );
     }
 
@@ -79,13 +78,13 @@ public class RoutingBucket implements Streamable {
     }
 
     public Resource resource(long id) {
-        return resources.get(id);
+        return resources.getOrElse(id, null);
     }
 
-    public RoutingBucket filterMembers(ImmutableSet<DiscoveryNode> members) {
+    public RoutingBucket filterMembers(Set<DiscoveryNode> members) {
         return new RoutingBucket(
             index,
-            Immutable.filter(this.members, members::contains),
+            this.members.intersect(members),
             resources
         );
     }

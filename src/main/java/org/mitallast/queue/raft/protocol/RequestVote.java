@@ -5,26 +5,32 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class RequestVote implements Streamable {
     private final long term;
     private final DiscoveryNode candidate;
     private final long lastLogTerm;
     private final long lastLogIndex;
 
-    public RequestVote(StreamInput stream) throws IOException {
+    public RequestVote(long term, DiscoveryNode candidate, long lastLogTerm, long lastLogIndex) {
+        this.term = term;
+        this.candidate = candidate;
+        this.lastLogTerm = lastLogTerm;
+        this.lastLogIndex = lastLogIndex;
+    }
+
+    public RequestVote(StreamInput stream) {
         term = stream.readLong();
         candidate = stream.readStreamable(DiscoveryNode::new);
         lastLogTerm = stream.readLong();
         lastLogIndex = stream.readLong();
     }
 
-    public RequestVote(long term, DiscoveryNode candidate, long lastLogTerm, long lastLogIndex) {
-        this.term = term;
-        this.candidate = candidate;
-        this.lastLogTerm = lastLogTerm;
-        this.lastLogIndex = lastLogIndex;
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeLong(term);
+        stream.writeStreamable(candidate);
+        stream.writeLong(lastLogTerm);
+        stream.writeLong(lastLogIndex);
     }
 
     public long getTerm() {
@@ -41,14 +47,6 @@ public class RequestVote implements Streamable {
 
     public long getLastLogIndex() {
         return lastLogIndex;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeLong(term);
-        stream.writeStreamable(candidate);
-        stream.writeLong(lastLogTerm);
-        stream.writeLong(lastLogIndex);
     }
 
     @Override

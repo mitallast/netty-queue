@@ -1,13 +1,12 @@
 package org.mitallast.queue.common.stream;
 
 import io.netty.buffer.ByteBuf;
+import javaslang.collection.Seq;
+import javaslang.collection.Set;
+import javaslang.collection.Vector;
+import javaslang.control.Option;
 
-import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UTFDataFormatException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
 
 public abstract class StreamOutput extends OutputStream {
     private final StreamableClassRegistry classRegistry;
@@ -18,25 +17,33 @@ public abstract class StreamOutput extends OutputStream {
     }
 
     @Override
-    public abstract void write(int b) throws IOException;
+    public abstract void write(int b);
 
-    public void writeBoolean(boolean v) throws IOException {
+    @Override
+    public void write(byte[] b) {
+        write(b, 0, b.length);
+    }
+
+    @Override
+    public abstract void write(byte[] b, int off, int len);
+
+    public void writeBoolean(boolean v) {
         write(v ? 1 : 0);
     }
 
-    public void writeUnsignedShort(int v) throws IOException {
+    public void writeUnsignedShort(int v) {
         buffer[0] = (byte) (v >>> 8);
         buffer[1] = (byte) (v);
         write(buffer, 0, 2);
     }
 
-    public void writeShort(short v) throws IOException {
+    public void writeShort(short v) {
         buffer[0] = (byte) (v >>> 8);
         buffer[1] = (byte) (v);
         write(buffer, 0, 2);
     }
 
-    public void writeInt(int v) throws IOException {
+    public void writeInt(int v) {
         buffer[0] = (byte) (v >>> 24);
         buffer[1] = (byte) (v >>> 16);
         buffer[2] = (byte) (v >>> 8);
@@ -44,7 +51,7 @@ public abstract class StreamOutput extends OutputStream {
         write(buffer, 0, 4);
     }
 
-    public void writeLong(long v) throws IOException {
+    public void writeLong(long v) {
         buffer[0] = (byte) (v >>> 56);
         buffer[1] = (byte) (v >>> 48);
         buffer[2] = (byte) (v >>> 40);
@@ -56,15 +63,15 @@ public abstract class StreamOutput extends OutputStream {
         write(buffer, 0, 8);
     }
 
-    public void writeFloat(float v) throws IOException {
+    public void writeFloat(float v) {
         writeInt(Float.floatToRawIntBits(v));
     }
 
-    public void writeDouble(double v) throws IOException {
+    public void writeDouble(double v) {
         writeLong(Double.doubleToRawLongBits(v));
     }
 
-    public final void writeText(String str) throws IOException {
+    public final void writeText(String str) {
         int strlen = str.length();
         int utflen = 0;
         int c, count = 0;
@@ -82,7 +89,7 @@ public abstract class StreamOutput extends OutputStream {
         }
 
         if (utflen > 65535) {
-            throw new UTFDataFormatException("encoded string too long: " + utflen + " bytes");
+            throw new StreamException("encoded string too long: " + utflen + " bytes");
         }
 
         if (buffer == null || buffer.length < utflen + 2) {
@@ -116,50 +123,59 @@ public abstract class StreamOutput extends OutputStream {
         write(buffer, 0, utflen + 2);
     }
 
-    public final <Type extends Enum<Type>> void writeEnum(Type type) throws IOException {
+    public final <Type extends Enum<Type>> void writeEnum(Type type) {
         writeUnsignedShort((short) type.ordinal());
     }
 
-    public final void writeByteBuf(ByteBuf buffer) throws IOException {
+    public final void writeByteBuf(ByteBuf buffer) {
         writeByteBuf(buffer, buffer.readableBytes());
     }
 
-    public abstract void writeByteBuf(ByteBuf buffer, int length) throws IOException;
+    public abstract void writeByteBuf(ByteBuf buffer, int length);
 
-    public final <T extends Streamable> void writeClass(Class<T> streamableClass) throws IOException {
+    public final <T extends Streamable> void writeClass(Class<T> streamableClass) {
         classRegistry.writeClass(this, streamableClass);
     }
 
-    public final <T extends Streamable> void writeStreamable(T streamable) throws IOException {
+    public final <T extends Streamable> void writeStreamable(T streamable) {
         streamable.writeTo(this);
     }
 
-    public final <T extends Streamable> void writeStreamableOrNull(T streamable) throws IOException {
-        if (streamable != null) {
+    public final <T extends Streamable> void writeTypedVector(Vector<T> list) {
+        writeInt(list.size());
+        list.forEach(entry -> {
+            writeClass(entry.getClass());
+            writeStreamable(entry);
+        });
+    }
+
+    public final <T extends Streamable> void writeVector(Vector<T> list) {
+        writeInt(list.size());
+        list.forEach(this::writeStreamable);
+    }
+
+    public final <T extends Streamable> void writeSet(Set<T> set) {
+        writeInt(set.size());
+        set.forEach(this::writeStreamable);
+    }
+
+    public final <T extends Streamable> void writeSeq(Seq<T> seq) {
+        writeInt(seq.size());
+        seq.forEach(this::writeStreamable);
+    }
+
+    public final <T extends Streamable> void writeOpt(Option<T> option) {
+        if (option.isDefined()) {
             writeBoolean(true);
-            streamable.writeTo(this);
+            writeStreamable(option.get());
         } else {
             writeBoolean(false);
         }
     }
 
-    public final <T extends Streamable> void writeStreamableList(Collection<T> streamable) throws IOException {
-        int size = streamable.size();
-        writeInt(size);
-        if (size > 0) {
-            for (T t : streamable) {
-                t.writeTo(this);
-            }
-        }
-    }
+    @Override
+    public abstract void flush();
 
-    public final <T extends Streamable> void writeStreamableSet(Set<T> streamable) throws IOException {
-        int size = streamable.size();
-        writeInt(size);
-        if (size > 0) {
-            for (T t : streamable) {
-                t.writeTo(this);
-            }
-        }
-    }
+    @Override
+    public abstract void close();
 }

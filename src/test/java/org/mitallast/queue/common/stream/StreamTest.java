@@ -1,9 +1,8 @@
 package org.mitallast.queue.common.stream;
 
-import com.google.common.collect.ImmutableSet;
-import com.typesafe.config.ConfigFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import javaslang.collection.HashSet;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -11,8 +10,6 @@ import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.json.JsonStreamable;
 import org.mitallast.queue.transport.DiscoveryNode;
-
-import java.io.IOException;
 
 public class StreamTest extends BaseTest {
 
@@ -23,9 +20,9 @@ public class StreamTest extends BaseTest {
 
     @Before
     public void setUp() throws Exception {
-        streamService = new InternalStreamService(ImmutableSet.of(
+        streamService = new InternalStreamService(HashSet.of(
             StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 1)
-        ));
+        ).toJavaSet());
         buffer = Unpooled.buffer();
     }
 
@@ -97,11 +94,11 @@ public class StreamTest extends BaseTest {
         public TestStreamable() {
         }
 
-        public TestStreamable(StreamInput streamInput) throws IOException {
+        public TestStreamable(StreamInput streamInput) {
         }
 
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
 
         }
     }

@@ -5,12 +5,10 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class AddServer implements Streamable {
     private final DiscoveryNode member;
 
-    public AddServer(StreamInput stream) throws IOException {
+    public AddServer(StreamInput stream) {
         member = stream.readStreamable(DiscoveryNode::new);
     }
 
@@ -22,7 +20,7 @@ public class AddServer implements Streamable {
         return member;
     }
 
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeStreamable(member);
     }
 

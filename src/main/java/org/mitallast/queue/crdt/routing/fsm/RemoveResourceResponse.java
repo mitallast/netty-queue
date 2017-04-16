@@ -5,8 +5,6 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.routing.ResourceType;
 
-import java.io.IOException;
-
 public class RemoveResourceResponse implements Streamable {
     private final ResourceType type;
     private final long id;
@@ -18,14 +16,14 @@ public class RemoveResourceResponse implements Streamable {
         this.removed = removed;
     }
 
-    public RemoveResourceResponse(StreamInput stream) throws IOException {
+    public RemoveResourceResponse(StreamInput stream) {
         type = stream.readEnum(ResourceType.class);
         id = stream.readLong();
         removed = stream.readBoolean();
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeEnum(type);
         stream.writeLong(id);
         stream.writeBoolean(removed);

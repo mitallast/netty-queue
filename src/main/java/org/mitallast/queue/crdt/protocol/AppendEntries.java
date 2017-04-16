@@ -1,40 +1,38 @@
 package org.mitallast.queue.crdt.protocol;
 
-import com.google.common.collect.ImmutableList;
+import javaslang.collection.Vector;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.log.LogEntry;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class AppendEntries implements Streamable {
     private final int bucket;
     private final DiscoveryNode member;
     private final long prevVclock;
-    private final ImmutableList<LogEntry> entries;
+    private final Vector<LogEntry> entries;
 
-    public AppendEntries(int bucket, DiscoveryNode member, long prevVclock, ImmutableList<LogEntry> entries) {
+    public AppendEntries(int bucket, DiscoveryNode member, long prevVclock, Vector<LogEntry> entries) {
         this.bucket = bucket;
         this.member = member;
         this.prevVclock = prevVclock;
         this.entries = entries;
     }
 
-    public AppendEntries(StreamInput stream) throws IOException {
+    public AppendEntries(StreamInput stream) {
         this.bucket = stream.readInt();
         this.member = stream.readStreamable(DiscoveryNode::new);
         this.prevVclock = stream.readLong();
-        this.entries = stream.readStreamableList(LogEntry::new);
+        this.entries = stream.readVector(LogEntry::new);
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
         stream.writeStreamable(member);
         stream.writeLong(prevVclock);
-        stream.writeStreamableList(entries);
+        stream.writeVector(entries);
     }
 
     public int bucket() {
@@ -49,7 +47,7 @@ public class AppendEntries implements Streamable {
         return prevVclock;
     }
 
-    public ImmutableList<LogEntry> entries() {
+    public Vector<LogEntry> entries() {
         return entries;
     }
 }

@@ -1,12 +1,14 @@
 package org.mitallast.queue.common.stream;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
+import javaslang.collection.HashSet;
+import javaslang.collection.Seq;
+import javaslang.collection.Set;
+import javaslang.collection.Vector;
+import javaslang.control.Option;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public abstract class StreamInput implements Closeable {
     private final StreamableClassRegistry classRegistry;
@@ -16,36 +18,36 @@ public abstract class StreamInput implements Closeable {
         this.classRegistry = classRegistry;
     }
 
-    public abstract int available() throws IOException;
+    public abstract int available();
 
-    public abstract int read() throws IOException;
+    public abstract int read();
 
-    public final void read(byte[] b) throws IOException {
+    public final void read(byte[] b) {
         read(b, 0, b.length);
     }
 
-    public abstract void read(byte[] b, int off, int len) throws IOException;
+    public abstract void read(byte[] b, int off, int len);
 
-    public abstract void skipBytes(int n) throws IOException;
+    public abstract void skipBytes(int n);
 
-    public boolean readBoolean() throws IOException {
+    public boolean readBoolean() {
         return read() == 1;
     }
 
-    public byte readByte() throws IOException {
+    public byte readByte() {
         return (byte) read();
     }
 
-    public short readShort() throws IOException {
+    public short readShort() {
         return (short) readUnsignedShort();
     }
 
-    public int readUnsignedShort() throws IOException {
+    public int readUnsignedShort() {
         read(buffer, 0, 2);
         return ((int) buffer[0] & 0xff) << 8 | (int) buffer[1] & 0xff;
     }
 
-    public int readInt() throws IOException {
+    public int readInt() {
         read(buffer, 0, 4);
         return ((int) buffer[0] & 0xff) << 24 |
             ((int) buffer[1] & 0xff) << 16 |
@@ -53,7 +55,7 @@ public abstract class StreamInput implements Closeable {
             (int) buffer[3] & 0xff;
     }
 
-    public long readLong() throws IOException {
+    public long readLong() {
         read(buffer, 0, 8);
         return ((long) buffer[0] & 0xff) << 56 |
             ((long) buffer[1] & 0xff) << 48 |
@@ -65,73 +67,66 @@ public abstract class StreamInput implements Closeable {
             (long) buffer[7] & 0xff;
     }
 
-    public float readFloat() throws IOException {
+    public float readFloat() {
         return Float.intBitsToFloat(readInt());
     }
 
-    public double readDouble() throws IOException {
+    public double readDouble() {
         return Double.longBitsToDouble(readLong());
     }
 
-    public final String readText() throws IOException {
+    public final String readText() {
         int bytes = readUnsignedShort();
         if (buffer == null || buffer.length < bytes) {
             buffer = new byte[bytes];
         }
         read(buffer, 0, bytes);
-        return new String(buffer, 0, bytes, CharsetUtil.UTF_8);
+        return new String(buffer, 0, bytes, CharsetUtil.UTF_8).intern();
     }
 
-    public final <Type extends Enum<Type>> Type readEnum(Class<Type> enumClass) throws IOException {
+    public final <Type extends Enum<Type>> Type readEnum(Class<Type> enumClass) {
         int ord = readUnsignedShort();
         return enumClass.getEnumConstants()[ord];
     }
 
-    public abstract ByteBuf readByteBuf() throws IOException;
+    public abstract ByteBuf readByteBuf();
 
-    public final <T extends Streamable> T readStreamable() throws IOException {
+    public final <T extends Streamable> T readStreamable() {
         return classRegistry.readStreamable(this);
     }
 
-    public final <T extends Streamable> T readStreamable(StreamableReader<T> reader) throws IOException {
+    public final <T extends Streamable> T readStreamable(StreamableReader<T> reader) {
         return reader.read(this);
     }
 
-    public final <T extends Streamable> T readStreamableOrNull(StreamableReader<T> reader) throws IOException {
+    public final Vector<Streamable> readVector() {
+        int size = readInt();
+        return Vector.fill(size, this::readStreamable);
+    }
+
+    public final <T extends Streamable> Vector<T> readVector(StreamableReader<T> reader) {
+        int size = readInt();
+        return Vector.fill(size, () -> readStreamable(reader));
+    }
+
+    public final <T extends Streamable> Set<T> readSet(StreamableReader<T> reader) {
+        int size = readInt();
+        return HashSet.fill(size, () -> readStreamable(reader));
+    }
+
+    public final <T extends Streamable> Seq<T> readSeq(StreamableReader<T> reader) {
+        int size = readInt();
+        return Vector.fill(size, () -> readStreamable(reader));
+    }
+
+    public final <T extends Streamable> Option<T> readOpt(StreamableReader<T> reader) {
         if (readBoolean()) {
-            return reader.read(this);
+            return Option.some(readStreamable(reader));
         } else {
-            return null;
+            return Option.none();
         }
     }
 
-    public final <T extends Streamable> ImmutableList<T> readStreamableList(StreamableReader<T> reader) throws IOException {
-        int size = readInt();
-        if (size == 0) {
-            return ImmutableList.of();
-        } else if (size == 1) {
-            return ImmutableList.of(reader.read(this));
-        } else {
-            ImmutableList.Builder<T> builder = ImmutableList.builder();
-            for (int i = 0; i < size; i++) {
-                builder.add(reader.read(this));
-            }
-            return builder.build();
-        }
-    }
-
-    public final <T extends Streamable> ImmutableSet<T> readStreamableSet(StreamableReader<T> reader) throws IOException {
-        int size = readInt();
-        if (size == 0) {
-            return ImmutableSet.of();
-        } else if (size == 1) {
-            return ImmutableSet.of(reader.read(this));
-        } else {
-            ImmutableSet.Builder<T> builder = ImmutableSet.builder();
-            for (int i = 0; i < size; i++) {
-                builder.add(reader.read(this));
-            }
-            return builder.build();
-        }
-    }
+    @Override
+    public abstract void close();
 }

@@ -14,7 +14,6 @@ import org.mitallast.queue.crdt.vclock.VectorClock;
 import org.mitallast.queue.crdt.vclock.VectorClockFactory;
 
 import javax.inject.Inject;
-import java.io.IOException;
 
 public class DefaultBucket implements Bucket {
     private final Logger logger;
@@ -31,7 +30,7 @@ public class DefaultBucket implements Bucket {
         ReplicatedLogFactory logFactory,
         VectorClockFactory vclockFactory,
         ReplicatorFactory replicatorFactory
-    ) throws IOException {
+    ) {
         this.index = index;
         logger = LogManager.getLogger("replicator[" + index + "]");
         vclock = vclockFactory.create(index);
@@ -68,7 +67,7 @@ public class DefaultBucket implements Bucket {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         logger.info("close");
         replicator.stop();
         log.close();
@@ -76,7 +75,7 @@ public class DefaultBucket implements Bucket {
     }
 
     @Override
-    public void delete() throws IOException {
+    public void delete() {
         logger.info("delete");
         log.delete();
         vclock.delete();

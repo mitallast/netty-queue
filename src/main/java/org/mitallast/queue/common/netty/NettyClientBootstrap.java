@@ -14,7 +14,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
@@ -47,7 +46,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doStart() throws IOException {
+    protected void doStart() {
         final Class<? extends SocketChannel> channelClass;
         final EventLoopGroup group;
         if (Epoll.isAvailable()) {
@@ -86,11 +85,11 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     }
 
     @Override
-    protected void doStop() throws IOException {
+    protected void doStop() {
     }
 
     @Override
-    protected void doClose() throws IOException {
+    protected void doClose() {
 
     }
 }

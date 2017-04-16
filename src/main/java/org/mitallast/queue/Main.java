@@ -5,8 +5,6 @@ import com.typesafe.config.ConfigFactory;
 import org.mitallast.queue.node.InternalNode;
 import org.mitallast.queue.node.Node;
 
-import java.io.IOException;
-
 public class Main {
     public static final Object mutex = new Object();
 
@@ -19,14 +17,10 @@ public class Main {
             mutex.wait();
         }
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                synchronized (mutex) {
-                    mutex.notify();
-                }
-                node.close();
-            } catch (IOException e) {
-                e.printStackTrace(System.err);
+            synchronized (mutex) {
+                mutex.notify();
             }
+            node.close();
         }));
     }
 }

@@ -1,29 +1,28 @@
 package org.mitallast.queue.raft.cluster;
 
-import com.google.common.collect.ImmutableSet;
+import javaslang.collection.HashSet;
+import javaslang.collection.Set;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class StableClusterConfiguration implements ClusterConfiguration {
-    private final ImmutableSet<DiscoveryNode> members;
+    private final Set<DiscoveryNode> members;
 
-    public StableClusterConfiguration(StreamInput stream) throws IOException {
-        members = stream.readStreamableSet(DiscoveryNode::new);
+    public StableClusterConfiguration(StreamInput stream) {
+        members = stream.readSet(DiscoveryNode::new);
     }
 
     public StableClusterConfiguration(DiscoveryNode... members) {
-        this(ImmutableSet.copyOf(members));
+        this(HashSet.of(members));
     }
 
-    public StableClusterConfiguration(ImmutableSet<DiscoveryNode> members) {
+    public StableClusterConfiguration(Set<DiscoveryNode> members) {
         this.members = members;
     }
 
     @Override
-    public ImmutableSet<DiscoveryNode> members() {
+    public Set<DiscoveryNode> members() {
         return members;
     }
 
@@ -47,18 +46,9 @@ public class StableClusterConfiguration implements ClusterConfiguration {
         return members.contains(member);
     }
 
-    public StableClusterConfiguration withMember(DiscoveryNode member) {
-        ImmutableSet<DiscoveryNode> newMembers = ImmutableSet.<DiscoveryNode>builder()
-            .addAll(members)
-            .add(member)
-            .build();
-
-        return new StableClusterConfiguration(newMembers);
-    }
-
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeStreamableSet(members);
+    public void writeTo(StreamOutput stream) {
+        stream.writeSet(members);
     }
 
     @Override

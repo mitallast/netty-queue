@@ -5,23 +5,29 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 
-import java.io.IOException;
-
 public class RaftSnapshotMetadata implements Streamable {
     private final long lastIncludedTerm;
     private final long lastIncludedIndex;
     private final ClusterConfiguration config;
 
-    public RaftSnapshotMetadata(StreamInput stream) throws IOException {
+    public RaftSnapshotMetadata(long lastIncludedTerm, long lastIncludedIndex, ClusterConfiguration config) {
+        this.lastIncludedTerm = lastIncludedTerm;
+        this.lastIncludedIndex = lastIncludedIndex;
+        this.config = config;
+    }
+
+    public RaftSnapshotMetadata(StreamInput stream) {
         lastIncludedTerm = stream.readLong();
         lastIncludedIndex = stream.readLong();
         config = stream.readStreamable();
     }
 
-    public RaftSnapshotMetadata(long lastIncludedTerm, long lastIncludedIndex, ClusterConfiguration config) {
-        this.lastIncludedTerm = lastIncludedTerm;
-        this.lastIncludedIndex = lastIncludedIndex;
-        this.config = config;
+    @Override
+    public void writeTo(StreamOutput stream) {
+        stream.writeLong(lastIncludedTerm);
+        stream.writeLong(lastIncludedIndex);
+        stream.writeClass(config.getClass());
+        stream.writeStreamable(config);
     }
 
     public long getLastIncludedTerm() {
@@ -34,14 +40,6 @@ public class RaftSnapshotMetadata implements Streamable {
 
     public ClusterConfiguration getConfig() {
         return config;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) throws IOException {
-        stream.writeLong(lastIncludedTerm);
-        stream.writeLong(lastIncludedIndex);
-        stream.writeClass(config.getClass());
-        stream.writeStreamable(config);
     }
 
     @Override
@@ -67,9 +65,9 @@ public class RaftSnapshotMetadata implements Streamable {
     @Override
     public String toString() {
         return "RaftSnapshotMetadata{" +
-                "lastIncludedTerm=" + lastIncludedTerm +
-                ", lastIncludedIndex=" + lastIncludedIndex +
-                ", config=" + config +
-                '}';
+            "lastIncludedTerm=" + lastIncludedTerm +
+            ", lastIncludedIndex=" + lastIncludedIndex +
+            ", config=" + config +
+            '}';
     }
 }

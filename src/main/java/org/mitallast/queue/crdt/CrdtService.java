@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt;
 
-import com.google.common.collect.ImmutableCollection;
+import javaslang.collection.Seq;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 
@@ -14,5 +14,5 @@ public interface CrdtService {
 
     Bucket bucket(long resourceId);
 
-    ImmutableCollection<Bucket> buckets();
+    Seq<Bucket> buckets();
 }

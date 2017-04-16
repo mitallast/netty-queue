@@ -5,8 +5,6 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-import java.io.IOException;
-
 public class AppendRejected implements Streamable {
     private final int bucket;
     private final DiscoveryNode member;
@@ -18,14 +16,14 @@ public class AppendRejected implements Streamable {
         this.vclock = vclock;
     }
 
-    public AppendRejected(StreamInput stream) throws IOException {
+    public AppendRejected(StreamInput stream) {
         bucket = stream.readInt();
         member = stream.readStreamable(DiscoveryNode::new);
         vclock = stream.readLong();
     }
 
     @Override
-    public void writeTo(StreamOutput stream) throws IOException {
+    public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
         stream.writeStreamable(member);
         stream.writeLong(vclock);

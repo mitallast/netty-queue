@@ -6,7 +6,6 @@ import org.mitallast.queue.crdt.replication.Replicator;
 import org.mitallast.queue.crdt.vclock.VectorClock;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 public interface Bucket extends Closeable {
 
@@ -20,5 +19,8 @@ public interface Bucket extends Closeable {
 
     VectorClock vclock();
 
-    void delete() throws IOException;
+    void delete();
+
+    @Override
+    void close();
 }

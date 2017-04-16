@@ -1,22 +1,22 @@
 package org.mitallast.queue.transport.netty;
 
-import com.google.common.collect.ImmutableSet;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import javaslang.collection.HashSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.stream.*;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
 public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessage() throws Exception {
-        StreamService streamService = new InternalStreamService(
-            ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
+        StreamService streamService = new InternalStreamService(HashSet.of(
+            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)
+        ).toJavaSet());
         StreamableEncoder encoder = new StreamableEncoder(streamService);
         StreamableDecoder decoder = new StreamableDecoder(streamService);
 
@@ -33,8 +33,9 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessageEncodeBenchmark() throws Exception {
-        StreamService streamService = new InternalStreamService(
-            ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
+        StreamService streamService = new InternalStreamService(HashSet.of(
+            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)
+        ).toJavaSet());
         StreamableEncoder encoder = new StreamableEncoder(streamService);
 
         ByteBuf buffer = Unpooled.directBuffer(1024);
@@ -54,8 +55,9 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessageDecodeBenchmark() throws Exception {
-        StreamService streamService = new InternalStreamService(
-            ImmutableSet.of(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)));
+        StreamService streamService = new InternalStreamService(HashSet.of(
+            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)
+        ).toJavaSet());
         StreamableEncoder encoder = new StreamableEncoder(streamService);
         StreamableDecoder decoder = new StreamableDecoder(streamService);
 
@@ -79,16 +81,16 @@ public class TransportFrameTest extends BaseTest {
 
         private final long value;
 
-        public TestStreamable(StreamInput streamInput) throws IOException {
-            this.value = streamInput.readLong();
-        }
-
         public TestStreamable(long value) {
             this.value = value;
         }
 
+        public TestStreamable(StreamInput streamInput) {
+            this.value = streamInput.readLong();
+        }
+
         @Override
-        public void writeTo(StreamOutput stream) throws IOException {
+        public void writeTo(StreamOutput stream) {
             stream.writeLong(value);
         }
     }

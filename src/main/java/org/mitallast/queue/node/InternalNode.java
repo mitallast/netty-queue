@@ -20,8 +20,6 @@ import org.mitallast.queue.raft.rest.RaftRestModule;
 import org.mitallast.queue.rest.RestModule;
 import org.mitallast.queue.transport.TransportModule;
 
-import java.io.IOException;
-
 public class InternalNode extends AbstractLifecycleComponent implements Node {
 
     private final Config config;
@@ -72,17 +70,17 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
     }
 
     @Override
-    protected void doStart() throws IOException {
+    protected void doStart() {
         injector.getInstance(LifecycleService.class).start();
     }
 
     @Override
-    protected void doStop() throws IOException {
+    protected void doStop() {
         injector.getInstance(LifecycleService.class).stop();
     }
 
     @Override
-    protected void doClose() throws IOException {
+    protected void doClose() {
         injector.getInstance(LifecycleService.class).close();
     }
 }

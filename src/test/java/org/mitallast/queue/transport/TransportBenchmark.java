@@ -1,8 +1,9 @@
 package org.mitallast.queue.transport;
 
-import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
@@ -22,12 +23,12 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Override
     protected Config config() throws Exception {
-        ImmutableMap<String, Object> config = ImmutableMap.<String, Object>builder()
-            .put("rest.enabled", false)
-            .put("raft.enabled", false)
-            .put("blob.enabled", false)
-            .build();
-        return ConfigFactory.parseMap(config).withFallback(super.config());
+        Map<String, Object> config = HashMap.of(
+            "rest.enabled", false,
+            "raft.enabled", false,
+            "blob.enabled", false
+        );
+        return ConfigFactory.parseMap(config.toJavaMap()).withFallback(super.config());
     }
 
     @Before
@@ -52,7 +53,7 @@ public class TransportBenchmark extends BaseQueueTest {
         countDownLatch = new CountDownLatch(total());
         long start = System.currentTimeMillis();
         for (int i = 0; i < total(); i++) {
-            transportService.channel(member).send(new TestStreamable(i));
+            transportService.send(member, new TestStreamable(i));
         }
         countDownLatch.await();
         long end = System.currentTimeMillis();
@@ -67,7 +68,7 @@ public class TransportBenchmark extends BaseQueueTest {
         long start = System.currentTimeMillis();
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < total(); i += concurrency) {
-                transportService.channel(member).send(new TestStreamable(i));
+                transportService.send(member, new TestStreamable(i));
             }
         });
         countDownLatch.await();
@@ -79,7 +80,7 @@ public class TransportBenchmark extends BaseQueueTest {
         int warmUp = total() * 4;
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
-            transportService.channel(member).send(new TestStreamable(i));
+            transportService.send(member, new TestStreamable(i));
         }
         countDownLatch.await();
         System.gc();

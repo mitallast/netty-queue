@@ -1,9 +1,10 @@
 package org.mitallast.queue.rest.action;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.handler.codec.http.HttpMethod;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
 import org.mitallast.queue.rest.RestController;
 
 public class SettingsAction {
@@ -19,8 +20,8 @@ public class SettingsAction {
             .handle(HttpMethod.GET, "_settings");
     }
 
-    public ImmutableMap<String, Boolean> settings() {
-        return ImmutableMap.of(
+    public Map<String, Boolean> settings() {
+        return HashMap.of(
             "raft", config.getBoolean("raft.enabled"),
             "crdt", config.getBoolean("crdt.enabled")
         );

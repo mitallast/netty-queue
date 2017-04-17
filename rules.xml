@@ -36,11 +36,6 @@
                 <ignoreVersion type="regex">.*rc.</ignoreVersion>
             </ignoreVersions>
         </rule>
-        <rule groupId="com.google.guava">
-            <ignoreVersions>
-                <ignoreVersion type="regex">.*rc.</ignoreVersion>
-            </ignoreVersions>
-        </rule>
         <rule groupId="org.webjars">
             <ignoreVersions>
                 <ignoreVersion type="regex">.*alpha.</ignoreVersion>

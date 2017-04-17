@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -16,6 +15,7 @@ import com.typesafe.config.ConfigRenderOptions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
+import javaslang.jackson.datatype.JavaslangModule;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +35,7 @@ public class JsonService {
         mapper = new ObjectMapper();
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         mapper.registerModule(module);
-        mapper.registerModule(new GuavaModule());
+        mapper.registerModule(new JavaslangModule());
         mapper.registerModule(new JodaModule());
     }
 

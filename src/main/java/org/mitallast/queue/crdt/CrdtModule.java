@@ -23,6 +23,8 @@ import org.mitallast.queue.crdt.replication.Replicator;
 import org.mitallast.queue.crdt.replication.ReplicatorFactory;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingTable;
+import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
+import org.mitallast.queue.crdt.routing.allocation.DefaultAllocationStrategy;
 import org.mitallast.queue.crdt.routing.fsm.*;
 import org.mitallast.queue.crdt.vclock.FileVectorClock;
 import org.mitallast.queue.crdt.vclock.VectorClock;
@@ -39,6 +41,12 @@ public class CrdtModule extends AbstractModule {
         // routing
 
         bind(RoutingTableFSM.class).asEagerSingleton();
+
+        // allocation
+
+        bind(DefaultAllocationStrategy.class).asEagerSingleton();
+        bind(AllocationStrategy.class).to(DefaultAllocationStrategy.class);
+
 
         // bucket
 
@@ -85,6 +93,8 @@ public class CrdtModule extends AbstractModule {
         binder.addBinding().toInstance(of(RemoveResource.class, RemoveResource::new, 1202));
         binder.addBinding().toInstance(of(RemoveResourceResponse.class, RemoveResourceResponse::new, 1203));
         binder.addBinding().toInstance(of(UpdateMembers.class, UpdateMembers::new, 1204));
-        binder.addBinding().toInstance(of(Allocate.class, Allocate::new, 1205));
+        binder.addBinding().toInstance(of(AddBucketMember.class, AddBucketMember::new, 1205));
+        binder.addBinding().toInstance(of(CloseBucketMember.class, CloseBucketMember::new, 1206));
+        binder.addBinding().toInstance(of(RemoveBucketMember.class, RemoveBucketMember::new, 1207));
     }
 }

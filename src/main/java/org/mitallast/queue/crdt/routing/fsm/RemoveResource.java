@@ -32,4 +32,30 @@ public class RemoveResource implements Streamable {
     public long id() {
         return id;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RemoveResource that = (RemoveResource) o;
+
+        if (id != that.id) return false;
+        return type == that.type;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type.hashCode();
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RemoveResource{" +
+            "type=" + type +
+            ", id=" + id +
+            '}';
+    }
 }

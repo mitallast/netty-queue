@@ -40,4 +40,33 @@ public class RemoveResourceResponse implements Streamable {
     public boolean isRemoved() {
         return removed;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        RemoveResourceResponse that = (RemoveResourceResponse) o;
+
+        if (id != that.id) return false;
+        if (removed != that.removed) return false;
+        return type == that.type;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type.hashCode();
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        result = 31 * result + (removed ? 1 : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "RemoveResourceResponse{" +
+            "type=" + type +
+            ", id=" + id +
+            ", removed=" + removed +
+            '}';
+    }
 }

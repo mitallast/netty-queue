@@ -32,4 +32,30 @@ public class AddResource implements Streamable {
     public ResourceType type() {
         return type;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AddResource that = (AddResource) o;
+
+        if (id != that.id) return false;
+        return type == that.type;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (id ^ (id >>> 32));
+        result = 31 * result + type.hashCode();
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "AddResource{" +
+            "id=" + id +
+            ", type=" + type +
+            '}';
+    }
 }

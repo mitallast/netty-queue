@@ -3,12 +3,15 @@ package org.mitallast.queue.crdt.routing.fsm;
 import com.google.common.base.Preconditions;
 import com.typesafe.config.Config;
 import javaslang.control.Option;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.file.FileService;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.crdt.routing.BucketMember;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
 import org.mitallast.queue.crdt.routing.RoutingTable;
@@ -21,6 +24,7 @@ import javax.inject.Inject;
 import java.io.File;
 
 public class RoutingTableFSM implements ResourceFSM {
+    private final Logger logger = LogManager.getLogger();
     private final EventBus eventBus;
     private final StreamService streamService;
     private final File file;
@@ -52,7 +56,9 @@ public class RoutingTableFSM implements ResourceFSM {
         registry.register(AddResource.class, this::handle);
         registry.register(RemoveResource.class, this::handle);
         registry.register(UpdateMembers.class, this::handle);
-        registry.register(Allocate.class, this::handle);
+        registry.register(AddBucketMember.class, this::handle);
+        registry.register(CloseBucketMember.class, this::handle);
+        registry.register(RemoveBucketMember.class, this::handle);
         registry.register(RoutingTable.class, this::handle);
     }
 
@@ -72,7 +78,9 @@ public class RoutingTableFSM implements ResourceFSM {
     private void persist(long index, RoutingTable routingTable) {
         Preconditions.checkArgument(index > lastApplied);
         this.lastApplied = index;
+        logger.info("before: {}", this.routingTable);
         this.routingTable = routingTable;
+        logger.info("after: {}", this.routingTable);
         try (StreamOutput output = streamService.output(file)) {
             output.writeLong(lastApplied);
             output.writeStreamable(routingTable);
@@ -122,13 +130,37 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private Streamable handle(long index, Allocate allocate) {
+    private Streamable handle(long index, AddBucketMember request) {
         if (index <= lastApplied) {
             return null;
         }
-        RoutingBucket bucket = routingTable.bucket(allocate.bucket());
-        if (!bucket.members().contains(allocate.node())) {
-            persist(index, routingTable.withBucketMember(allocate.bucket(), allocate.node()));
+        RoutingBucket bucket = routingTable.bucket(request.bucket());
+        if (!bucket.members().containsKey(request.member())) {
+            persist(index, routingTable.withBucketMember(request.bucket(), request.member()));
+        }
+        return null;
+    }
+
+    private Streamable handle(long index, CloseBucketMember request) {
+        if (index <= lastApplied) {
+            return null;
+        }
+        RoutingBucket bucket = routingTable.bucket(request.bucket());
+        Option<BucketMember> member = bucket.members().get(request.member());
+        if (member.exists(BucketMember::isOpened)) {
+            persist(index, routingTable.withBucketMember(request.bucket(), member.get().close()));
+        }
+        return null;
+    }
+
+    private Streamable handle(long index, RemoveBucketMember request) {
+        if (index <= lastApplied) {
+            return null;
+        }
+        RoutingBucket bucket = routingTable.bucket(request.bucket());
+        Option<BucketMember> member = bucket.members().get(request.member());
+        if (member.exists(BucketMember::isClosed)) {
+            persist(index, routingTable.withoutBucketMember(request.bucket(), member.get().member()));
         }
         return null;
     }

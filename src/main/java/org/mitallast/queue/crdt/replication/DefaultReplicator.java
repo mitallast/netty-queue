@@ -10,13 +10,18 @@ import javaslang.collection.Vector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
+import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.bucket.Bucket;
+import org.mitallast.queue.crdt.event.ClosedLogSynced;
 import org.mitallast.queue.crdt.log.LogEntry;
 import org.mitallast.queue.crdt.log.ReplicatedLog;
 import org.mitallast.queue.crdt.protocol.AppendEntries;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
+import org.mitallast.queue.crdt.routing.RoutingBucket;
+import org.mitallast.queue.crdt.routing.RoutingTable;
+import org.mitallast.queue.crdt.routing.fsm.RoutingTableFSM;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.RaftMetadata;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
@@ -32,6 +37,8 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     private final static Logger logger = LogManager.getLogger();
 
     private final Raft raft;
+    private final RoutingTableFSM fsm;
+    private final EventBus eventBus;
     private final ClusterDiscovery clusterDiscovery;
     private final TransportService transportService;
     private final Bucket bucket;
@@ -43,15 +50,19 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
 
     private final long timeout;
 
+    private volatile boolean open = true;
+
     @Inject
     public DefaultReplicator(
         Config config,
         Raft raft,
-        ClusterDiscovery clusterDiscovery,
+        RoutingTableFSM fsm, EventBus eventBus, ClusterDiscovery clusterDiscovery,
         TransportService transportService,
         @Assisted Bucket bucket
     ) {
         this.raft = raft;
+        this.fsm = fsm;
+        this.eventBus = eventBus;
         this.clusterDiscovery = clusterDiscovery;
         this.transportService = transportService;
         this.bucket = bucket;
@@ -81,6 +92,9 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     public void append(long id, Streamable event) {
         lock.lock();
         try {
+            if (!open) {
+                throw new IllegalStateException("closed");
+            }
             bucket.log().append(id, event);
             maybeSendEntries();
         } finally {
@@ -98,6 +112,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
             }
             replicationTimeout.put(message.member(), 0);
             maybeSendEntries(message.member());
+            maybeSync();
         } finally {
             lock.unlock();
         }
@@ -113,14 +128,37 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
             }
             replicationTimeout.put(message.member(), 0);
             maybeSendEntries(message.member());
+            maybeSync();
         } finally {
             lock.unlock();
+        }
+    }
 
+    @Override
+    public void open() {
+        lock.lock();
+        try {
+            open = true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void closeAndSync() {
+        lock.lock();
+        try {
+            open = false;
+            maybeSync();
+        } finally {
+            lock.unlock();
         }
     }
 
     private void maybeSendEntries() {
-        Set<DiscoveryNode> members = raft.currentMeta().membersWithout(clusterDiscovery.self());
+        RoutingTable routingTable = fsm.get();
+        RoutingBucket bucket = routingTable.buckets().get(this.bucket.index());
+        Set<DiscoveryNode> members = bucket.members().keySet().remove(clusterDiscovery.self());
         for (DiscoveryNode member : members) {
             maybeSendEntries(member);
         }
@@ -141,6 +179,25 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
             logger.debug("send append {} vclock={}", member, nodeVclock);
             replicationTimeout.put(member, System.currentTimeMillis() + timeout);
             transportService.send(member, new AppendEntries(bucket.index(), clusterDiscovery.self(), nodeVclock, append));
+        }
+    }
+
+    private void maybeSync() {
+        if (!open) {
+            long last = bucket.log().vclock();
+
+            RoutingTable routingTable = fsm.get();
+            RoutingBucket bucket = routingTable.buckets().get(this.bucket.index());
+            Set<DiscoveryNode> members = bucket.members().keySet().remove(clusterDiscovery.self());
+            if (members.isEmpty()) { // no replica
+                return;
+            }
+            for (DiscoveryNode member : members) {
+                if (vclock.get(member) != last) {
+                    return; // not synced
+                }
+            }
+            eventBus.trigger(new ClosedLogSynced(bucket.index()));
         }
     }
 

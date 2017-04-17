@@ -40,4 +40,33 @@ public class AddResourceResponse implements Streamable {
     public boolean isCreated() {
         return created;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        AddResourceResponse that = (AddResourceResponse) o;
+
+        if (id != that.id) return false;
+        if (created != that.created) return false;
+        return type == that.type;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = type.hashCode();
+        result = 31 * result + (int) (id ^ (id >>> 32));
+        result = 31 * result + (created ? 1 : 0);
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return "AddResourceResponse{" +
+            "type=" + type +
+            ", id=" + id +
+            ", created=" + created +
+            '}';
+    }
 }

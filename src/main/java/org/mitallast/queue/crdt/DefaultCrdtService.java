@@ -1,31 +1,35 @@
 package org.mitallast.queue.crdt;
 
-import javaslang.collection.*;
+import javaslang.collection.HashMap;
+import javaslang.collection.Map;
+import javaslang.collection.Seq;
+import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.bucket.BucketFactory;
+import org.mitallast.queue.crdt.event.ClosedLogSynced;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
+import org.mitallast.queue.crdt.routing.BucketMember;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
 import org.mitallast.queue.crdt.routing.RoutingTable;
+import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged;
-import org.mitallast.queue.crdt.routing.fsm.Allocate;
+import org.mitallast.queue.crdt.routing.fsm.RemoveBucketMember;
 import org.mitallast.queue.crdt.routing.fsm.RoutingTableFSM;
 import org.mitallast.queue.crdt.routing.fsm.UpdateMembers;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.event.MembersChanged;
 import org.mitallast.queue.raft.protocol.ClientMessage;
-import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 
 import javax.inject.Inject;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.mitallast.queue.raft.RaftState.Leader;
@@ -34,6 +38,7 @@ public class DefaultCrdtService implements CrdtService {
     private final Logger logger = LogManager.getLogger();
     private final Raft raft;
     private final RoutingTableFSM routingTableFSM;
+    private final AllocationStrategy allocationStrategy;
     private final ClusterDiscovery discovery;
     private final BucketFactory bucketFactory;
 
@@ -45,6 +50,7 @@ public class DefaultCrdtService implements CrdtService {
     public DefaultCrdtService(
         Raft raft,
         RoutingTableFSM routingTableFSM,
+        AllocationStrategy allocationStrategy,
         ClusterDiscovery discovery,
         TransportController transportController,
         BucketFactory bucketFactory,
@@ -54,12 +60,14 @@ public class DefaultCrdtService implements CrdtService {
         this.routingTableFSM = routingTableFSM;
         this.discovery = discovery;
         this.bucketFactory = bucketFactory;
+        this.allocationStrategy = allocationStrategy;
 
         this.lock = new ReentrantLock();
 
         Executor executor = Executors.newSingleThreadExecutor();
         eventBus.subscribe(MembersChanged.class, this::handle, executor);
         eventBus.subscribe(RoutingTableChanged.class, this::handle, executor);
+        eventBus.subscribe(ClosedLogSynced.class, this::handle, executor);
 
         transportController.registerMessageHandler(AppendSuccessful.class, this::successful);
         transportController.registerMessageHandler(AppendRejected.class, this::rejected);
@@ -76,6 +84,24 @@ public class DefaultCrdtService implements CrdtService {
         Bucket bucket = bucket(message.bucket());
         if (bucket != null) {
             bucket.replicator().rejected(message);
+        }
+    }
+
+    private void handle(ClosedLogSynced message) {
+        lock.lock();
+        try {
+            RoutingTable routingTable = routingTableFSM.get();
+            Option<BucketMember> member = routingTable.bucket(message.bucket()).members().get(discovery.self());
+            if (member.isDefined() && member.get().isClosed()) {
+                logger.info("RemoveBucketMember bucket {} {}", message.bucket(), discovery.self());
+                RemoveBucketMember request = new RemoveBucketMember(message.bucket(), discovery.self());
+                raft.apply(new ClientMessage(discovery.self(), request));
+            } else {
+                logger.warn("open closed replicator bucket {}", message.bucket());
+                buckets.get(message.bucket()).get().replicator().open();
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -119,7 +145,7 @@ public class DefaultCrdtService implements CrdtService {
                 return;
             }
             lastApplied = changed.index();
-            logger.info("routing table changed");
+            logger.info("routing table changed: {}", changed.routingTable());
             processAsLeader(changed.routingTable());
             processBuckets(changed.routingTable());
         } finally {
@@ -129,36 +155,31 @@ public class DefaultCrdtService implements CrdtService {
 
     private void processAsLeader(RoutingTable routingTable) {
         if (raft.currentState() == Leader) {
-            Set<DiscoveryNode> members = routingTable.members();
-            for (RoutingBucket routingBucket : routingTable.buckets()) {
-                if (routingBucket.members().size() < routingTable.replicas()) {
-                    Set<DiscoveryNode> bucketMembers = routingBucket.members();
-                    Vector<DiscoveryNode> available = members.diff(bucketMembers).toVector();
-                    if (!available.isEmpty()) {
-                        DiscoveryNode node = available.get(ThreadLocalRandom.current().nextInt(available.size()));
-                        logger.info("allocate bucket {} {} {}", routingBucket.index(), node);
-                        Allocate allocate = new Allocate(routingBucket.index(), node);
-                        raft.apply(new ClientMessage(discovery.self(), allocate));
-                        return;
-                    }
-                }
-            }
+            allocationStrategy.update(routingTable)
+                .forEach(cmd -> raft.apply(new ClientMessage(discovery.self(), cmd)));
         }
     }
 
     private void processBuckets(RoutingTable routingTable) {
         for (RoutingBucket routingBucket : routingTable.buckets()) {
-            if (routingBucket.members().contains(discovery.self())) {
+            if (routingBucket.members().containsKey(discovery.self())) {
+                BucketMember bucketMember = routingBucket.members().get(discovery.self()).get();
                 Bucket bucket = getOrCreate(routingBucket.index());
-                for (Resource resource : routingBucket.resources().values()) {
-                    if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
-                        logger.info("allocate resource {}:{}", resource.id(), resource.type());
-                        switch (resource.type()) {
-                            case LWWRegister:
-                                bucket.registry().createLWWRegister(resource.id());
-                                break;
-                            default:
-                                logger.warn("unexpected type: {}", resource.type());
+
+                if (bucketMember.isClosed()) {
+                    bucket.replicator().closeAndSync();
+                } else {
+                    bucket.replicator().open();
+                    for (Resource resource : routingBucket.resources().values()) {
+                        if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
+                            logger.info("allocate resource {}:{}", resource.id(), resource.type());
+                            switch (resource.type()) {
+                                case LWWRegister:
+                                    bucket.registry().createLWWRegister(resource.id());
+                                    break;
+                                default:
+                                    logger.warn("unexpected type: {}", resource.type());
+                            }
                         }
                     }
                 }

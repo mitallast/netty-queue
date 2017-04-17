@@ -12,4 +12,8 @@ public interface Replicator extends LifecycleComponent {
     void successful(AppendSuccessful message);
 
     void rejected(AppendRejected message);
+
+    void open();
+
+    void closeAndSync();
 }

@@ -21,7 +21,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     }
 
     @Override
-    protected void doStart() {
+    protected synchronized void doStart() {
         for (LifecycleComponent component : lifecycleQueue) {
             logger.debug("starting {}", component);
             component.start();
@@ -29,7 +29,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     }
 
     @Override
-    protected void doStop() {
+    protected synchronized void doStop() {
         final int size = lifecycleQueue.size();
         for (int i = size - 1; i >= 0; i--) {
             LifecycleComponent component = lifecycleQueue.get(i);
@@ -39,7 +39,7 @@ public class LifecycleService extends AbstractLifecycleComponent implements Prov
     }
 
     @Override
-    protected void doClose() {
+    protected synchronized void doClose() {
         final int size = lifecycleQueue.size();
         for (int i = size - 1; i >= 0; i--) {
             LifecycleComponent component = lifecycleQueue.get(i);

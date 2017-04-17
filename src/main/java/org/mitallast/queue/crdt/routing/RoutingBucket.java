@@ -1,7 +1,6 @@
 package org.mitallast.queue.crdt.routing;
 
 import javaslang.collection.HashMap;
-import javaslang.collection.HashSet;
 import javaslang.collection.Map;
 import javaslang.collection.Set;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -11,14 +10,14 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RoutingBucket implements Streamable {
     private final int index;
-    private final Set<DiscoveryNode> members;
+    private final Map<DiscoveryNode, BucketMember> members;
     private final Map<Long, Resource> resources;
 
     public RoutingBucket(int index) {
-        this(index, HashSet.empty(), HashMap.empty());
+        this(index, HashMap.empty(), HashMap.empty());
     }
 
-    public RoutingBucket(int index, Set<DiscoveryNode> members, Map<Long, Resource> resources) {
+    public RoutingBucket(int index, Map<DiscoveryNode, BucketMember> members, Map<Long, Resource> resources) {
         this.index = index;
         this.members = members;
         this.resources = resources;
@@ -26,14 +25,14 @@ public class RoutingBucket implements Streamable {
 
     public RoutingBucket(StreamInput stream) {
         index = stream.readInt();
-        members = stream.readSet(DiscoveryNode::new);
+        members = stream.readSeq(BucketMember::new).toMap(BucketMember::member, r -> r);
         resources = stream.readSeq(Resource::new).toMap(Resource::id, r -> r);
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeInt(index);
-        stream.writeSet(members);
+        stream.writeSeq(members.values());
         stream.writeSeq(resources.values());
     }
 
@@ -41,7 +40,7 @@ public class RoutingBucket implements Streamable {
         return index;
     }
 
-    public Set<DiscoveryNode> members() {
+    public Map<DiscoveryNode, BucketMember> members() {
         return members;
     }
 
@@ -49,10 +48,14 @@ public class RoutingBucket implements Streamable {
         return resources;
     }
 
-    public RoutingBucket withMember(DiscoveryNode node) {
+    public RoutingBucket withMember(DiscoveryNode member) {
+        return withMember(new BucketMember(member));
+    }
+
+    public RoutingBucket withMember(BucketMember member) {
         return new RoutingBucket(
             index,
-            members.add(node),
+            members.put(member.member(), member),
             resources
         );
     }
@@ -84,8 +87,25 @@ public class RoutingBucket implements Streamable {
     public RoutingBucket filterMembers(Set<DiscoveryNode> members) {
         return new RoutingBucket(
             index,
-            this.members.intersect(members),
+            this.members.filterKeys(members::contains),
             resources
         );
+    }
+
+    public RoutingBucket withoutMember(DiscoveryNode member) {
+        return new RoutingBucket(
+            index,
+            this.members.remove(member),
+            resources
+        );
+    }
+
+    @Override
+    public String toString() {
+        return "RoutingBucket{" +
+            "index=" + index +
+            ", members=" + members +
+            ", resources=" + resources +
+            '}';
     }
 }

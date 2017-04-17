@@ -72,6 +72,11 @@ public class FileReplicatedLog implements ReplicatedLog {
     }
 
     @Override
+    public long vclock() {
+        return vclock.get();
+    }
+
+    @Override
     public LogEntry append(long id, Streamable event) {
         while (true) {
             LogEntry append = lastSegment.append(id, event);

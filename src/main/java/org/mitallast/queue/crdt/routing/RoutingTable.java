@@ -49,6 +49,10 @@ public class RoutingTable implements Streamable {
         return buckets;
     }
 
+    public int bucketsCount(DiscoveryNode node) {
+        return buckets.count(bucket -> bucket.members().containsKey(node));
+    }
+
     public RoutingBucket bucket(long resourceId) {
         int bucket = Long.hashCode(resourceId) % buckets.size();
         return buckets.get(bucket);
@@ -89,11 +93,38 @@ public class RoutingTable implements Streamable {
         );
     }
 
+    public RoutingTable withBucketMember(int bucket, BucketMember node) {
+        RoutingBucket updated = buckets.get(bucket).withMember(node);
+        return new RoutingTable(
+            replicas,
+            members,
+            buckets.update(bucket, updated)
+        );
+    }
+
     public RoutingTable withMembers(Set<DiscoveryNode> members) {
         return new RoutingTable(
             replicas,
             members,
             buckets.map(bucket -> bucket.filterMembers(members))
         );
+    }
+
+    public RoutingTable withoutBucketMember(int bucket, DiscoveryNode member) {
+        RoutingBucket updated = buckets.get(bucket).withoutMember(member);
+        return new RoutingTable(
+            replicas,
+            members,
+            buckets.update(bucket, updated)
+        );
+    }
+
+    @Override
+    public String toString() {
+        return "RoutingTable{" +
+            "replicas=" + replicas +
+            ", members=" + members +
+            ", buckets=" + buckets +
+            '}';
     }
 }

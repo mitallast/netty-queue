@@ -26,4 +26,26 @@ public class UpdateMembers implements Streamable {
     public Set<DiscoveryNode> members() {
         return members;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        UpdateMembers that = (UpdateMembers) o;
+
+        return members.equals(that.members);
+    }
+
+    @Override
+    public int hashCode() {
+        return members.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "UpdateMembers{" +
+            "members=" + members +
+            '}';
+    }
 }

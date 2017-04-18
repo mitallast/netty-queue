@@ -5,34 +5,41 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class BucketMember implements Streamable {
+public class RoutingReplica implements Streamable {
 
-    enum State {
+    public enum State {
         OPENED, CLOSED;
     }
 
+    private final long id;
     private final DiscoveryNode member;
-
     private final State state;
 
-    public BucketMember(DiscoveryNode member) {
-        this(member, State.OPENED);
+    public RoutingReplica(long id, DiscoveryNode member) {
+        this(id, member, State.OPENED);
     }
 
-    public BucketMember(DiscoveryNode member, State state) {
+    public RoutingReplica(long id, DiscoveryNode member, State state) {
+        this.id = id;
         this.member = member;
         this.state = state;
     }
 
-    public BucketMember(StreamInput stream) {
+    public RoutingReplica(StreamInput stream) {
+        this.id = stream.readInt();
         this.member = stream.readStreamable(DiscoveryNode::new);
         this.state = stream.readEnum(State.class);
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
+        stream.writeLong(id);
         stream.writeStreamable(member);
         stream.writeEnum(state);
+    }
+
+    public long id() {
+        return id;
     }
 
     public DiscoveryNode member() {
@@ -51,12 +58,12 @@ public class BucketMember implements Streamable {
         return state == State.CLOSED;
     }
 
-    public BucketMember close() {
-        return new BucketMember(member, State.CLOSED);
+    public RoutingReplica close() {
+        return new RoutingReplica(id, member, State.CLOSED);
     }
 
     @Override
     public String toString() {
-        return "{" + member + ", state=" + state + '}';
+        return "RoutingReplica{id=" + id + ", " + member + ", state=" + state + '}';
     }
 }

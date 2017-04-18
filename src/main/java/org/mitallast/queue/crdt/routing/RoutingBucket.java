@@ -3,6 +3,7 @@ package org.mitallast.queue.crdt.routing;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import javaslang.collection.Set;
+import javaslang.control.Option;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -10,29 +11,29 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RoutingBucket implements Streamable {
     private final int index;
-    private final Map<DiscoveryNode, BucketMember> members;
+    private final Map<Long, RoutingReplica> replicas;
     private final Map<Long, Resource> resources;
 
     public RoutingBucket(int index) {
         this(index, HashMap.empty(), HashMap.empty());
     }
 
-    public RoutingBucket(int index, Map<DiscoveryNode, BucketMember> members, Map<Long, Resource> resources) {
+    public RoutingBucket(int index, Map<Long, RoutingReplica> replicas, Map<Long, Resource> resources) {
         this.index = index;
-        this.members = members;
+        this.replicas = replicas;
         this.resources = resources;
     }
 
     public RoutingBucket(StreamInput stream) {
         index = stream.readInt();
-        members = stream.readSeq(BucketMember::new).toMap(BucketMember::member, r -> r);
+        replicas = stream.readSeq(RoutingReplica::new).toMap(RoutingReplica::id, r -> r);
         resources = stream.readSeq(Resource::new).toMap(Resource::id, r -> r);
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeInt(index);
-        stream.writeSeq(members.values());
+        stream.writeSeq(replicas.values());
         stream.writeSeq(resources.values());
     }
 
@@ -40,30 +41,26 @@ public class RoutingBucket implements Streamable {
         return index;
     }
 
-    public Map<DiscoveryNode, BucketMember> members() {
-        return members;
+    public Map<Long, RoutingReplica> replicas() {
+        return replicas;
+    }
+
+    public Option<RoutingReplica> replica(DiscoveryNode member) {
+        return replicas.values().find(replica -> replica.member().equals(member));
+    }
+
+    public boolean exists(DiscoveryNode member) {
+        return replicas.values().exists(replica -> replica.member().equals(member));
     }
 
     public Map<Long, Resource> resources() {
         return resources;
     }
 
-    public RoutingBucket withMember(DiscoveryNode member) {
-        return withMember(new BucketMember(member));
-    }
-
-    public RoutingBucket withMember(BucketMember member) {
-        return new RoutingBucket(
-            index,
-            members.put(member.member(), member),
-            resources
-        );
-    }
-
     public RoutingBucket withResource(Resource resource) {
         return new RoutingBucket(
             index,
-            members,
+            replicas,
             resources.put(resource.id(), resource)
         );
     }
@@ -71,7 +68,7 @@ public class RoutingBucket implements Streamable {
     public RoutingBucket withoutResource(long resource) {
         return new RoutingBucket(
             index,
-            members,
+            replicas,
             resources.remove(resource)
         );
     }
@@ -84,18 +81,26 @@ public class RoutingBucket implements Streamable {
         return resources.getOrElse(id, null);
     }
 
-    public RoutingBucket filterMembers(Set<DiscoveryNode> members) {
+    public RoutingBucket withReplica(RoutingReplica member) {
         return new RoutingBucket(
             index,
-            this.members.filterKeys(members::contains),
+            replicas.put(member.id(), member),
             resources
         );
     }
 
-    public RoutingBucket withoutMember(DiscoveryNode member) {
+    public RoutingBucket filterReplicas(Set<DiscoveryNode> members) {
         return new RoutingBucket(
             index,
-            this.members.remove(member),
+            replicas.filterValues(replica -> members.contains(replica.member())),
+            resources
+        );
+    }
+
+    public RoutingBucket withoutReplica(long replica) {
+        return new RoutingBucket(
+            index,
+            replicas.remove(replica),
             resources
         );
     }
@@ -104,7 +109,7 @@ public class RoutingBucket implements Streamable {
     public String toString() {
         return "RoutingBucket{" +
             "index=" + index +
-            ", members=" + members +
+            ", members=" + replicas +
             ", resources=" + resources +
             '}';
     }

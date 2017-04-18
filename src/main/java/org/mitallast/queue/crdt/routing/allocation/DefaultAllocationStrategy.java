@@ -7,11 +7,11 @@ import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.crdt.routing.BucketMember;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
+import org.mitallast.queue.crdt.routing.RoutingReplica;
 import org.mitallast.queue.crdt.routing.RoutingTable;
-import org.mitallast.queue.crdt.routing.fsm.AddBucketMember;
-import org.mitallast.queue.crdt.routing.fsm.CloseBucketMember;
+import org.mitallast.queue.crdt.routing.fsm.AddReplica;
+import org.mitallast.queue.crdt.routing.fsm.CloseReplica;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class DefaultAllocationStrategy implements AllocationStrategy {
@@ -21,17 +21,17 @@ public class DefaultAllocationStrategy implements AllocationStrategy {
     public Option<Streamable> update(RoutingTable routingTable) {
         Set<DiscoveryNode> members = routingTable.members();
 
-        Map<DiscoveryNode, Vector<BucketMember>> stats = routingTable.buckets()
-            .flatMap(bucket -> bucket.members().values())
-            .groupBy(BucketMember::member);
+        Map<DiscoveryNode, Vector<RoutingReplica>> stats = routingTable.buckets()
+            .flatMap(bucket -> bucket.replicas().values())
+            .groupBy(RoutingReplica::member);
 
         boolean rebalance = false;
         for (RoutingBucket routingBucket : routingTable.buckets()) {
             // check for new allocations
-            int open = routingBucket.members().values().count(BucketMember::isOpened);
+            int open = routingBucket.replicas().values().count(RoutingReplica::isOpened);
             if (open < routingTable.replicas()) {
                 logger.info("bucket {} has open {} < {} replicas", routingBucket.index(), open, routingTable.replicas());
-                Set<DiscoveryNode> bucketMembers = routingBucket.members().keySet();
+                Set<DiscoveryNode> bucketMembers = routingBucket.replicas().values().map(RoutingReplica::member).toSet();
                 Option<DiscoveryNode> available = members.diff(bucketMembers).minBy((a, b) -> {
                     int sizeA = stats.get(a).map(Vector::size).getOrElse(0);
                     int sizeB = stats.get(b).map(Vector::size).getOrElse(0);
@@ -39,14 +39,14 @@ public class DefaultAllocationStrategy implements AllocationStrategy {
                 });
                 if (!available.isEmpty()) {
                     DiscoveryNode node = available.get();
-                    logger.info("addBucketMember bucket {} {}", routingBucket.index(), node);
-                    AddBucketMember request = new AddBucketMember(routingBucket.index(), node);
+                    logger.info("add replica bucket {} {}", routingBucket.index(), node);
+                    AddReplica request = new AddReplica(routingBucket.index(), node);
                     return Option.some(request);
                 } else {
                     logger.warn("no available nodes");
                 }
             }
-            if (routingBucket.members().values().exists(BucketMember::isClosed)) {
+            if (routingBucket.replicas().values().exists(RoutingReplica::isClosed)) {
                 rebalance = true;
             }
         }
@@ -58,17 +58,17 @@ public class DefaultAllocationStrategy implements AllocationStrategy {
                 if (routingTable.bucketsCount(member) < minimumBuckets) {
                     logger.warn("node {} buckets {} < min {}", member, count, minimumBuckets);
                     Vector<RoutingBucket> memberBuckets = routingTable.buckets()
-                        .filter(bucket -> bucket.members().containsKey(member));
+                        .filter(bucket -> bucket.exists(member));
 
                     Vector<RoutingBucket> availableBuckets = routingTable.buckets()
                         .removeAll(memberBuckets)
-                        .filter(bucket -> bucket.members()
-                            .remove(member) // without current node
+                        .filter(bucket -> bucket.replicas()
                             .values()
+                            .filter(replica -> !replica.member().equals(member)) // without current node
                             .exists(rm -> routingTable.bucketsCount(rm.member()) > minimumBuckets) // do not include nodes with min buckets
                         );
 
-                    Option<DiscoveryNode> available = members.filter(t -> availableBuckets.exists(b -> b.members().containsKey(t)))
+                    Option<DiscoveryNode> available = members.filter(t -> availableBuckets.exists(b -> b.exists(t)))
                         .maxBy((a, b) -> {
                             int sizeA = stats.get(a).map(Vector::size).getOrElse(0);
                             int sizeB = stats.get(b).map(Vector::size).getOrElse(0);
@@ -77,12 +77,18 @@ public class DefaultAllocationStrategy implements AllocationStrategy {
 
                     if (available.isDefined()) {
                         DiscoveryNode last = available.get();
-                        RoutingBucket close = routingTable.buckets()
-                            .find(bucket -> bucket.members().containsKey(last))
-                            .get();
-                        logger.info("CloseBucketMember bucket {} {}", close.index(), last);
-                        CloseBucketMember request = new CloseBucketMember(close.index(), last);
-                        return Option.some(request);
+                        Option<RoutingBucket> closeOpt = availableBuckets.find(bucket -> bucket.exists(last));
+                        if (closeOpt.isDefined()) {
+                            RoutingBucket close = closeOpt.get();
+                            RoutingReplica replica = close.replica(last).get();
+                            logger.info("close replica bucket {} {}", close.index(), replica.id());
+                            CloseReplica request = new CloseReplica(close.index(), replica.id());
+                            return Option.some(request);
+                        } else {
+                            logger.warn("no bucket to close found");
+                        }
+                    } else {
+                        logger.warn("no available buckets");
                     }
                 }
             }

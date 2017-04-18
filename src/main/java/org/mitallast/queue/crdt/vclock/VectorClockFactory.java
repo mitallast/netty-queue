@@ -1,5 +1,5 @@
 package org.mitallast.queue.crdt.vclock;
 
 public interface VectorClockFactory {
-    VectorClock create(int index);
+    VectorClock create(int index, long replica);
 }

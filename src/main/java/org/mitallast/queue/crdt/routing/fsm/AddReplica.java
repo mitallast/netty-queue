@@ -5,16 +5,16 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class RemoveBucketMember implements Streamable {
+public class AddReplica implements Streamable {
     private final int bucket;
     private final DiscoveryNode member;
 
-    public RemoveBucketMember(int bucket, DiscoveryNode member) {
+    public AddReplica(int bucket, DiscoveryNode member) {
         this.bucket = bucket;
         this.member = member;
     }
 
-    public RemoveBucketMember(StreamInput stream) {
+    public AddReplica(StreamInput stream) {
         bucket = stream.readInt();
         member = stream.readStreamable(DiscoveryNode::new);
     }
@@ -38,7 +38,7 @@ public class RemoveBucketMember implements Streamable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        RemoveBucketMember that = (RemoveBucketMember) o;
+        AddReplica that = (AddReplica) o;
 
         if (bucket != that.bucket) return false;
         return member.equals(that.member);
@@ -53,6 +53,6 @@ public class RemoveBucketMember implements Streamable {
 
     @Override
     public String toString() {
-        return "RemoveBucketMember{bucket=" + bucket + ", " + member + '}';
+        return "AddReplica{bucket=" + bucket + ", " + member + '}';
     }
 }

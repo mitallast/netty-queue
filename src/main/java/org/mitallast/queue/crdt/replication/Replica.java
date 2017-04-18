@@ -9,24 +9,22 @@ import org.mitallast.queue.crdt.log.LogEntry;
 import org.mitallast.queue.crdt.protocol.AppendEntries;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
-import org.mitallast.queue.raft.discovery.ClusterDiscovery;
+import org.mitallast.queue.crdt.routing.RoutingBucket;
+import org.mitallast.queue.crdt.routing.RoutingReplica;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportService;
 
 public class Replica {
     private final static Logger logger = LogManager.getLogger();
-    private final ClusterDiscovery clusterDiscovery;
     private final TransportService transportService;
     private final CrdtService crdtService;
 
     @Inject
     public Replica(
-        ClusterDiscovery clusterDiscovery,
         TransportService transportService,
         TransportController transportController,
         CrdtService crdtService
     ) {
-        this.clusterDiscovery = clusterDiscovery;
         this.transportService = transportService;
         this.crdtService = crdtService;
 
@@ -39,24 +37,31 @@ public class Replica {
             logger.warn("unexpected bucket {}, ignore", message.bucket());
             return;
         }
-        long localVclock = bucket.vclock().get(message.member());
+        RoutingBucket routingBucket = crdtService.routingTable().bucket(message.bucket());
+        RoutingReplica replica = routingBucket.replicas().getOrElse(message.replica(), null);
+        if (replica == null) {
+            logger.warn("unexpected replica {}, ignore", message.replica());
+            return;
+        }
+
+        long localVclock = bucket.vclock().get(message.replica());
         if (localVclock == message.prevVclock()) {
             logger.debug("append entries vclock:{}", localVclock);
             for (LogEntry logEntry : message.entries()) {
                 bucket.registry().crdt(logEntry.id()).update(logEntry.event());
                 localVclock = Math.max(localVclock, logEntry.vclock());
             }
-            bucket.vclock().put(message.member(), localVclock);
+            bucket.vclock().put(message.replica(), localVclock);
             logger.debug("append entries successful:{}", localVclock);
             transportService.send(
-                message.member(),
-                new AppendSuccessful(message.bucket(), clusterDiscovery.self(), localVclock)
+                replica.member(),
+                new AppendSuccessful(message.bucket(), bucket.replica(), localVclock)
             );
         } else {
             logger.warn("unmatched vclock local:{} remote:{}", localVclock, message.prevVclock());
             transportService.send(
-                message.member(),
-                new AppendRejected(message.bucket(), clusterDiscovery.self(), localVclock)
+                replica.member(),
+                new AppendRejected(message.bucket(), bucket.replica(), localVclock)
             );
         }
     }

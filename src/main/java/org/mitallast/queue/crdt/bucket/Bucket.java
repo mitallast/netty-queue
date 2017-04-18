@@ -11,6 +11,8 @@ public interface Bucket extends Closeable {
 
     int index();
 
+    long replica();
+
     CrdtRegistry registry();
 
     ReplicatedLog log();

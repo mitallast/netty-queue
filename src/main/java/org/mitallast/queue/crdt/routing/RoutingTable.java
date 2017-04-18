@@ -13,21 +13,24 @@ public class RoutingTable implements Streamable {
     private final int replicas;
     private final Set<DiscoveryNode> members;
     private final Vector<RoutingBucket> buckets;
+    private final long nextReplica;
 
     public RoutingTable(int replicas, int buckets) {
-        this(replicas, HashSet.empty(), Vector.range(0, buckets).map(RoutingBucket::new));
+        this(replicas, HashSet.empty(), Vector.range(0, buckets).map(RoutingBucket::new), 0);
     }
 
-    public RoutingTable(int replicas, Set<DiscoveryNode> members, Vector<RoutingBucket> buckets) {
+    public RoutingTable(int replicas, Set<DiscoveryNode> members, Vector<RoutingBucket> buckets, long nextReplica) {
         this.replicas = replicas;
         this.members = members;
         this.buckets = buckets;
+        this.nextReplica = nextReplica;
     }
 
     public RoutingTable(StreamInput stream) {
         replicas = stream.readInt();
         members = stream.readSet(DiscoveryNode::new);
         buckets = stream.readVector(RoutingBucket::new);
+        nextReplica = stream.readLong();
     }
 
     @Override
@@ -35,6 +38,7 @@ public class RoutingTable implements Streamable {
         stream.writeInt(replicas);
         stream.writeSet(members);
         stream.writeVector(buckets);
+        stream.writeLong(nextReplica);
     }
 
     public int replicas() {
@@ -50,7 +54,7 @@ public class RoutingTable implements Streamable {
     }
 
     public int bucketsCount(DiscoveryNode node) {
-        return buckets.count(bucket -> bucket.members().containsKey(node));
+        return buckets.count(bucket -> bucket.replicas().values().exists(replica -> replica.member().equals(node)));
     }
 
     public RoutingBucket bucket(long resourceId) {
@@ -71,7 +75,8 @@ public class RoutingTable implements Streamable {
         return new RoutingTable(
             replicas,
             members,
-            buckets.update(bucket.index(), bucket)
+            buckets.update(bucket.index(), bucket),
+            nextReplica
         );
     }
 
@@ -80,25 +85,28 @@ public class RoutingTable implements Streamable {
         return new RoutingTable(
             replicas,
             members,
-            buckets.update(bucket.index(), bucket)
+            buckets.update(bucket.index(), bucket),
+            nextReplica
         );
     }
 
-    public RoutingTable withBucketMember(int bucket, DiscoveryNode node) {
-        RoutingBucket updated = buckets.get(bucket).withMember(node);
+    public RoutingTable withReplica(int bucket, DiscoveryNode member) {
+        RoutingBucket updated = buckets.get(bucket).withReplica(new RoutingReplica(nextReplica, member));
         return new RoutingTable(
             replicas,
             members,
-            buckets.update(bucket, updated)
+            buckets.update(bucket, updated),
+            nextReplica + 1
         );
     }
 
-    public RoutingTable withBucketMember(int bucket, BucketMember node) {
-        RoutingBucket updated = buckets.get(bucket).withMember(node);
+    public RoutingTable withReplica(int bucket, RoutingReplica replica) {
+        RoutingBucket updated = buckets.get(bucket).withReplica(replica);
         return new RoutingTable(
             replicas,
             members,
-            buckets.update(bucket, updated)
+            buckets.update(bucket, updated),
+            nextReplica
         );
     }
 
@@ -106,16 +114,18 @@ public class RoutingTable implements Streamable {
         return new RoutingTable(
             replicas,
             members,
-            buckets.map(bucket -> bucket.filterMembers(members))
+            buckets.map(bucket -> bucket.filterReplicas(members)),
+            nextReplica
         );
     }
 
-    public RoutingTable withoutBucketMember(int bucket, DiscoveryNode member) {
-        RoutingBucket updated = buckets.get(bucket).withoutMember(member);
+    public RoutingTable withoutReplica(int bucket, long replica) {
+        RoutingBucket updated = buckets.get(bucket).withoutReplica(replica);
         return new RoutingTable(
             replicas,
             members,
-            buckets.update(bucket, updated)
+            buckets.update(bucket, updated),
+            nextReplica
         );
     }
 
@@ -125,6 +135,7 @@ public class RoutingTable implements Streamable {
             "replicas=" + replicas +
             ", members=" + members +
             ", buckets=" + buckets +
+            ", nextReplica=" + nextReplica +
             '}';
     }
 }

@@ -35,6 +35,7 @@ public class FileReplicatedLogTest extends BaseTest {
             ),
             streamService,
             logEntry -> false,
+            0,
             0
         );
     }

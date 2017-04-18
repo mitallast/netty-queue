@@ -93,8 +93,8 @@ public class CrdtModule extends AbstractModule {
         binder.addBinding().toInstance(of(RemoveResource.class, RemoveResource::new, 1202));
         binder.addBinding().toInstance(of(RemoveResourceResponse.class, RemoveResourceResponse::new, 1203));
         binder.addBinding().toInstance(of(UpdateMembers.class, UpdateMembers::new, 1204));
-        binder.addBinding().toInstance(of(AddBucketMember.class, AddBucketMember::new, 1205));
-        binder.addBinding().toInstance(of(CloseBucketMember.class, CloseBucketMember::new, 1206));
-        binder.addBinding().toInstance(of(RemoveBucketMember.class, RemoveBucketMember::new, 1207));
+        binder.addBinding().toInstance(of(AddReplica.class, AddReplica::new, 1205));
+        binder.addBinding().toInstance(of(CloseReplica.class, CloseReplica::new, 1206));
+        binder.addBinding().toInstance(of(RemoveReplica.class, RemoveReplica::new, 1207));
     }
 }

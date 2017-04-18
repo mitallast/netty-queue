@@ -3,7 +3,6 @@ package org.mitallast.queue.crdt;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import javaslang.collection.Vector;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseClusterTest;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -45,26 +44,25 @@ public class ClusterCrdtTest extends BaseClusterTest {
 
         long total = 400000;
 
-        for (long id = 0; id < nodesCount; id++) {
-            raft.get(0).apply(new ClientMessage(discoveryNodes.get(0), new AddResource(id, ResourceType.LWWRegister)));
-            awaitResourceAllocate(id);
-
-            long expected = (total / nodesCount + (nodesCount % 2));
+        for (long c = 0; c < nodesCount; c++) {
+            final long crdt = c;
+            raft.get(0).apply(new ClientMessage(discoveryNodes.get(0), new AddResource(crdt, ResourceType.LWWRegister)));
+            awaitResourceAllocate(crdt);
 
             long start = System.currentTimeMillis();
             for (long i = 0; i < total; i++) {
                 crdtServices.get((int) (i % nodesCount))
-                    .bucket(id)
+                    .bucket(crdt)
                     .registry()
-                    .crdt(id, LWWRegister.class)
+                    .crdt(crdt, LWWRegister.class)
                     .assign(new TestLong(i));
             }
             for (int w = 0; w < 10; w++) {
-                if (expected != crdtServices.get(1).bucket(id).vclock().get(discoveryNodes.get(0))) {
-                    Thread.sleep(10);
-                    continue;
-                }
-                if (expected != crdtServices.get(2).bucket(id).vclock().get(discoveryNodes.get(0))) {
+                if (crdtServices.forAll(b -> b.bucket(crdt)
+                    .registry()
+                    .crdt(crdt, LWWRegister.class)
+                    .value()
+                    .contains(new TestLong(total - 1)))) {
                     Thread.sleep(10);
                     continue;
                 }
@@ -72,30 +70,39 @@ public class ClusterCrdtTest extends BaseClusterTest {
             }
             long end = System.currentTimeMillis();
 
-            Assert.assertEquals(expected, crdtServices.get(1).bucket(id).vclock().get(discoveryNodes.get(0)));
-            Assert.assertEquals(expected, crdtServices.get(2).bucket(id).vclock().get(discoveryNodes.get(0)));
+            assert crdtServices.forAll(b -> b.bucket(crdt)
+                .registry()
+                .crdt(crdt, LWWRegister.class)
+                .value()
+                .contains(new TestLong(total - 1)));
 
             printQps("CRDT async", total, start, end);
         }
     }
 
-    private void awaitResourceAllocate(long id) throws Exception {
+    private void awaitResourceAllocate(long crdt) throws Exception {
         // await bucket allocation
         while (true) {
             boolean allocated = true;
             for (CrdtService crdtService : crdtServices) {
-                if (crdtService.routingTable().bucket(id).members().size() < nodesCount) {
+                if (crdtService.routingTable().bucket(crdt).replicas().size() < nodesCount) {
+                    logger.info("await replica count");
                     allocated = false;
-                }
-                if (crdtService.bucket(id).registry().crdtOpt(id).isEmpty()) {
+                    break;
+                } else if (crdtService.bucket(crdt) == null) {
+                    logger.info("await bucket");
                     allocated = false;
+                    break;
+                } else if (crdtService.bucket(crdt).registry().crdtOpt(crdt).isEmpty()) {
+                    logger.info("await crdt");
+                    allocated = false;
+                    break;
                 }
             }
             if (allocated) {
                 logger.info("await allocation done");
                 break;
             }
-            logger.info("await allocation");
             Thread.sleep(1000);
         }
     }

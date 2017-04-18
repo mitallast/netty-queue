@@ -3,29 +3,28 @@ package org.mitallast.queue.crdt.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 public class AppendSuccessful implements Streamable {
     private final int bucket;
-    private final DiscoveryNode member;
+    private final long replica;
     private final long vclock;
 
-    public AppendSuccessful(int bucket, DiscoveryNode member, long vclock) {
+    public AppendSuccessful(int bucket, long replica, long vclock) {
         this.bucket = bucket;
-        this.member = member;
+        this.replica = replica;
         this.vclock = vclock;
     }
 
     public AppendSuccessful(StreamInput stream) {
         bucket = stream.readInt();
-        member = stream.readStreamable(DiscoveryNode::new);
+        replica = stream.readLong();
         vclock = stream.readLong();
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
-        stream.writeStreamable(member);
+        stream.writeLong(replica);
         stream.writeLong(vclock);
     }
 
@@ -33,8 +32,8 @@ public class AppendSuccessful implements Streamable {
         return bucket;
     }
 
-    public DiscoveryNode member() {
-        return member;
+    public long replica() {
+        return replica;
     }
 
     public long vclock() {
@@ -45,7 +44,7 @@ public class AppendSuccessful implements Streamable {
     public String toString() {
         return "AppendSuccessful{" +
             "bucket=" + bucket +
-            ", member=" + member +
+            ", replica=" + replica +
             ", vclock=" + vclock +
             '}';
     }

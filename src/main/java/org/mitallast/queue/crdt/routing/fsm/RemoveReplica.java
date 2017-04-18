@@ -3,34 +3,33 @@ package org.mitallast.queue.crdt.routing.fsm;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.DiscoveryNode;
 
-public class CloseBucketMember implements Streamable {
+public class RemoveReplica implements Streamable {
     private final int bucket;
-    private final DiscoveryNode member;
+    private final long replica;
 
-    public CloseBucketMember(int bucket, DiscoveryNode member) {
+    public RemoveReplica(int bucket, long replica) {
         this.bucket = bucket;
-        this.member = member;
+        this.replica = replica;
     }
 
-    public CloseBucketMember(StreamInput stream) {
+    public RemoveReplica(StreamInput stream) {
         bucket = stream.readInt();
-        member = stream.readStreamable(DiscoveryNode::new);
+        replica = stream.readLong();
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
-        stream.writeStreamable(member);
+        stream.writeLong(replica);
     }
 
     public int bucket() {
         return bucket;
     }
 
-    public DiscoveryNode member() {
-        return member;
+    public long replica() {
+        return replica;
     }
 
     @Override
@@ -38,21 +37,21 @@ public class CloseBucketMember implements Streamable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        CloseBucketMember that = (CloseBucketMember) o;
+        RemoveReplica that = (RemoveReplica) o;
 
         if (bucket != that.bucket) return false;
-        return member.equals(that.member);
+        return replica == that.replica;
     }
 
     @Override
     public int hashCode() {
         int result = bucket;
-        result = 31 * result + member.hashCode();
+        result = 31 * result + (int) (replica ^ (replica >>> 32));
         return result;
     }
 
     @Override
     public String toString() {
-        return "CloseBucketMember{bucket=" + bucket + ", " + member + '}';
+        return "RemoveReplica{bucket=" + bucket + ", replica=" + replica + '}';
     }
 }

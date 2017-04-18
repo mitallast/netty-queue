@@ -2,7 +2,6 @@ package org.mitallast.queue.crdt;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
-import javaslang.collection.Seq;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,13 +11,13 @@ import org.mitallast.queue.crdt.bucket.BucketFactory;
 import org.mitallast.queue.crdt.event.ClosedLogSynced;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
-import org.mitallast.queue.crdt.routing.BucketMember;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
+import org.mitallast.queue.crdt.routing.RoutingReplica;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged;
-import org.mitallast.queue.crdt.routing.fsm.RemoveBucketMember;
+import org.mitallast.queue.crdt.routing.fsm.RemoveReplica;
 import org.mitallast.queue.crdt.routing.fsm.RoutingTableFSM;
 import org.mitallast.queue.crdt.routing.fsm.UpdateMembers;
 import org.mitallast.queue.raft.Raft;
@@ -91,10 +90,11 @@ public class DefaultCrdtService implements CrdtService {
         lock.lock();
         try {
             RoutingTable routingTable = routingTableFSM.get();
-            Option<BucketMember> member = routingTable.bucket(message.bucket()).members().get(discovery.self());
-            if (member.isDefined() && member.get().isClosed()) {
-                logger.info("RemoveBucketMember bucket {} {}", message.bucket(), discovery.self());
-                RemoveBucketMember request = new RemoveBucketMember(message.bucket(), discovery.self());
+            Option<RoutingReplica> replica = routingTable.bucket(message.bucket())
+                .replicas().get(message.replica());
+            if (replica.isDefined() && replica.get().isClosed()) {
+                logger.info("RemoveReplica bucket {} {}", message.bucket(), message.replica());
+                RemoveReplica request = new RemoveReplica(message.bucket(), message.replica());
                 raft.apply(new ClientMessage(discovery.self(), request));
             } else {
                 logger.warn("open closed replicator bucket {}", message.bucket());
@@ -124,11 +124,6 @@ public class DefaultCrdtService implements CrdtService {
     public Bucket bucket(long resourceId) {
         int index = routingTable().bucket(resourceId).index();
         return bucket(index);
-    }
-
-    @Override
-    public Seq<Bucket> buckets() {
-        return buckets.values();
     }
 
     private void handle(MembersChanged event) {
@@ -162,40 +157,39 @@ public class DefaultCrdtService implements CrdtService {
 
     private void processBuckets(RoutingTable routingTable) {
         for (RoutingBucket routingBucket : routingTable.buckets()) {
-            if (routingBucket.members().containsKey(discovery.self())) {
-                BucketMember bucketMember = routingBucket.members().get(discovery.self()).get();
-                Bucket bucket = getOrCreate(routingBucket.index());
-
-                if (bucketMember.isClosed()) {
-                    bucket.replicator().closeAndSync();
-                } else {
-                    bucket.replicator().open();
-                    for (Resource resource : routingBucket.resources().values()) {
-                        if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
-                            logger.info("allocate resource {}:{}", resource.id(), resource.type());
-                            switch (resource.type()) {
-                                case LWWRegister:
-                                    bucket.registry().createLWWRegister(resource.id());
-                                    break;
-                                default:
-                                    logger.warn("unexpected type: {}", resource.type());
-                            }
-                        }
-                    }
-                }
+            Option<RoutingReplica> replicaOpt = routingBucket.replicas().values()
+                .find(r -> r.member().equals(discovery.self()));
+            if (replicaOpt.isDefined()) {
+                processReplica(routingBucket, replicaOpt.get());
             } else {
                 deleteIfExists(routingBucket.index());
             }
         }
     }
 
-    private Bucket getOrCreate(int index) {
-        Bucket bucket = bucket(index);
+    private void processReplica(RoutingBucket routingBucket, RoutingReplica replica) {
+        Bucket bucket = bucket(routingBucket.index());
         if (bucket == null) {
-            bucket = bucketFactory.create(index);
-            buckets = buckets.put(index, bucket);
+            bucket = bucketFactory.create(routingBucket.index(), replica.id());
+            buckets = buckets.put(routingBucket.index(), bucket);
         }
-        return bucket;
+        if (replica.isClosed()) {
+            bucket.replicator().closeAndSync();
+        } else {
+            bucket.replicator().open();
+            for (Resource resource : routingBucket.resources().values()) {
+                if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
+                    logger.info("allocate resource {}:{}", resource.id(), resource.type());
+                    switch (resource.type()) {
+                        case LWWRegister:
+                            bucket.registry().createLWWRegister(resource.id());
+                            break;
+                        default:
+                            logger.warn("unexpected type: {}", resource.type());
+                    }
+                }
+            }
+        }
     }
 
     private void deleteIfExists(int index) {

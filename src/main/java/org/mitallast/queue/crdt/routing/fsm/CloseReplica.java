@@ -3,56 +3,56 @@ package org.mitallast.queue.crdt.routing.fsm;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.DiscoveryNode;
 
-public class AddBucketMember implements Streamable {
+public class CloseReplica implements Streamable {
     private final int bucket;
-    private final DiscoveryNode member;
+    private final long replica;
 
-    public AddBucketMember(int bucket, DiscoveryNode member) {
+    public CloseReplica(int bucket, long replica) {
         this.bucket = bucket;
-        this.member = member;
+        this.replica = replica;
     }
 
-    public AddBucketMember(StreamInput stream) {
+    public CloseReplica(StreamInput stream) {
         bucket = stream.readInt();
-        member = stream.readStreamable(DiscoveryNode::new);
+        replica = stream.readLong();
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
-        stream.writeStreamable(member);
+        stream.writeLong(replica);
     }
 
     public int bucket() {
         return bucket;
     }
 
-    public DiscoveryNode member() {
-        return member;
+    public long replica() {
+        return replica;
     }
+
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        AddBucketMember that = (AddBucketMember) o;
+        CloseReplica that = (CloseReplica) o;
 
         if (bucket != that.bucket) return false;
-        return member.equals(that.member);
+        return replica == that.replica;
     }
 
     @Override
     public int hashCode() {
         int result = bucket;
-        result = 31 * result + member.hashCode();
+        result = 31 * result + (int) (replica ^ (replica >>> 32));
         return result;
     }
 
     @Override
     public String toString() {
-        return "AddBucketMember{bucket=" + bucket + ", " + member + '}';
+        return "CloseReplica{bucket=" + bucket + ", replica=" + replica + '}';
     }
 }

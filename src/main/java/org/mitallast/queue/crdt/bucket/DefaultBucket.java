@@ -18,6 +18,7 @@ import javax.inject.Inject;
 public class DefaultBucket implements Bucket {
     private final Logger logger;
     private final int index;
+    private final long replica;
     private final CrdtRegistry registry;
     private final ReplicatedLog log;
     private final VectorClock vclock;
@@ -26,17 +27,19 @@ public class DefaultBucket implements Bucket {
     @Inject
     public DefaultBucket(
         @Assisted int index,
+        @Assisted long replica,
         CrdtRegistryFactory crdtRegistryFactory,
         ReplicatedLogFactory logFactory,
         VectorClockFactory vclockFactory,
         ReplicatorFactory replicatorFactory
     ) {
         this.index = index;
+        this.replica = replica;
         logger = LogManager.getLogger("replicator[" + index + "]");
-        vclock = vclockFactory.create(index);
+        vclock = vclockFactory.create(index, replica);
         replicator = replicatorFactory.create(this);
         registry = crdtRegistryFactory.create(index, replicator);
-        log = logFactory.create(index, new DefaultCompactionFilter(registry));
+        log = logFactory.create(index, replica, new DefaultCompactionFilter(registry));
 
         replicator.start();
     }
@@ -44,6 +47,11 @@ public class DefaultBucket implements Bucket {
     @Override
     public int index() {
         return index;
+    }
+
+    @Override
+    public long replica() {
+        return replica;
     }
 
     @Override

@@ -45,14 +45,15 @@ public class FileReplicatedLog implements ReplicatedLog {
         FileService fileService,
         StreamService streamService,
         @Assisted Predicate<LogEntry> compactionFilter,
-        @Assisted int index
+        @Assisted int index,
+        @Assisted long replica
     ) {
         this.segmentSize = config.getInt("crdt.segment.size");
 
         this.fileService = fileService;
         this.streamService = streamService;
         this.compactionFilter = compactionFilter;
-        this.serviceName = String.format("crdt/%d/log", index);
+        this.serviceName = String.format("crdt/%d/log/%d", index, replica);
 
         fileService.service(serviceName).mkdir();
         long[] offsets = fileService.resources(serviceName, "regex:event.[0-9]+.log")

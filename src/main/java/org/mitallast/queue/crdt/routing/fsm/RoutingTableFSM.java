@@ -11,9 +11,9 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.crdt.routing.BucketMember;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
+import org.mitallast.queue.crdt.routing.RoutingReplica;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
@@ -56,9 +56,11 @@ public class RoutingTableFSM implements ResourceFSM {
         registry.register(AddResource.class, this::handle);
         registry.register(RemoveResource.class, this::handle);
         registry.register(UpdateMembers.class, this::handle);
-        registry.register(AddBucketMember.class, this::handle);
-        registry.register(CloseBucketMember.class, this::handle);
-        registry.register(RemoveBucketMember.class, this::handle);
+
+        registry.register(AddReplica.class, this::handle);
+        registry.register(CloseReplica.class, this::handle);
+        registry.register(RemoveReplica.class, this::handle);
+
         registry.register(RoutingTable.class, this::handle);
     }
 
@@ -130,37 +132,39 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private Streamable handle(long index, AddBucketMember request) {
+    private Streamable handle(long index, AddReplica request) {
         if (index <= lastApplied) {
             return null;
         }
-        RoutingBucket bucket = routingTable.bucket(request.bucket());
-        if (!bucket.members().containsKey(request.member())) {
-            persist(index, routingTable.withBucketMember(request.bucket(), request.member()));
+        RoutingBucket routingBucket = routingTable.bucket(request.bucket());
+        if (!routingBucket.exists(request.member())) {
+            persist(index, routingTable.withReplica(request.bucket(), request.member()));
+        } else {
+            logger.warn("node {} already allocated in bucket {}", request.member(), request.bucket());
         }
         return null;
     }
 
-    private Streamable handle(long index, CloseBucketMember request) {
+    private Streamable handle(long index, CloseReplica request) {
         if (index <= lastApplied) {
             return null;
         }
-        RoutingBucket bucket = routingTable.bucket(request.bucket());
-        Option<BucketMember> member = bucket.members().get(request.member());
-        if (member.exists(BucketMember::isOpened)) {
-            persist(index, routingTable.withBucketMember(request.bucket(), member.get().close()));
+        RoutingBucket routingBucket = routingTable.bucket(request.bucket());
+        Option<RoutingReplica> replica = routingBucket.replicas().get(request.replica());
+        if (replica.exists(RoutingReplica::isOpened)) {
+            persist(index, routingTable.withReplica(request.bucket(), replica.get().close()));
         }
         return null;
     }
 
-    private Streamable handle(long index, RemoveBucketMember request) {
+    private Streamable handle(long index, RemoveReplica request) {
         if (index <= lastApplied) {
             return null;
         }
-        RoutingBucket bucket = routingTable.bucket(request.bucket());
-        Option<BucketMember> member = bucket.members().get(request.member());
-        if (member.exists(BucketMember::isClosed)) {
-            persist(index, routingTable.withoutBucketMember(request.bucket(), member.get().member()));
+        RoutingBucket routingBucket = routingTable.bucket(request.bucket());
+        Option<RoutingReplica> replica = routingBucket.replicas().get(request.replica());
+        if (replica.exists(RoutingReplica::isClosed)) {
+            persist(index, routingTable.withoutReplica(request.bucket(), request.replica()));
         }
         return null;
     }

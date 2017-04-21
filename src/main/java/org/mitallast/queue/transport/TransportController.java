@@ -21,7 +21,7 @@ public class TransportController {
         if (handler != null) {
             handler.handle(message);
         } else {
-            logger.error("handler not found for {}, close channel", message.getClass());
+            logger.error("handler not found for {}", message.getClass());
         }
     }
 }

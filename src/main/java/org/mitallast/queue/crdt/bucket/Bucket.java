@@ -6,12 +6,15 @@ import org.mitallast.queue.crdt.replication.Replicator;
 import org.mitallast.queue.crdt.vclock.VectorClock;
 
 import java.io.Closeable;
+import java.util.concurrent.locks.ReentrantLock;
 
 public interface Bucket extends Closeable {
 
     int index();
 
     long replica();
+
+    ReentrantLock lock();
 
     CrdtRegistry registry();
 

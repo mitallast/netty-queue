@@ -10,10 +10,10 @@ public abstract class NettyClient extends NettyClientBootstrap {
     protected final int port;
     protected volatile Channel channel;
 
-    public NettyClient(Config config) {
-        super(config);
-        host = config.getString("host");
-        port = config.getInt("port");
+    protected NettyClient(Config config, NettyProvider provider, String host, int port) {
+        super(config, provider);
+        this.host = host;
+        this.port = port;
     }
 
     @Override

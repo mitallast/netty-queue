@@ -3,8 +3,12 @@ package org.mitallast.queue.crdt;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import javaslang.collection.Vector;
+import javaslang.control.Option;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseClusterTest;
+import org.mitallast.queue.common.ConfigBuilder;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
@@ -13,20 +17,34 @@ import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.routing.ResourceType;
 import org.mitallast.queue.crdt.routing.fsm.AddResource;
 import org.mitallast.queue.raft.ClusterRaftTest;
+import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.transport.DiscoveryNode;
+
+import java.io.IOException;
 
 import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
 public class ClusterCrdtTest extends BaseClusterTest {
 
+    private Vector<Raft> raft;
     private Vector<CrdtService> crdtServices;
     private Vector<DiscoveryNode> discoveryNodes;
 
     @Override
+    protected ConfigBuilder config() throws IOException {
+        return super.config()
+            .with("crdt.replicas", 3)
+            .with("crdt.buckets", 1);
+    }
+
+    @Before
     public void setUpNodes() throws Exception {
-        super.setUpNodes();
+        createLeader();
+        createFollower();
+        createFollower();
+        raft = nodes.map(n -> n.injector().getInstance(Raft.class));
         crdtServices = nodes.map(n -> n.injector().getInstance(CrdtService.class));
         discoveryNodes = nodes.map(n -> n.injector().getInstance(ClusterDiscovery.class).self());
     }
@@ -42,27 +60,23 @@ public class ClusterCrdtTest extends BaseClusterTest {
     public void testReplicate() throws Exception {
         awaitElection();
 
-        long total = 400000;
+        long total = 1000000;
 
-        for (long c = 0; c < nodesCount; c++) {
+        for (long c = 0; c < 1000000; c++) {
             final long crdt = c;
             raft.get(0).apply(new ClientMessage(discoveryNodes.get(0), new AddResource(crdt, ResourceType.LWWRegister)));
             awaitResourceAllocate(crdt);
 
+            Vector<LWWRegister> registers = crdtServices
+                .map(s -> s.bucket(crdt).registry())
+                .map(r -> r.crdt(crdt, LWWRegister.class));
+
             long start = System.currentTimeMillis();
             for (long i = 0; i < total; i++) {
-                crdtServices.get((int) (i % nodesCount))
-                    .bucket(crdt)
-                    .registry()
-                    .crdt(crdt, LWWRegister.class)
-                    .assign(new TestLong(i));
+                registers.get((int) (i % nodes.size())).assign(new TestLong(i), i);
             }
-            for (int w = 0; w < 10; w++) {
-                if (crdtServices.forAll(b -> b.bucket(crdt)
-                    .registry()
-                    .crdt(crdt, LWWRegister.class)
-                    .value()
-                    .contains(new TestLong(total - 1)))) {
+            for (int w = 0; w < 10000; w++) {
+                if (!registers.forAll(r -> r.value().contains(new TestLong(total - 1)))) {
                     Thread.sleep(10);
                     continue;
                 }
@@ -70,11 +84,13 @@ public class ClusterCrdtTest extends BaseClusterTest {
             }
             long end = System.currentTimeMillis();
 
-            assert crdtServices.forAll(b -> b.bucket(crdt)
-                .registry()
-                .crdt(crdt, LWWRegister.class)
-                .value()
-                .contains(new TestLong(total - 1)));
+            for (CrdtService crdtService : crdtServices) {
+                LWWRegister register = crdtService.bucket(crdt)
+                    .registry()
+                    .crdt(crdt, LWWRegister.class);
+
+                Assert.assertEquals(Option.some(new TestLong(total - 1)), register.value());
+            }
 
             printQps("CRDT async", total, start, end);
         }
@@ -85,8 +101,8 @@ public class ClusterCrdtTest extends BaseClusterTest {
         while (true) {
             boolean allocated = true;
             for (CrdtService crdtService : crdtServices) {
-                if (crdtService.routingTable().bucket(crdt).replicas().size() < nodesCount) {
-                    logger.info("await replica count");
+                if (crdtService.routingTable().bucket(crdt).replicas().size() < nodes.size()) {
+                    logger.info("await replica count: {}", crdtService.routingTable().bucket(crdt).replicas().size());
                     allocated = false;
                     break;
                 } else if (crdtService.bucket(crdt) == null) {
@@ -131,6 +147,28 @@ public class ClusterCrdtTest extends BaseClusterTest {
         @Override
         public void writeTo(StreamOutput stream) {
             stream.writeLong(value);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            TestLong testLong = (TestLong) o;
+
+            return value == testLong.value;
+        }
+
+        @Override
+        public int hashCode() {
+            return (int) (value ^ (value >>> 32));
+        }
+
+        @Override
+        public String toString() {
+            return "TestLong{" +
+                "value=" + value +
+                '}';
         }
     }
 }

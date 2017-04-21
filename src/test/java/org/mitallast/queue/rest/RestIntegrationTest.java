@@ -8,6 +8,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
+import org.mitallast.queue.common.netty.NettyProvider;
 import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
@@ -26,7 +27,10 @@ public class RestIntegrationTest extends BaseQueueTest {
         client = 0;
         clients = new ArrayList<>();
         for (int i = 0; i <= concurrency(); i++) {
-            RestClient restClient = new RestClient(node().config());
+            RestClient restClient = new RestClient(
+                node().config(),
+                node().injector().getInstance(NettyProvider.class)
+            );
             restClient.start();
             clients.add(restClient);
         }

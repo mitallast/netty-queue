@@ -9,6 +9,8 @@ import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.bucket.BucketFactory;
 import org.mitallast.queue.crdt.event.ClosedLogSynced;
+import org.mitallast.queue.crdt.log.LogEntry;
+import org.mitallast.queue.crdt.protocol.AppendEntries;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
 import org.mitallast.queue.crdt.routing.Resource;
@@ -25,6 +27,7 @@ import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.event.MembersChanged;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.transport.TransportController;
+import org.mitallast.queue.transport.TransportService;
 
 import javax.inject.Inject;
 import java.util.concurrent.Executor;
@@ -40,8 +43,9 @@ public class DefaultCrdtService implements CrdtService {
     private final AllocationStrategy allocationStrategy;
     private final ClusterDiscovery discovery;
     private final BucketFactory bucketFactory;
+    private final TransportService transportService;
 
-    private final ReentrantLock lock;
+    private final ReentrantLock lock = new ReentrantLock();
     private volatile long lastApplied = 0;
     private volatile Map<Integer, Bucket> buckets = HashMap.empty();
 
@@ -53,23 +57,68 @@ public class DefaultCrdtService implements CrdtService {
         ClusterDiscovery discovery,
         TransportController transportController,
         BucketFactory bucketFactory,
-        EventBus eventBus
+        EventBus eventBus,
+        TransportService transportService
     ) {
         this.raft = raft;
         this.routingTableFSM = routingTableFSM;
         this.discovery = discovery;
         this.bucketFactory = bucketFactory;
         this.allocationStrategy = allocationStrategy;
-
-        this.lock = new ReentrantLock();
+        this.transportService = transportService;
 
         Executor executor = Executors.newSingleThreadExecutor();
         eventBus.subscribe(MembersChanged.class, this::handle, executor);
         eventBus.subscribe(RoutingTableChanged.class, this::handle, executor);
         eventBus.subscribe(ClosedLogSynced.class, this::handle, executor);
 
+        transportController.registerMessageHandler(AppendEntries.class, this::append);
         transportController.registerMessageHandler(AppendSuccessful.class, this::successful);
         transportController.registerMessageHandler(AppendRejected.class, this::rejected);
+    }
+
+    private void append(AppendEntries message) {
+        Bucket bucket = bucket(message.bucket());
+        if (bucket == null) {
+            logger.warn("unexpected bucket {}, ignore", message.bucket());
+        } else {
+            bucket.lock().lock();
+            try {
+                RoutingBucket routingBucket = routingTable().bucket(message.bucket());
+                RoutingReplica replica = routingBucket.replicas().getOrElse(message.replica(), null);
+                if (replica == null) {
+                    logger.warn("unexpected replica {}, ignore", message.replica());
+                } else {
+                    long localIndex = bucket.vclock().get(message.replica());
+                    if (localIndex == message.prevVclock()) {
+                        for (LogEntry logEntry : message.entries()) {
+                            bucket.registry().crdt(logEntry.id()).update(logEntry.event());
+                            localIndex = Math.max(localIndex, logEntry.vclock());
+                        }
+                        bucket.vclock().put(message.replica(), localIndex);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("[replica={}:{}] append success to={}:{} prev={} new={}",
+                                bucket.index(), bucket.replica(),
+                                message.bucket(), message.replica(), message.prevVclock(), localIndex);
+                        }
+                        transportService.send(
+                            replica.member(),
+                            new AppendSuccessful(message.bucket(), bucket.replica(), localIndex)
+                        );
+                    } else {
+                        logger.warn("[replica={}:{}] append reject to={}:{} prev={} index={}",
+                            bucket.index(), bucket.replica(),
+                            message.bucket(), message.replica(), message.prevVclock(), localIndex);
+                        transportService.send(
+                            replica.member(),
+                            new AppendRejected(message.bucket(), bucket.replica(), localIndex)
+                        );
+                    }
+                }
+            } finally {
+                bucket.lock().unlock();
+            }
+        }
     }
 
     private void successful(AppendSuccessful message) {
@@ -98,7 +147,10 @@ public class DefaultCrdtService implements CrdtService {
                 raft.apply(new ClientMessage(discovery.self(), request));
             } else {
                 logger.warn("open closed replicator bucket {}", message.bucket());
-                buckets.get(message.bucket()).get().replicator().open();
+                Bucket bucket = bucket(message.bucket());
+                if (bucket != null) {
+                    bucket.replicator().open();
+                }
             }
         } finally {
             lock.unlock();
@@ -110,7 +162,6 @@ public class DefaultCrdtService implements CrdtService {
         return routingTableFSM.get();
     }
 
-    @Override
     public boolean contains(int index) {
         return buckets.containsKey(index);
     }
@@ -173,32 +224,42 @@ public class DefaultCrdtService implements CrdtService {
             bucket = bucketFactory.create(routingBucket.index(), replica.id());
             buckets = buckets.put(routingBucket.index(), bucket);
         }
-        if (replica.isClosed()) {
-            bucket.replicator().closeAndSync();
-        } else {
-            bucket.replicator().open();
-            for (Resource resource : routingBucket.resources().values()) {
-                if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
-                    logger.info("allocate resource {}:{}", resource.id(), resource.type());
-                    switch (resource.type()) {
-                        case LWWRegister:
-                            bucket.registry().createLWWRegister(resource.id());
-                            break;
-                        default:
-                            logger.warn("unexpected type: {}", resource.type());
+        bucket.lock().lock();
+        try {
+            if (replica.isClosed()) {
+                bucket.replicator().closeAndSync();
+            } else {
+                bucket.replicator().open();
+                for (Resource resource : routingBucket.resources().values()) {
+                    if (bucket.registry().crdtOpt(resource.id()).isEmpty()) {
+                        logger.info("allocate resource {}:{}", resource.id(), resource.type());
+                        switch (resource.type()) {
+                            case LWWRegister:
+                                bucket.registry().createLWWRegister(resource.id());
+                                break;
+                            default:
+                                logger.warn("unexpected type: {}", resource.type());
+                        }
                     }
                 }
             }
+        } finally {
+            bucket.lock().unlock();
         }
     }
 
     private void deleteIfExists(int index) {
-        if (contains(index)) {
+        Bucket bucket = bucket(index);
+        if (bucket != null) {
             logger.info("delete bucket {}", index);
-            Bucket bucket = bucket(index);
-            buckets = buckets.remove(index);
-            bucket.close();
-            bucket.delete();
+            bucket.lock().lock();
+            try {
+                buckets = buckets.remove(index);
+                bucket.close();
+                bucket.delete();
+            } finally {
+                bucket.lock().unlock();
+            }
         }
     }
 }

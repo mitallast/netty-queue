@@ -2,7 +2,9 @@ package org.mitallast.queue.crdt.vclock;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import gnu.trove.impl.sync.TSynchronizedLongLongMap;
 import gnu.trove.iterator.TLongLongIterator;
+import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import org.mitallast.queue.common.file.FileService;
 import org.mitallast.queue.common.stream.StreamInput;
@@ -15,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class FileVectorClock implements VectorClock {
     private final FileService fileService;
     private final StreamService streamService;
-    private final TLongLongHashMap vclock;
+    private final TLongLongMap vclock;
     private final ReentrantLock writeLock = new ReentrantLock();
     private final String serviceName;
 
@@ -32,7 +34,7 @@ public class FileVectorClock implements VectorClock {
     ) {
         this.fileService = fileService;
         this.streamService = streamService;
-        this.vclock = new TLongLongHashMap(7, 0.5f, 0, 0);
+        this.vclock = new TSynchronizedLongLongMap(new TLongLongHashMap(7, 0.5f, 0, 0));
         this.logSize = 0;
         this.serviceName = String.format("crdt/%d/vclock/%d", index, replicaId);
 
@@ -55,6 +57,7 @@ public class FileVectorClock implements VectorClock {
     public void put(long replica, long nodeVclock) {
         writeLock.lock();
         try {
+            assert vclock.get(replica) <= nodeVclock;
             vclock.put(replica, nodeVclock);
             vclockOutput.writeLong(replica);
             vclockOutput.writeLong(nodeVclock);

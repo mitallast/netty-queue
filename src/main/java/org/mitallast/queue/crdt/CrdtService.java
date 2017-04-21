@@ -7,8 +7,6 @@ public interface CrdtService {
 
     RoutingTable routingTable();
 
-    boolean contains(int index);
-
     Bucket bucket(int index);
 
     Bucket bucket(long resourceId);

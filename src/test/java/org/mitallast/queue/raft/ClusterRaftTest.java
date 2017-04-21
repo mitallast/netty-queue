@@ -36,6 +36,7 @@ import static org.mitallast.queue.raft.RaftState.Leader;
 
 public class ClusterRaftTest extends BaseClusterTest {
 
+    private Vector<Raft> raft;
     private Vector<RegisterClient> client;
     private Vector<RegisterByteClient> byteClient;
 
@@ -47,7 +48,10 @@ public class ClusterRaftTest extends BaseClusterTest {
 
     @Before
     public void setUpNodes() throws Exception {
-        super.setUpNodes();
+        createLeader();
+        createFollower();
+        createFollower();
+        raft = nodes.map(n -> n.injector().getInstance(Raft.class));
         client = nodes.map(n -> n.injector().getInstance(RegisterClient.class));
         byteClient = nodes.map(n -> n.injector().getInstance(RegisterByteClient.class));
     }
@@ -72,7 +76,7 @@ public class ClusterRaftTest extends BaseClusterTest {
     public void benchmarkSynchronous() throws Exception {
         awaitElection();
         int leader = 0;
-        for (int i = 0; i < nodesCount; i++) {
+        for (int i = 0; i < nodes.size(); i++) {
             if (raft.get(i).currentState() == Leader) {
                 leader = i;
             }
@@ -101,7 +105,7 @@ public class ClusterRaftTest extends BaseClusterTest {
     public void benchmarkAsynchronous() throws Exception {
         awaitElection();
         int leader = 0;
-        for (int i = 0; i < nodesCount; i++) {
+        for (int i = 0; i < nodes.size(); i++) {
             if (raft.get(i).currentState() == Leader) {
                 leader = i;
             }
@@ -135,7 +139,7 @@ public class ClusterRaftTest extends BaseClusterTest {
     public void benchmarkAsynchronousByte() throws Exception {
         awaitElection();
         int leader = 0;
-        for (int i = 0; i < nodesCount; i++) {
+        for (int i = 0; i < nodes.size(); i++) {
             if (raft.get(i).currentState() == Leader) {
                 leader = i;
             }
@@ -149,7 +153,7 @@ public class ClusterRaftTest extends BaseClusterTest {
             byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes)).get();
         }
 
-        for(int t=0;t<3;t++) {
+        for (int t = 0; t < 3; t++) {
             final int total = 200000;
             final ArrayList<CompletableFuture<RegisterByteOK>> futures = new ArrayList<>(total);
             final long start = System.currentTimeMillis();

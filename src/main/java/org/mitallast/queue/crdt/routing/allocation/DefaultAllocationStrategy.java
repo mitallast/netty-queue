@@ -15,7 +15,7 @@ import org.mitallast.queue.crdt.routing.fsm.CloseReplica;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class DefaultAllocationStrategy implements AllocationStrategy {
-    private final Logger logger = LogManager.getLogger();
+    private final static Logger logger = LogManager.getLogger(AllocationStrategy.class);
 
     @Override
     public Option<Streamable> update(RoutingTable routingTable) {

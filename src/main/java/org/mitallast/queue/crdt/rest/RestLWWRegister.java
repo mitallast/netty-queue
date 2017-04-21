@@ -75,7 +75,7 @@ public class RestLWWRegister {
         }
         Option<LWWRegister> lwwRegisterOpt = bucket.registry().crdtOpt(id, LWWRegister.class);
         if (lwwRegisterOpt.isDefined()) {
-            lwwRegisterOpt.get().assign(value);
+            lwwRegisterOpt.get().assign(value, System.currentTimeMillis());
         }
         return true;
     }

@@ -14,11 +14,13 @@ import org.mitallast.queue.crdt.vclock.VectorClock;
 import org.mitallast.queue.crdt.vclock.VectorClockFactory;
 
 import javax.inject.Inject;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class DefaultBucket implements Bucket {
     private final Logger logger;
     private final int index;
     private final long replica;
+    private final ReentrantLock lock;
     private final CrdtRegistry registry;
     private final ReplicatedLog log;
     private final VectorClock vclock;
@@ -36,6 +38,7 @@ public class DefaultBucket implements Bucket {
         this.index = index;
         this.replica = replica;
         logger = LogManager.getLogger("replicator[" + index + "]");
+        lock = new ReentrantLock();
         vclock = vclockFactory.create(index, replica);
         replicator = replicatorFactory.create(this);
         registry = crdtRegistryFactory.create(index, replicator);
@@ -52,6 +55,11 @@ public class DefaultBucket implements Bucket {
     @Override
     public long replica() {
         return replica;
+    }
+
+    @Override
+    public ReentrantLock lock() {
+        return lock;
     }
 
     @Override

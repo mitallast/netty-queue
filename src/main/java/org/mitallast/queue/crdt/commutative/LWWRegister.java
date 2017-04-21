@@ -11,21 +11,24 @@ public class LWWRegister implements CmRDT {
     public static class SourceAssign implements SourceUpdate {
 
         private final Streamable value;
+        private final long timestamp;
 
-        public SourceAssign(Streamable value) {
+        public SourceAssign(Streamable value, long timestamp) {
             this.value = value;
+            this.timestamp = timestamp;
         }
 
         public SourceAssign(StreamInput stream) {
             this.value = stream.readStreamable();
+            this.timestamp = stream.readLong();
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
             stream.writeClass(value.getClass());
             stream.writeStreamable(value);
+            stream.writeLong(timestamp);
         }
-
     }
 
     public static class DownstreamAssign implements DownstreamUpdate {
@@ -81,7 +84,8 @@ public class LWWRegister implements CmRDT {
     @Override
     public void sourceUpdate(SourceUpdate update) {
         if (update instanceof SourceAssign) {
-            assign(((SourceAssign) update).value);
+            SourceAssign assign = (SourceAssign) update;
+            assign(assign.value, assign.timestamp);
         }
     }
 
@@ -98,15 +102,21 @@ public class LWWRegister implements CmRDT {
         }
     }
 
-    public void assign(Streamable value) {
+    public void assign(Streamable value, long timestamp) {
         synchronized (this) {
-            this.value = Option.some(value);
-            this.timestamp = System.currentTimeMillis();
+            if (this.timestamp < timestamp) {
+                this.value = Option.some(value);
+                this.timestamp = timestamp;
+                replicator.append(id, new DownstreamAssign(value, timestamp));
+            }
         }
-        replicator.append(id, new DownstreamAssign(value, timestamp));
     }
 
     public Option<Streamable> value() {
         return value;
+    }
+
+    public long timestamp() {
+        return timestamp;
     }
 }

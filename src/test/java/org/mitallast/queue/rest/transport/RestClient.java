@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import org.mitallast.queue.common.netty.NettyClient;
+import org.mitallast.queue.common.netty.NettyProvider;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -19,8 +20,11 @@ public class RestClient extends NettyClient {
 
     private final ConcurrentLinkedDeque<CompletableFuture<FullHttpResponse>> queue = new ConcurrentLinkedDeque<>();
 
-    public RestClient(Config config) {
-        super(config.getConfig("rest"));
+    public RestClient(Config config, NettyProvider provider) {
+        super(config, provider,
+            config.getString("rest.host"),
+            config.getInt("rest.port")
+        );
     }
 
     public CompletableFuture<FullHttpResponse> send(HttpRequest request) {

@@ -3,20 +3,13 @@ package org.mitallast.queue.common.netty;
 import com.typesafe.config.Config;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
-import io.netty.channel.epoll.Epoll;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollServerSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.util.concurrent.DefaultThreadFactory;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 
-import java.util.concurrent.ThreadFactory;
-
 public abstract class NettyServer extends AbstractLifecycleComponent {
-
     protected final String host;
     protected final int port;
     private final int backlog;
@@ -25,47 +18,28 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
     private final boolean tcpNoDelay;
     private final int sndBuf;
     private final int rcvBuf;
-    private final int threads;
+    protected final NettyProvider provider;
     protected Channel channel;
     protected ServerBootstrap bootstrap;
 
-    public NettyServer(Config config) {
-        this.host = config.getString("host");
-        this.port = config.getInt("port");
-        this.backlog = config.getInt("backlog");
-        this.reuseAddress = config.getBoolean("reuse_address");
-        this.keepAlive = config.getBoolean("keep_alive");
-        this.tcpNoDelay = config.getBoolean("tcp_no_delay");
-        this.sndBuf = config.getInt("snd_buf");
-        this.rcvBuf = config.getInt("rcv_buf");
-        this.threads = config.getInt("threads");
-    }
-
-    private ThreadFactory threadFactory(String name) {
-        return new DefaultThreadFactory(name, true, Thread.NORM_PRIORITY, new ThreadGroup(name));
+    protected NettyServer(Config config, NettyProvider provider, String host, int port) {
+        this.host = host;
+        this.port = port;
+        this.provider = provider;
+        this.backlog = config.getInt("netty.backlog");
+        this.reuseAddress = config.getBoolean("netty.reuse_address");
+        this.keepAlive = config.getBoolean("netty.keep_alive");
+        this.tcpNoDelay = config.getBoolean("netty.tcp_no_delay");
+        this.sndBuf = config.getInt("netty.snd_buf");
+        this.rcvBuf = config.getInt("netty.rcv_buf");
     }
 
     @Override
     protected void doStart() {
         try {
-            final Class<? extends ServerSocketChannel> channelClass;
-            final EventLoopGroup boss;
-            final EventLoopGroup worker;
-            if (Epoll.isAvailable()) {
-                logger.info("use epoll");
-                channelClass = EpollServerSocketChannel.class;
-                boss = new EpollEventLoopGroup(1, threadFactory("boss"));
-                worker = new EpollEventLoopGroup(threads, threadFactory("worker"));
-            } else {
-                logger.info("use nio");
-                channelClass = NioServerSocketChannel.class;
-                boss = new NioEventLoopGroup(1, threadFactory("boss"));
-                worker = new NioEventLoopGroup(threads, threadFactory("worker"));
-            }
-
             bootstrap = new ServerBootstrap();
-            bootstrap.group(boss, worker)
-                .channel(channelClass)
+            bootstrap.group(provider.parent(), provider.child())
+                .channel(provider.serverChannel())
                 .handler(channelInitializer())
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)
@@ -91,6 +65,11 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
 
     @Override
     protected void doStop() {
+
+    }
+
+    @Override
+    protected void doClose() {
         try {
             if (channel != null) {
                 channel.close().sync();
@@ -99,13 +78,7 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
-        bootstrap.config().group().shutdownGracefully();
         channel = null;
         bootstrap = null;
-    }
-
-    @Override
-    protected void doClose() {
-
     }
 }

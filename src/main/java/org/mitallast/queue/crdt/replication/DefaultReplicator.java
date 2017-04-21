@@ -3,6 +3,7 @@ package org.mitallast.queue.crdt.replication;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.typesafe.config.Config;
+import gnu.trove.impl.sync.TSynchronizedLongLongMap;
 import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import javaslang.collection.Seq;
@@ -40,8 +41,8 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
 
     private final ReentrantLock lock = new ReentrantLock();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final TLongLongMap vclock = new TLongLongHashMap(32, 0.5f, 0, 0);
-    private final TLongLongMap replicationTimeout = new TLongLongHashMap(32, 0.5f, 0, 0);
+    private final TLongLongMap replicationIndex = new TSynchronizedLongLongMap(new TLongLongHashMap(32, 0.5f, 0, 0));
+    private final TLongLongMap replicationTimeout = new TSynchronizedLongLongMap(new TLongLongHashMap(32, 0.5f, 0, 0));
 
     private final long timeout;
 
@@ -101,9 +102,13 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     public void successful(AppendSuccessful message) {
         lock.lock();
         try {
-            logger.debug("append successful replica={} vclock={}", message.replica(), message.vclock());
-            if (vclock.get(message.replica()) < message.vclock()) {
-                vclock.put(message.replica(), message.vclock());
+            if (logger.isDebugEnabled()) {
+                logger.debug("[replica={}:{}] append successful from={}:{} last={}",
+                    bucket.index(), bucket.replica(),
+                    message.bucket(), message.replica(), message.vclock());
+            }
+            if (replicationIndex.get(message.replica()) < message.vclock()) {
+                replicationIndex.put(message.replica(), message.vclock());
             }
             replicationTimeout.put(message.replica(), 0);
             maybeSendEntries(message.replica());
@@ -117,9 +122,11 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     public void rejected(AppendRejected message) {
         lock.lock();
         try {
-            logger.warn("append rejected {} vclock={}", message.replica(), message.vclock());
-            if (vclock.get(message.replica()) < message.vclock()) {
-                vclock.put(message.replica(), message.vclock());
+            logger.warn("[replica={}:{}] append rejected from={}:{} last={}",
+                bucket.index(), bucket.replica(),
+                message.bucket(), message.replica(), message.vclock());
+            if (replicationIndex.get(message.replica()) < message.vclock()) {
+                replicationIndex.put(message.replica(), message.vclock());
             }
             replicationTimeout.put(message.replica(), 0);
             maybeSendEntries(message.replica());
@@ -159,25 +166,52 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
 
     private void maybeSendEntries(long replica) {
         RoutingTable routingTable = fsm.get();
-        RoutingBucket routingBucket = routingTable.buckets().get(this.bucket.index());
+        RoutingBucket routingBucket = routingTable.buckets().get(bucket.index());
         routingBucket.replicas().get(replica).forEach(this::maybeSendEntries);
     }
 
     private void maybeSendEntries(RoutingReplica replica) {
+        if (replica.id() == bucket.replica()) { // do not send to self
+            return;
+        }
         long timeout = replicationTimeout.get(replica.id());
-        if (timeout < System.currentTimeMillis()) {
+        if (timeout == 0) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("[replica={}:{}] no request in progress at {}:{}",
+                    bucket.index(), bucket.replica(),
+                    bucket.index(), replica.id());
+            }
             sendEntries(replica);
+        } else if (timeout < System.currentTimeMillis()) {
+            logger.warn("[replica={}:{}] request timeout at {}:{}",
+                bucket.index(), bucket.replica(),
+                bucket.index(), replica.id());
+            sendEntries(replica);
+        } else {
+            if (logger.isTraceEnabled()) {
+                logger.trace("[replica={}:{}] request in progress to {}:{}",
+                    bucket.index(), bucket.replica(),
+                    bucket.index(), replica.id());
+            }
         }
     }
 
     private void sendEntries(RoutingReplica replica) {
-        long nodeVclock = vclock.get(replica.id());
+        long prev = replicationIndex.get(replica.id());
         ReplicatedLog log = bucket.log();
-        Vector<LogEntry> append = log.entriesFrom(nodeVclock);
-        if (!append.isEmpty()) {
-            logger.debug("send append replica={} vclock={}", replica.id(), nodeVclock);
+        Vector<LogEntry> append = log.entriesFrom(prev).take(10000);
+        if (append.nonEmpty()) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("[replica={}:{}] send append to={}:{} prev={}",
+                    bucket.index(), bucket.replica(),
+                    bucket.index(), replica.id(), prev);
+            }
             replicationTimeout.put(replica.id(), System.currentTimeMillis() + timeout);
-            transportService.send(replica.member(), new AppendEntries(bucket.index(), bucket.replica(), nodeVclock, append));
+            transportService.send(replica.member(), new AppendEntries(bucket.index(), bucket.replica(), prev, append));
+        } else {
+            if (logger.isTraceEnabled()) {
+                logger.trace("no new entries");
+            }
         }
     }
 
@@ -192,7 +226,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
                 return;
             }
             for (RoutingReplica replica : replicas) {
-                if (vclock.get(replica.id()) != last) {
+                if (replicationIndex.get(replica.id()) != last) {
                     return; // not synced
                 }
             }

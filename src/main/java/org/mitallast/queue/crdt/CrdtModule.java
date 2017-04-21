@@ -18,7 +18,6 @@ import org.mitallast.queue.crdt.registry.CrdtRegistry;
 import org.mitallast.queue.crdt.registry.CrdtRegistryFactory;
 import org.mitallast.queue.crdt.registry.DefaultCrdtRegistry;
 import org.mitallast.queue.crdt.replication.DefaultReplicator;
-import org.mitallast.queue.crdt.replication.Replica;
 import org.mitallast.queue.crdt.replication.Replicator;
 import org.mitallast.queue.crdt.replication.ReplicatorFactory;
 import org.mitallast.queue.crdt.routing.Resource;
@@ -71,8 +70,6 @@ public class CrdtModule extends AbstractModule {
         install(new FactoryModuleBuilder()
             .implement(Replicator.class, DefaultReplicator.class)
             .build(ReplicatorFactory.class));
-
-        bind(Replica.class).asEagerSingleton();
 
         // protocol
 

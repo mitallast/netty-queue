@@ -3,6 +3,7 @@ package org.mitallast.queue.transport.netty;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
+import org.mitallast.queue.common.netty.NettyProvider;
 import org.mitallast.queue.common.netty.NettyServer;
 import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.common.stream.Streamable;
@@ -19,10 +20,14 @@ public class NettyTransportServer extends NettyServer implements TransportServer
     @Inject
     public NettyTransportServer(
         Config config,
+        NettyProvider provider,
         TransportController transportController,
         StreamService streamService
     ) {
-        super(config.getConfig("transport"));
+        super(config, provider,
+            config.getString("transport.host"),
+            config.getInt("transport.port")
+        );
         this.transportController = transportController;
         this.streamService = streamService;
         this.discoveryNode = new DiscoveryNode(host, port);

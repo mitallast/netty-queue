@@ -4,7 +4,6 @@ import javaslang.collection.Vector;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RaftSnapshot implements Streamable {
     private final RaftSnapshotMetadata meta;
@@ -34,8 +33,8 @@ public class RaftSnapshot implements Streamable {
         return data;
     }
 
-    public LogEntry toEntry(DiscoveryNode node) {
-        return new LogEntry(this, meta.getLastIncludedTerm(), meta.getLastIncludedIndex(), node);
+    public LogEntry toEntry() {
+        return new LogEntry(meta.getLastIncludedTerm(), meta.getLastIncludedIndex(), 0, this);
     }
 
     @Override

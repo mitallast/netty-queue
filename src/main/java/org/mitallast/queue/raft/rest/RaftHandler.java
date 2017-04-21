@@ -31,10 +31,10 @@ public class RaftHandler {
         return HashMap.of(
             "committedIndex", log.committedIndex(),
             "entries", log.entries().map(entry -> HashMap.of(
-                "term", entry.getTerm(),
-                "index", entry.getIndex(),
-                "command", entry.getCommand().getClass().getSimpleName(),
-                "client", entry.getClient()
+                "term", entry.term(),
+                "index", entry.index(),
+                "command", entry.command().getClass().getSimpleName(),
+                "session", entry.session()
             ))
         );
     }

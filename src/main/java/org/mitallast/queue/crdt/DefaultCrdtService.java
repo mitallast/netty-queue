@@ -2,6 +2,7 @@ package org.mitallast.queue.crdt;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
+import javaslang.concurrent.Future;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,15 +14,10 @@ import org.mitallast.queue.crdt.log.LogEntry;
 import org.mitallast.queue.crdt.protocol.AppendEntries;
 import org.mitallast.queue.crdt.protocol.AppendRejected;
 import org.mitallast.queue.crdt.protocol.AppendSuccessful;
-import org.mitallast.queue.crdt.routing.Resource;
-import org.mitallast.queue.crdt.routing.RoutingBucket;
-import org.mitallast.queue.crdt.routing.RoutingReplica;
-import org.mitallast.queue.crdt.routing.RoutingTable;
+import org.mitallast.queue.crdt.routing.*;
 import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged;
-import org.mitallast.queue.crdt.routing.fsm.RemoveReplica;
-import org.mitallast.queue.crdt.routing.fsm.RoutingTableFSM;
-import org.mitallast.queue.crdt.routing.fsm.UpdateMembers;
+import org.mitallast.queue.crdt.routing.fsm.*;
 import org.mitallast.queue.raft.Raft;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.event.MembersChanged;
@@ -144,7 +140,7 @@ public class DefaultCrdtService implements CrdtService {
             if (replica.isDefined() && replica.get().isClosed()) {
                 logger.info("RemoveReplica bucket {} {}", message.bucket(), message.replica());
                 RemoveReplica request = new RemoveReplica(message.bucket(), message.replica());
-                raft.apply(new ClientMessage(discovery.self(), request));
+                raft.apply(new ClientMessage(request, 0));
             } else {
                 logger.warn("open closed replicator bucket {}", message.bucket());
                 Bucket bucket = bucket(message.bucket());
@@ -177,10 +173,17 @@ public class DefaultCrdtService implements CrdtService {
         return bucket(index);
     }
 
+    @Override
+    public Future<Boolean> addResource(long id, ResourceType resourceType) {
+        return raft.command(new AddResource(id, ResourceType.LWWRegister))
+            .filter(m -> m instanceof AddResourceResponse)
+            .map(m -> ((AddResourceResponse) m).isCreated());
+    }
+
     private void handle(MembersChanged event) {
         if (raft.currentState() == Leader) {
             logger.info("members changed");
-            raft.apply(new ClientMessage(discovery.self(), new UpdateMembers(event.members())));
+            raft.apply(new ClientMessage(new UpdateMembers(event.members()), 0));
         }
     }
 
@@ -202,7 +205,7 @@ public class DefaultCrdtService implements CrdtService {
     private void processAsLeader(RoutingTable routingTable) {
         if (raft.currentState() == Leader) {
             allocationStrategy.update(routingTable)
-                .forEach(cmd -> raft.apply(new ClientMessage(discovery.self(), cmd)));
+                .forEach(cmd -> raft.apply(new ClientMessage(cmd, 0)));
         }
     }
 

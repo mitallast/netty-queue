@@ -2,6 +2,7 @@ package org.mitallast.queue.crdt.rest;
 
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
+import javaslang.concurrent.Future;
 import javaslang.control.Option;
 import org.mitallast.queue.common.json.JsonStreamable;
 import org.mitallast.queue.common.stream.Streamable;
@@ -9,31 +10,21 @@ import org.mitallast.queue.crdt.CrdtService;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.routing.ResourceType;
-import org.mitallast.queue.crdt.routing.fsm.AddResource;
-import org.mitallast.queue.raft.Raft;
-import org.mitallast.queue.raft.discovery.ClusterDiscovery;
-import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.rest.RestController;
 
 public class RestLWWRegister {
-    private final ClusterDiscovery clusterDiscovery;
-    private final Raft raft;
     private final CrdtService crdtService;
 
     @Inject
     public RestLWWRegister(
         RestController controller,
-        ClusterDiscovery clusterDiscovery,
-        Raft raft,
         CrdtService crdtService
     ) {
-        this.clusterDiscovery = clusterDiscovery;
-        this.raft = raft;
         this.crdtService = crdtService;
 
         controller.handler(this::create)
             .param(controller.param().toLong("id"))
-            .response(controller.response().either(
+            .response(controller.response().futureEither(
                 controller.response().created(),
                 controller.response().badRequest()
             ))
@@ -54,9 +45,8 @@ public class RestLWWRegister {
             .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/value");
     }
 
-    public boolean create(long id) {
-        raft.apply(new ClientMessage(clusterDiscovery.self(), new AddResource(id, ResourceType.LWWRegister)));
-        return true;
+    public Future<Boolean> create(long id) {
+        return crdtService.addResource(id, ResourceType.LWWRegister);
     }
 
     public Option<Streamable> value(long id) {

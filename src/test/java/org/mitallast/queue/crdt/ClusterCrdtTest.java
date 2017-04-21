@@ -15,12 +15,7 @@ import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.routing.ResourceType;
-import org.mitallast.queue.crdt.routing.fsm.AddResource;
 import org.mitallast.queue.raft.ClusterRaftTest;
-import org.mitallast.queue.raft.Raft;
-import org.mitallast.queue.raft.discovery.ClusterDiscovery;
-import org.mitallast.queue.raft.protocol.ClientMessage;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.IOException;
 
@@ -28,9 +23,7 @@ import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
 public class ClusterCrdtTest extends BaseClusterTest {
 
-    private Vector<Raft> raft;
     private Vector<CrdtService> crdtServices;
-    private Vector<DiscoveryNode> discoveryNodes;
 
     @Override
     protected ConfigBuilder config() throws IOException {
@@ -44,9 +37,7 @@ public class ClusterCrdtTest extends BaseClusterTest {
         createLeader();
         createFollower();
         createFollower();
-        raft = nodes.map(n -> n.injector().getInstance(Raft.class));
         crdtServices = nodes.map(n -> n.injector().getInstance(CrdtService.class));
-        discoveryNodes = nodes.map(n -> n.injector().getInstance(ClusterDiscovery.class).self());
     }
 
     @Override
@@ -64,8 +55,7 @@ public class ClusterCrdtTest extends BaseClusterTest {
 
         for (long c = 0; c < 1000000; c++) {
             final long crdt = c;
-            raft.get(0).apply(new ClientMessage(discoveryNodes.get(0), new AddResource(crdt, ResourceType.LWWRegister)));
-            awaitResourceAllocate(crdt);
+            crdtServices.head().addResource(crdt, ResourceType.LWWRegister).get();
 
             Vector<LWWRegister> registers = crdtServices
                 .map(s -> s.bucket(crdt).registry())
@@ -93,33 +83,6 @@ public class ClusterCrdtTest extends BaseClusterTest {
             }
 
             printQps("CRDT async", total, start, end);
-        }
-    }
-
-    private void awaitResourceAllocate(long crdt) throws Exception {
-        // await bucket allocation
-        while (true) {
-            boolean allocated = true;
-            for (CrdtService crdtService : crdtServices) {
-                if (crdtService.routingTable().bucket(crdt).replicas().size() < nodes.size()) {
-                    logger.info("await replica count: {}", crdtService.routingTable().bucket(crdt).replicas().size());
-                    allocated = false;
-                    break;
-                } else if (crdtService.bucket(crdt) == null) {
-                    logger.info("await bucket");
-                    allocated = false;
-                    break;
-                } else if (crdtService.bucket(crdt).registry().crdtOpt(crdt).isEmpty()) {
-                    logger.info("await crdt");
-                    allocated = false;
-                    break;
-                }
-            }
-            if (allocated) {
-                logger.info("await allocation done");
-                break;
-            }
-            Thread.sleep(1000);
         }
     }
 

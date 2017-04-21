@@ -3,50 +3,49 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 public class LogEntry implements Streamable {
     private final long term;
     private final long index;
     private final Streamable command;
-    private final DiscoveryNode client;
+    private final long session;
 
-    public LogEntry(Streamable command, long term, long index, DiscoveryNode client) {
-        this.command = command;
+    public LogEntry(long term, long index, long session, Streamable command) {
         this.term = term;
         this.index = index;
-        this.client = client;
+        this.session = session;
+        this.command = command;
     }
 
     public LogEntry(StreamInput stream) {
         term = stream.readLong();
         index = stream.readLong();
+        session = stream.readLong();
         command = stream.readStreamable();
-        client = stream.readStreamable(DiscoveryNode::new);
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeLong(term);
         stream.writeLong(index);
+        stream.writeLong(session);
         stream.writeClass(command.getClass());
         stream.writeStreamable(command);
-        stream.writeStreamable(client);
     }
 
-    public long getTerm() {
+    public long term() {
         return term;
     }
 
-    public long getIndex() {
+    public long index() {
         return index;
     }
 
-    public DiscoveryNode getClient() {
-        return client;
+    public long session() {
+        return session;
     }
 
-    public Streamable getCommand() {
+    public Streamable command() {
         return command;
     }
 
@@ -55,13 +54,11 @@ public class LogEntry implements Streamable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        LogEntry logEntry = (LogEntry) o;
+        LogEntry entry = (LogEntry) o;
 
-        if (index != logEntry.index) return false;
-        if (term != logEntry.term) return false;
-        if (!command.equals(logEntry.command)) return false;
-        return client.equals(logEntry.client);
-
+        return term == entry.term &&
+            index == entry.index &&
+            command.equals(entry.command);
     }
 
     @Override
@@ -69,16 +66,15 @@ public class LogEntry implements Streamable {
         int result = (int) (term ^ (term >>> 32));
         result = 31 * result + (int) (index ^ (index >>> 32));
         result = 31 * result + command.hashCode();
-        result = 31 * result + client.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
-
-        return "{" + term + ':' + index +
-            ',' + command +
-            ',' + client +
+        return "LogEntry{" +
+            "term=" + term +
+            ", index=" + index +
+            ", command=" + command +
             '}';
     }
 }

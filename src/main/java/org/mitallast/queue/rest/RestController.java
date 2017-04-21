@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import javaslang.concurrent.Future;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -63,7 +64,7 @@ public class RestController {
         }
     }
 
-    private void executeHandler(RestRequest request)  {
+    private void executeHandler(RestRequest request) {
         final RestHandler handler = getHandler(request);
         if (handler != null) {
             handler.handleRequest(request);
@@ -213,7 +214,7 @@ public class RestController {
         }
 
         public <T> BiConsumer<RestRequest, Option<T>> optional(BiConsumer<RestRequest, T> mapper,
-                                                                 Consumer<RestRequest> empty) {
+                                                               Consumer<RestRequest> empty) {
             return (request, optional) -> {
                 if (optional.isDefined()) {
                     mapper.accept(request, optional.get());
@@ -221,6 +222,26 @@ public class RestController {
                     empty.accept(request);
                 }
             };
+        }
+
+        public <T> BiConsumer<RestRequest, Future<T>> futureJson() {
+            return future(json());
+        }
+
+        public BiConsumer<RestRequest, Future<Boolean>> futureEither(Consumer<RestRequest> right, Consumer<RestRequest> left) {
+            return future(either(right, left));
+        }
+
+        public <T> BiConsumer<RestRequest, Future<T>> future(BiConsumer<RestRequest, T> mapper) {
+            return (request, future) -> future.onComplete(result -> {
+                if (result.isSuccess()) {
+                    mapper.accept(request, result.get());
+                } else {
+                    request.response()
+                        .status(HttpResponseStatus.INTERNAL_SERVER_ERROR)
+                        .error(result.getCause());
+                }
+            });
         }
     }
 
@@ -372,7 +393,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request)  {
+        public void handleRequest(RestRequest request) {
             R response = handler.handleRequest();
             responseMapper.accept(request, response);
         }
@@ -394,7 +415,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request)  {
+        public void handleRequest(RestRequest request) {
             P1 param1 = param1mapper.apply(request);
             R response = handler.handleRequest(param1);
             responseMapper.accept(request, response);
@@ -420,7 +441,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request)  {
+        public void handleRequest(RestRequest request) {
             P1 param1 = param1mapper.apply(request);
             P2 param2 = param2mapper.apply(request);
             R response = handler.handleRequest(param1, param2);
@@ -450,7 +471,7 @@ public class RestController {
         }
 
         @Override
-        public void handleRequest(RestRequest request)  {
+        public void handleRequest(RestRequest request) {
             P1 param1 = param1mapper.apply(request);
             P2 param2 = param2mapper.apply(request);
             P3 param3 = param3mapper.apply(request);
@@ -480,18 +501,18 @@ public class RestController {
     // function handler
 
     public interface FunctionHandler<R> {
-        R handleRequest() ;
+        R handleRequest();
     }
 
     public interface Function1Handler<R, P1> {
-        R handleRequest(P1 p1) ;
+        R handleRequest(P1 p1);
     }
 
     public interface Function2Handler<R, P1, P2> {
-        R handleRequest(P1 p1, P2 p2) ;
+        R handleRequest(P1 p1, P2 p2);
     }
 
     public interface Function3Handler<R, P1, P2, P3> {
-        R handleRequest(P1 p1, P2 p2, P3 p3) ;
+        R handleRequest(P1 p1, P2 p2, P3 p3);
     }
 }

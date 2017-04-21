@@ -3,35 +3,34 @@ package org.mitallast.queue.raft.protocol;
 import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 public class ClientMessage implements Streamable {
-    private final DiscoveryNode client;
-    private final Streamable cmd;
+    private final Streamable command;
+    private final long session;
 
-    public ClientMessage(DiscoveryNode client, Streamable cmd) {
-        this.client = client;
-        this.cmd = cmd;
+    public ClientMessage(Streamable command, long session) {
+        this.command = command;
+        this.session = session;
     }
 
     public ClientMessage(StreamInput stream) {
-        client = stream.readStreamable(DiscoveryNode::new);
-        cmd = stream.readStreamable();
+        command = stream.readStreamable();
+        session = stream.readLong();
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(client);
-        stream.writeClass(cmd.getClass());
-        stream.writeStreamable(cmd);
+        stream.writeClass(command.getClass());
+        stream.writeStreamable(command);
+        stream.writeLong(session);
     }
 
-    public DiscoveryNode getClient() {
-        return client;
+    public Streamable command() {
+        return command;
     }
 
-    public Streamable getCmd() {
-        return cmd;
+    public long session() {
+        return session;
     }
 
     @Override
@@ -41,15 +40,16 @@ public class ClientMessage implements Streamable {
 
         ClientMessage that = (ClientMessage) o;
 
-        if (!client.equals(that.client)) return false;
-        return cmd.equals(that.cmd);
-
+        return command.equals(that.command);
     }
 
     @Override
     public int hashCode() {
-        int result = client.hashCode();
-        result = 31 * result + cmd.hashCode();
-        return result;
+        return command.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "ClientMessage{command=" + command + '}';
     }
 }

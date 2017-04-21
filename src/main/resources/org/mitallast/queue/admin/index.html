@@ -132,7 +132,7 @@
                     <th>term</th>
                     <th>index</th>
                     <th>command</th>
-                    <th>client</th>
+                    <th>session</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -140,9 +140,7 @@
                     <td>{{entry.term}}</td>
                     <td>{{entry.index}}</td>
                     <td>{{entry.command}}</td>
-                    <td ng-if="entry.client">
-                        {{entry.client.host}}:{{entry.client.port}}
-                    </td>
+                    <td>{{entry.session}}</td>
                 </tr>
                 </tbody>
             </table>

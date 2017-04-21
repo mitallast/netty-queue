@@ -7,7 +7,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import javaslang.collection.Vector;
 import javaslang.concurrent.Future;
-import javaslang.concurrent.Promise;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,19 +18,13 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
-import org.mitallast.queue.raft.discovery.ClusterDiscovery;
-import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import org.mitallast.queue.raft.resource.ResourceFSM;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
-import org.mitallast.queue.transport.TransportController;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mitallast.queue.raft.RaftState.Leader;
 
@@ -219,11 +212,11 @@ public class ClusterRaftTest extends BaseClusterTest {
         public Streamable handle(long index, RegisterSet registerSet) {
             logger.debug("prev value: {} new value: {}", value, registerSet.value);
             value = registerSet.value;
-            return new RegisterValue(registerSet.requestId, value);
+            return new RegisterValue(value);
         }
 
         public Streamable handle(long index, RegisterGet message) {
-            return new RegisterValue(message.requestId, value);
+            return new RegisterValue(value);
         }
 
         public Streamable handle(long index, RegisterByteSet set) {
@@ -232,11 +225,11 @@ public class ClusterRaftTest extends BaseClusterTest {
                 buff.release();
             }
             buff = set.buff;
-            return new RegisterByteOK(set.requestId);
+            return new RegisterByteOK();
         }
 
         public Streamable handle(long index, RegisterByteGet message) {
-            return new RegisterByteValue(message.requestId, buff);
+            return new RegisterByteValue(buff);
         }
 
         @Override
@@ -246,22 +239,18 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterSet implements Streamable {
-        private final long requestId;
         private final String value;
 
         public RegisterSet(StreamInput streamInput) {
-            this.requestId = streamInput.readLong();
             this.value = streamInput.readText();
         }
 
-        public RegisterSet(long requestId, String value) {
-            this.requestId = requestId;
+        public RegisterSet(String value) {
             this.value = value;
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
             stream.writeText(value);
         }
 
@@ -274,214 +263,142 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterGet implements Streamable {
-        private final long requestId;
 
         public RegisterGet(StreamInput streamInput) {
-            requestId = streamInput.readLong();
         }
 
-        public RegisterGet(long requestId) {
-            this.requestId = requestId;
+        public RegisterGet() {
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
         }
 
         @Override
         public String toString() {
-            return "RegisterGet{" +
-                "requestId=" + requestId +
-                '}';
+            return "RegisterGet{}";
         }
     }
 
     public static class RegisterValue implements Streamable {
-
-        private final long requestId;
         private final String value;
 
         public RegisterValue(StreamInput streamInput) {
-            this.requestId = streamInput.readLong();
             this.value = streamInput.readText();
         }
 
-        public RegisterValue(long requestId, String value) {
-            this.requestId = requestId;
+        public RegisterValue(String value) {
             this.value = value;
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
             stream.writeText(value);
         }
 
         @Override
         public String toString() {
-            return "RegisterValue{" +
-                "requestId=" + requestId +
-                ", value='" + value + '\'' +
-                '}';
+            return "RegisterValue{value=" + value + '}';
         }
     }
 
     public static class RegisterByteSet implements Streamable {
-        private final long requestId;
         private final ByteBuf buff;
 
-        public RegisterByteSet(long requestId, ByteBuf buff) {
-            this.requestId = requestId;
+        public RegisterByteSet(ByteBuf buff) {
             this.buff = buff;
         }
 
         public RegisterByteSet(StreamInput stream) {
-            requestId = stream.readLong();
             buff = stream.readByteBuf();
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
             stream.writeByteBuf(buff);
         }
     }
 
     public static class RegisterByteOK implements Streamable {
-        private final long requestId;
-
-        public RegisterByteOK(long requestId) {
-            this.requestId = requestId;
+        public RegisterByteOK() {
         }
 
         public RegisterByteOK(StreamInput stream) {
-            requestId = stream.readLong();
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
         }
     }
 
     public static class RegisterByteGet implements Streamable {
-        private final long requestId;
-
-        public RegisterByteGet(long requestId) {
-            this.requestId = requestId;
+        public RegisterByteGet() {
         }
 
         public RegisterByteGet(StreamInput stream) {
-            requestId = stream.readLong();
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
         }
     }
 
     public static class RegisterByteValue implements Streamable {
-        private final long requestId;
         private final ByteBuf buff;
 
-        public RegisterByteValue(long requestId, ByteBuf buff) {
-            this.requestId = requestId;
+        public RegisterByteValue(ByteBuf buff) {
             this.buff = buff;
         }
 
         public RegisterByteValue(StreamInput stream) {
-            requestId = stream.readLong();
             buff = stream.readByteBuf();
         }
 
         @Override
         public void writeTo(StreamOutput stream) {
-            stream.writeLong(requestId);
             stream.writeByteBuf(buff);
         }
     }
 
     public static class RegisterClient {
-        private final Logger logger = LogManager.getLogger();
         private final Raft raft;
-        private final ClusterDiscovery clusterDiscovery;
-        private final AtomicLong counter = new AtomicLong();
-        private final ConcurrentMap<Long, Promise<String>> requests = new ConcurrentHashMap<>();
 
         @Inject
-        public RegisterClient(Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
+        public RegisterClient(Raft raft) {
             this.raft = raft;
-            this.clusterDiscovery = clusterDiscovery;
-
-            controller.registerMessageHandler(RegisterValue.class, this::receive);
         }
 
         public Future<String> set(String value) {
-            long request = counter.incrementAndGet();
-            Promise<String> promise = Promise.make();
-            requests.put(request, promise);
-            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterSet(request, value)));
-            return promise.future();
+            return raft.command(new RegisterSet(value))
+                .filter(m -> m instanceof RegisterValue)
+                .map(m -> ((RegisterValue) m).value);
         }
 
         public Future<String> get() {
-            long request = counter.incrementAndGet();
-            Promise<String> promise = Promise.make();
-            requests.put(request, promise);
-            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterGet(request)));
-            return promise.future();
-        }
-
-        private void receive(RegisterValue event) {
-            logger.debug("client received: {}", event);
-            requests.get(event.requestId).success(event.value);
+            return raft.command(new RegisterGet())
+                .filter(m -> m instanceof RegisterValue)
+                .map(m -> ((RegisterValue) m).value);
         }
     }
 
     public static class RegisterByteClient {
-        private final Logger logger = LogManager.getLogger();
-
         private final Raft raft;
-        private final ClusterDiscovery clusterDiscovery;
-        private final AtomicLong counter = new AtomicLong();
-        private final ConcurrentMap<Long, Promise<RegisterByteOK>> setRequests = new ConcurrentHashMap<>();
-        private final ConcurrentMap<Long, Promise<ByteBuf>> getRequests = new ConcurrentHashMap<>();
 
         @Inject
-        public RegisterByteClient(Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
+        public RegisterByteClient(Raft raft) {
             this.raft = raft;
-            this.clusterDiscovery = clusterDiscovery;
-
-            controller.registerMessageHandler(RegisterByteOK.class, this::receiveOk);
-            controller.registerMessageHandler(RegisterByteValue.class, this::receiveValue);
         }
 
         public Future<RegisterByteOK> set(ByteBuf value) {
-            long request = counter.incrementAndGet();
-            Promise<RegisterByteOK> promise = Promise.make();
-            setRequests.put(request, promise);
-            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterByteSet(request, value)));
-            return promise.future();
+            return raft.command(new RegisterByteSet(value))
+                .filter(m -> m instanceof RegisterByteOK)
+                .map(m -> (RegisterByteOK) m);
         }
 
         public Future<ByteBuf> get() {
-            long request = counter.incrementAndGet();
-            Promise<ByteBuf> promise = Promise.make();
-            getRequests.put(request, promise);
-            raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterByteGet(request)));
-            return promise.future();
-        }
-
-        private void receiveOk(RegisterByteOK event) {
-            logger.debug("client received: {}", event);
-            setRequests.get(event.requestId).success(event);
-        }
-
-        private void receiveValue(RegisterByteValue event) {
-            logger.debug("client received: {}", event);
-            getRequests.get(event.requestId).success(event.buff);
+            return raft.command(new RegisterByteGet())
+                .filter(m -> m instanceof RegisterByteValue)
+                .map(m -> ((RegisterByteValue) m).buff);
         }
     }
 }

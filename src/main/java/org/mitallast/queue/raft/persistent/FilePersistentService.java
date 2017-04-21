@@ -197,12 +197,12 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public Option<Long> lastTerm() {
-            return (entries.isEmpty()) ? Option.none() : Option.some(last().getTerm());
+            return (entries.isEmpty()) ? Option.none() : Option.some(last().term());
         }
 
         @Override
         public long lastIndex() {
-            return entries.isEmpty() ? 1 : last().getIndex();
+            return entries.isEmpty() ? 1 : last().index();
         }
 
         @Override
@@ -212,7 +212,7 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public long nextIndex() {
-            return entries.isEmpty() ? 1 : last().getIndex() + 1;
+            return entries.isEmpty() ? 1 : last().index() + 1;
         }
 
         @Override
@@ -226,15 +226,15 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public ReplicatedLog append(LogEntry entry) {
-            Preconditions.checkArgument(entry.getIndex() > committedIndex, "entry index should be > committed index");
-            Preconditions.checkArgument(entry.getIndex() >= start, "entry index should be >= start index");
+            Preconditions.checkArgument(entry.index() > committedIndex, "entry index should be > committed index");
+            Preconditions.checkArgument(entry.index() >= start, "entry index should be >= start index");
 
-            if (entry.getIndex() <= length()) { // if contains
-                LogEntry contains = get(entry.getIndex());
-                if (contains.getTerm() == entry.getTerm()) { // if term matches, entry already contains in log
+            if (entry.index() <= length()) { // if contains
+                LogEntry contains = get(entry.index());
+                if (contains.term() == entry.term()) { // if term matches, entry already contains in log
                     return this;
                 } else {
-                    long prev = entry.getIndex() - 1;
+                    long prev = entry.index() - 1;
                     truncate(prev);
                 }
             }
@@ -260,7 +260,7 @@ public class FilePersistentService implements PersistentService {
             Preconditions.checkArgument(truncateIndex >= committedIndex, "truncate index should be > committed index %d", committedIndex);
             Preconditions.checkArgument(truncateIndex < lastIndex(), "truncate index should be < last index");
 
-            entries = entries.dropRightUntil(entry -> entry.getIndex() <= truncateIndex);
+            entries = entries.dropRightUntil(entry -> entry.index() <= truncateIndex);
 
             segmentOutput.close();
             File tmpSegment = temporaryFile();
@@ -283,10 +283,10 @@ public class FilePersistentService implements PersistentService {
             if (toSend.isEmpty()) {
                 return toSend;
             } else {
-                long batchTerm = toSend.get(0).getTerm();
+                long batchTerm = toSend.get(0).term();
                 Vector<LogEntry> builder = Vector.empty();
                 for (LogEntry logEntry : toSend) {
-                    if (logEntry.getTerm() == batchTerm) {
+                    if (logEntry.term() == batchTerm) {
                         builder = builder.append(logEntry);
                     } else {
                         break;
@@ -308,7 +308,7 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public boolean containsEntryAt(long index) {
-            return index >= start && index <= length() && get(index).getIndex() == index;
+            return index >= start && index <= length() && get(index).index() == index;
         }
 
         @Override
@@ -318,22 +318,22 @@ public class FilePersistentService implements PersistentService {
             } else if (!containsEntryAt(index)) {
                 throw new IllegalArgumentException("Unable to find log entry at index " + index);
             } else {
-                return get(index).getTerm();
+                return get(index).term();
             }
         }
 
         @Override
-        public ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node) {
+        public ReplicatedLog compactWith(RaftSnapshot snapshot) {
             long lastIncludedIndex = snapshot.getMeta().getLastIncludedIndex();
-            LogEntry snapshotEntry = snapshot.toEntry(node);
+            LogEntry snapshotEntry = snapshot.toEntry();
 
             if (entries.isEmpty()) {
                 entries = Vector.of(snapshotEntry);
             } else {
-                if (entries.get(0).getIndex() > lastIncludedIndex) {
+                if (entries.get(0).index() > lastIncludedIndex) {
                     throw new IllegalArgumentException("snapshot too old");
                 }
-                entries = entries.dropUntil(entry -> entry.getIndex() > lastIncludedIndex).prepend(snapshotEntry);
+                entries = entries.dropUntil(entry -> entry.index() > lastIncludedIndex).prepend(snapshotEntry);
             }
 
             if (snapshot.getMeta().getLastIncludedIndex() == start) {
@@ -373,12 +373,12 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public boolean hasSnapshot() {
-            return !entries.isEmpty() && entries.get(0).getCommand() instanceof RaftSnapshot;
+            return !entries.isEmpty() && entries.get(0).command() instanceof RaftSnapshot;
         }
 
         @Override
         public RaftSnapshot snapshot() {
-            return (RaftSnapshot) entries.get(0).getCommand();
+            return (RaftSnapshot) entries.get(0).command();
         }
 
         private void flush() {

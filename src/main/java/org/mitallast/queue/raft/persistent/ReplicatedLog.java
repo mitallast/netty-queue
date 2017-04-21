@@ -5,7 +5,6 @@ import javaslang.collection.Vector;
 import javaslang.control.Option;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
-import org.mitallast.queue.transport.DiscoveryNode;
 
 import java.io.Closeable;
 
@@ -37,7 +36,7 @@ public interface ReplicatedLog extends Closeable {
 
     ReplicatedLog append(Vector<LogEntry> entries);
 
-    ReplicatedLog compactWith(RaftSnapshot snapshot, DiscoveryNode node);
+    ReplicatedLog compactWith(RaftSnapshot snapshot);
 
     Vector<LogEntry> entriesBatchFrom(long fromIncluding, int howMany);
 

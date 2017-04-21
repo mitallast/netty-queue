@@ -10,15 +10,16 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
+import javaslang.concurrent.Future;
+import javaslang.concurrent.Promise;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.netty.NettyProvider;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class RestClient extends NettyClient {
 
-    private final ConcurrentLinkedDeque<CompletableFuture<FullHttpResponse>> queue = new ConcurrentLinkedDeque<>();
+    private final ConcurrentLinkedDeque<Promise<FullHttpResponse>> queue = new ConcurrentLinkedDeque<>();
 
     public RestClient(Config config, NettyProvider provider) {
         super(config, provider,
@@ -27,11 +28,11 @@ public class RestClient extends NettyClient {
         );
     }
 
-    public CompletableFuture<FullHttpResponse> send(HttpRequest request) {
-        final CompletableFuture<FullHttpResponse> future = new CompletableFuture<>();
-        queue.push(future);
+    public Future<FullHttpResponse> send(HttpRequest request) {
+        Promise<FullHttpResponse> promise = Promise.make();
+        queue.push(promise);
         channel.writeAndFlush(request);
-        return future;
+        return promise.future();
     }
 
     @Override
@@ -46,7 +47,7 @@ public class RestClient extends NettyClient {
                 pipeline.addLast("handler", new SimpleChannelInboundHandler<FullHttpResponse>(false) {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse response) throws Exception {
-                        queue.poll().complete(response);
+                        queue.poll().success(response);
                     }
                 });
             }

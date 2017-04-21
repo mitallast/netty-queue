@@ -6,6 +6,8 @@ import com.google.inject.multibindings.Multibinder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import javaslang.collection.Vector;
+import javaslang.concurrent.Future;
+import javaslang.concurrent.Promise;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,7 +29,6 @@ import org.mitallast.queue.transport.TransportController;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -119,14 +120,14 @@ public class ClusterRaftTest extends BaseClusterTest {
 
         for (int t = 0; t < 3; t++) {
             final int total = 200000;
-            final ArrayList<CompletableFuture<String>> futures = new ArrayList<>(total);
+            final ArrayList<Future<String>> futures = new ArrayList<>(total);
             final long start = System.currentTimeMillis();
             for (int i = 0; i < total; i++) {
-                CompletableFuture<String> future = client.get(leader).set("hello world " + i);
+                Future<String> future = client.get(leader).set("hello world " + i);
                 futures.add(future);
             }
             for (int i = 0; i < total; i++) {
-                CompletableFuture<String> future = futures.get(i);
+                Future<String> future = futures.get(i);
                 String value = future.get();
                 Assert.assertEquals("hello world " + i, value);
             }
@@ -155,10 +156,10 @@ public class ClusterRaftTest extends BaseClusterTest {
 
         for (int t = 0; t < 3; t++) {
             final int total = 200000;
-            final ArrayList<CompletableFuture<RegisterByteOK>> futures = new ArrayList<>(total);
+            final ArrayList<Future<RegisterByteOK>> futures = new ArrayList<>(total);
             final long start = System.currentTimeMillis();
             for (int i = 0; i < total; i++) {
-                CompletableFuture<RegisterByteOK> future = byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes));
+                Future<RegisterByteOK> future = byteClient.get(leader).set(Unpooled.wrappedBuffer(bytes));
                 futures.add(future);
             }
             for (int i = 0; i < total; i++) {
@@ -407,7 +408,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         private final Raft raft;
         private final ClusterDiscovery clusterDiscovery;
         private final AtomicLong counter = new AtomicLong();
-        private final ConcurrentMap<Long, CompletableFuture<String>> requests = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Long, Promise<String>> requests = new ConcurrentHashMap<>();
 
         @Inject
         public RegisterClient(Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
@@ -417,25 +418,25 @@ public class ClusterRaftTest extends BaseClusterTest {
             controller.registerMessageHandler(RegisterValue.class, this::receive);
         }
 
-        public CompletableFuture<String> set(String value) {
+        public Future<String> set(String value) {
             long request = counter.incrementAndGet();
-            CompletableFuture<String> future = new CompletableFuture<>();
-            requests.put(request, future);
+            Promise<String> promise = Promise.make();
+            requests.put(request, promise);
             raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterSet(request, value)));
-            return future;
+            return promise.future();
         }
 
-        public CompletableFuture<String> get() {
+        public Future<String> get() {
             long request = counter.incrementAndGet();
-            CompletableFuture<String> future = new CompletableFuture<>();
-            requests.put(request, future);
+            Promise<String> promise = Promise.make();
+            requests.put(request, promise);
             raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterGet(request)));
-            return future;
+            return promise.future();
         }
 
         private void receive(RegisterValue event) {
             logger.debug("client received: {}", event);
-            requests.get(event.requestId).complete(event.value);
+            requests.get(event.requestId).success(event.value);
         }
     }
 
@@ -445,8 +446,8 @@ public class ClusterRaftTest extends BaseClusterTest {
         private final Raft raft;
         private final ClusterDiscovery clusterDiscovery;
         private final AtomicLong counter = new AtomicLong();
-        private final ConcurrentMap<Long, CompletableFuture<RegisterByteOK>> setRequests = new ConcurrentHashMap<>();
-        private final ConcurrentMap<Long, CompletableFuture<ByteBuf>> getRequests = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Long, Promise<RegisterByteOK>> setRequests = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Long, Promise<ByteBuf>> getRequests = new ConcurrentHashMap<>();
 
         @Inject
         public RegisterByteClient(Raft raft, ClusterDiscovery clusterDiscovery, TransportController controller) {
@@ -457,30 +458,30 @@ public class ClusterRaftTest extends BaseClusterTest {
             controller.registerMessageHandler(RegisterByteValue.class, this::receiveValue);
         }
 
-        public CompletableFuture<RegisterByteOK> set(ByteBuf value) {
+        public Future<RegisterByteOK> set(ByteBuf value) {
             long request = counter.incrementAndGet();
-            CompletableFuture<RegisterByteOK> future = new CompletableFuture<>();
-            setRequests.put(request, future);
+            Promise<RegisterByteOK> promise = Promise.make();
+            setRequests.put(request, promise);
             raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterByteSet(request, value)));
-            return future;
+            return promise.future();
         }
 
-        public CompletableFuture<ByteBuf> get() {
+        public Future<ByteBuf> get() {
             long request = counter.incrementAndGet();
-            CompletableFuture<ByteBuf> future = new CompletableFuture<>();
-            getRequests.put(request, future);
+            Promise<ByteBuf> promise = Promise.make();
+            getRequests.put(request, promise);
             raft.apply(new ClientMessage(clusterDiscovery.self(), new RegisterByteGet(request)));
-            return future;
+            return promise.future();
         }
 
         private void receiveOk(RegisterByteOK event) {
             logger.debug("client received: {}", event);
-            setRequests.get(event.requestId).complete(event);
+            setRequests.get(event.requestId).success(event);
         }
 
         private void receiveValue(RegisterByteValue event) {
             logger.debug("client received: {}", event);
-            getRequests.get(event.requestId).complete(event.buff);
+            getRequests.get(event.requestId).success(event.buff);
         }
     }
 }

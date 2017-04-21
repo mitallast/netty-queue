@@ -4,6 +4,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
+import javaslang.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,8 +14,6 @@ import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 
 public class RestIntegrationTest extends BaseQueueTest {
@@ -83,8 +82,8 @@ public class RestIntegrationTest extends BaseQueueTest {
                 "/",
                 false
             );
-            CompletableFuture<FullHttpResponse> future = restClient.send(request);
-            future.thenAccept(consumer);
+            Future<FullHttpResponse> future = restClient.send(request);
+            future.onSuccess(consumer);
             futures.add(future);
         }
         logger.info("await");

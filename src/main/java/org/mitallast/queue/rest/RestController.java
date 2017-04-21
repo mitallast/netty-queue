@@ -16,7 +16,6 @@ import org.mitallast.queue.rest.netty.HttpRequest;
 
 import java.io.File;
 import java.net.URL;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -197,14 +196,6 @@ public class RestController {
             return optional(json());
         }
 
-        public <T> BiConsumer<RestRequest, CompletableFuture<T>> futureJson() {
-            return future(json());
-        }
-
-        public BiConsumer<RestRequest, CompletableFuture<byte[]>> futureBytes() {
-            return future(bytes());
-        }
-
         public BiConsumer<RestRequest, URL> url() {
             return (request, file) -> request.response().file(file);
         }
@@ -230,17 +221,6 @@ public class RestController {
                     empty.accept(request);
                 }
             };
-        }
-
-        public <T> BiConsumer<RestRequest, CompletableFuture<T>> future(BiConsumer<RestRequest, T> mapper) {
-            return (request, future) -> future.whenComplete((value, error) -> {
-                if (error != null) {
-                    request.response().status(HttpResponseStatus.INTERNAL_SERVER_ERROR)
-                        .error(error);
-                } else {
-                    mapper.accept(request, value);
-                }
-            });
         }
     }
 

@@ -1,5 +1,6 @@
 package org.mitallast.queue.common.netty;
 
+import com.google.common.base.Preconditions;
 import com.typesafe.config.Config;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -26,6 +27,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     protected NettyClientBootstrap(Config config, NettyProvider provider) {
         this.provider = provider;
+        this.bootstrap = null;
 
         maxContentLength = config.getInt("netty.max_content_length");
         reuseAddress = config.getBoolean("netty.reuse_address");
@@ -56,11 +58,13 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
 
     public final ChannelFuture connect(DiscoveryNode node) {
         checkIsStarted();
+        Preconditions.checkNotNull(bootstrap);
         return bootstrap.connect(node.host(), node.port());
     }
 
     public final ChannelFuture connect(String host, int port) {
         checkIsStarted();
+        Preconditions.checkNotNull(bootstrap);
         return bootstrap.connect(host, port);
     }
 

@@ -15,8 +15,8 @@ public class SettingsAction {
     public SettingsAction(Config config, RestController controller) {
         this.config = config;
 
-        controller.handler(this::settings)
-            .response(controller.response().json())
+        controller.handle(this::settings)
+            .apply(controller.response().json())
             .handle(HttpMethod.GET, "_settings");
     }
 

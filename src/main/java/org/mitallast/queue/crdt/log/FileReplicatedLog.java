@@ -16,6 +16,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
@@ -39,7 +40,6 @@ public class FileReplicatedLog implements ReplicatedLog {
     private final AtomicLong vclock = new AtomicLong(0);
 
     @Inject
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public FileReplicatedLog(
         Config config,
         FileService fileService,
@@ -55,7 +55,6 @@ public class FileReplicatedLog implements ReplicatedLog {
         this.compactionFilter = compactionFilter;
         this.serviceName = String.format("crdt/%d/log/%d", index, replica);
 
-        fileService.service(serviceName).mkdir();
         long[] offsets = fileService.resources(serviceName, "regex:event.[0-9]+.log")
             .map(path -> path.getFileName().toString())
             .map(name -> name.substring(6, name.length() - 4))
@@ -177,8 +176,7 @@ public class FileReplicatedLog implements ReplicatedLog {
         private final long offset;
         private final File logFile;
         private final StreamOutput logOutput;
-
-        private volatile int added = 0;
+        private final AtomicInteger added = new AtomicInteger(0);
 
         private Segment(long offset) {
             this.offset = offset;
@@ -193,7 +191,7 @@ public class FileReplicatedLog implements ReplicatedLog {
                     if (!entries.isEmpty()) {
                         vclock.set(entries.get(entries.size() - 1).vclock() + 1);
                     }
-                    added = entries.size();
+                    added.set(entries.size());
                 }
             }
         }
@@ -206,17 +204,17 @@ public class FileReplicatedLog implements ReplicatedLog {
                 LogEntry logEntry = new LogEntry(vclock.incrementAndGet(), id, event);
                 logOutput.writeStreamable(logEntry);
                 entries.add(logEntry);
-                added = added + 1;
+                added.incrementAndGet();
                 return logEntry;
             }
         }
 
         private boolean isFull() {
-            return added == segmentSize;
+            return added.get() == segmentSize;
         }
 
         private boolean isGarbage() {
-            return added == segmentSize && entries.isEmpty();
+            return isFull() && entries.isEmpty();
         }
 
         private void compact() {

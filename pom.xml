@@ -11,17 +11,17 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <netty.version>4.1.5.Final</netty.version>
+        <netty.version>4.1.9.Final</netty.version>
         <logback.version>1.1.7</logback.version>
-        <slf4j.version>1.7.22</slf4j.version>
-        <log4j2.version>2.8</log4j2.version>
-        <jackson.version>2.8.6</jackson.version>
-        <joda.version>2.9.4</joda.version>
+        <slf4j.version>1.7.25</slf4j.version>
+        <log4j2.version>2.8.2</log4j2.version>
+        <jackson.version>2.8.8</jackson.version>
+        <joda.version>2.9.9</joda.version>
         <javassist.version>3.21.0-GA</javassist.version>
         <google.guice.version>4.1.0</google.guice.version>
         <junit.version>4.12</junit.version>
-        <unitils.version>3.4.2</unitils.version>
-        <mockito.version>2.2.0</mockito.version>
+        <unitils.version>3.4.6</unitils.version>
+        <mockito.version>2.7.22</mockito.version>
         <uuid.version>3.4</uuid.version>
         <trove.version>3.0.3</trove.version>
         <typesafe.config.version>1.3.1</typesafe.config.version>
@@ -164,7 +164,7 @@
         <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>angularjs</artifactId>
-            <version>1.6.1</version>
+            <version>1.6.2</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -280,7 +280,27 @@
                     <rulesUri>file://${basedir}/rules.xml</rulesUri>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>3.0.4</version>
+            </plugin>
         </plugins>
     </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>3.0.4</version>
+                <configuration>
+                    <effort>Max</effort>
+                    <threshold>Low</threshold>
+                    <xmlOutput>true</xmlOutput>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
 
 </project>

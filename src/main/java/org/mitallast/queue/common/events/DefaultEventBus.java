@@ -24,7 +24,7 @@ public class DefaultEventBus implements EventBus {
     public <Event> void subscribe(Class<Event> eventClass, Consumer<Event> consumer, Executor executor) {
         lock.lock();
         try {
-            consumers = consumers.put(eventClass, new AsyncListener<>(consumer, executor));
+            consumers = consumers.put(eventClass, new Listener<>(consumer, executor));
         } finally {
             lock.unlock();
         }
@@ -53,14 +53,24 @@ public class DefaultEventBus implements EventBus {
     }
 
     private static class Listener<Event> {
-        protected final Consumer<Event> consumer;
+        private final Consumer<Event> consumer;
+        private final Executor executor;
 
-        private Listener(Consumer<Event> consumer) {
+        public Listener(Consumer<Event> consumer) {
+            this(consumer, null);
+        }
+
+        public Listener(Consumer<Event> consumer, Executor executor) {
             this.consumer = consumer;
+            this.executor = executor;
         }
 
         public void accept(Event event) {
-            consumer.accept(event);
+            if (executor == null) {
+                consumer.accept(event);
+            } else {
+                executor.execute(() -> consumer.accept(event));
+            }
         }
 
         @Override
@@ -68,28 +78,14 @@ public class DefaultEventBus implements EventBus {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
 
-            Listener listener = (Listener) o;
+            Listener<?> that = (Listener<?>) o;
 
-            return consumer != null ? consumer.equals(listener.consumer) : listener.consumer == null;
+            return consumer.equals(that.consumer);
         }
 
         @Override
         public int hashCode() {
-            return consumer != null ? consumer.hashCode() : 0;
-        }
-    }
-
-    private static class AsyncListener<Event> extends Listener<Event> {
-        private final Executor executor;
-
-        public AsyncListener(Consumer<Event> consumer, Executor executor) {
-            super(consumer);
-            this.executor = executor;
-        }
-
-        @Override
-        public void accept(Event event) {
-            executor.execute(() -> consumer.accept(event));
+            return consumer.hashCode();
         }
     }
 }

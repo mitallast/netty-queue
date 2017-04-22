@@ -21,10 +21,7 @@ import org.mitallast.queue.rest.ResponseBuilder;
 import org.mitallast.queue.rest.RestRequest;
 
 import javax.activation.MimetypesFileTypeMap;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -186,10 +183,10 @@ public class HttpRequest implements RestRequest {
             Preconditions.checkNotNull(error);
             ByteBuf buffer = ctx.alloc().buffer();
             try (ByteBufOutputStream outputStream = new ByteBufOutputStream(buffer)) {
-                try (PrintWriter printWriter = new PrintWriter(outputStream)) {
+                try (PrintWriter printWriter = new PrintWriter(new OutputStreamWriter(outputStream, CharsetUtil.UTF_8))) {
                     error.printStackTrace(printWriter);
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 buffer.release();
                 throw new RuntimeException(e);
             }

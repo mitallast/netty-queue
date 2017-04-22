@@ -17,11 +17,11 @@ public class RaftHandler {
     @Inject
     public RaftHandler(RestController controller, Raft raft) {
         this.raft = raft;
-        controller.handler(this::log)
-            .response(controller.response().json())
+        controller.handle(this::log)
+            .apply(controller.response().json())
             .handle(HttpMethod.GET, "_raft/log");
-        controller.handler(this::state)
-            .response(controller.response().json())
+        controller.handle(this::state)
+            .apply(controller.response().json())
             .handle(HttpMethod.GET, "_raft/state");
     }
 

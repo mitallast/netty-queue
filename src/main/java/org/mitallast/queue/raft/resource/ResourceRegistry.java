@@ -12,8 +12,8 @@ import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 public class ResourceRegistry {
     private final static Logger logger = LogManager.getLogger();
 
-    private Vector<ResourceFSM> resources = Vector.empty();
-    private Map<Class, ResourceHandler> handlers = HashMap.empty();
+    private volatile Vector<ResourceFSM> resources = Vector.empty();
+    private volatile Map<Class, ResourceHandler> handlers = HashMap.empty();
 
     public synchronized void register(ResourceFSM fsm) {
         resources = resources.append(fsm);

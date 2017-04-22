@@ -12,6 +12,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.StreamService;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FileVectorClock implements VectorClock {
@@ -23,7 +24,7 @@ public class FileVectorClock implements VectorClock {
 
     private volatile File vclockFile;
     private volatile StreamOutput vclockOutput;
-    private volatile int logSize;
+    private final AtomicInteger logSize = new AtomicInteger();
 
     @Inject
     public FileVectorClock(
@@ -35,7 +36,6 @@ public class FileVectorClock implements VectorClock {
         this.fileService = fileService;
         this.streamService = streamService;
         this.vclock = new TSynchronizedLongLongMap(new TLongLongHashMap(7, 0.5f, 0, 0));
-        this.logSize = 0;
         this.serviceName = String.format("crdt/%d/vclock/%d", index, replicaId);
 
         this.vclockFile = fileService.resource(serviceName, "vclock.log");
@@ -47,7 +47,7 @@ public class FileVectorClock implements VectorClock {
                     long replica = stream.readLong();
                     long nodeVclock = stream.readLong();
                     vclock.put(replica, nodeVclock);
-                    logSize++;
+                    logSize.incrementAndGet();
                 }
             }
         }
@@ -61,8 +61,8 @@ public class FileVectorClock implements VectorClock {
             vclock.put(replica, nodeVclock);
             vclockOutput.writeLong(replica);
             vclockOutput.writeLong(nodeVclock);
-            logSize++;
-            if (logSize > vclock.size() + 1000000) {
+            int size = logSize.incrementAndGet();
+            if (size > vclock.size() + 1000000) {
                 vclockOutput.close();
 
                 File tmp = fileService.temporary(serviceName, "vclock", "log");
@@ -99,7 +99,6 @@ public class FileVectorClock implements VectorClock {
                 vclockOutput.close();
                 vclockOutput = null;
             }
-            logSize = 0;
         } finally {
             writeLock.unlock();
         }

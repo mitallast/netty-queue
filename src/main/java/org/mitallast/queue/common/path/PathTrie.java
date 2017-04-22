@@ -16,7 +16,7 @@ public class PathTrie<TrieType> {
         root = new TrieNode<>(String.valueOf(separator), null);
     }
 
-    public void insert(String path, TrieType value) {
+    public synchronized void insert(String path, TrieType value) {
         String[] parts = Strings.splitStringToArray(path, separator);
         if (parts.length == 0) {
             root.value = value;
@@ -72,7 +72,7 @@ public class PathTrie<TrieType> {
                 && key.charAt(key.length() - 1) == '}';
         }
 
-        public synchronized void insert(String[] path, int index, NodeType value) {
+        public void insert(String[] path, int index, NodeType value) {
             if (index >= path.length) {
                 return;
             }

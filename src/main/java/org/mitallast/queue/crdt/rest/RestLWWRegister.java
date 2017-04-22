@@ -22,23 +22,23 @@ public class RestLWWRegister {
     ) {
         this.crdtService = crdtService;
 
-        controller.handler(this::create)
-            .param(controller.param().toLong("id"))
-            .response(controller.response().futureEither(
+        controller.handle(this::create)
+            .apply(controller.param().toLong("id"))
+            .apply(controller.response().futureEither(
                 controller.response().created(),
                 controller.response().badRequest()
             ))
             .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register");
 
-        controller.handler(this::value)
-            .param(controller.param().toLong("id"))
-            .response(controller.response().optionalJson())
+        controller.handle(this::value)
+            .apply(controller.param().toLong("id"))
+            .apply(controller.response().optionalJson())
             .handle(HttpMethod.GET, "_crdt/{id}/lww-register/value");
 
-        controller.handler(this::assign)
-            .param(controller.param().toLong("id"))
-            .param(controller.param().json(JsonStreamable.class))
-            .response(controller.response().either(
+        controller.handle(this::assign)
+            .apply(controller.param().toLong("id"))
+            .apply(controller.param().json(JsonStreamable.class))
+            .apply(controller.response().either(
                 controller.response().ok(),
                 controller.response().badRequest()
             ))

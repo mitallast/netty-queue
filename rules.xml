@@ -21,9 +21,10 @@
                 <ignoreVersion type="regex">.*CR.*</ignoreVersion>
             </ignoreVersions>
         </rule>
-        <rule groupId="org.elasticsearch">
+        <rule groupId="org.slf4j">
             <ignoreVersions>
-                <ignoreVersion type="regex">.*Beta.*</ignoreVersion>
+                <ignoreVersion type="regex">.*beta.*</ignoreVersion>
+                <ignoreVersion type="regex">.*alpha.*</ignoreVersion>
             </ignoreVersions>
         </rule>
         <rule groupId="org.mockito">
@@ -34,11 +35,18 @@
         <rule groupId="com.fasterxml.jackson.core">
             <ignoreVersions>
                 <ignoreVersion type="regex">.*rc.</ignoreVersion>
+                <ignoreVersion type="regex">.*pr.</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+        <rule groupId="com.fasterxml.jackson.datatype">
+            <ignoreVersions>
+                <ignoreVersion type="regex">.*rc.</ignoreVersion>
+                <ignoreVersion type="regex">.*pr.</ignoreVersion>
             </ignoreVersions>
         </rule>
         <rule groupId="org.webjars">
             <ignoreVersions>
-                <ignoreVersion type="regex">.*alpha.</ignoreVersion>
+                <ignoreVersion type="regex">.*alpha.*</ignoreVersion>
             </ignoreVersions>
         </rule>
     </rules>

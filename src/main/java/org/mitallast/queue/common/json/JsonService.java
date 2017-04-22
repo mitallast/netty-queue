@@ -64,7 +64,11 @@ public class JsonService {
     }
 
     public <T> T deserialize(String data, Class<T> type) {
-        return deserialize(data, type);
+        try {
+            return mapper.readValue(data, type);
+        } catch (IOException e) {
+            throw new JsonException(e);
+        }
     }
 
     public <T> T deserialize(ByteBuf buf, Class<T> type) {

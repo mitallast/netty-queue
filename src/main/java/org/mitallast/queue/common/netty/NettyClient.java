@@ -14,6 +14,7 @@ public abstract class NettyClient extends NettyClientBootstrap {
         super(config, provider);
         this.host = host;
         this.port = port;
+        this.channel = null;
     }
 
     @Override
@@ -32,7 +33,10 @@ public abstract class NettyClient extends NettyClientBootstrap {
 
     @Override
     protected void doStop() {
-        channel.close().awaitUninterruptibly();
+        if (channel != null) {
+            channel.close().awaitUninterruptibly();
+            channel = null;
+        }
         super.doStop();
     }
 

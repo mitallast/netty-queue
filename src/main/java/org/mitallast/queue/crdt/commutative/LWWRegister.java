@@ -58,8 +58,8 @@ public class LWWRegister implements CmRDT {
     private final long id;
     private final Replicator replicator;
 
-    private Option<Streamable> value = Option.none();
-    private long timestamp = 0;
+    private volatile Option<Streamable> value = Option.none();
+    private volatile long timestamp = 0;
 
     public LWWRegister(long id, Replicator replicator) {
         this.id = id;
@@ -102,21 +102,15 @@ public class LWWRegister implements CmRDT {
         }
     }
 
-    public void assign(Streamable value, long timestamp) {
-        synchronized (this) {
-            if (this.timestamp < timestamp) {
-                this.value = Option.some(value);
-                this.timestamp = timestamp;
-                replicator.append(id, new DownstreamAssign(value, timestamp));
-            }
+    public synchronized void assign(Streamable value, long timestamp) {
+        if (this.timestamp < timestamp) {
+            this.value = Option.some(value);
+            this.timestamp = timestamp;
+            replicator.append(id, new DownstreamAssign(value, timestamp));
         }
     }
 
     public Option<Streamable> value() {
         return value;
-    }
-
-    public long timestamp() {
-        return timestamp;
     }
 }

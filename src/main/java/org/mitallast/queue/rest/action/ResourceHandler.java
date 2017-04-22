@@ -17,16 +17,16 @@ public class ResourceHandler {
     @Inject
     public ResourceHandler(RestController controller) throws IOException {
 
-        ClassPath classPath = ClassPath.from(getClass().getClassLoader());
+        ClassPath classPath = ClassPath.from(ResourceHandler.class.getClassLoader());
         ImmutableSet<ClassPath.ResourceInfo> resources = classPath.getResources();
 
         resources.stream()
             .filter(resource -> resource.getResourceName().startsWith("META-INF/resources/webjars/"))
             .forEach(resource -> {
                 String resourcePath = resource.getResourceName().substring("META-INF".length());
-                controller.handler(this::webjars)
-                    .param(controller.param().path())
-                    .response(controller.response().url())
+                controller.handle(this::webjars)
+                    .apply(controller.param().path())
+                    .apply(controller.response().url())
                     .handle(HttpMethod.GET, resourcePath);
             });
 
@@ -37,18 +37,18 @@ public class ResourceHandler {
                 .filter(resource -> resource.getResourceName().startsWith("org/mitallast/queue/admin/"))
                 .forEach(resource -> {
                     String resourcePath = resource.getResourceName().substring("org/mitallast/queue/admin/".length());
-                    controller.handler(this::resourceStatic)
-                        .param(controller.param().path())
-                        .response(controller.response().url())
+                    controller.handle(this::resourceStatic)
+                        .apply(controller.param().path())
+                        .apply(controller.response().url())
                         .handle(HttpMethod.GET, resourcePath);
                 });
 
-            controller.handler(this::resourceFavicon)
-                .response(controller.response().url())
+            controller.handle(this::resourceFavicon)
+                .apply(controller.response().url())
                 .handle(HttpMethod.GET, "favicon.ico");
 
-            controller.handler(this::resourceIndex)
-                .response(controller.response().url())
+            controller.handle(this::resourceIndex)
+                .apply(controller.response().url())
                 .handle(HttpMethod.GET, "/");
         } else {
             Path root = new File("./src/main/resources/org/mitallast/queue/admin/").toPath();
@@ -63,28 +63,28 @@ public class ResourceHandler {
                         builder.append(part.getFileName());
                     }
                     String resourcePath = builder.toString();
-                    controller.handler(this::fileStatic)
-                        .param(controller.param().path())
-                        .response(controller.response().file())
+                    controller.handle(this::fileStatic)
+                        .apply(controller.param().path())
+                        .apply(controller.response().file())
                         .handle(HttpMethod.GET, resourcePath);
                 });
 
-            controller.handler(this::fileFavicon)
-                .response(controller.response().file())
+            controller.handle(this::fileFavicon)
+                .apply(controller.response().file())
                 .handle(HttpMethod.GET, "favicon.ico");
 
-            controller.handler(this::fileIndex)
-                .response(controller.response().file())
+            controller.handle(this::fileIndex)
+                .apply(controller.response().file())
                 .handle(HttpMethod.GET, "/");
         }
     }
 
     public URL webjars(String path) {
-        return getClass().getResource("/META-INF" + path);
+        return ResourceHandler.class.getResource("/META-INF" + path);
     }
 
     public URL resourceStatic(String path) {
-        return getClass().getResource("/org/mitallast/queue" + path);
+        return ResourceHandler.class.getResource("/org/mitallast/queue" + path);
     }
 
     public File fileStatic(String path) {
@@ -92,11 +92,11 @@ public class ResourceHandler {
     }
 
     public URL resourceFavicon() {
-        return getClass().getResource("/favicon.ico");
+        return ResourceHandler.class.getResource("/favicon.ico");
     }
 
     public URL resourceIndex() {
-        return getClass().getResource("/org/mitallast/queue/admin/index.html");
+        return ResourceHandler.class.getResource("/org/mitallast/queue/admin/index.html");
     }
 
     public File fileFavicon() {

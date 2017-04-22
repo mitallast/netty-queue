@@ -41,7 +41,7 @@ public class DefaultBucket implements Bucket {
         lock = new ReentrantLock();
         vclock = vclockFactory.create(index, replica);
         replicator = replicatorFactory.create(this);
-        registry = crdtRegistryFactory.create(index, replicator);
+        registry = crdtRegistryFactory.create(index, replica, replicator);
         log = logFactory.create(index, replica, new DefaultCompactionFilter(registry));
 
         replicator.start();

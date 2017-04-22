@@ -200,8 +200,8 @@ public class RestController {
             };
         }
 
-        public BiConsumer<RestRequest, String> text() {
-            return (request, response) -> request.response().text(response);
+        public <T> BiConsumer<RestRequest, T> text() {
+            return (request, response) -> request.response().text(response.toString());
         }
 
         public BiConsumer<RestRequest, byte[]> bytes() {

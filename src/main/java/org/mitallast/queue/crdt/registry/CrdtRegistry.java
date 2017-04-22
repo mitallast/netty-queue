@@ -9,6 +9,8 @@ public interface CrdtRegistry {
 
     boolean createLWWRegister(long id);
 
+    boolean createGCounter(long id);
+
     boolean remove(long id);
 
     Crdt crdt(long id);

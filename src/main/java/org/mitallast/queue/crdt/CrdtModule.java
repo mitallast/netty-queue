@@ -7,6 +7,7 @@ import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.bucket.BucketFactory;
 import org.mitallast.queue.crdt.bucket.DefaultBucket;
+import org.mitallast.queue.crdt.commutative.GCounter;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
 import org.mitallast.queue.crdt.log.ReplicatedLog;
@@ -75,23 +76,26 @@ public class CrdtModule extends AbstractModule {
 
         Multibinder<StreamableRegistry> binder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
 
-        binder.addBinding().toInstance(of(LWWRegister.SourceAssign.class, LWWRegister.SourceAssign::new, 1000));
-        binder.addBinding().toInstance(of(LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign::new, 1001));
+        binder.addBinding().toInstance(of(LWWRegister.SourceAssign.class, LWWRegister.SourceAssign::new, 1100));
+        binder.addBinding().toInstance(of(LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign::new, 1101));
 
-        binder.addBinding().toInstance(of(AppendEntries.class, AppendEntries::new, 1004));
-        binder.addBinding().toInstance(of(AppendSuccessful.class, AppendSuccessful::new, 1005));
-        binder.addBinding().toInstance(of(AppendRejected.class, AppendRejected::new, 1006));
+        binder.addBinding().toInstance(of(GCounter.SourceAssign.class, GCounter.SourceAssign::new, 1200));
+        binder.addBinding().toInstance(of(GCounter.DownstreamAssign.class, GCounter.DownstreamAssign::new, 1201));
 
-        binder.addBinding().toInstance(of(Resource.class, Resource::new, 1100));
-        binder.addBinding().toInstance(of(RoutingTable.class, RoutingTable::new, 1101));
+        binder.addBinding().toInstance(of(AppendEntries.class, AppendEntries::new, 1300));
+        binder.addBinding().toInstance(of(AppendSuccessful.class, AppendSuccessful::new, 1301));
+        binder.addBinding().toInstance(of(AppendRejected.class, AppendRejected::new, 1302));
 
-        binder.addBinding().toInstance(of(AddResource.class, AddResource::new, 1200));
-        binder.addBinding().toInstance(of(AddResourceResponse.class, AddResourceResponse::new, 1201));
-        binder.addBinding().toInstance(of(RemoveResource.class, RemoveResource::new, 1202));
-        binder.addBinding().toInstance(of(RemoveResourceResponse.class, RemoveResourceResponse::new, 1203));
-        binder.addBinding().toInstance(of(UpdateMembers.class, UpdateMembers::new, 1204));
-        binder.addBinding().toInstance(of(AddReplica.class, AddReplica::new, 1205));
-        binder.addBinding().toInstance(of(CloseReplica.class, CloseReplica::new, 1206));
-        binder.addBinding().toInstance(of(RemoveReplica.class, RemoveReplica::new, 1207));
+        binder.addBinding().toInstance(of(Resource.class, Resource::new, 1400));
+        binder.addBinding().toInstance(of(RoutingTable.class, RoutingTable::new, 1401));
+
+        binder.addBinding().toInstance(of(AddResource.class, AddResource::new, 1500));
+        binder.addBinding().toInstance(of(AddResourceResponse.class, AddResourceResponse::new, 1501));
+        binder.addBinding().toInstance(of(RemoveResource.class, RemoveResource::new, 1502));
+        binder.addBinding().toInstance(of(RemoveResourceResponse.class, RemoveResourceResponse::new, 1503));
+        binder.addBinding().toInstance(of(UpdateMembers.class, UpdateMembers::new, 1504));
+        binder.addBinding().toInstance(of(AddReplica.class, AddReplica::new, 1505));
+        binder.addBinding().toInstance(of(CloseReplica.class, CloseReplica::new, 1506));
+        binder.addBinding().toInstance(of(RemoveReplica.class, RemoveReplica::new, 1507));
     }
 }

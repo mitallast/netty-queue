@@ -6,6 +6,7 @@ import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
 import javaslang.control.Option;
 import org.mitallast.queue.crdt.Crdt;
+import org.mitallast.queue.crdt.commutative.GCounter;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.replication.Replicator;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DefaultCrdtRegistry implements CrdtRegistry {
 
     private final int index;
+    private final long replica;
     private final Replicator replicator;
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -22,9 +24,11 @@ public class DefaultCrdtRegistry implements CrdtRegistry {
     @Inject
     public DefaultCrdtRegistry(
         @Assisted int index,
+        @Assisted long replica,
         @Assisted Replicator replicator
     ) {
         this.index = index;
+        this.replica = replica;
         this.replicator = replicator;
     }
 
@@ -41,6 +45,20 @@ public class DefaultCrdtRegistry implements CrdtRegistry {
                 return false;
             }
             crdtMap.put(id, new LWWRegister(id, replicator));
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public boolean createGCounter(long id) {
+        lock.lock();
+        try {
+            if (crdtMap.containsKey(id)) {
+                return false;
+            }
+            crdtMap.put(id, new GCounter(id, replica, replicator));
             return true;
         } finally {
             lock.unlock();
@@ -82,7 +100,7 @@ public class DefaultCrdtRegistry implements CrdtRegistry {
         if (type.isInstance(crdt)) {
             return (T) crdt;
         } else {
-            throw new IllegalArgumentException("CRDT " + id + " does not LWWRegister, actual " + crdt.getClass().getSimpleName());
+            throw new IllegalArgumentException("CRDT " + id + " does not " + type.getSimpleName() + ", actual " + crdt.getClass().getSimpleName());
         }
     }
 
@@ -96,7 +114,7 @@ public class DefaultCrdtRegistry implements CrdtRegistry {
         if (type.isInstance(crdt)) {
             return Option.some((T) crdt);
         } else {
-            throw new IllegalArgumentException("CRDT " + id + " does not LWWRegister, actual " + crdt.getClass().getSimpleName());
+            throw new IllegalArgumentException("CRDT " + id + " does not " + type.getSimpleName() + ", actual " + crdt.getClass().getSimpleName());
         }
     }
 }

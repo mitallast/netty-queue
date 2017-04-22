@@ -13,6 +13,7 @@ import org.mitallast.queue.common.stream.StreamInput;
 import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.crdt.commutative.GCounter;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.routing.ResourceType;
 import org.mitallast.queue.raft.ClusterRaftTest;
@@ -48,14 +49,51 @@ public class ClusterCrdtTest extends BaseClusterTest {
     }
 
     @Test
-    public void testReplicate() throws Exception {
+    public void testCounter() throws Exception {
         awaitElection();
 
         long total = 1000000;
 
-        for (long c = 0; c < 1000000; c++) {
+        for (long c = 0; c < 10; c++) {
             final long crdt = c;
-            crdtServices.head().addResource(crdt, ResourceType.LWWRegister).get();
+            createResource(crdt, ResourceType.GCounter);
+
+            Vector<GCounter> counters = crdtServices
+                .map(s -> s.bucket(crdt).registry())
+                .map(r -> r.crdt(crdt, GCounter.class));
+
+            long start = System.currentTimeMillis();
+            executeConcurrent((thread, concurrency) -> {
+                for (long i = thread; i < total; i += concurrency) {
+                    counters.get((int) (i % nodes.size())).increment();
+                }
+            });
+            for (int w = 0; w < 100; w++) {
+                if (!counters.forAll(r -> r.value() == total)) {
+                    Thread.sleep(10);
+                    continue;
+                }
+                break;
+            }
+            long end = System.currentTimeMillis();
+
+            for (GCounter counter : counters) {
+                Assert.assertEquals(total, counter.value());
+            }
+
+            printQps("CRDT counter", total, start, end);
+        }
+    }
+
+    @Test
+    public void testLWWRegister() throws Exception {
+        awaitElection();
+
+        long total = 1000000;
+
+        for (long c = 0; c < 10; c++) {
+            final long crdt = c;
+            createResource(crdt, ResourceType.LWWRegister);
 
             Vector<LWWRegister> registers = crdtServices
                 .map(s -> s.bucket(crdt).registry())
@@ -65,8 +103,9 @@ public class ClusterCrdtTest extends BaseClusterTest {
             for (long i = 0; i < total; i++) {
                 registers.get((int) (i % nodes.size())).assign(new TestLong(i), i);
             }
-            for (int w = 0; w < 10000; w++) {
-                if (!registers.forAll(r -> r.value().contains(new TestLong(total - 1)))) {
+            TestLong expected = new TestLong(total - 1);
+            for (int w = 0; w < 1000; w++) {
+                if (!registers.forAll(r -> r.value().contains(expected))) {
                     Thread.sleep(10);
                     continue;
                 }
@@ -74,16 +113,27 @@ public class ClusterCrdtTest extends BaseClusterTest {
             }
             long end = System.currentTimeMillis();
 
-            for (CrdtService crdtService : crdtServices) {
-                LWWRegister register = crdtService.bucket(crdt)
-                    .registry()
-                    .crdt(crdt, LWWRegister.class);
-
-                Assert.assertEquals(Option.some(new TestLong(total - 1)), register.value());
+            for (LWWRegister register : registers) {
+                Assert.assertEquals(Option.some(expected), register.value());
             }
 
-            printQps("CRDT async", total, start, end);
+            printQps("CRDT lww register", total, start, end);
         }
+    }
+
+    private void createResource(long crdt, ResourceType type) throws Exception {
+        crdtServices.head().addResource(crdt, type).get();
+        for (int w = 0; w < 10; w++) {
+            if (!crdtServices
+                .map(s -> s.bucket(crdt).registry())
+                .forAll(r -> r.crdtOpt(crdt).isDefined())) {
+                logger.info("await crdt {}", crdt);
+                Thread.sleep(1000);
+            }
+        }
+        assert crdtServices
+            .map(s -> s.bucket(crdt).registry())
+            .forAll(r -> r.crdtOpt(crdt).isDefined());
     }
 
     public static class TestModule extends AbstractModule {

@@ -175,7 +175,7 @@ public class DefaultCrdtService implements CrdtService {
 
     @Override
     public Future<Boolean> addResource(long id, ResourceType resourceType) {
-        return raft.command(new AddResource(id, ResourceType.LWWRegister))
+        return raft.command(new AddResource(id, resourceType))
             .filter(m -> m instanceof AddResourceResponse)
             .map(m -> ((AddResourceResponse) m).isCreated());
     }
@@ -239,6 +239,9 @@ public class DefaultCrdtService implements CrdtService {
                         switch (resource.type()) {
                             case LWWRegister:
                                 bucket.registry().createLWWRegister(resource.id());
+                                break;
+                            case GCounter:
+                                bucket.registry().createGCounter(resource.id());
                                 break;
                             default:
                                 logger.warn("unexpected type: {}", resource.type());

@@ -22,14 +22,14 @@ import org.mitallast.queue.crdt.registry.DefaultCrdtRegistry;
 import org.mitallast.queue.crdt.replication.DefaultReplicator;
 import org.mitallast.queue.crdt.replication.Replicator;
 import org.mitallast.queue.crdt.replication.ReplicatorFactory;
+import org.mitallast.queue.crdt.replication.state.FileReplicaState;
+import org.mitallast.queue.crdt.replication.state.ReplicaState;
+import org.mitallast.queue.crdt.replication.state.ReplicaStateFactory;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
 import org.mitallast.queue.crdt.routing.allocation.DefaultAllocationStrategy;
 import org.mitallast.queue.crdt.routing.fsm.*;
-import org.mitallast.queue.crdt.vclock.FileVectorClock;
-import org.mitallast.queue.crdt.vclock.VectorClock;
-import org.mitallast.queue.crdt.vclock.VectorClockFactory;
 
 import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
@@ -56,8 +56,8 @@ public class CrdtModule extends AbstractModule {
             .build(ReplicatedLogFactory.class));
 
         install(new FactoryModuleBuilder()
-            .implement(VectorClock.class, FileVectorClock.class)
-            .build(VectorClockFactory.class));
+            .implement(ReplicaState.class, FileReplicaState.class)
+            .build(ReplicaStateFactory.class));
 
         install(new FactoryModuleBuilder()
             .implement(CrdtRegistry.class, DefaultCrdtRegistry.class)

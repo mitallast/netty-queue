@@ -10,8 +10,8 @@ import org.mitallast.queue.crdt.registry.CrdtRegistry;
 import org.mitallast.queue.crdt.registry.CrdtRegistryFactory;
 import org.mitallast.queue.crdt.replication.Replicator;
 import org.mitallast.queue.crdt.replication.ReplicatorFactory;
-import org.mitallast.queue.crdt.vclock.VectorClock;
-import org.mitallast.queue.crdt.vclock.VectorClockFactory;
+import org.mitallast.queue.crdt.replication.state.ReplicaState;
+import org.mitallast.queue.crdt.replication.state.ReplicaStateFactory;
 
 import javax.inject.Inject;
 import java.util.concurrent.locks.ReentrantLock;
@@ -23,7 +23,7 @@ public class DefaultBucket implements Bucket {
     private final ReentrantLock lock;
     private final CrdtRegistry registry;
     private final ReplicatedLog log;
-    private final VectorClock vclock;
+    private final ReplicaState replicaState;
     private final Replicator replicator;
 
     @Inject
@@ -32,14 +32,14 @@ public class DefaultBucket implements Bucket {
         @Assisted long replica,
         CrdtRegistryFactory crdtRegistryFactory,
         ReplicatedLogFactory logFactory,
-        VectorClockFactory vclockFactory,
+        ReplicaStateFactory stateFactory,
         ReplicatorFactory replicatorFactory
     ) {
         this.index = index;
         this.replica = replica;
         logger = LogManager.getLogger("replicator[" + index + "]");
         lock = new ReentrantLock();
-        vclock = vclockFactory.create(index, replica);
+        replicaState = stateFactory.create(index, replica);
         replicator = replicatorFactory.create(this);
         registry = crdtRegistryFactory.create(index, replica, replicator);
         log = logFactory.create(index, replica, new DefaultCompactionFilter(registry));
@@ -78,8 +78,8 @@ public class DefaultBucket implements Bucket {
     }
 
     @Override
-    public VectorClock vclock() {
-        return vclock;
+    public ReplicaState state() {
+        return replicaState;
     }
 
     @Override
@@ -87,13 +87,13 @@ public class DefaultBucket implements Bucket {
         logger.info("close");
         replicator.stop();
         log.close();
-        vclock.close();
+        replicaState.close();
     }
 
     @Override
     public void delete() {
         logger.info("delete");
         log.delete();
-        vclock.delete();
+        replicaState.delete();
     }
 }

@@ -7,11 +7,11 @@ import java.io.Closeable;
 
 public interface ReplicatedLog extends Closeable {
 
-    long vclock();
+    long index();
 
     LogEntry append(long id, Streamable event);
 
-    Vector<LogEntry> entriesFrom(long nodeVclock);
+    Vector<LogEntry> entriesFrom(long index);
 
     void delete();
 

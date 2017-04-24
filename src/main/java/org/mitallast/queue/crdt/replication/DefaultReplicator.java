@@ -105,10 +105,10 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
             if (logger.isDebugEnabled()) {
                 logger.debug("[replica={}:{}] append successful from={}:{} last={}",
                     bucket.index(), bucket.replica(),
-                    message.bucket(), message.replica(), message.vclock());
+                    message.bucket(), message.replica(), message.index());
             }
-            if (replicationIndex.get(message.replica()) < message.vclock()) {
-                replicationIndex.put(message.replica(), message.vclock());
+            if (replicationIndex.get(message.replica()) < message.index()) {
+                replicationIndex.put(message.replica(), message.index());
             }
             replicationTimeout.put(message.replica(), 0);
             maybeSendEntries(message.replica());
@@ -124,9 +124,9 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
         try {
             logger.warn("[replica={}:{}] append rejected from={}:{} last={}",
                 bucket.index(), bucket.replica(),
-                message.bucket(), message.replica(), message.vclock());
-            if (replicationIndex.get(message.replica()) < message.vclock()) {
-                replicationIndex.put(message.replica(), message.vclock());
+                message.bucket(), message.replica(), message.index());
+            if (replicationIndex.get(message.replica()) < message.index()) {
+                replicationIndex.put(message.replica(), message.index());
             }
             replicationTimeout.put(message.replica(), 0);
             maybeSendEntries(message.replica());
@@ -217,7 +217,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
 
     private void maybeSync() {
         if (!open) {
-            long last = bucket.log().vclock();
+            long last = bucket.log().index();
 
             RoutingTable routingTable = fsm.get();
             RoutingBucket routingBucket = routingTable.buckets().get(bucket.index());

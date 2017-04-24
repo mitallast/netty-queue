@@ -37,7 +37,7 @@ public class FileReplicatedLog implements ReplicatedLog {
     private volatile Vector<Segment> segments = Vector.empty();
     private volatile Segment lastSegment;
 
-    private final AtomicLong vclock = new AtomicLong(0);
+    private final AtomicLong index = new AtomicLong(0);
 
     @Inject
     public FileReplicatedLog(
@@ -66,14 +66,14 @@ public class FileReplicatedLog implements ReplicatedLog {
             segments = segments.append(new Segment(i));
         }
         if (segments.isEmpty()) {
-            segments = segments.append(new Segment(vclock.get()));
+            segments = segments.append(new Segment(this.index.get()));
         }
         lastSegment = segments.get(segments.size() - 1);
     }
 
     @Override
-    public long vclock() {
-        return vclock.get();
+    public long index() {
+        return index.get();
     }
 
     @Override
@@ -87,7 +87,7 @@ public class FileReplicatedLog implements ReplicatedLog {
             segmentsLock.lock();
             try {
                 if (lastSegment.isFull()) {
-                    lastSegment = new Segment(vclock.get());
+                    lastSegment = new Segment(index.get());
                     segments = segments.append(lastSegment);
                     logger.debug("created segment {}", lastSegment.offset);
                     append = lastSegment.append(id, event);
@@ -106,13 +106,13 @@ public class FileReplicatedLog implements ReplicatedLog {
     }
 
     @Override
-    public Vector<LogEntry> entriesFrom(long nodeVclock) {
+    public Vector<LogEntry> entriesFrom(long index) {
         Vector<LogEntry> builder = Vector.empty();
         for (Segment segment : segments.reverse()) {
             synchronized (segment.entries) {
                 for (int i = segment.entries.size() - 1; i >= 0; i--) {
                     LogEntry logEntry = segment.entries.get(i);
-                    if (logEntry.vclock() > nodeVclock) {
+                    if (logEntry.index() > index) {
                         builder = builder.append(logEntry);
                     } else {
                         return builder.reverse();
@@ -189,7 +189,7 @@ public class FileReplicatedLog implements ReplicatedLog {
                         entries.add(input.readStreamable(LogEntry::new));
                     }
                     if (!entries.isEmpty()) {
-                        vclock.set(entries.get(entries.size() - 1).vclock() + 1);
+                        index.set(entries.get(entries.size() - 1).index() + 1);
                     }
                     added.set(entries.size());
                 }
@@ -201,7 +201,7 @@ public class FileReplicatedLog implements ReplicatedLog {
                 if (isFull()) {
                     return null;
                 }
-                LogEntry logEntry = new LogEntry(vclock.incrementAndGet(), id, event);
+                LogEntry logEntry = new LogEntry(index.incrementAndGet(), id, event);
                 logOutput.writeStreamable(logEntry);
                 entries.add(logEntry);
                 added.incrementAndGet();

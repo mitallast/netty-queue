@@ -85,17 +85,17 @@ public class DefaultCrdtService implements CrdtService {
                 if (replica == null) {
                     logger.warn("unexpected replica {}, ignore", message.replica());
                 } else {
-                    long localIndex = bucket.vclock().get(message.replica());
-                    if (localIndex == message.prevVclock()) {
+                    long localIndex = bucket.state().get(message.replica());
+                    if (localIndex == message.prevIndex()) {
                         for (LogEntry logEntry : message.entries()) {
                             bucket.registry().crdt(logEntry.id()).update(logEntry.event());
-                            localIndex = Math.max(localIndex, logEntry.vclock());
+                            localIndex = Math.max(localIndex, logEntry.index());
                         }
-                        bucket.vclock().put(message.replica(), localIndex);
+                        bucket.state().put(message.replica(), localIndex);
                         if (logger.isDebugEnabled()) {
                             logger.debug("[replica={}:{}] append success to={}:{} prev={} new={}",
                                 bucket.index(), bucket.replica(),
-                                message.bucket(), message.replica(), message.prevVclock(), localIndex);
+                                message.bucket(), message.replica(), message.prevIndex(), localIndex);
                         }
                         transportService.send(
                             replica.member(),
@@ -104,7 +104,7 @@ public class DefaultCrdtService implements CrdtService {
                     } else {
                         logger.warn("[replica={}:{}] append reject to={}:{} prev={} index={}",
                             bucket.index(), bucket.replica(),
-                            message.bucket(), message.replica(), message.prevVclock(), localIndex);
+                            message.bucket(), message.replica(), message.prevIndex(), localIndex);
                         transportService.send(
                             replica.member(),
                             new AppendRejected(message.bucket(), bucket.replica(), localIndex)

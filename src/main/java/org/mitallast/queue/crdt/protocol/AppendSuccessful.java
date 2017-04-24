@@ -7,25 +7,25 @@ import org.mitallast.queue.common.stream.Streamable;
 public class AppendSuccessful implements Streamable {
     private final int bucket;
     private final long replica;
-    private final long vclock;
+    private final long index;
 
-    public AppendSuccessful(int bucket, long replica, long vclock) {
+    public AppendSuccessful(int bucket, long replica, long index) {
         this.bucket = bucket;
         this.replica = replica;
-        this.vclock = vclock;
+        this.index = index;
     }
 
     public AppendSuccessful(StreamInput stream) {
         bucket = stream.readInt();
         replica = stream.readLong();
-        vclock = stream.readLong();
+        index = stream.readLong();
     }
 
     @Override
     public void writeTo(StreamOutput stream) {
         stream.writeInt(bucket);
         stream.writeLong(replica);
-        stream.writeLong(vclock);
+        stream.writeLong(index);
     }
 
     public int bucket() {
@@ -36,8 +36,8 @@ public class AppendSuccessful implements Streamable {
         return replica;
     }
 
-    public long vclock() {
-        return vclock;
+    public long index() {
+        return index;
     }
 
     @Override
@@ -45,7 +45,7 @@ public class AppendSuccessful implements Streamable {
         return "AppendSuccessful{" +
             "bucket=" + bucket +
             ", replica=" + replica +
-            ", vclock=" + vclock +
+            ", index=" + index +
             '}';
     }
 }

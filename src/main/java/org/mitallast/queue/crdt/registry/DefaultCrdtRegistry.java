@@ -7,6 +7,7 @@ import gnu.trove.map.hash.TLongObjectHashMap;
 import javaslang.control.Option;
 import org.mitallast.queue.crdt.Crdt;
 import org.mitallast.queue.crdt.commutative.GCounter;
+import org.mitallast.queue.crdt.commutative.GSet;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.replication.Replicator;
 
@@ -59,6 +60,20 @@ public class DefaultCrdtRegistry implements CrdtRegistry {
                 return false;
             }
             crdtMap.put(id, new GCounter(id, replica, replicator));
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public boolean createGSet(long id) {
+        lock.lock();
+        try {
+            if (crdtMap.containsKey(id)) {
+                return false;
+            }
+            crdtMap.put(id, new GSet(id, replicator));
             return true;
         } finally {
             lock.unlock();

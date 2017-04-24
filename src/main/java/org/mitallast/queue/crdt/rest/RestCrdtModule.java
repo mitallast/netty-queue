@@ -8,5 +8,6 @@ public class RestCrdtModule extends AbstractModule {
         bind(RestCrdtRouting.class).asEagerSingleton();
         bind(RestLWWRegister.class).asEagerSingleton();
         bind(RestGCounter.class).asEagerSingleton();
+        bind(RestGSet.class).asEagerSingleton();
     }
 }

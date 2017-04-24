@@ -40,4 +40,13 @@ public class LogEntry implements Streamable {
     public Streamable event() {
         return event;
     }
+
+    @Override
+    public String toString() {
+        return "LogEntry{" +
+            "vclock=" + vclock +
+            ", id=" + id +
+            ", event=" + event +
+            '}';
+    }
 }

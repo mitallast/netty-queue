@@ -7,7 +7,7 @@
     </Appenders>
     <Loggers>
         <Logger name="org.mitallast.queue.raft.Raft" level="WARN"/>
-        <Root level="info">
+        <Root level="debug">
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>

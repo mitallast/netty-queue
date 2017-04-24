@@ -176,8 +176,8 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
         }
         long timeout = replicationTimeout.get(replica.id());
         if (timeout == 0) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("[replica={}:{}] no request in progress at {}:{}",
+            if (logger.isTraceEnabled()) {
+                logger.trace("[replica={}:{}] no request in progress at {}:{}",
                     bucket.index(), bucket.replica(),
                     bucket.index(), replica.id());
             }
@@ -202,9 +202,9 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
         Vector<LogEntry> append = log.entriesFrom(prev).take(10000);
         if (append.nonEmpty()) {
             if (logger.isDebugEnabled()) {
-                logger.debug("[replica={}:{}] send append to={}:{} prev={}",
+                logger.debug("[replica={}:{}] send append to={}:{} prev={} entries: {}",
                     bucket.index(), bucket.replica(),
-                    bucket.index(), replica.id(), prev);
+                    bucket.index(), replica.id(), prev, append);
             }
             replicationTimeout.put(replica.id(), System.currentTimeMillis() + timeout);
             transportService.send(replica.member(), new AppendEntries(bucket.index(), bucket.replica(), prev, append));

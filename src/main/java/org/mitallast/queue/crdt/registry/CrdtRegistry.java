@@ -11,6 +11,8 @@ public interface CrdtRegistry {
 
     boolean createGCounter(long id);
 
+    boolean createGSet(long id);
+
     boolean remove(long id);
 
     Crdt crdt(long id);

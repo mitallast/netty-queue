@@ -8,6 +8,7 @@ import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.bucket.BucketFactory;
 import org.mitallast.queue.crdt.bucket.DefaultBucket;
 import org.mitallast.queue.crdt.commutative.GCounter;
+import org.mitallast.queue.crdt.commutative.GSet;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
 import org.mitallast.queue.crdt.log.ReplicatedLog;
@@ -79,8 +80,11 @@ public class CrdtModule extends AbstractModule {
         binder.addBinding().toInstance(of(LWWRegister.SourceAssign.class, LWWRegister.SourceAssign::new, 1100));
         binder.addBinding().toInstance(of(LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign::new, 1101));
 
-        binder.addBinding().toInstance(of(GCounter.SourceAssign.class, GCounter.SourceAssign::new, 1200));
-        binder.addBinding().toInstance(of(GCounter.DownstreamAssign.class, GCounter.DownstreamAssign::new, 1201));
+        binder.addBinding().toInstance(of(GCounter.SourceAssign.class, GCounter.SourceAssign::new, 1110));
+        binder.addBinding().toInstance(of(GCounter.DownstreamAssign.class, GCounter.DownstreamAssign::new, 1111));
+
+        binder.addBinding().toInstance(of(GSet.SourceAdd.class, GSet.SourceAdd::new, 1120));
+        binder.addBinding().toInstance(of(GSet.DownstreamAdd.class, GSet.DownstreamAdd::new, 1121));
 
         binder.addBinding().toInstance(of(AppendEntries.class, AppendEntries::new, 1300));
         binder.addBinding().toInstance(of(AppendSuccessful.class, AppendSuccessful::new, 1301));

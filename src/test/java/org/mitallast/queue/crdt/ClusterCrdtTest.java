@@ -14,6 +14,7 @@ import org.mitallast.queue.common.stream.StreamOutput;
 import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.common.stream.StreamableRegistry;
 import org.mitallast.queue.crdt.commutative.GCounter;
+import org.mitallast.queue.crdt.commutative.GSet;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
 import org.mitallast.queue.crdt.routing.ResourceType;
 import org.mitallast.queue.raft.ClusterRaftTest;
@@ -49,43 +50,6 @@ public class ClusterCrdtTest extends BaseClusterTest {
     }
 
     @Test
-    public void testCounter() throws Exception {
-        awaitElection();
-
-        long total = 1000000;
-
-        for (long c = 0; c < 10; c++) {
-            final long crdt = c;
-            createResource(crdt, ResourceType.GCounter);
-
-            Vector<GCounter> counters = crdtServices
-                .map(s -> s.bucket(crdt).registry())
-                .map(r -> r.crdt(crdt, GCounter.class));
-
-            long start = System.currentTimeMillis();
-            executeConcurrent((thread, concurrency) -> {
-                for (long i = thread; i < total; i += concurrency) {
-                    counters.get((int) (i % nodes.size())).increment();
-                }
-            });
-            for (int w = 0; w < 100; w++) {
-                if (!counters.forAll(r -> r.value() == total)) {
-                    Thread.sleep(10);
-                    continue;
-                }
-                break;
-            }
-            long end = System.currentTimeMillis();
-
-            for (GCounter counter : counters) {
-                Assert.assertEquals(total, counter.value());
-            }
-
-            printQps("CRDT counter", total, start, end);
-        }
-    }
-
-    @Test
     public void testLWWRegister() throws Exception {
         awaitElection();
 
@@ -117,7 +81,85 @@ public class ClusterCrdtTest extends BaseClusterTest {
                 Assert.assertEquals(Option.some(expected), register.value());
             }
 
-            printQps("CRDT lww register", total, start, end);
+            printQps("CRDT lww-register", total, start, end);
+        }
+    }
+
+    @Test
+    public void testGCounter() throws Exception {
+        awaitElection();
+
+        long total = 1000000;
+
+        for (long c = 0; c < 10; c++) {
+            final long crdt = c;
+            createResource(crdt, ResourceType.GCounter);
+
+            Vector<GCounter> counters = crdtServices
+                .map(s -> s.bucket(crdt).registry())
+                .map(r -> r.crdt(crdt, GCounter.class));
+
+            long start = System.currentTimeMillis();
+            executeConcurrent((thread, concurrency) -> {
+                for (long i = thread; i < total; i += concurrency) {
+                    counters.get((int) (i % nodes.size())).increment();
+                }
+            });
+            for (int w = 0; w < 100; w++) {
+                if (!counters.forAll(r -> r.value() == total)) {
+                    Thread.sleep(10);
+                    continue;
+                }
+                break;
+            }
+            long end = System.currentTimeMillis();
+
+            for (GCounter counter : counters) {
+                Assert.assertEquals(total, counter.value());
+            }
+
+            printQps("CRDT g-counter", total, start, end);
+        }
+    }
+
+    @Test
+    public void testGSet() throws Exception {
+        awaitElection();
+
+        long total = 10;
+
+        for (long c = 0; c < 10; c++) {
+            final long crdt = c;
+            createResource(crdt, ResourceType.GSet);
+
+            Vector<GSet> sets = crdtServices
+                .map(s -> s.bucket(crdt).registry())
+                .map(r -> r.crdt(crdt, GSet.class));
+
+            long start = System.currentTimeMillis();
+            executeConcurrent((thread, concurrency) -> {
+                for (long i = thread; i < total; i += concurrency) {
+                    sets.get((int) (i % nodes.size())).add(new TestLong(i));
+                }
+            });
+
+            for (int w = 0; w < 1000; w++) {
+                if (!sets.forAll(r -> r.values().length() == total)) {
+                    Thread.sleep(10);
+                    continue;
+                }
+                break;
+            }
+            long end = System.currentTimeMillis();
+
+            for (GSet set : sets) {
+                logger.info("set: {}", set.values());
+            }
+            for (GSet set : sets) {
+                Assert.assertEquals(total, set.values().length());
+            }
+
+            printQps("CRDT g-set", total, start, end);
         }
     }
 
@@ -179,9 +221,7 @@ public class ClusterCrdtTest extends BaseClusterTest {
 
         @Override
         public String toString() {
-            return "TestLong{" +
-                "value=" + value +
-                '}';
+            return String.valueOf(value);
         }
     }
 }

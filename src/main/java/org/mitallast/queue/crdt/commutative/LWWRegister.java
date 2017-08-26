@@ -1,64 +1,68 @@
 package org.mitallast.queue.crdt.commutative;
 
 import javaslang.control.Option;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.replication.Replicator;
 
 public class LWWRegister implements CmRDT {
 
     public static class SourceAssign implements SourceUpdate {
+        public static final Codec<SourceAssign> codec = Codec.of(
+            SourceAssign::new,
+            SourceAssign::value,
+            SourceAssign::timestamp,
+            Codec.anyCodec(),
+            Codec.longCodec
+        );
 
-        private final Streamable value;
+        private final Message value;
         private final long timestamp;
 
-        public SourceAssign(Streamable value, long timestamp) {
+        public SourceAssign(Message value, long timestamp) {
             this.value = value;
             this.timestamp = timestamp;
         }
 
-        public SourceAssign(StreamInput stream) {
-            this.value = stream.readStreamable();
-            this.timestamp = stream.readLong();
+        public Message value() {
+            return value;
         }
 
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeClass(value.getClass());
-            stream.writeStreamable(value);
-            stream.writeLong(timestamp);
+        public long timestamp() {
+            return timestamp;
         }
     }
 
     public static class DownstreamAssign implements DownstreamUpdate {
+        public static final Codec<DownstreamAssign> codec = Codec.of(
+            DownstreamAssign::new,
+            DownstreamAssign::value,
+            DownstreamAssign::timestamp,
+            Codec.anyCodec(),
+            Codec.longCodec
+        );
 
-        private final Streamable value;
+        private final Message value;
         private final long timestamp;
 
-        public DownstreamAssign(Streamable value, long timestamp) {
+        public DownstreamAssign(Message value, long timestamp) {
             this.value = value;
             this.timestamp = timestamp;
         }
 
-        public DownstreamAssign(StreamInput stream) {
-            this.value = stream.readStreamable();
-            this.timestamp = stream.readLong();
+        public Message value() {
+            return value;
         }
 
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeClass(value.getClass());
-            stream.writeStreamable(value);
-            stream.writeLong(timestamp);
+        public long timestamp() {
+            return timestamp;
         }
-
     }
 
     private final long id;
     private final Replicator replicator;
 
-    private volatile Option<Streamable> value = Option.none();
+    private volatile Option<Message> value = Option.none();
     private volatile long timestamp = 0;
 
     public LWWRegister(long id, Replicator replicator) {
@@ -67,7 +71,7 @@ public class LWWRegister implements CmRDT {
     }
 
     @Override
-    public void update(Streamable event) {
+    public void update(Message event) {
         if (event instanceof SourceUpdate) {
             sourceUpdate((SourceUpdate) event);
         } else if (event instanceof DownstreamUpdate) {
@@ -76,7 +80,7 @@ public class LWWRegister implements CmRDT {
     }
 
     @Override
-    public boolean shouldCompact(Streamable event) {
+    public boolean shouldCompact(Message event) {
         return event instanceof DownstreamAssign &&
             ((DownstreamAssign) event).timestamp < timestamp;
     }
@@ -102,7 +106,7 @@ public class LWWRegister implements CmRDT {
         }
     }
 
-    public synchronized void assign(Streamable value, long timestamp) {
+    public synchronized void assign(Message value, long timestamp) {
         if (this.timestamp < timestamp) {
             this.value = Option.some(value);
             this.timestamp = timestamp;
@@ -110,7 +114,7 @@ public class LWWRegister implements CmRDT {
         }
     }
 
-    public Option<Streamable> value() {
+    public Option<Message> value() {
         return value;
     }
 }

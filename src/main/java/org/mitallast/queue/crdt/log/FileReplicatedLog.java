@@ -6,13 +6,10 @@ import com.typesafe.config.Config;
 import javaslang.collection.Vector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.common.stream.Streamable;
 
-import java.io.File;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,7 +25,6 @@ public class FileReplicatedLog implements ReplicatedLog {
     private final int segmentSize;
 
     private final FileService fileService;
-    private final StreamService streamService;
     private final Predicate<LogEntry> compactionFilter;
     private final String serviceName;
 
@@ -43,7 +39,6 @@ public class FileReplicatedLog implements ReplicatedLog {
     public FileReplicatedLog(
         Config config,
         FileService fileService,
-        StreamService streamService,
         @Assisted Predicate<LogEntry> compactionFilter,
         @Assisted int index,
         @Assisted long replica
@@ -51,7 +46,6 @@ public class FileReplicatedLog implements ReplicatedLog {
         this.segmentSize = config.getInt("crdt.segment.size");
 
         this.fileService = fileService;
-        this.streamService = streamService;
         this.compactionFilter = compactionFilter;
         this.serviceName = String.format("crdt/%d/log/%d", index, replica);
 
@@ -77,7 +71,7 @@ public class FileReplicatedLog implements ReplicatedLog {
     }
 
     @Override
-    public LogEntry append(long id, Streamable event) {
+    public LogEntry append(long id, Message event) {
         while (true) {
             LogEntry append = lastSegment.append(id, event);
             if (append != null) {
@@ -175,34 +169,40 @@ public class FileReplicatedLog implements ReplicatedLog {
         private final ArrayList<LogEntry> entries = new ArrayList<>();
         private final long offset;
         private final File logFile;
-        private final StreamOutput logOutput;
+        private final DataOutputStream logOutput;
         private final AtomicInteger added = new AtomicInteger(0);
 
         private Segment(long offset) {
             this.offset = offset;
             this.logFile = fileService.resource(serviceName, "event." + offset + ".log");
-            this.logOutput = streamService.output(logFile, true);
+            try {
+                this.logOutput = fileService.output(logFile, true);
 
-            if (logFile.length() > 0) {
-                try (StreamInput input = streamService.input(logFile)) {
-                    while (input.available() > 0) {
-                        entries.add(input.readStreamable(LogEntry::new));
+                if (logFile.length() > 0) {
+                    try (DataInputStream stream = fileService.input(logFile)) {
+                        if (stream.available() > 0) {
+                            while (stream.available() > 0) {
+                                entries.add(LogEntry.codec.read(stream));
+                            }
+                        }
+                        if (!entries.isEmpty()) {
+                            index.set(entries.get(entries.size() - 1).index() + 1);
+                        }
+                        added.set(entries.size());
                     }
-                    if (!entries.isEmpty()) {
-                        index.set(entries.get(entries.size() - 1).index() + 1);
-                    }
-                    added.set(entries.size());
                 }
+            } catch (IOException e) {
+                throw new IOError(e);
             }
         }
 
-        private LogEntry append(long id, Streamable event) {
+        private LogEntry append(long id, Message event) {
             synchronized (entries) {
                 if (isFull()) {
                     return null;
                 }
                 LogEntry logEntry = new LogEntry(index.incrementAndGet(), id, event);
-                logOutput.writeStreamable(logEntry);
+                LogEntry.codec.write(logOutput, logEntry);
                 entries.add(logEntry);
                 added.incrementAndGet();
                 return logEntry;
@@ -224,7 +224,11 @@ public class FileReplicatedLog implements ReplicatedLog {
         }
 
         private void close() {
-            logOutput.close();
+            try {
+                logOutput.close();
+            } catch (IOException e) {
+                throw new IOError(e);
+            }
         }
     }
 }

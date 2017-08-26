@@ -2,14 +2,24 @@ package org.mitallast.queue.crdt.routing;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
+import javaslang.collection.Seq;
 import javaslang.collection.Set;
 import javaslang.control.Option;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class RoutingBucket implements Streamable {
+public class RoutingBucket implements Message {
+    public static final Codec<RoutingBucket> codec = Codec.of(
+        RoutingBucket::new,
+        RoutingBucket::index,
+        RoutingBucket::replicaSeq,
+        RoutingBucket::resourceSeq,
+        Codec.intCodec,
+        Codec.seqCodec(RoutingReplica.codec),
+        Codec.seqCodec(Resource.codec)
+    );
+
     private final int index;
     private final Map<Long, RoutingReplica> replicas;
     private final Map<Long, Resource> resources;
@@ -18,27 +28,24 @@ public class RoutingBucket implements Streamable {
         this(index, HashMap.empty(), HashMap.empty());
     }
 
+    public RoutingBucket(int index, Seq<RoutingReplica> replicas, Seq<Resource> resources) {
+        this.index = index;
+        this.replicas = replicas.toMap(RoutingReplica::id, r -> r);
+        this.resources = resources.toMap(Resource::id, r -> r);
+    }
+
     public RoutingBucket(int index, Map<Long, RoutingReplica> replicas, Map<Long, Resource> resources) {
         this.index = index;
         this.replicas = replicas;
         this.resources = resources;
     }
 
-    public RoutingBucket(StreamInput stream) {
-        index = stream.readInt();
-        replicas = stream.readSeq(RoutingReplica::new).toMap(RoutingReplica::id, r -> r);
-        resources = stream.readSeq(Resource::new).toMap(Resource::id, r -> r);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeInt(index);
-        stream.writeSeq(replicas.values());
-        stream.writeSeq(resources.values());
-    }
-
     public int index() {
         return index;
+    }
+
+    public Seq<RoutingReplica> replicaSeq() {
+        return replicas.values();
     }
 
     public Map<Long, RoutingReplica> replicas() {
@@ -51,6 +58,10 @@ public class RoutingBucket implements Streamable {
 
     public boolean exists(DiscoveryNode member) {
         return replicas.values().exists(replica -> replica.member().equals(member));
+    }
+
+    public Seq<Resource> resourceSeq() {
+        return resources.values();
     }
 
     public Map<Long, Resource> resources() {

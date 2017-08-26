@@ -5,7 +5,7 @@ import javaslang.collection.Map;
 import javaslang.collection.Vector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 
@@ -19,12 +19,12 @@ public class ResourceRegistry {
         resources = resources.append(fsm);
     }
 
-    public synchronized <T extends Streamable> void register(Class<T> type, ResourceHandler<T> handler) {
+    public synchronized <T extends Message> void register(Class<T> type, ResourceHandler<T> handler) {
         handlers = handlers.put(type, handler);
     }
 
     @SuppressWarnings("unchecked")
-    public Streamable apply(long index, Streamable event) {
+    public Message apply(long index, Message event) {
         ResourceHandler handler = handlers.getOrElse(event.getClass(), null);
         if (handler != null) {
             return handler.apply(index, event);
@@ -35,12 +35,12 @@ public class ResourceRegistry {
     }
 
     public RaftSnapshot prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
-        Vector<Streamable> snapshots = resources.flatMap(r -> r.prepareSnapshot(snapshotMeta));
+        Vector<Message> snapshots = resources.flatMap(r -> r.prepareSnapshot(snapshotMeta));
         return new RaftSnapshot(snapshotMeta, snapshots);
     }
 
     @FunctionalInterface
-    public interface ResourceHandler<T> {
-        Streamable apply(long index, T event);
+    public interface ResourceHandler<T extends Message> {
+        Message apply(long index, T event);
     }
 }

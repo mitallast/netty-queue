@@ -4,7 +4,6 @@ import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.multibindings.Multibinder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import javaslang.collection.HashMap;
@@ -16,13 +15,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.file.FileModule;
-import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
-import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
 import org.mitallast.queue.raft.persistent.FilePersistentService;
@@ -47,6 +46,10 @@ import static org.mockito.Mockito.when;
 
 
 public class RaftTest extends BaseTest {
+
+    static {
+        Codec.register(5555555, TestFSMMessage.class, TestFSMMessage.codec);
+    }
 
     private Injector injector;
 
@@ -99,7 +102,6 @@ public class RaftTest extends BaseTest {
         override("raft.snapshot-interval", "100");
         injector = Guice.createInjector(
             new ComponentModule(config),
-            new StreamModule(),
             new FileModule(),
             new TestRaftModule()
         );
@@ -118,7 +120,8 @@ public class RaftTest extends BaseTest {
     }
 
     private void appendBigClusterConf() throws Exception {
-        log = log.append(new LogEntry(1, 1, 0, new StableClusterConfiguration(node1, node2, node3, node4, node5))).commit(1);
+        log = log.append(new LogEntry(1, 1, 0, new StableClusterConfiguration(node1, node2, node3, node4, node5)))
+            .commit(1);
     }
 
     private void override(String key, String value) {
@@ -398,7 +401,8 @@ public class RaftTest extends BaseTest {
         appendClusterSelf();
         start();
         raft.apply(new RemoveServer(node4));
-        verify(transportService).send(node4, new RemoveServerResponse(RemoveServerResponse.Status.NOT_LEADER, Option.none()));
+        verify(transportService).send(node4, new RemoveServerResponse(RemoveServerResponse.Status.NOT_LEADER, Option
+            .none()));
     }
 
     // candidate
@@ -423,7 +427,8 @@ public class RaftTest extends BaseTest {
         verify(transportService).send(node3, new RequestVote(2, node1, 1, 1));
 
         raft.apply(new RemoveServer(node3));
-        verify(transportService).send(node3, new RemoveServerResponse(RemoveServerResponse.Status.NOT_LEADER, Option.none()));
+        verify(transportService).send(node3, new RemoveServerResponse(RemoveServerResponse.Status.NOT_LEADER, Option
+            .none()));
     }
 
     @Test
@@ -972,7 +977,8 @@ public class RaftTest extends BaseTest {
     @Test
     public void testLeaderCreateSnapshot() throws Exception {
         // snapshot
-        RaftSnapshotMetadata meta = new RaftSnapshotMetadata(2, 100, new StableClusterConfiguration(node1, node2, node3));
+        RaftSnapshotMetadata meta = new RaftSnapshotMetadata(2, 100, new StableClusterConfiguration(node1, node2,
+            node3));
         RaftSnapshot snapshot = new RaftSnapshot(meta, Vector.empty());
         when(registry.prepareSnapshot(meta)).thenReturn(snapshot);
 
@@ -1034,7 +1040,8 @@ public class RaftTest extends BaseTest {
         Assert.assertTrue(raft.currentMeta().getConfig().isTransitioning());
 
         raft.apply(new AddServer(node5));
-        verify(transportService).send(node5, new AddServerResponse(AddServerResponse.Status.TIMEOUT, Option.some(node1)));
+        verify(transportService).send(node5, new AddServerResponse(AddServerResponse.Status.TIMEOUT, Option.some
+            (node1)));
     }
 
     @Test
@@ -1072,7 +1079,8 @@ public class RaftTest extends BaseTest {
         Assert.assertTrue(raft.currentMeta().getConfig().isTransitioning());
 
         raft.apply(new RemoveServer(node2));
-        verify(transportService).send(node2, new RemoveServerResponse(RemoveServerResponse.Status.TIMEOUT, Option.some(node1)));
+        verify(transportService).send(node2, new RemoveServerResponse(RemoveServerResponse.Status.TIMEOUT, Option
+            .some(node1)));
     }
 
     @Test
@@ -1156,26 +1164,18 @@ public class RaftTest extends BaseTest {
         raft.apply(new AppendSuccessful(node, term, index));
     }
 
-    private AppendEntries appendEntries(DiscoveryNode node, long term, long prevTerm, long prevIndex, long commit, LogEntry... logEntries) {
-        return new AppendEntries(node, term, prevTerm, prevIndex, Vector.of(logEntries), commit);
+    private AppendEntries appendEntries(DiscoveryNode node, long term, long prevTerm, long prevIndex, long commit,
+                                        LogEntry... logEntries) {
+        return new AppendEntries(node, term, prevTerm, prevIndex, commit, Vector.of(logEntries));
     }
 
     // test dependencies
 
-    private static class TestFSMMessage implements Streamable {
-
+    private static class TestFSMMessage implements Message {
         public static final TestFSMMessage INSTANCE = new TestFSMMessage();
+        public static final Codec<TestFSMMessage> codec = Codec.of(INSTANCE);
 
         private TestFSMMessage() {
-        }
-
-        @SuppressWarnings("unused")
-        public static TestFSMMessage read(StreamInput stream) {
-            return INSTANCE;
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
         }
     }
 
@@ -1220,39 +1220,6 @@ public class RaftTest extends BaseTest {
             bind(RaftContext.class).toInstance(context);
             bind(FilePersistentService.class).asEagerSingleton();
             bind(PersistentService.class).to(FilePersistentService.class);
-
-            Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendEntries.class, AppendEntries::new, 200));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendRejected.class, AppendRejected::new, 201));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendSuccessful.class, AppendSuccessful::new, 202));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 210));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 230));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(Noop.class, Noop::read, 231));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 240));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 241));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshot.class, InstallSnapshot::new, 261));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 262));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 263));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(JointConsensusClusterConfiguration.class,
-                JointConsensusClusterConfiguration::new, 270));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 271));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServer.class, AddServer::new, 280));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServerResponse.class, AddServerResponse::new, 281));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServer.class, RemoveServer::new, 282));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServerResponse.class, RemoveServerResponse::new, 283));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(TestFSMMessage.class, TestFSMMessage::read, 290));
         }
     }
 }

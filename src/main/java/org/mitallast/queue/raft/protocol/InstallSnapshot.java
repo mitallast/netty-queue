@@ -1,20 +1,23 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class InstallSnapshot implements Streamable {
+public class InstallSnapshot implements Message {
+    public static final Codec<InstallSnapshot> codec = Codec.of(
+        InstallSnapshot::new,
+        InstallSnapshot::getLeader,
+        InstallSnapshot::getTerm,
+        InstallSnapshot::getSnapshot,
+        DiscoveryNode.codec,
+        Codec.longCodec,
+        RaftSnapshot.codec
+    );
+
     private final DiscoveryNode leader;
     private final long term;
     private final RaftSnapshot snapshot;
-
-    public InstallSnapshot(StreamInput stream) {
-        leader = stream.readStreamable(DiscoveryNode::new);
-        term = stream.readLong();
-        snapshot = stream.readStreamable(RaftSnapshot::new);
-    }
 
     public InstallSnapshot(DiscoveryNode leader, long term, RaftSnapshot snapshot) {
         this.leader = leader;
@@ -32,13 +35,6 @@ public class InstallSnapshot implements Streamable {
 
     public RaftSnapshot getSnapshot() {
         return snapshot;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(leader);
-        stream.writeLong(term);
-        stream.writeStreamable(snapshot);
     }
 
     @Override

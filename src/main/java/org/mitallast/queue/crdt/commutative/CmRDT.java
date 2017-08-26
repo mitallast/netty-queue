@@ -1,13 +1,13 @@
 package org.mitallast.queue.crdt.commutative;
 
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.Crdt;
 
 public interface CmRDT extends Crdt {
 
-    interface SourceUpdate extends Streamable {}
+    interface SourceUpdate extends Message {}
 
-    interface DownstreamUpdate extends Streamable {}
+    interface DownstreamUpdate extends Message {}
 
     void sourceUpdate(SourceUpdate update);
 

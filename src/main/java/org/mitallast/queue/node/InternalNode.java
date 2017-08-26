@@ -12,7 +12,6 @@ import org.mitallast.queue.common.component.ModulesBuilder;
 import org.mitallast.queue.common.events.EventBusModule;
 import org.mitallast.queue.common.file.FileModule;
 import org.mitallast.queue.common.json.JsonModule;
-import org.mitallast.queue.common.stream.StreamModule;
 import org.mitallast.queue.crdt.CrdtModule;
 import org.mitallast.queue.crdt.rest.RestCrdtModule;
 import org.mitallast.queue.raft.RaftModule;
@@ -33,7 +32,6 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         ModulesBuilder modules = new ModulesBuilder();
         modules.add(new ComponentModule(config));
         modules.add(new FileModule());
-        modules.add(new StreamModule());
         modules.add(new JsonModule());
         modules.add(new EventBusModule());
         modules.add(new TransportModule());

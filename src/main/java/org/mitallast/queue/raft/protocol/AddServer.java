@@ -1,16 +1,17 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class AddServer implements Streamable {
-    private final DiscoveryNode member;
+public class AddServer implements Message {
+    public static final Codec<AddServer> codec = Codec.of(
+        AddServer::new,
+        AddServer::getMember,
+        DiscoveryNode.codec
+    );
 
-    public AddServer(StreamInput stream) {
-        member = stream.readStreamable(DiscoveryNode::new);
-    }
+    private final DiscoveryNode member;
 
     public AddServer(DiscoveryNode member) {
         this.member = member;
@@ -18,10 +19,6 @@ public class AddServer implements Streamable {
 
     public DiscoveryNode getMember() {
         return member;
-    }
-
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(member);
     }
 
     @Override

@@ -1,18 +1,20 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class DeclineCandidate implements Streamable {
+public class DeclineCandidate implements Message {
+    public static final Codec<DeclineCandidate> codec = Codec.of(
+        DeclineCandidate::new,
+        DeclineCandidate::getMember,
+        DeclineCandidate::getTerm,
+        DiscoveryNode.codec,
+        Codec.longCodec
+    );
+
     private final DiscoveryNode member;
     private final long term;
-
-    public DeclineCandidate(StreamInput stream) {
-        member = stream.readStreamable(DiscoveryNode::new);
-        term = stream.readLong();
-    }
 
     public DeclineCandidate(DiscoveryNode member, long term) {
         this.member = member;
@@ -28,20 +30,14 @@ public class DeclineCandidate implements Streamable {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
         DeclineCandidate that = (DeclineCandidate) o;
 
-        if (!member.equals(that.member)) return false;
-        return term == that.term;
+        if (term != that.term) return false;
+        return member.equals(that.member);
     }
 
     @Override

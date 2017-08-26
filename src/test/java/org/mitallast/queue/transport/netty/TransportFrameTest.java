@@ -2,23 +2,24 @@ package org.mitallast.queue.transport.netty;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import javaslang.collection.HashSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.stream.*;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
 import java.util.ArrayList;
 
 public class TransportFrameTest extends BaseTest {
 
+    static {
+        Codec.register(123, TestStreamable.class, TestStreamable.codec);
+    }
+
     @Test
     public void testMessage() throws Exception {
-        StreamService streamService = new InternalStreamService(HashSet.of(
-            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)
-        ).toJavaSet());
-        StreamableEncoder encoder = new StreamableEncoder(streamService);
-        StreamableDecoder decoder = new StreamableDecoder(streamService);
+        CodecEncoder encoder = new CodecEncoder();
+        CodecDecoder decoder = new CodecDecoder();
 
         ByteBuf buffer = Unpooled.buffer();
         encoder.encode(null, new TestStreamable(123123), buffer);
@@ -33,10 +34,7 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessageEncodeBenchmark() throws Exception {
-        StreamService streamService = new InternalStreamService(HashSet.of(
-            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)
-        ).toJavaSet());
-        StreamableEncoder encoder = new StreamableEncoder(streamService);
+        CodecEncoder encoder = new CodecEncoder();
 
         ByteBuf buffer = Unpooled.directBuffer(1024);
         buffer.markWriterIndex();
@@ -55,11 +53,8 @@ public class TransportFrameTest extends BaseTest {
 
     @Test
     public void testMessageDecodeBenchmark() throws Exception {
-        StreamService streamService = new InternalStreamService(HashSet.of(
-            StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 123)
-        ).toJavaSet());
-        StreamableEncoder encoder = new StreamableEncoder(streamService);
-        StreamableDecoder decoder = new StreamableDecoder(streamService);
+        CodecEncoder encoder = new CodecEncoder();
+        CodecDecoder decoder = new CodecDecoder();
 
         ByteBuf buffer = Unpooled.directBuffer(1024);
         encoder.encode(null, new TestStreamable(123123), buffer);
@@ -77,7 +72,12 @@ public class TransportFrameTest extends BaseTest {
         printQps("decode", max, start, end);
     }
 
-    public static class TestStreamable implements Streamable {
+    public static class TestStreamable implements Message {
+        public static final Codec<TestStreamable> codec = Codec.of(
+            TestStreamable::new,
+            TestStreamable::value,
+            Codec.longCodec
+        );
 
         private final long value;
 
@@ -85,13 +85,8 @@ public class TransportFrameTest extends BaseTest {
             this.value = value;
         }
 
-        public TestStreamable(StreamInput streamInput) {
-            this.value = streamInput.readLong();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeLong(value);
+        public long value() {
+            return value;
         }
     }
 }

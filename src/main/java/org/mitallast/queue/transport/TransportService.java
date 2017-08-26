@@ -1,6 +1,6 @@
 package org.mitallast.queue.transport;
 
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
 
 public interface TransportService {
 
@@ -8,5 +8,5 @@ public interface TransportService {
 
     void disconnectFromNode(DiscoveryNode node);
 
-    void send(DiscoveryNode node, Streamable message);
+    void send(DiscoveryNode node, Message message);
 }

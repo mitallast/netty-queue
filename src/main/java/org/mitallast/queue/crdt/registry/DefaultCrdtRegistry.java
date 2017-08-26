@@ -9,6 +9,7 @@ import org.mitallast.queue.crdt.Crdt;
 import org.mitallast.queue.crdt.commutative.GCounter;
 import org.mitallast.queue.crdt.commutative.GSet;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
+import org.mitallast.queue.crdt.commutative.OrderedGSet;
 import org.mitallast.queue.crdt.replication.Replicator;
 
 import java.util.concurrent.locks.ReentrantLock;
@@ -74,6 +75,20 @@ public class DefaultCrdtRegistry implements CrdtRegistry {
                 return false;
             }
             crdtMap.put(id, new GSet(id, replicator));
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public boolean createOrderedGSet(long id) {
+        lock.lock();
+        try {
+            if (crdtMap.containsKey(id)) {
+                return false;
+            }
+            crdtMap.put(id, new OrderedGSet(id, replica, replicator));
             return true;
         } finally {
             lock.unlock();

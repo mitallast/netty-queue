@@ -3,37 +3,35 @@ package org.mitallast.queue.crdt;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import javaslang.collection.HashMap;
-import javaslang.collection.HashSet;
 import javaslang.collection.Vector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.*;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
 import org.mitallast.queue.crdt.log.LogEntry;
 
 public class FileReplicatedLogTest extends BaseTest {
 
-    InternalStreamService streamService;
+    static {
+        Codec.register(777777, TestLong.class, TestLong.codec);
+    }
+
     Config config;
     FileReplicatedLog log;
 
     @Before
     public void setUp() throws Exception {
-        streamService = new InternalStreamService(HashSet.of(
-            StreamableRegistry.of(TestLong.class, TestLong::new, 1)
-        ).toJavaSet());
         config = ConfigFactory.parseMap(HashMap.of("node.path", testFolder.newFolder().getAbsolutePath()).toJavaMap())
             .withFallback(ConfigFactory.defaultReference());
         log = new FileReplicatedLog(
             config,
             new FileService(
-                config,
-                streamService
+                config
             ),
-            streamService,
             logEntry -> false,
             0,
             0
@@ -80,20 +78,21 @@ public class FileReplicatedLogTest extends BaseTest {
         }
     }
 
-    public static class TestLong implements Streamable {
+    public static class TestLong implements Message {
+        public static final Codec<TestLong> codec = Codec.of(
+            TestLong::new,
+            TestLong::value,
+            Codec.longCodec
+        );
+
         private final long value;
 
         public TestLong(long value) {
             this.value = value;
         }
 
-        public TestLong(StreamInput stream) {
-            this.value = stream.readLong();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeLong(value);
+        public long value() {
+            return value;
         }
     }
 }

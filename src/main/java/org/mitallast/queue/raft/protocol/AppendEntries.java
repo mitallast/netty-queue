@@ -1,12 +1,27 @@
 package org.mitallast.queue.raft.protocol;
 
 import javaslang.collection.Vector;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class AppendEntries implements Streamable {
+public class AppendEntries implements Message {
+    public static final Codec<AppendEntries> codec = Codec.of(
+        AppendEntries::new,
+        AppendEntries::getMember,
+        AppendEntries::getTerm,
+        AppendEntries::getPrevLogTerm,
+        AppendEntries::getPrevLogIndex,
+        AppendEntries::getLeaderCommit,
+        AppendEntries::getEntries,
+        DiscoveryNode.codec,
+        Codec.longCodec,
+        Codec.longCodec,
+        Codec.longCodec,
+        Codec.longCodec,
+        Codec.vectorCodec(LogEntry.codec)
+    );
+
     private final DiscoveryNode member;
     private final long term;
     private final long prevLogTerm;
@@ -14,32 +29,13 @@ public class AppendEntries implements Streamable {
     private final long leaderCommit;
     private final Vector<LogEntry> entries;
 
-    public AppendEntries(StreamInput stream) {
-        member = stream.readStreamable(DiscoveryNode::new);
-        term = stream.readLong();
-        prevLogTerm = stream.readLong();
-        prevLogIndex = stream.readLong();
-        leaderCommit = stream.readLong();
-        entries = stream.readVector(LogEntry::new);
-    }
-
-    public AppendEntries(DiscoveryNode member, long term, long prevLogTerm, long prevLogIndex, Vector<LogEntry> entries, long leaderCommit) {
+    public AppendEntries(DiscoveryNode member, long term, long prevLogTerm, long prevLogIndex, long leaderCommit, Vector<LogEntry> entries) {
         this.member = member;
         this.term = term;
         this.prevLogTerm = prevLogTerm;
         this.prevLogIndex = prevLogIndex;
         this.leaderCommit = leaderCommit;
         this.entries = entries;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
-        stream.writeLong(prevLogTerm);
-        stream.writeLong(prevLogIndex);
-        stream.writeLong(leaderCommit);
-        stream.writeVector(entries);
     }
 
     public DiscoveryNode getMember() {

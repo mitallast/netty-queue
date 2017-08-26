@@ -4,8 +4,8 @@ import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpMethod;
 import javaslang.concurrent.Future;
 import javaslang.control.Option;
-import org.mitallast.queue.common.json.JsonStreamable;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
+import org.mitallast.queue.common.json.JsonMessage;
 import org.mitallast.queue.crdt.CrdtService;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
@@ -37,7 +37,7 @@ public class RestLWWRegister {
 
         controller.handle(this::assign)
             .apply(controller.param().toLong("id"))
-            .apply(controller.param().json(JsonStreamable.class))
+            .apply(controller.param().json(JsonMessage.class))
             .apply(controller.response().either(
                 controller.response().ok(),
                 controller.response().badRequest()
@@ -49,7 +49,7 @@ public class RestLWWRegister {
         return crdtService.addResource(id, ResourceType.LWWRegister);
     }
 
-    public Option<Streamable> value(long id) {
+    public Option<Message> value(long id) {
         Bucket bucket = crdtService.bucket(id);
         if (bucket == null) {
             return Option.none();
@@ -58,7 +58,7 @@ public class RestLWWRegister {
         }
     }
 
-    public boolean assign(long id, JsonStreamable value) {
+    public boolean assign(long id, JsonMessage value) {
         Bucket bucket = crdtService.bucket(id);
         if (bucket == null) {
             return false;

@@ -10,9 +10,9 @@ import javaslang.collection.Seq;
 import javaslang.collection.Vector;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.events.EventBus;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.event.ClosedLogSynced;
 import org.mitallast.queue.crdt.log.LogEntry;
@@ -85,7 +85,7 @@ public class DefaultReplicator extends AbstractLifecycleComponent implements Rep
     }
 
     @Override
-    public void append(long id, Streamable event) {
+    public void append(long id, Message event) {
         lock.lock();
         try {
             if (!open) {

@@ -1,18 +1,20 @@
 package org.mitallast.queue.transport;
 
 import com.google.common.base.Preconditions;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class DiscoveryNode implements Streamable {
+public class DiscoveryNode implements Message {
+    public static final Codec<DiscoveryNode> codec = Codec.of(
+        DiscoveryNode::new,
+        DiscoveryNode::host,
+        DiscoveryNode::port,
+        Codec.stringCodec,
+        Codec.intCodec
+    );
+
     private final String host;
     private final int port;
-
-    public DiscoveryNode(StreamInput stream) {
-        host = stream.readText();
-        port = stream.readInt();
-    }
 
     public DiscoveryNode(String host, int port) {
         Preconditions.checkNotNull(host);
@@ -26,12 +28,6 @@ public class DiscoveryNode implements Streamable {
 
     public int port() {
         return port;
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeText(host);
-        stream.writeInt(port);
     }
 
     @Override

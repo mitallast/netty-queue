@@ -7,10 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import javaslang.Function0;
-import javaslang.Function1;
-import javaslang.Function2;
-import javaslang.Function3;
+import javaslang.*;
 import javaslang.concurrent.Future;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
@@ -166,6 +163,21 @@ public class RestController {
             P1 p1 = m1.apply(request);
             P2 p2 = m2.apply(request);
             R r = handler.apply(p1, p2);
+            mr.accept(request, r);
+        });
+    }
+
+    public <P1, P2, P3, R> Function4<
+        Function1<RestRequest, P1>,
+        Function1<RestRequest, P2>,
+        Function1<RestRequest, P3>,
+        BiConsumer<RestRequest, R>,
+        FunctionHandlerBuilder> handle(Function3<P1, P2, P3, R> handler) {
+        return (m1, m2, m3, mr) -> new FunctionHandlerBuilder(request -> {
+            P1 p1 = m1.apply(request);
+            P2 p2 = m2.apply(request);
+            P3 p3 = m3.apply(request);
+            R r = handler.apply(p1, p2, p3);
             mr.accept(request, r);
         });
     }

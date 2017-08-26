@@ -1,26 +1,22 @@
 package org.mitallast.queue.crdt.routing.fsm;
 
 import javaslang.collection.Set;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 
-public class UpdateMembers implements Streamable {
+public class UpdateMembers implements Message {
+    public static final Codec<UpdateMembers> codec = Codec.of(
+        UpdateMembers::new,
+        UpdateMembers::members,
+        Codec.setCodec(DiscoveryNode.codec)
+    );
+
     private final Set<DiscoveryNode> members;
 
     public UpdateMembers(Set<DiscoveryNode> members) {
         this.members = members;
-    }
-
-    public UpdateMembers(StreamInput stream) {
-        members = stream.readSet(DiscoveryNode::new);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeSet(members);
     }
 
     public Set<DiscoveryNode> members() {

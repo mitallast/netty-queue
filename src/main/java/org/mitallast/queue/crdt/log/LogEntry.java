@@ -1,32 +1,27 @@
 package org.mitallast.queue.crdt.log;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class LogEntry implements Streamable {
+public class LogEntry implements Message {
+    public static final Codec<LogEntry> codec = Codec.of(
+        LogEntry::new,
+        LogEntry::index,
+        LogEntry::id,
+        LogEntry::event,
+        Codec.longCodec,
+        Codec.longCodec,
+        Codec.anyCodec()
+    );
+
     private final long index;
     private final long id;
-    private final Streamable event;
+    private final Message event;
 
-    public LogEntry(long index, long id, Streamable event) {
+    public LogEntry(long index, long id, Message event) {
         this.index = index;
         this.id = id;
         this.event = event;
-    }
-
-    public LogEntry(StreamInput stream) {
-        this.index = stream.readLong();
-        this.id = stream.readLong();
-        this.event = stream.readStreamable();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeLong(index);
-        stream.writeLong(id);
-        stream.writeClass(event.getClass());
-        stream.writeStreamable(event);
     }
 
     public long index() {
@@ -37,7 +32,7 @@ public class LogEntry implements Streamable {
         return id;
     }
 
-    public Streamable event() {
+    public Message event() {
         return event;
     }
 

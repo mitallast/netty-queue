@@ -5,9 +5,8 @@ import gnu.trove.impl.sync.TSynchronizedLongLongMap;
 import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import gnu.trove.procedure.TLongProcedure;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.replication.Replicator;
 
 /**
@@ -16,23 +15,32 @@ import org.mitallast.queue.crdt.replication.Replicator;
 public class GCounter implements CmRDT {
 
     public static class SourceAssign implements SourceUpdate {
+        public static final Codec<SourceAssign> codec = Codec.of(
+            SourceAssign::new,
+            SourceAssign::value,
+            Codec.longCodec
+        );
+
         private final long value;
 
         public SourceAssign(long value) {
             this.value = value;
         }
 
-        public SourceAssign(StreamInput stream) {
-            this.value = stream.readLong();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeLong(value);
+        public long value() {
+            return value;
         }
     }
 
     public static class DownstreamAssign implements DownstreamUpdate {
+        public static final Codec<DownstreamAssign> codec = Codec.of(
+            DownstreamAssign::new,
+            DownstreamAssign::replica,
+            DownstreamAssign::value,
+            Codec.longCodec,
+            Codec.longCodec
+        );
+
         private final long replica;
         private final long value;
 
@@ -41,15 +49,12 @@ public class GCounter implements CmRDT {
             this.value = value;
         }
 
-        public DownstreamAssign(StreamInput stream) {
-            this.replica = stream.readLong();
-            this.value = stream.readLong();
+        public long replica() {
+            return replica;
         }
 
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeLong(replica);
-            stream.writeLong(value);
+        public long value() {
+            return value;
         }
     }
 
@@ -66,7 +71,7 @@ public class GCounter implements CmRDT {
     }
 
     @Override
-    public void update(Streamable event) {
+    public void update(Message event) {
         if (event instanceof SourceUpdate) {
             sourceUpdate((SourceUpdate) event);
         } else if (event instanceof DownstreamUpdate) {
@@ -75,7 +80,7 @@ public class GCounter implements CmRDT {
     }
 
     @Override
-    public boolean shouldCompact(Streamable event) {
+    public boolean shouldCompact(Message event) {
         return event instanceof DownstreamAssign &&
             ((DownstreamAssign) event).value < counterMap.get(replica);
     }

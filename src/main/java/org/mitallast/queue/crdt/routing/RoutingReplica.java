@@ -1,11 +1,19 @@
 package org.mitallast.queue.crdt.routing;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class RoutingReplica implements Streamable {
+public class RoutingReplica implements Message {
+    public static final Codec<RoutingReplica> codec = Codec.of(
+        RoutingReplica::new,
+        RoutingReplica::id,
+        RoutingReplica::member,
+        RoutingReplica::state,
+        Codec.longCodec,
+        DiscoveryNode.codec,
+        Codec.enumCodec(State.class)
+    );
 
     public enum State {
         OPENED, CLOSED;
@@ -23,19 +31,6 @@ public class RoutingReplica implements Streamable {
         this.id = id;
         this.member = member;
         this.state = state;
-    }
-
-    public RoutingReplica(StreamInput stream) {
-        this.id = stream.readInt();
-        this.member = stream.readStreamable(DiscoveryNode::new);
-        this.state = stream.readEnum(State.class);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeLong(id);
-        stream.writeStreamable(member);
-        stream.writeEnum(state);
     }
 
     public long id() {

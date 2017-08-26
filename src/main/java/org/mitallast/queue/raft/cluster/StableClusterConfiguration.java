@@ -2,16 +2,17 @@ package org.mitallast.queue.raft.cluster;
 
 import javaslang.collection.HashSet;
 import javaslang.collection.Set;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class StableClusterConfiguration implements ClusterConfiguration {
-    private final Set<DiscoveryNode> members;
+    public static final Codec<StableClusterConfiguration> codec = Codec.of(
+        StableClusterConfiguration::new,
+        StableClusterConfiguration::members,
+        Codec.setCodec(DiscoveryNode.codec)
+    );
 
-    public StableClusterConfiguration(StreamInput stream) {
-        members = stream.readSet(DiscoveryNode::new);
-    }
+    private final Set<DiscoveryNode> members;
 
     public StableClusterConfiguration(DiscoveryNode... members) {
         this(HashSet.of(members));
@@ -47,11 +48,6 @@ public class StableClusterConfiguration implements ClusterConfiguration {
     }
 
     @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeSet(members);
-    }
-
-    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -59,7 +55,6 @@ public class StableClusterConfiguration implements ClusterConfiguration {
         StableClusterConfiguration that = (StableClusterConfiguration) o;
 
         return members.equals(that.members);
-
     }
 
     @Override

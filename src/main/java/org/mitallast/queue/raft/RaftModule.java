@@ -1,8 +1,8 @@
 package org.mitallast.queue.raft;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
@@ -12,6 +12,31 @@ import org.mitallast.queue.raft.protocol.*;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 
 public class RaftModule extends AbstractModule {
+    static {
+        Codec.register(200, AddServer.class, AddServer.codec);
+        Codec.register(201, AddServerResponse.class, AddServerResponse.codec);
+        Codec.register(202, AppendEntries.class, AppendEntries.codec);
+        Codec.register(203, AppendRejected.class, AppendRejected.codec);
+        Codec.register(204, AppendSuccessful.class, AppendSuccessful.codec);
+        Codec.register(205, ClientMessage.class, ClientMessage.codec);
+        Codec.register(206, DeclineCandidate.class, DeclineCandidate.codec);
+        Codec.register(207, InstallSnapshot.class, InstallSnapshot.codec);
+        Codec.register(208, InstallSnapshotRejected.class, InstallSnapshotRejected.codec);
+        Codec.register(209, InstallSnapshotSuccessful.class, InstallSnapshotSuccessful.codec);
+        Codec.register(210, LogEntry.class, LogEntry.codec);
+        Codec.register(211, Noop.class, Noop.codec);
+        Codec.register(212, RaftSnapshot.class, RaftSnapshot.codec);
+        Codec.register(213, RaftSnapshotMetadata.class, RaftSnapshotMetadata.codec);
+        Codec.register(214, RemoveServer.class, RemoveServer.codec);
+        Codec.register(215, RemoveServerResponse.class, RemoveServerResponse.codec);
+        Codec.register(216, RequestVote.class, RequestVote.codec);
+        Codec.register(217, VoteCandidate.class, VoteCandidate.codec);
+
+        Codec.register(218, ClusterConfiguration.class, ClusterConfiguration.codec);
+        Codec.register(219, JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration.codec);
+        Codec.register(220, StableClusterConfiguration.class, StableClusterConfiguration.codec);
+    }
+
     @Override
     protected void configure() {
         bind(Raft.class).asEagerSingleton();
@@ -25,35 +50,5 @@ public class RaftModule extends AbstractModule {
         bind(RaftContext.class).to(DefaultRaftContext.class);
 
         bind(ResourceRegistry.class).asEagerSingleton();
-
-        Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendEntries.class, AppendEntries::new, 200));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendRejected.class, AppendRejected::new, 201));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AppendSuccessful.class, AppendSuccessful::new, 202));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(ClientMessage.class, ClientMessage::new, 210));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RequestVote.class, RequestVote::new, 223));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(VoteCandidate.class, VoteCandidate::new, 225));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(DeclineCandidate.class, DeclineCandidate::new, 226));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(LogEntry.class, LogEntry::new, 230));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(Noop.class, Noop::read, 231));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 240));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RaftSnapshotMetadata.class, RaftSnapshotMetadata::new, 241));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshot.class, InstallSnapshot::new, 261));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotRejected.class, InstallSnapshotRejected::new, 262));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(InstallSnapshotSuccessful.class, InstallSnapshotSuccessful::new, 263));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration::new, 270));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 271));
-
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServer.class, AddServer::new, 280));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(AddServerResponse.class, AddServerResponse::new, 281));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServer.class, RemoveServer::new, 282));
-        streamableBinder.addBinding().toInstance(StreamableRegistry.of(RemoveServerResponse.class, RemoveServerResponse::new, 283));
     }
 }

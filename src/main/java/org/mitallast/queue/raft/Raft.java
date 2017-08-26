@@ -10,9 +10,9 @@ import javaslang.concurrent.Promise;
 import javaslang.control.Option;
 import org.apache.logging.log4j.CloseableThreadContext;
 import org.mitallast.queue.common.Match;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.component.AbstractLifecycleComponent;
 import org.mitallast.queue.common.events.EventBus;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.discovery.ClusterDiscovery;
@@ -49,7 +49,7 @@ public class Raft extends AbstractLifecycleComponent {
     private final RaftContext context;
     private final EventBus eventBus;
     private final ConcurrentLinkedQueue<ClientMessage> stashed;
-    private final ConcurrentHashMap<Long, Promise<Streamable>> sessionCommands;
+    private final ConcurrentHashMap<Long, Promise<Message>> sessionCommands;
     private final ReentrantLock lock;
     private volatile Option<DiscoveryNode> recentlyContactedByLeader;
     private volatile Map<DiscoveryNode, Long> replicationIndex;
@@ -57,7 +57,7 @@ public class Raft extends AbstractLifecycleComponent {
     private volatile LogIndexMap matchIndex;
     private volatile State state;
 
-    private final Match.Mapper<Streamable, State> mapper = Match.<Streamable, State>map()
+    private final Match.Mapper<Message, State> mapper = Match.<Message, State>map()
         .when(AppendEntries.class, (e) -> state.handle(e))
         .when(AppendRejected.class, (e) -> state.handle(e))
         .when(AppendSuccessful.class, (e) -> state.handle(e))
@@ -130,7 +130,7 @@ public class Raft extends AbstractLifecycleComponent {
 
     // fsm related
 
-    public void apply(Streamable event) {
+    public void apply(Message event) {
         lock.lock();
         try {
             if (state == null) {
@@ -144,9 +144,9 @@ public class Raft extends AbstractLifecycleComponent {
         }
     }
 
-    public Future<Streamable> command(Streamable cmd) {
-        Promise<Streamable> promise = Promise.make();
-        Promise<Streamable> prev;
+    public Future<Message> command(Message cmd) {
+        Promise<Message> promise = Promise.make();
+        Promise<Message> prev;
         long session;
         do {
             session = ThreadLocalRandom.current().nextLong();
@@ -179,13 +179,13 @@ public class Raft extends AbstractLifecycleComponent {
         return replicatedLog;
     }
 
-    public Vector<Streamable> currentStashed() {
+    public Vector<Message> currentStashed() {
         return Vector.ofAll(stashed);
     }
 
     // behavior related
 
-    private void send(DiscoveryNode node, Streamable message) {
+    private void send(DiscoveryNode node, Message message) {
         if (node.equals(clusterDiscovery.self())) {
             transportController.dispatch(message);
         } else {
@@ -326,11 +326,11 @@ public class Raft extends AbstractLifecycleComponent {
 
         // stash messages
 
-        public void stash(ClientMessage streamable) {
+        public void stash(ClientMessage message) {
             if (logger.isDebugEnabled()) {
-                logger.debug("stash {}", streamable);
+                logger.debug("stash {}", message);
             }
-            stashed.add(streamable);
+            stashed.add(message);
         }
     }
 
@@ -543,12 +543,12 @@ public class Raft extends AbstractLifecycleComponent {
                         if (logger.isDebugEnabled()) {
                             logger.debug("committing entry {} on follower, leader is committed until [{}]", entry, msg.getLeaderCommit());
                         }
-                        Streamable result = registry.apply(entry.index(), entry.command());
+                        Message result = registry.apply(entry.index(), entry.command());
                         if (result != null) {
                             if (logger.isDebugEnabled()) {
                                 logger.debug("success client command session {}", entry.session());
                             }
-                            Promise<Streamable> promise = sessionCommands.remove(entry.session());
+                            Promise<Message> promise = sessionCommands.remove(entry.session());
                             if (promise != null) {
                                 promise.success(result);
                             }
@@ -665,8 +665,8 @@ public class Raft extends AbstractLifecycleComponent {
 
                 meta = meta.withConfig(message.getSnapshot().getMeta().getConfig());
                 replicatedLog.compactWith(message.getSnapshot());
-                for (Streamable streamable : message.getSnapshot().getData()) {
-                    registry.apply(message.getSnapshot().getMeta().getLastIncludedIndex(), streamable);
+                for (Message msg : message.getSnapshot().getData()) {
+                    registry.apply(message.getSnapshot().getMeta().getLastIncludedIndex(), msg);
                 }
 
                 if (logger.isInfoEnabled()) {
@@ -684,7 +684,7 @@ public class Raft extends AbstractLifecycleComponent {
         private void unstash() {
             if (recentlyContactedByLeader.isDefined()) {
                 DiscoveryNode leader = recentlyContactedByLeader.get();
-                Streamable poll;
+                Message poll;
                 while ((poll = stashed.poll()) != null) {
                     send(leader, poll);
                 }
@@ -1279,10 +1279,13 @@ public class Raft extends AbstractLifecycleComponent {
                     logger.info("send to {} append entries {} prev {}:{} in {} from index:{}", follower, entries.size(),
                         prevTerm, prevIndex, meta.getCurrentTerm(), lastIndex);
                 }
-                AppendEntries append = new AppendEntries(clusterDiscovery.self(), meta.getCurrentTerm(),
+                AppendEntries append = new AppendEntries(
+                    clusterDiscovery.self(),
+                    meta.getCurrentTerm(),
                     prevTerm, prevIndex,
-                    entries,
-                    replicatedLog.committedIndex());
+                    replicatedLog.committedIndex(),
+                    entries
+                );
                 send(follower, append);
             }
         }
@@ -1327,12 +1330,12 @@ public class Raft extends AbstractLifecycleComponent {
                             logger.info("applying command[index={}]: {}",
                                 entry.index(), entry.command().getClass().getSimpleName());
                         }
-                        Streamable result = registry.apply(entry.index(), entry.command());
+                        Message result = registry.apply(entry.index(), entry.command());
                         if (result != null) {
                             if (logger.isDebugEnabled()) {
                                 logger.debug("success client command session {}", entry.session());
                             }
-                            Promise<Streamable> promise = sessionCommands.remove(entry.session());
+                            Promise<Message> promise = sessionCommands.remove(entry.session());
                             if (promise != null) {
                                 promise.success(result);
                             }

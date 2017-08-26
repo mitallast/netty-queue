@@ -2,7 +2,6 @@ package org.mitallast.queue.raft;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
-import com.google.inject.multibindings.Multibinder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import javaslang.collection.Vector;
@@ -14,14 +13,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseClusterTest;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.ConfigBuilder;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import org.mitallast.queue.raft.resource.ResourceFSM;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Random;
@@ -29,6 +28,17 @@ import java.util.Random;
 import static org.mitallast.queue.raft.RaftState.Leader;
 
 public class ClusterRaftTest extends BaseClusterTest {
+
+    static {
+        Codec.register(900000, RegisterSet.class, RegisterSet.codec);
+        Codec.register(900001, RegisterGet.class, RegisterGet.codec);
+        Codec.register(900002, RegisterValue.class, RegisterValue.codec);
+
+        Codec.register(900100, RegisterByteSet.class, RegisterByteSet.codec);
+        Codec.register(900101, RegisterByteOK.class, RegisterByteOK.codec);
+        Codec.register(900102, RegisterByteGet.class, RegisterByteGet.codec);
+        Codec.register(900103, RegisterByteValue.class, RegisterByteValue.codec);
+    }
 
     private Vector<Raft> raft;
     private Vector<RegisterClient> client;
@@ -38,6 +48,11 @@ public class ClusterRaftTest extends BaseClusterTest {
         return new AbstractModule[]{
             new TestModule()
         };
+    }
+
+    @Override
+    protected ConfigBuilder config() throws IOException {
+        return super.config().with("crdt.enabled", false);
     }
 
     @Before
@@ -182,16 +197,6 @@ public class ClusterRaftTest extends BaseClusterTest {
             bind(RegisterByteClient.class).asEagerSingleton();
             bind(RegisterResourceFSM.class).asEagerSingleton();
             bind(ResourceFSM.class).to(RegisterResourceFSM.class);
-
-            Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterSet.class, RegisterSet::new, 900000));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterGet.class, RegisterGet::new, 900001));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterValue.class, RegisterValue::new, 900002));
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteSet.class, RegisterByteSet::new, 900010));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteOK.class, RegisterByteOK::new, 900011));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteGet.class, RegisterByteGet::new, 900012));
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(RegisterByteValue.class, RegisterByteValue::new, 900013));
         }
     }
 
@@ -209,49 +214,50 @@ public class ClusterRaftTest extends BaseClusterTest {
             registry.register(RegisterByteGet.class, this::handle);
         }
 
-        public Streamable handle(long index, RegisterSet registerSet) {
+        public Message handle(long index, RegisterSet registerSet) {
             logger.debug("prev value: {} new value: {}", value, registerSet.value);
             value = registerSet.value;
             return new RegisterValue(value);
         }
 
-        public Streamable handle(long index, RegisterGet message) {
+        public Message handle(long index, RegisterGet message) {
             return new RegisterValue(value);
         }
 
-        public Streamable handle(long index, RegisterByteSet set) {
-            logger.debug("prev value: {} new value: {}", value, set.buff);
+        public Message handle(long index, RegisterByteSet set) {
+            logger.debug("prev value: {} new value: {}", value, set.buf);
             if (buff != null) {
                 buff.release();
             }
-            buff = set.buff;
+            buff = set.buf;
             return new RegisterByteOK();
         }
 
-        public Streamable handle(long index, RegisterByteGet message) {
+        public Message handle(long index, RegisterByteGet message) {
             return new RegisterByteValue(buff);
         }
 
         @Override
-        public Option<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+        public Option<Message> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
             return Option.none();
         }
     }
 
-    public static class RegisterSet implements Streamable {
-        private final String value;
+    public static class RegisterSet implements Message {
+        public static final Codec<RegisterSet> codec = Codec.of(
+            RegisterSet::new,
+            RegisterSet::value,
+            Codec.stringCodec
+        );
 
-        public RegisterSet(StreamInput streamInput) {
-            this.value = streamInput.readText();
-        }
+        private final String value;
 
         public RegisterSet(String value) {
             this.value = value;
         }
 
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeText(value);
+        public String value() {
+            return value;
         }
 
         @Override
@@ -262,38 +268,28 @@ public class ClusterRaftTest extends BaseClusterTest {
         }
     }
 
-    public static class RegisterGet implements Streamable {
-
-        public RegisterGet(StreamInput streamInput) {
-        }
+    public static class RegisterGet implements Message {
+        public static final Codec<RegisterGet> codec = Codec.of(new RegisterGet());
 
         public RegisterGet() {
         }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-        }
-
-        @Override
-        public String toString() {
-            return "RegisterGet{}";
-        }
     }
 
-    public static class RegisterValue implements Streamable {
-        private final String value;
+    public static class RegisterValue implements Message {
+        public static final Codec<RegisterValue> codec = Codec.of(
+            RegisterValue::new,
+            RegisterValue::value,
+            Codec.stringCodec
+        );
 
-        public RegisterValue(StreamInput streamInput) {
-            this.value = streamInput.readText();
-        }
+        private final String value;
 
         public RegisterValue(String value) {
             this.value = value;
         }
 
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeText(value);
+        public String value() {
+            return value;
         }
 
         @Override
@@ -302,61 +298,53 @@ public class ClusterRaftTest extends BaseClusterTest {
         }
     }
 
-    public static class RegisterByteSet implements Streamable {
-        private final ByteBuf buff;
+    public static class RegisterByteSet implements Message {
+        public static final Codec<RegisterByteSet> codec = Codec.of(
+            RegisterByteSet::new,
+            RegisterByteSet::buf,
+            Codec.bufCodec
+        );
 
-        public RegisterByteSet(ByteBuf buff) {
-            this.buff = buff;
+        private final ByteBuf buf;
+
+        public RegisterByteSet(ByteBuf buf) {
+            this.buf = buf;
         }
 
-        public RegisterByteSet(StreamInput stream) {
-            buff = stream.readByteBuf();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeByteBuf(buff);
+        public ByteBuf buf() {
+            return buf;
         }
     }
 
-    public static class RegisterByteOK implements Streamable {
+    public static class RegisterByteOK implements Message {
+        public static final Codec<RegisterByteOK> codec = Codec.of(new RegisterByteOK());
+
         public RegisterByteOK() {
         }
-
-        public RegisterByteOK(StreamInput stream) {
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-        }
     }
 
-    public static class RegisterByteGet implements Streamable {
+    public static class RegisterByteGet implements Message {
+        public static final Codec<RegisterByteGet> codec = Codec.of(new RegisterByteGet());
+
         public RegisterByteGet() {
         }
-
-        public RegisterByteGet(StreamInput stream) {
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-        }
     }
 
-    public static class RegisterByteValue implements Streamable {
-        private final ByteBuf buff;
+    public static class RegisterByteValue implements Message {
+        public static final Codec<RegisterByteValue> codec = Codec.of(
+            RegisterByteValue::new,
+            RegisterByteValue::buf,
+            Codec.bufCodec
+        );
 
-        public RegisterByteValue(ByteBuf buff) {
-            this.buff = buff;
+        private final ByteBuf buf;
+
+        public RegisterByteValue(ByteBuf buf) {
+            this.buf = buf;
         }
 
-        public RegisterByteValue(StreamInput stream) {
-            buff = stream.readByteBuf();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeByteBuf(buff);
+        public ByteBuf buf() {
+            return buf;
         }
     }
 
@@ -398,7 +386,7 @@ public class ClusterRaftTest extends BaseClusterTest {
         public Future<ByteBuf> get() {
             return raft.command(new RegisterByteGet())
                 .filter(m -> m instanceof RegisterByteValue)
-                .map(m -> ((RegisterByteValue) m).buff);
+                .map(m -> ((RegisterByteValue) m).buf());
         }
     }
 }

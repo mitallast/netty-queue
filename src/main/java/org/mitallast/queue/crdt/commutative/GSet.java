@@ -2,60 +2,52 @@ package org.mitallast.queue.crdt.commutative;
 
 import javaslang.collection.LinkedHashSet;
 import javaslang.collection.Set;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.replication.Replicator;
 
 public class GSet implements CmRDT {
 
     public static class SourceAdd implements SourceUpdate {
-        private final Streamable value;
+        public static final Codec<SourceAdd> codec = Codec.of(
+            SourceAdd::new,
+            SourceAdd::value,
+            Codec.anyCodec()
+        );
 
-        public SourceAdd(Streamable value) {
+        private final Message value;
+
+        public SourceAdd(Message value) {
             this.value = value;
         }
 
-        public SourceAdd(StreamInput stream) {
-            this.value = stream.readStreamable();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeClass(value.getClass());
-            stream.writeStreamable(value);
+        public Message value() {
+            return value;
         }
     }
 
     public static class DownstreamAdd implements DownstreamUpdate {
-        private final Streamable value;
+        public static final Codec<DownstreamAdd> codec = Codec.of(
+            DownstreamAdd::new,
+            DownstreamAdd::value,
+            Codec.anyCodec()
+        );
 
-        public DownstreamAdd(Streamable value) {
+        private final Message value;
+
+        public DownstreamAdd(Message value) {
             this.value = value;
         }
 
-        public DownstreamAdd(StreamInput stream) {
-            this.value = stream.readStreamable();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeClass(value.getClass());
-            stream.writeStreamable(value);
-        }
-
-        @Override
-        public String toString() {
-            return "DownstreamAdd{" +
-                "value=" + value +
-                '}';
+        public Message value() {
+            return value;
         }
     }
 
     private final long id;
     private final Replicator replicator;
 
-    private volatile Set<Streamable> values = LinkedHashSet.empty();
+    private volatile Set<Message> values = LinkedHashSet.empty();
 
     public GSet(long id, Replicator replicator) {
         this.id = id;
@@ -63,7 +55,7 @@ public class GSet implements CmRDT {
     }
 
     @Override
-    public void update(Streamable event) {
+    public void update(Message event) {
         if (event instanceof SourceUpdate) {
             sourceUpdate((SourceUpdate) event);
         } else if (event instanceof DownstreamUpdate) {
@@ -72,7 +64,7 @@ public class GSet implements CmRDT {
     }
 
     @Override
-    public boolean shouldCompact(Streamable event) {
+    public boolean shouldCompact(Message event) {
         return false;
     }
 
@@ -94,14 +86,14 @@ public class GSet implements CmRDT {
         }
     }
 
-    public synchronized void add(Streamable value) {
+    public synchronized void add(Message value) {
         if (!values.contains(value)) {
             values = values.add(value);
             replicator.append(id, new DownstreamAdd(value));
         }
     }
 
-    public Set<Streamable> values() {
+    public Set<Message> values() {
         return values;
     }
 }

@@ -1,27 +1,23 @@
 package org.mitallast.queue.crdt.routing.fsm;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class RemoveReplica implements Streamable {
+public class RemoveReplica implements Message {
+    public static final Codec<RemoveReplica> codec = Codec.of(
+        RemoveReplica::new,
+        RemoveReplica::bucket,
+        RemoveReplica::replica,
+        Codec.intCodec,
+        Codec.longCodec
+    );
+
     private final int bucket;
     private final long replica;
 
     public RemoveReplica(int bucket, long replica) {
         this.bucket = bucket;
         this.replica = replica;
-    }
-
-    public RemoveReplica(StreamInput stream) {
-        bucket = stream.readInt();
-        replica = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeInt(bucket);
-        stream.writeLong(replica);
     }
 
     public int bucket() {

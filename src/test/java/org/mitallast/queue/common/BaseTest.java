@@ -3,8 +3,11 @@ package org.mitallast.queue.common;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.mitallast.queue.crdt.CrdtModule;
+import org.mitallast.queue.raft.RaftModule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +26,12 @@ public class BaseTest {
     public TemporaryFolder testFolder = new TemporaryFolder();
 
     private ExecutorService executorService = Executors.newCachedThreadPool();
+
+    @Before
+    public void setUpModule() throws Exception {
+        new RaftModule();
+        new CrdtModule();
+    }
 
     @After
     public void tearDownExecutorService() throws Exception {
@@ -97,6 +106,15 @@ public class BaseTest {
         long qps = (long) (total / (double) (end - start) * 1000.);
         logger.info(metric + ": " + total + " at " + (end - start) + "ms");
         logger.info(metric + ": " + qps + " qps");
+    }
+
+    protected String randomString() {
+        String str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        char[] chars = new char[16];
+        for(int i=0; i<chars.length; i++) {
+            chars[i] = str.charAt(random.nextInt(str.length()));
+        }
+        return new String(chars);
     }
 
     public interface Task {

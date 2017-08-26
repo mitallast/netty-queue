@@ -1,31 +1,26 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class ClientMessage implements Streamable {
-    private final Streamable command;
+public class ClientMessage implements Message {
+    public static final Codec<ClientMessage> codec = Codec.of(
+        ClientMessage::new,
+        ClientMessage::command,
+        ClientMessage::session,
+        Codec.anyCodec(),
+        Codec.longCodec
+    );
+
+    private final Message command;
     private final long session;
 
-    public ClientMessage(Streamable command, long session) {
+    public ClientMessage(Message command, long session) {
         this.command = command;
         this.session = session;
     }
 
-    public ClientMessage(StreamInput stream) {
-        command = stream.readStreamable();
-        session = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeClass(command.getClass());
-        stream.writeStreamable(command);
-        stream.writeLong(session);
-    }
-
-    public Streamable command() {
+    public Message command() {
         return command;
     }
 
@@ -40,12 +35,15 @@ public class ClientMessage implements Streamable {
 
         ClientMessage that = (ClientMessage) o;
 
-        return command.equals(that.command);
+        if (session != that.session) return false;
+        return command != null ? command.equals(that.command) : that.command == null;
     }
 
     @Override
     public int hashCode() {
-        return command.hashCode();
+        int result = command != null ? command.hashCode() : 0;
+        result = 31 * result + (int) (session ^ (session >>> 32));
+        return result;
     }
 
     @Override

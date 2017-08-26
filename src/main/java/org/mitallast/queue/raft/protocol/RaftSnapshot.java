@@ -1,35 +1,31 @@
 package org.mitallast.queue.raft.protocol;
 
 import javaslang.collection.Vector;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class RaftSnapshot implements Streamable {
+public class RaftSnapshot implements Message {
+    public static final Codec<RaftSnapshot> codec = Codec.of(
+        RaftSnapshot::new,
+        RaftSnapshot::getMeta,
+        RaftSnapshot::getData,
+        RaftSnapshotMetadata.codec,
+        Codec.vectorCodec(Codec.anyCodec())
+    );
+
     private final RaftSnapshotMetadata meta;
-    private final Vector<Streamable> data;
+    private final Vector<Message> data;
 
-    public RaftSnapshot(RaftSnapshotMetadata meta, Vector<Streamable> data) {
+    public RaftSnapshot(RaftSnapshotMetadata meta, Vector<Message> data) {
         this.meta = meta;
         this.data = data;
-    }
-
-    public RaftSnapshot(StreamInput stream) {
-        meta = stream.readStreamable(RaftSnapshotMetadata::new);
-        data = stream.readVector();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(meta);
-        stream.writeTypedVector(data);
     }
 
     public RaftSnapshotMetadata getMeta() {
         return meta;
     }
 
-    public Vector<Streamable> getData() {
+    public Vector<Message> getData() {
         return data;
     }
 
@@ -44,7 +40,8 @@ public class RaftSnapshot implements Streamable {
 
         RaftSnapshot that = (RaftSnapshot) o;
 
-        return meta.equals(that.meta) && data.equals(that.data);
+        if (!meta.equals(that.meta)) return false;
+        return data.equals(that.data);
     }
 
     @Override

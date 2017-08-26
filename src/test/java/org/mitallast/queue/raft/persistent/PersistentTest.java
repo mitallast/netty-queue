@@ -8,11 +8,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.InternalStreamService;
-import org.mitallast.queue.common.stream.StreamService;
 import org.mitallast.queue.transport.DiscoveryNode;
-
-import java.util.Collections;
 
 public class PersistentTest extends BaseTest {
 
@@ -28,18 +24,11 @@ public class PersistentTest extends BaseTest {
     }
 
     private FileService fileService() throws Exception {
-        return new FileService(config(), streamService());
-    }
-
-    private StreamService streamService() throws Exception {
-        return new InternalStreamService(Collections.emptySet());
+        return new FileService(config());
     }
 
     private PersistentService persistent() throws Exception {
-        return new FilePersistentService(
-            fileService(),
-            streamService()
-        );
+        return new FilePersistentService(fileService());
     }
 
     @Test

@@ -5,8 +5,8 @@ import io.netty.handler.codec.http.HttpMethod;
 import javaslang.collection.Set;
 import javaslang.concurrent.Future;
 import javaslang.control.Option;
-import org.mitallast.queue.common.json.JsonStreamable;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
+import org.mitallast.queue.common.json.JsonMessage;
 import org.mitallast.queue.crdt.CrdtService;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.commutative.GSet;
@@ -29,28 +29,28 @@ public class RestGSet {
                 controller.response().created(),
                 controller.response().badRequest()
             ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter");
+            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-set");
 
         controller.handle(this::values)
             .apply(controller.param().toLong("id"))
             .apply(controller.response().optionalJson())
-            .handle(HttpMethod.GET, "_crdt/{id}/g-counter/values");
+            .handle(HttpMethod.GET, "_crdt/{id}/g-set/values");
 
         controller.handle(this::add)
             .apply(controller.param().toLong("id"))
-            .apply(controller.param().json(JsonStreamable.class))
+            .apply(controller.param().json(JsonMessage.class))
             .apply(controller.response().either(
                 controller.response().ok(),
                 controller.response().badRequest()
             ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/add");
+            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-set/add");
     }
 
     public Future<Boolean> create(long id) {
         return crdtService.addResource(id, ResourceType.GSet);
     }
 
-    public Option<Set<Streamable>> values(long id) {
+    public Option<Set<Message>> values(long id) {
         Bucket bucket = crdtService.bucket(id);
         if (bucket == null) {
             return Option.none();
@@ -59,14 +59,14 @@ public class RestGSet {
         }
     }
 
-    public boolean add(long id, JsonStreamable value) {
+    public boolean add(long id, JsonMessage value) {
         Bucket bucket = crdtService.bucket(id);
         if (bucket == null) {
             return false;
         }
-        Option<GSet> lwwRegisterOpt = bucket.registry().crdtOpt(id, GSet.class);
-        if (lwwRegisterOpt.isDefined()) {
-            lwwRegisterOpt.get().add(value);
+        Option<GSet> set = bucket.registry().crdtOpt(id, GSet.class);
+        if (set.isDefined()) {
+            set.get().add(value);
         }
         return true;
     }

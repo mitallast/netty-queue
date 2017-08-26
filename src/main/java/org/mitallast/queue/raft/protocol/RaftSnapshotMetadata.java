@@ -1,11 +1,20 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 
-public class RaftSnapshotMetadata implements Streamable {
+public class RaftSnapshotMetadata implements Message {
+    public static final Codec<RaftSnapshotMetadata> codec = Codec.of(
+        RaftSnapshotMetadata::new,
+        RaftSnapshotMetadata::getLastIncludedTerm,
+        RaftSnapshotMetadata::getLastIncludedIndex,
+        RaftSnapshotMetadata::getConfig,
+        Codec.longCodec,
+        Codec.longCodec,
+        ClusterConfiguration.codec
+    );
+
     private final long lastIncludedTerm;
     private final long lastIncludedIndex;
     private final ClusterConfiguration config;
@@ -14,20 +23,6 @@ public class RaftSnapshotMetadata implements Streamable {
         this.lastIncludedTerm = lastIncludedTerm;
         this.lastIncludedIndex = lastIncludedIndex;
         this.config = config;
-    }
-
-    public RaftSnapshotMetadata(StreamInput stream) {
-        lastIncludedTerm = stream.readLong();
-        lastIncludedIndex = stream.readLong();
-        config = stream.readStreamable();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeLong(lastIncludedTerm);
-        stream.writeLong(lastIncludedIndex);
-        stream.writeClass(config.getClass());
-        stream.writeStreamable(config);
     }
 
     public long getLastIncludedTerm() {

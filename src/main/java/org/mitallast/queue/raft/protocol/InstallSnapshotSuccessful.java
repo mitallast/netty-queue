@@ -1,11 +1,20 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class InstallSnapshotSuccessful implements Streamable {
+public class InstallSnapshotSuccessful implements Message {
+    public static final Codec<InstallSnapshotSuccessful> codec = Codec.of(
+        InstallSnapshotSuccessful::new,
+        InstallSnapshotSuccessful::getMember,
+        InstallSnapshotSuccessful::getTerm,
+        InstallSnapshotSuccessful::getLastIndex,
+        DiscoveryNode.codec,
+        Codec.longCodec,
+        Codec.longCodec
+    );
+
     private final DiscoveryNode member;
     private final long term;
     private final long lastIndex;
@@ -14,19 +23,6 @@ public class InstallSnapshotSuccessful implements Streamable {
         this.member = member;
         this.term = term;
         this.lastIndex = lastIndex;
-    }
-
-    public InstallSnapshotSuccessful(StreamInput stream) {
-        member = stream.readStreamable(DiscoveryNode::new);
-        term = stream.readLong();
-        lastIndex = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
-        stream.writeLong(lastIndex);
     }
 
     public DiscoveryNode getMember() {

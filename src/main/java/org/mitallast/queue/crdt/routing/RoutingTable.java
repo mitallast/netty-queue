@@ -3,13 +3,24 @@ package org.mitallast.queue.crdt.routing;
 import javaslang.collection.HashSet;
 import javaslang.collection.Set;
 import javaslang.collection.Vector;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 
-public class RoutingTable implements Streamable {
+public class RoutingTable implements Message {
+    public static final Codec<RoutingTable> codec = Codec.of(
+        RoutingTable::new,
+        RoutingTable::replicas,
+        RoutingTable::members,
+        RoutingTable::buckets,
+        RoutingTable::nextReplica,
+        Codec.intCodec,
+        Codec.setCodec(DiscoveryNode.codec),
+        Codec.vectorCodec(RoutingBucket.codec),
+        Codec.longCodec
+    );
+
     private final int replicas;
     private final Set<DiscoveryNode> members;
     private final Vector<RoutingBucket> buckets;
@@ -26,21 +37,6 @@ public class RoutingTable implements Streamable {
         this.nextReplica = nextReplica;
     }
 
-    public RoutingTable(StreamInput stream) {
-        replicas = stream.readInt();
-        members = stream.readSet(DiscoveryNode::new);
-        buckets = stream.readVector(RoutingBucket::new);
-        nextReplica = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeInt(replicas);
-        stream.writeSet(members);
-        stream.writeVector(buckets);
-        stream.writeLong(nextReplica);
-    }
-
     public int replicas() {
         return replicas;
     }
@@ -51,6 +47,10 @@ public class RoutingTable implements Streamable {
 
     public Vector<RoutingBucket> buckets() {
         return buckets;
+    }
+
+    public long nextReplica() {
+        return nextReplica;
     }
 
     public int bucketsCount(DiscoveryNode node) {

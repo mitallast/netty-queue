@@ -1,7 +1,5 @@
 package org.mitallast.queue.common;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.netty.util.ResourceLeakDetector;
@@ -9,10 +7,8 @@ import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import org.junit.After;
 import org.junit.Before;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.node.InternalNode;
 
 import java.util.List;
@@ -23,6 +19,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class BaseIntegrationTest extends BaseTest {
+    static {
+        Codec.register(100, TestStreamable.class, TestStreamable.codec);
+    }
 
     private final static AtomicInteger nodeCounter = new AtomicInteger(0);
     private List<InternalNode> nodes = new CopyOnWriteArrayList<>();
@@ -32,7 +31,7 @@ public class BaseIntegrationTest extends BaseTest {
     }
 
     protected InternalNode createNode(Config config) throws Exception {
-        InternalNode node = new InternalNode(config, new TestModule());
+        InternalNode node = new InternalNode(config);
         node.start();
         nodes.add(node);
         return node;
@@ -68,31 +67,21 @@ public class BaseIntegrationTest extends BaseTest {
         ).toJavaMap()).withFallback(ConfigFactory.defaultReference());
     }
 
-    public class TestModule extends AbstractModule {
-
-        @Override
-        protected void configure() {
-            Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-
-            streamableBinder.addBinding().toInstance(StreamableRegistry.of(TestStreamable.class, TestStreamable::new, 100));
-        }
-    }
-
-    public static class TestStreamable implements Streamable {
+    public static class TestStreamable implements Message {
+        public static final Codec<TestStreamable> codec = Codec.of(
+            TestStreamable::new,
+            TestStreamable::value,
+            Codec.longCodec
+        );
 
         private final long value;
-
-        public TestStreamable(StreamInput streamInput) {
-            this.value = streamInput.readLong();
-        }
 
         public TestStreamable(long value) {
             this.value = value;
         }
 
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeLong(value);
+        public long value() {
+            return value;
         }
 
         @Override

@@ -8,8 +8,6 @@ import org.mitallast.queue.node.Node;
 import java.util.concurrent.CountDownLatch;
 
 public class Main {
-    public static final Object mutex = new Object();
-
     public static void main(String[] args) throws Exception {
         Config config = ConfigFactory.load();
         final Node node = new InternalNode(config);

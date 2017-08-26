@@ -6,7 +6,7 @@ import javaslang.collection.Vector;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
 import org.mitallast.queue.crdt.routing.RoutingReplica;
 import org.mitallast.queue.crdt.routing.RoutingTable;
@@ -18,7 +18,7 @@ public class DefaultAllocationStrategy implements AllocationStrategy {
     private final static Logger logger = LogManager.getLogger(AllocationStrategy.class);
 
     @Override
-    public Option<Streamable> update(RoutingTable routingTable) {
+    public Option<Message> update(RoutingTable routingTable) {
         Set<DiscoveryNode> members = routingTable.members();
 
         Map<DiscoveryNode, Vector<RoutingReplica>> stats = routingTable.buckets()

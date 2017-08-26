@@ -6,10 +6,9 @@ import com.typesafe.config.Config;
 import io.netty.channel.*;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.netty.NettyProvider;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
@@ -24,19 +23,16 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     private final ReentrantLock connectionLock = new ReentrantLock();
     private final int maxConnections;
     private final TransportController transportController;
-    private final StreamService streamService;
     private volatile Map<DiscoveryNode, NodeChannel> connectedNodes = HashMap.empty();
 
     @Inject
     public NettyTransportService(
         Config config,
         NettyProvider provider,
-        TransportController transportController,
-        StreamService streamService
+        TransportController transportController
     ) {
         super(config, provider);
         this.transportController = transportController;
-        this.streamService = streamService;
         maxConnections = config.getInt("transport.max_connections");
     }
 
@@ -46,12 +42,12 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new StreamableDecoder(streamService));
-                pipeline.addLast(new StreamableEncoder(streamService));
-                pipeline.addLast(new SimpleChannelInboundHandler<Streamable>(false) {
+                pipeline.addLast(new CodecDecoder());
+                pipeline.addLast(new CodecEncoder());
+                pipeline.addLast(new SimpleChannelInboundHandler<Message>(false) {
 
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, Streamable frame) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, Message frame) throws Exception {
                         transportController.dispatch(frame);
                     }
 
@@ -119,7 +115,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
     }
 
     @Override
-    public void send(DiscoveryNode node, Streamable message) {
+    public void send(DiscoveryNode node, Message message) {
         try {
             connectToNode(node);
             channel(node).send(message);
@@ -183,7 +179,7 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         }
 
         @Override
-        public void send(Streamable message) {
+        public void send(Message message) {
             Channel channel = channel();
             channel.writeAndFlush(message, channel.voidPromise());
         }

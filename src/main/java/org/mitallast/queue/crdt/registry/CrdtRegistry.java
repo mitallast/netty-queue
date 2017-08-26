@@ -13,6 +13,8 @@ public interface CrdtRegistry {
 
     boolean createGSet(long id);
 
+    boolean createOrderedGSet(long id);
+
     boolean remove(long id);
 
     Crdt crdt(long id);

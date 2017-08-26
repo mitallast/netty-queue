@@ -1,7 +1,6 @@
 package org.mitallast.queue.crdt;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.multibindings.Multibinder;
 import javaslang.collection.Vector;
 import javaslang.control.Option;
 import org.junit.Assert;
@@ -9,21 +8,22 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseClusterTest;
 import org.mitallast.queue.common.ConfigBuilder;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.commutative.GCounter;
 import org.mitallast.queue.crdt.commutative.GSet;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
+import org.mitallast.queue.crdt.commutative.OrderedGSet;
 import org.mitallast.queue.crdt.routing.ResourceType;
 import org.mitallast.queue.raft.ClusterRaftTest;
 
 import java.io.IOException;
 
-import static org.mitallast.queue.common.stream.StreamableRegistry.of;
 
 public class ClusterCrdtTest extends BaseClusterTest {
+    static {
+        Codec.register(99000000, TestLong.class, TestLong.codec);
+    }
 
     private Vector<CrdtService> crdtServices;
 
@@ -126,9 +126,9 @@ public class ClusterCrdtTest extends BaseClusterTest {
     public void testGSet() throws Exception {
         awaitElection();
 
-        long total = 10;
+        long total = 1000000;
 
-        for (long c = 0; c < 10; c++) {
+        for (long c = 0; c < 3; c++) {
             final long crdt = c;
             createResource(crdt, ResourceType.GSet);
 
@@ -153,13 +153,48 @@ public class ClusterCrdtTest extends BaseClusterTest {
             long end = System.currentTimeMillis();
 
             for (GSet set : sets) {
-                logger.info("set: {}", set.values());
-            }
-            for (GSet set : sets) {
                 Assert.assertEquals(total, set.values().length());
             }
 
             printQps("CRDT g-set", total, start, end);
+        }
+    }
+
+    @Test
+    public void testOrderedGSet() throws Exception {
+        awaitElection();
+
+        long total = 1000000;
+
+        for (long c = 0; c < 3; c++) {
+            final long crdt = c;
+            createResource(crdt, ResourceType.OrderedGSet);
+
+            Vector<OrderedGSet> sets = crdtServices
+                .map(s -> s.bucket(crdt).registry())
+                .map(r -> r.crdt(crdt, OrderedGSet.class));
+
+            long start = System.currentTimeMillis();
+            executeConcurrent((thread, concurrency) -> {
+                for (long i = thread; i < total; i += concurrency) {
+                    sets.get((int) (i % nodes.size())).add(new TestLong(i), i);
+                }
+            });
+
+            for (int w = 0; w < 1000; w++) {
+                if (!sets.forAll(r -> r.values().length() == total)) {
+                    Thread.sleep(10);
+                    continue;
+                }
+                break;
+            }
+            long end = System.currentTimeMillis();
+
+            for (OrderedGSet set : sets) {
+                Assert.assertEquals(total, set.values().length());
+            }
+
+            printQps("CRDT ordered-g-set", total, start, end);
         }
     }
 
@@ -182,26 +217,24 @@ public class ClusterCrdtTest extends BaseClusterTest {
         @Override
         protected void configure() {
             bind(ClusterRaftTest.RegisterClient.class).asEagerSingleton();
-
-            Multibinder<StreamableRegistry> streamableBinder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-            streamableBinder.addBinding().toInstance(of(TestLong.class, TestLong::new, 900000));
         }
     }
 
-    public static class TestLong implements Streamable {
+    public static class TestLong implements Message {
+        public static final Codec<TestLong> codec = Codec.of(
+            TestLong::new,
+            TestLong::value,
+            Codec.longCodec
+        );
+
         private final long value;
 
         public TestLong(long value) {
             this.value = value;
         }
 
-        public TestLong(StreamInput stream) {
-            this.value = stream.readLong();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeLong(value);
+        public long value() {
+            return value;
         }
 
         @Override

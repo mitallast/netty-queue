@@ -2,14 +2,14 @@ package org.mitallast.queue.crdt;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.google.inject.multibindings.Multibinder;
-import org.mitallast.queue.common.stream.StreamableRegistry;
+import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.crdt.bucket.Bucket;
 import org.mitallast.queue.crdt.bucket.BucketFactory;
 import org.mitallast.queue.crdt.bucket.DefaultBucket;
 import org.mitallast.queue.crdt.commutative.GCounter;
 import org.mitallast.queue.crdt.commutative.GSet;
 import org.mitallast.queue.crdt.commutative.LWWRegister;
+import org.mitallast.queue.crdt.commutative.OrderedGSet;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
 import org.mitallast.queue.crdt.log.ReplicatedLog;
 import org.mitallast.queue.crdt.log.ReplicatedLogFactory;
@@ -31,9 +31,31 @@ import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
 import org.mitallast.queue.crdt.routing.allocation.DefaultAllocationStrategy;
 import org.mitallast.queue.crdt.routing.fsm.*;
 
-import static org.mitallast.queue.common.stream.StreamableRegistry.of;
-
 public class CrdtModule extends AbstractModule {
+    static {
+        Codec.register(300, LWWRegister.SourceAssign.class, LWWRegister.SourceAssign.codec);
+        Codec.register(301, LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign.codec);
+        Codec.register(302, GCounter.SourceAssign.class, GCounter.SourceAssign.codec);
+        Codec.register(303, GCounter.DownstreamAssign.class, GCounter.DownstreamAssign.codec);
+        Codec.register(304, GSet.SourceAdd.class, GSet.SourceAdd.codec);
+        Codec.register(305, GSet.DownstreamAdd.class, GSet.DownstreamAdd.codec);
+        Codec.register(306, OrderedGSet.SourceAdd.class, OrderedGSet.SourceAdd.codec);
+        Codec.register(307, OrderedGSet.DownstreamAdd.class, OrderedGSet.DownstreamAdd.codec);
+        Codec.register(308, AppendEntries.class, AppendEntries.codec);
+        Codec.register(309, AppendSuccessful.class, AppendSuccessful.codec);
+        Codec.register(310, AppendRejected.class, AppendRejected.codec);
+        Codec.register(311, Resource.class, Resource.codec);
+        Codec.register(312, RoutingTable.class, RoutingTable.codec);
+        Codec.register(313, AddResource.class, AddResource.codec);
+        Codec.register(314, AddResourceResponse.class, AddResourceResponse.codec);
+        Codec.register(315, RemoveResource.class, RemoveResource.codec);
+        Codec.register(316, RemoveResourceResponse.class, RemoveResourceResponse.codec);
+        Codec.register(317, UpdateMembers.class, UpdateMembers.codec);
+        Codec.register(318, AddReplica.class, AddReplica.codec);
+        Codec.register(319, CloseReplica.class, CloseReplica.codec);
+        Codec.register(320, RemoveReplica.class, RemoveReplica.codec);
+    }
+
     @Override
     protected void configure() {
         bind(DefaultCrdtService.class).asEagerSingleton();
@@ -47,7 +69,6 @@ public class CrdtModule extends AbstractModule {
 
         bind(DefaultAllocationStrategy.class).asEagerSingleton();
         bind(AllocationStrategy.class).to(DefaultAllocationStrategy.class);
-
 
         // bucket
 
@@ -72,34 +93,5 @@ public class CrdtModule extends AbstractModule {
         install(new FactoryModuleBuilder()
             .implement(Replicator.class, DefaultReplicator.class)
             .build(ReplicatorFactory.class));
-
-        // protocol
-
-        Multibinder<StreamableRegistry> binder = Multibinder.newSetBinder(binder(), StreamableRegistry.class);
-
-        binder.addBinding().toInstance(of(LWWRegister.SourceAssign.class, LWWRegister.SourceAssign::new, 1100));
-        binder.addBinding().toInstance(of(LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign::new, 1101));
-
-        binder.addBinding().toInstance(of(GCounter.SourceAssign.class, GCounter.SourceAssign::new, 1110));
-        binder.addBinding().toInstance(of(GCounter.DownstreamAssign.class, GCounter.DownstreamAssign::new, 1111));
-
-        binder.addBinding().toInstance(of(GSet.SourceAdd.class, GSet.SourceAdd::new, 1120));
-        binder.addBinding().toInstance(of(GSet.DownstreamAdd.class, GSet.DownstreamAdd::new, 1121));
-
-        binder.addBinding().toInstance(of(AppendEntries.class, AppendEntries::new, 1300));
-        binder.addBinding().toInstance(of(AppendSuccessful.class, AppendSuccessful::new, 1301));
-        binder.addBinding().toInstance(of(AppendRejected.class, AppendRejected::new, 1302));
-
-        binder.addBinding().toInstance(of(Resource.class, Resource::new, 1400));
-        binder.addBinding().toInstance(of(RoutingTable.class, RoutingTable::new, 1401));
-
-        binder.addBinding().toInstance(of(AddResource.class, AddResource::new, 1500));
-        binder.addBinding().toInstance(of(AddResourceResponse.class, AddResourceResponse::new, 1501));
-        binder.addBinding().toInstance(of(RemoveResource.class, RemoveResource::new, 1502));
-        binder.addBinding().toInstance(of(RemoveResourceResponse.class, RemoveResourceResponse::new, 1503));
-        binder.addBinding().toInstance(of(UpdateMembers.class, UpdateMembers::new, 1504));
-        binder.addBinding().toInstance(of(AddReplica.class, AddReplica::new, 1505));
-        binder.addBinding().toInstance(of(CloseReplica.class, CloseReplica::new, 1506));
-        binder.addBinding().toInstance(of(RemoveReplica.class, RemoveReplica::new, 1507));
     }
 }

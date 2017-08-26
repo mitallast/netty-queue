@@ -40,7 +40,7 @@ public class RestGCounter {
             .apply(controller.response().optional(
                 controller.response().text()
             ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/increment");
+            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter/increment");
 
         controller.handle(this::add)
             .apply(controller.param().toLong("id"))
@@ -48,7 +48,7 @@ public class RestGCounter {
             .apply(controller.response().optional(
                 controller.response().text()
             ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/add");
+            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter/add");
     }
 
     public Future<Boolean> create(long id) {

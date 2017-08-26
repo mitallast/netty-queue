@@ -5,7 +5,7 @@ import javaslang.control.Option;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.routing.RoutingReplica;
 import org.mitallast.queue.crdt.routing.RoutingTable;
 import org.mitallast.queue.crdt.routing.fsm.AddReplica;
@@ -237,11 +237,11 @@ public class AllocationStrategyTest extends BaseTest {
         expected(new AddReplica(0, node2), strategy.update(updated));
     }
 
-    private void expectedNone(Option<Streamable> actual) {
+    private void expectedNone(Option<Message> actual) {
         Assert.assertEquals(Option.none(), actual);
     }
 
-    private void expected(Streamable expected, Option<Streamable> actual) {
+    private void expected(Object expected, Option<Message> actual) {
         Assert.assertEquals(Option.of(expected), actual);
     }
 }

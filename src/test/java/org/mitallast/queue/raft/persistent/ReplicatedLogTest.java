@@ -3,15 +3,14 @@ package org.mitallast.queue.raft.persistent;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import javaslang.collection.HashMap;
-import javaslang.collection.HashSet;
 import javaslang.collection.Vector;
 import javaslang.control.Option;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.*;
-import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
 import org.mitallast.queue.raft.protocol.LogEntry;
 import org.mitallast.queue.raft.protocol.RaftSnapshot;
@@ -21,6 +20,9 @@ import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 public class ReplicatedLogTest extends BaseTest {
+    static {
+        Codec.register(8888888, AppendWord.class, AppendWord.codec);
+    }
 
     private final long term = 1;
     private final long term0 = 0;
@@ -37,10 +39,11 @@ public class ReplicatedLogTest extends BaseTest {
     private final LogEntry rewriteEntry4 = new LogEntry(term2, 4, 0, new AppendWord("rewrite"));
     private final RaftSnapshot snapshot1 = new RaftSnapshot(new RaftSnapshotMetadata(term, 1, clusterConf), Vector.empty());
     private final RaftSnapshot snapshot2 = new RaftSnapshot(new RaftSnapshotMetadata(term, 2, clusterConf), Vector.empty());
-    private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), Vector.empty());
 
+    private final RaftSnapshot snapshot3 = new RaftSnapshot(new RaftSnapshotMetadata(term, 3, clusterConf), Vector.empty());
     private final LogEntry snapshotEntry1 = new LogEntry(term, 1, 0, snapshot1);
     private final LogEntry snapshotEntry2 = new LogEntry(term, 2, 0, snapshot2);
+
     private final LogEntry snapshotEntry3 = new LogEntry(term, 3, 0, snapshot3);
 
     private Config config() {
@@ -52,21 +55,11 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     private FileService fileService() throws Exception {
-        return new FileService(config(), streamService());
-    }
-
-    private StreamService streamService() throws Exception {
-        return new InternalStreamService(HashSet.of(
-            StreamableRegistry.of(AppendWord.class, AppendWord::new, 10000),
-            StreamableRegistry.of(LogEntry.class, LogEntry::new, 10001),
-            StreamableRegistry.of(RaftSnapshot.class, RaftSnapshot::new, 10002),
-            StreamableRegistry.of(StableClusterConfiguration.class, StableClusterConfiguration::new, 10003),
-            StreamableRegistry.of(JointConsensusClusterConfiguration.class, JointConsensusClusterConfiguration::new, 10004)
-        ).toJavaSet());
+        return new FileService(config());
     }
 
     private ReplicatedLog log() throws Exception {
-        return new FilePersistentService(fileService(), streamService()).openLog();
+        return new FilePersistentService(fileService()).openLog();
     }
 
     @Test
@@ -511,20 +504,21 @@ public class ReplicatedLogTest extends BaseTest {
         printQps("append", total, start, end);
     }
 
-    public class AppendWord implements Streamable {
+    public static class AppendWord implements Message {
+        public static final Codec<AppendWord> codec = Codec.of(
+            AppendWord::new,
+            AppendWord::word,
+            Codec.stringCodec
+        );
+
         private final String word;
 
         public AppendWord(String word) {
             this.word = word;
         }
 
-        public AppendWord(StreamInput stream) {
-            word = stream.readText();
-        }
-
-        @Override
-        public void writeTo(StreamOutput stream) {
-            stream.writeText(word);
+        public String word() {
+            return word;
         }
 
         @Override

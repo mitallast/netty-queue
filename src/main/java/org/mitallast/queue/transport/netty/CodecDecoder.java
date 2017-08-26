@@ -1,24 +1,19 @@
 package org.mitallast.queue.transport.netty;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
+import java.io.DataInput;
 import java.util.List;
 
-public class StreamableDecoder extends ByteToMessageDecoder {
+public class CodecDecoder extends ByteToMessageDecoder {
     private final static Logger logger = LogManager.getLogger();
-
-    private final StreamService streamService;
-
-    public StreamableDecoder(StreamService streamService) {
-        this.streamService = streamService;
-    }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
@@ -32,12 +27,12 @@ public class StreamableDecoder extends ByteToMessageDecoder {
         if (buffer.readableBytes() < size + Integer.BYTES) {
             return;
         }
+
         buffer.skipBytes(Integer.BYTES);
         int start = buffer.readerIndex();
-        final Streamable message;
-        try (StreamInput input = streamService.input(buffer)) {
-            message = input.readStreamable();
-        }
+        final Message message;
+        DataInput stream = new ByteBufInputStream(buffer);
+        message = Codec.anyCodec().read(stream);
         int readSize = buffer.readerIndex() - start;
         if (readSize < size) {
             logger.warn("error reading message, expected {} read {}, skip bytes", size, readSize);

@@ -246,6 +246,9 @@ public class DefaultCrdtService implements CrdtService {
                             case GSet:
                                 bucket.registry().createGSet(resource.id());
                                 break;
+                            case OrderedGSet:
+                                bucket.registry().createOrderedGSet(resource.id());
+                                break;
                             default:
                                 logger.warn("unexpected type: {}", resource.type());
                         }

@@ -1,31 +1,26 @@
 package org.mitallast.queue.raft.cluster;
 
 import javaslang.collection.Set;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
+import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class JointConsensusClusterConfiguration implements ClusterConfiguration {
+    public static final Codec<JointConsensusClusterConfiguration> codec = Codec.of(
+        JointConsensusClusterConfiguration::new,
+        JointConsensusClusterConfiguration::getOldMembers,
+        JointConsensusClusterConfiguration::getNewMembers,
+        Codec.setCodec(DiscoveryNode.codec),
+        Codec.setCodec(DiscoveryNode.codec)
+    );
+
     private final Set<DiscoveryNode> oldMembers;
     private final Set<DiscoveryNode> newMembers;
     private final Set<DiscoveryNode> members;
-
-    public JointConsensusClusterConfiguration(StreamInput stream) {
-        oldMembers = stream.readSet(DiscoveryNode::new);
-        newMembers = stream.readSet(DiscoveryNode::new);
-        members = oldMembers.addAll(newMembers);
-    }
 
     public JointConsensusClusterConfiguration(Set<DiscoveryNode> oldMembers, Set<DiscoveryNode> newMembers) {
         this.oldMembers = oldMembers;
         this.newMembers = newMembers;
         this.members = oldMembers.addAll(newMembers);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeSet(oldMembers);
-        stream.writeSet(newMembers);
     }
 
     public Set<DiscoveryNode> getOldMembers() {
@@ -70,16 +65,13 @@ public class JointConsensusClusterConfiguration implements ClusterConfiguration 
         JointConsensusClusterConfiguration that = (JointConsensusClusterConfiguration) o;
 
         if (!oldMembers.equals(that.oldMembers)) return false;
-        if (!newMembers.equals(that.newMembers)) return false;
-        return members.equals(that.members);
-
+        return newMembers.equals(that.newMembers);
     }
 
     @Override
     public int hashCode() {
         int result = oldMembers.hashCode();
         result = 31 * result + newMembers.hashCode();
-        result = 31 * result + members.hashCode();
         return result;
     }
 

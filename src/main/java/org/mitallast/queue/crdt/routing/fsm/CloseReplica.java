@@ -1,27 +1,23 @@
 package org.mitallast.queue.crdt.routing.fsm;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class CloseReplica implements Streamable {
+public class CloseReplica implements Message {
+    public static final Codec<CloseReplica> codec = Codec.of(
+        CloseReplica::new,
+        CloseReplica::bucket,
+        CloseReplica::replica,
+        Codec.intCodec,
+        Codec.longCodec
+    );
+
     private final int bucket;
     private final long replica;
 
     public CloseReplica(int bucket, long replica) {
         this.bucket = bucket;
         this.replica = replica;
-    }
-
-    public CloseReplica(StreamInput stream) {
-        bucket = stream.readInt();
-        replica = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeInt(bucket);
-        stream.writeLong(replica);
     }
 
     public int bucket() {

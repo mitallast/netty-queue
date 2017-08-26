@@ -3,27 +3,21 @@ package org.mitallast.queue.common.file;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import javaslang.control.Option;
-import org.mitallast.queue.common.stream.*;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.*;
 import java.util.Iterator;
 import java.util.stream.Stream;
 
 public class FileService {
-
-    private final StreamService streamService;
     private final File root;
 
     @Inject
-    public FileService(Config config, StreamService streamService) {
-        this.streamService = streamService;
+    public FileService(Config config) {
         File path = new File(config.getString("node.path"));
         root = new File(path, config.getString("transport.port")).getAbsoluteFile();
         if (!root.exists() && !root.mkdirs()) {
-            throw new FileException("error create directory: " + root);
+            throw new IOError(new IOException("error create directory: " + root));
         }
     }
 
@@ -44,15 +38,15 @@ public class FileService {
         if (!resource.exists()) {
             if (!resource.getParentFile().exists()) {
                 if (!resource.getParentFile().mkdirs()) {
-                    throw new FileException("Error create directory " + resource.getParentFile());
+                    throw new IOError(new IOException("Error create directory " + resource.getParentFile()));
                 }
             }
             try {
                 if (!resource.createNewFile()) {
-                    throw new FileException("Error create file " + resource);
+                    throw new IOError(new IOException("Error create file " + resource));
                 }
             } catch (IOException e) {
-                throw new FileException(e);
+                throw new IOError(e);
             }
         }
         return resource;
@@ -63,7 +57,7 @@ public class FileService {
         try {
             return Files.createTempFile(servicePath, prefix, suffix).toFile();
         } catch (IOException e) {
-            throw new FileException(e);
+            throw new IOError(e);
         }
     }
 
@@ -77,7 +71,7 @@ public class FileService {
                 .filter(path -> path.toFile().isFile())
                 .map(servicePath::relativize);
         } catch (IOException e) {
-            throw new FileException(e);
+            throw new IOError(e);
         }
     }
 
@@ -94,25 +88,7 @@ public class FileService {
                 .map(servicePath::relativize)
                 .filter(matcher::matches);
         } catch (IOException e) {
-            throw new FileException(e);
-        }
-    }
-
-    public <T extends Streamable> Option<T> read(String service, String key, StreamableReader<T> reader) {
-        File resource = resource(service, key);
-        if (resource.length() == 0) {
-            return Option.none();
-        } else {
-            try (StreamInput input = streamService.input(resource)) {
-                return Option.some(input.readStreamable(reader));
-            }
-        }
-    }
-
-    public void write(String service, String key, Streamable streamable) {
-        File resource = resource(service, key);
-        try (StreamOutput output = streamService.output(resource)) {
-            output.writeStreamable(streamable);
+            throw new IOError(e);
         }
     }
 
@@ -138,7 +114,7 @@ public class FileService {
 
     public void delete(File file) {
         if (file.exists() && !file.delete()) {
-            throw new FileException("Error delete file " + file);
+            throw new IOError(new IOException("Error delete file " + file));
         }
     }
 
@@ -146,7 +122,31 @@ public class FileService {
         try {
             Files.move(tmp.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new FileException("Error move file " + dest);
+            throw new IOError(e);
+        }
+    }
+
+    public DataOutputStream output(File file) {
+        return output(file, false);
+    }
+
+    public DataOutputStream output(File file, boolean append) {
+        try {
+            FileOutputStream outputStream = new FileOutputStream(file, append);
+            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(outputStream);
+            return new DataOutputStream(bufferedOutputStream);
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
+    }
+
+    public DataInputStream input(File file) {
+        try {
+            FileInputStream inputStream = new FileInputStream(file);
+            BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+            return new DataInputStream(bufferedInputStream);
+        } catch (IOException e) {
+            throw new IOError(e);
         }
     }
 }

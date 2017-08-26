@@ -1,11 +1,22 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class RequestVote implements Streamable {
+public class RequestVote implements Message {
+    public static final Codec<RequestVote> codec = Codec.of(
+        RequestVote::new,
+        RequestVote::getTerm,
+        RequestVote::getCandidate,
+        RequestVote::getLastLogTerm,
+        RequestVote::getLastLogIndex,
+        Codec.longCodec,
+        DiscoveryNode.codec,
+        Codec.longCodec,
+        Codec.longCodec
+    );
+
     private final long term;
     private final DiscoveryNode candidate;
     private final long lastLogTerm;
@@ -16,21 +27,6 @@ public class RequestVote implements Streamable {
         this.candidate = candidate;
         this.lastLogTerm = lastLogTerm;
         this.lastLogIndex = lastLogIndex;
-    }
-
-    public RequestVote(StreamInput stream) {
-        term = stream.readLong();
-        candidate = stream.readStreamable(DiscoveryNode::new);
-        lastLogTerm = stream.readLong();
-        lastLogIndex = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeLong(term);
-        stream.writeStreamable(candidate);
-        stream.writeLong(lastLogTerm);
-        stream.writeLong(lastLogIndex);
     }
 
     public long getTerm() {

@@ -1,10 +1,19 @@
 package org.mitallast.queue.crdt.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 
-public class AppendSuccessful implements Streamable {
+public class AppendSuccessful implements Message {
+    public static final Codec<AppendSuccessful> codec = Codec.of(
+        AppendSuccessful::new,
+        AppendSuccessful::bucket,
+        AppendSuccessful::replica,
+        AppendSuccessful::index,
+        Codec.intCodec,
+        Codec.longCodec,
+        Codec.longCodec
+    );
+
     private final int bucket;
     private final long replica;
     private final long index;
@@ -13,19 +22,6 @@ public class AppendSuccessful implements Streamable {
         this.bucket = bucket;
         this.replica = replica;
         this.index = index;
-    }
-
-    public AppendSuccessful(StreamInput stream) {
-        bucket = stream.readInt();
-        replica = stream.readLong();
-        index = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeInt(bucket);
-        stream.writeLong(replica);
-        stream.writeLong(index);
     }
 
     public int bucket() {

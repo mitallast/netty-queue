@@ -5,12 +5,9 @@ import com.typesafe.config.Config;
 import javaslang.control.Option;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.StreamService;
-import org.mitallast.queue.common.stream.Streamable;
 import org.mitallast.queue.crdt.routing.Resource;
 import org.mitallast.queue.crdt.routing.RoutingBucket;
 import org.mitallast.queue.crdt.routing.RoutingReplica;
@@ -21,12 +18,12 @@ import org.mitallast.queue.raft.resource.ResourceFSM;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
 
 import javax.inject.Inject;
-import java.io.File;
+import java.io.*;
 
 public class RoutingTableFSM implements ResourceFSM {
     private final Logger logger = LogManager.getLogger();
     private final EventBus eventBus;
-    private final StreamService streamService;
+    private final FileService fileService;
     private final File file;
 
     private volatile long lastApplied;
@@ -37,11 +34,10 @@ public class RoutingTableFSM implements ResourceFSM {
         Config config,
         EventBus eventBus,
         ResourceRegistry registry,
-        FileService fileService,
-        StreamService streamService
+        FileService fileService
     ) {
+        this.fileService = fileService;
         this.eventBus = eventBus;
-        this.streamService = streamService;
         this.file = fileService.resource("crdt", "routing.bin");
 
         this.lastApplied = 0;
@@ -70,9 +66,10 @@ public class RoutingTableFSM implements ResourceFSM {
 
     private void restore() {
         if (file.length() > 0) {
-            try (StreamInput input = streamService.input(file)) {
-                lastApplied = input.readLong();
-                routingTable = input.readStreamable(RoutingTable::new);
+            try (DataInputStream stream = fileService.input(file)) {
+                routingTable = RoutingTable.codec.read(stream);
+            } catch (IOException e) {
+                throw new IOError(e);
             }
         }
     }
@@ -83,14 +80,15 @@ public class RoutingTableFSM implements ResourceFSM {
         logger.info("before: {}", this.routingTable);
         this.routingTable = routingTable;
         logger.info("after: {}", this.routingTable);
-        try (StreamOutput output = streamService.output(file)) {
-            output.writeLong(lastApplied);
-            output.writeStreamable(routingTable);
+        try (DataOutputStream stream = fileService.output(file)) {
+            RoutingTable.codec.write(stream, routingTable);
+        } catch (IOException e) {
+            throw new IOError(e);
         }
         eventBus.trigger(new RoutingTableChanged(index, routingTable));
     }
 
-    private Streamable handle(long index, RoutingTable routingTable) {
+    private Message handle(long index, RoutingTable routingTable) {
         if (index <= lastApplied) {
             return null;
         }
@@ -124,7 +122,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return new RemoveResourceResponse(request.type(), request.id(), false);
     }
 
-    private Streamable handle(long index, UpdateMembers updateMembers) {
+    private Message handle(long index, UpdateMembers updateMembers) {
         if (index <= lastApplied) {
             return null;
         }
@@ -132,7 +130,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private Streamable handle(long index, AddReplica request) {
+    private Message handle(long index, AddReplica request) {
         if (index <= lastApplied) {
             return null;
         }
@@ -145,7 +143,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private Streamable handle(long index, CloseReplica request) {
+    private Message handle(long index, CloseReplica request) {
         if (index <= lastApplied) {
             return null;
         }
@@ -157,7 +155,7 @@ public class RoutingTableFSM implements ResourceFSM {
         return null;
     }
 
-    private Streamable handle(long index, RemoveReplica request) {
+    private Message handle(long index, RemoveReplica request) {
         if (index <= lastApplied) {
             return null;
         }
@@ -170,7 +168,7 @@ public class RoutingTableFSM implements ResourceFSM {
     }
 
     @Override
-    public Option<Streamable> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
+    public Option<Message> prepareSnapshot(RaftSnapshotMetadata snapshotMeta) {
         return Option.some(routingTable);
     }
 }

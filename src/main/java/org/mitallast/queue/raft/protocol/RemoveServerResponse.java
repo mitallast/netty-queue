@@ -1,12 +1,19 @@
 package org.mitallast.queue.raft.protocol;
 
 import javaslang.control.Option;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class RemoveServerResponse implements Streamable {
+public class RemoveServerResponse implements Message {
+    public static final Codec<RemoveServerResponse> codec = Codec.of(
+        RemoveServerResponse::new,
+        RemoveServerResponse::getStatus,
+        RemoveServerResponse::getLeader,
+        Codec.enumCodec(Status.class),
+        DiscoveryNode.codec.opt()
+    );
+
     public enum Status {OK, TIMEOUT, NOT_LEADER}
 
     private final Status status;
@@ -15,17 +22,6 @@ public class RemoveServerResponse implements Streamable {
     public RemoveServerResponse(Status status, Option<DiscoveryNode> leader) {
         this.status = status;
         this.leader = leader;
-    }
-
-    public RemoveServerResponse(StreamInput stream) {
-        status = stream.readEnum(Status.class);
-        leader = stream.readOpt(DiscoveryNode::new);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeEnum(status);
-        stream.writeOpt(leader);
     }
 
     public Status getStatus() {

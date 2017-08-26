@@ -1,28 +1,24 @@
 package org.mitallast.queue.crdt.routing.fsm;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class AddReplica implements Streamable {
+public class AddReplica implements Message {
+    public static final Codec<AddReplica> codec = Codec.of(
+        AddReplica::new,
+        AddReplica::bucket,
+        AddReplica::member,
+        Codec.intCodec,
+        DiscoveryNode.codec
+    );
+
     private final int bucket;
     private final DiscoveryNode member;
 
     public AddReplica(int bucket, DiscoveryNode member) {
         this.bucket = bucket;
         this.member = member;
-    }
-
-    public AddReplica(StreamInput stream) {
-        bucket = stream.readInt();
-        member = stream.readStreamable(DiscoveryNode::new);
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeInt(bucket);
-        stream.writeStreamable(member);
     }
 
     public int bucket() {

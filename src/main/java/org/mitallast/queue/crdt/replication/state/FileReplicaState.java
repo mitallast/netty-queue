@@ -7,49 +7,47 @@ import gnu.trove.iterator.TLongLongIterator;
 import gnu.trove.map.TLongLongMap;
 import gnu.trove.map.hash.TLongLongHashMap;
 import org.mitallast.queue.common.file.FileService;
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.StreamService;
 
-import java.io.File;
+import java.io.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FileReplicaState implements ReplicaState {
     private final FileService fileService;
-    private final StreamService streamService;
     private final TLongLongMap indexMap;
     private final AtomicInteger size;
     private final ReentrantLock writeLock;
     private final String serviceName;
 
     private volatile File file;
-    private volatile StreamOutput output;
+    private volatile DataOutputStream output;
 
     @Inject
     public FileReplicaState(
         FileService fileService,
-        StreamService streamService,
         @Assisted int index,
         @Assisted long replicaId
     ) {
         this.fileService = fileService;
-        this.streamService = streamService;
         this.indexMap = new TSynchronizedLongLongMap(new TLongLongHashMap(7, 0.5f, 0, 0));
         this.size = new AtomicInteger();
         this.writeLock = new ReentrantLock();
         this.serviceName = String.format("crdt/%d/replica/%d", index, replicaId);
 
-        this.file = fileService.resource(serviceName, "state.log");
-        this.output = streamService.output(file, true);
+        try {
+            this.file = fileService.resource(serviceName, "state.log");
+            this.output = fileService.output(file, true);
 
-        if (file.length() > 0) {
-            try (StreamInput stream = streamService.input(file)) {
-                while (stream.available() > 0) {
-                    indexMap.put(stream.readLong(), stream.readLong());
-                    size.incrementAndGet();
+            if (file.length() > 0) {
+                try (DataInputStream stream = fileService.input(file)) {
+                    while (stream.available() > 0) {
+                        indexMap.put(stream.readLong(), stream.readLong());
+                        size.incrementAndGet();
+                    }
                 }
             }
+        } catch (IOException e) {
+            throw new IOError(e);
         }
     }
 
@@ -66,7 +64,7 @@ public class FileReplicaState implements ReplicaState {
                 output.close();
 
                 File tmp = fileService.temporary(serviceName, "state", "log");
-                try (StreamOutput stream = streamService.output(tmp)) {
+                try (DataOutputStream stream = fileService.output(tmp)) {
                     TLongLongIterator iterator = indexMap.iterator();
                     while (iterator.hasNext()) {
                         iterator.advance();
@@ -78,8 +76,10 @@ public class FileReplicaState implements ReplicaState {
                 fileService.move(tmp, file);
 
                 this.file = fileService.resource(serviceName, "state.log");
-                this.output = streamService.output(file, true);
+                this.output = fileService.output(file, true);
             }
+        } catch (IOException e) {
+            throw new IOError(e);
         } finally {
             writeLock.unlock();
         }
@@ -99,6 +99,8 @@ public class FileReplicaState implements ReplicaState {
                 output.close();
                 output = null;
             }
+        } catch (IOException e) {
+            throw new IOError(e);
         } finally {
             writeLock.unlock();
         }

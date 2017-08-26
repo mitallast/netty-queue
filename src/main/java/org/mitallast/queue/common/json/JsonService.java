@@ -29,8 +29,8 @@ public class JsonService {
         SimpleModule module = new SimpleModule();
         module.addSerializer(Config.class, new ConfigSerializer());
         module.addDeserializer(Config.class, new ConfigDeserializer());
-        module.addSerializer(JsonStreamable.class, new JsonStreamableSerializer());
-        module.addDeserializer(JsonStreamable.class, new JsonStreamableDeserializer());
+        module.addSerializer(JsonMessage.class, new JsonMessageSerializer());
+        module.addDeserializer(JsonMessage.class, new JsonMessageDeserializer());
 
         mapper = new ObjectMapper();
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
@@ -129,19 +129,19 @@ public class JsonService {
         }
     }
 
-    private static class JsonStreamableSerializer extends JsonSerializer<JsonStreamable> {
+    private static class JsonMessageSerializer extends JsonSerializer<JsonMessage> {
 
         @Override
-        public void serialize(JsonStreamable value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+        public void serialize(JsonMessage value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeTree(value.json());
         }
     }
 
-    private static class JsonStreamableDeserializer extends JsonDeserializer<JsonStreamable> {
+    private static class JsonMessageDeserializer extends JsonDeserializer<JsonMessage> {
         @Override
-        public JsonStreamable deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        public JsonMessage deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             JsonNode treeNode = p.readValueAsTree();
-            return new JsonStreamable(treeNode);
+            return new JsonMessage(treeNode);
         }
     }
 }

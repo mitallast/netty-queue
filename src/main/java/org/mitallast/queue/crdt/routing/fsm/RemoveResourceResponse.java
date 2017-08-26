@@ -1,11 +1,20 @@
 package org.mitallast.queue.crdt.routing.fsm;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.routing.ResourceType;
 
-public class RemoveResourceResponse implements Streamable {
+public class RemoveResourceResponse implements Message {
+    public static final Codec<RemoveResourceResponse> codec = Codec.of(
+        RemoveResourceResponse::new,
+        RemoveResourceResponse::type,
+        RemoveResourceResponse::id,
+        RemoveResourceResponse::isRemoved,
+        Codec.enumCodec(ResourceType.class),
+        Codec.longCodec,
+        Codec.booleanCodec
+    );
+
     private final ResourceType type;
     private final long id;
     private final boolean removed;
@@ -14,19 +23,6 @@ public class RemoveResourceResponse implements Streamable {
         this.type = type;
         this.id = id;
         this.removed = removed;
-    }
-
-    public RemoveResourceResponse(StreamInput stream) {
-        type = stream.readEnum(ResourceType.class);
-        id = stream.readLong();
-        removed = stream.readBoolean();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeEnum(type);
-        stream.writeLong(id);
-        stream.writeBoolean(removed);
     }
 
     public ResourceType type() {

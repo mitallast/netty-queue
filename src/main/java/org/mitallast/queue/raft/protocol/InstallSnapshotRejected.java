@@ -1,28 +1,24 @@
 package org.mitallast.queue.raft.protocol;
 
-import org.mitallast.queue.common.stream.StreamInput;
-import org.mitallast.queue.common.stream.StreamOutput;
-import org.mitallast.queue.common.stream.Streamable;
+import org.mitallast.queue.common.codec.Codec;
+import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
-public class InstallSnapshotRejected implements Streamable {
+public class InstallSnapshotRejected implements Message {
+    public static final Codec<InstallSnapshotRejected> codec = Codec.of(
+        InstallSnapshotRejected::new,
+        InstallSnapshotRejected::getMember,
+        InstallSnapshotRejected::getTerm,
+        DiscoveryNode.codec,
+        Codec.longCodec
+    );
+
     private final DiscoveryNode member;
     private final long term;
 
     public InstallSnapshotRejected(DiscoveryNode member, long term) {
         this.member = member;
         this.term = term;
-    }
-
-    public InstallSnapshotRejected(StreamInput stream) {
-        member = stream.readStreamable(DiscoveryNode::new);
-        term = stream.readLong();
-    }
-
-    @Override
-    public void writeTo(StreamOutput stream) {
-        stream.writeStreamable(member);
-        stream.writeLong(term);
     }
 
     public DiscoveryNode getMember() {

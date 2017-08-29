@@ -77,7 +77,7 @@ public class TransportBenchmark extends BaseQueueTest {
     }
 
     private void warmUp() throws Exception {
-        int warmUp = total() * 4;
+        int warmUp = total();
         countDownLatch = new CountDownLatch(warmUp);
         for (int i = 0; i < warmUp; i++) {
             transportService.send(member, new TestStreamable(i));

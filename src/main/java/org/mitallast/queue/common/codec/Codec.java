@@ -24,6 +24,7 @@ public interface Codec<T> {
     Codec<Integer> intCodec = new IntCodec();
     Codec<Long> longCodec = new LongCodec();
     Codec<String> stringCodec = new StringCodec();
+    Codec<byte[]> bytesCodec = new ByteArrayCodec();
     Codec<ByteBuf> bufCodec = new ByteBufCodec();
 
     static <T extends Message> void register(int code, Class<T> type, Codec<T> codec) {

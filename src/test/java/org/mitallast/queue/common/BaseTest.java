@@ -111,10 +111,16 @@ public class BaseTest {
     protected String randomString() {
         String str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         char[] chars = new char[16];
-        for(int i=0; i<chars.length; i++) {
+        for (int i = 0; i < chars.length; i++) {
             chars[i] = str.charAt(random.nextInt(str.length()));
         }
         return new String(chars);
+    }
+
+    protected byte[] randomBytes(int len) {
+        byte[] data = new byte[len];
+        random.nextBytes(data);
+        return data;
     }
 
     public interface Task {

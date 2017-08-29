@@ -3,9 +3,13 @@ package org.mitallast.queue.transport.netty;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
+import io.netty.util.AttributeKey;
 import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.netty.NettyProvider;
 import org.mitallast.queue.common.netty.NettyServer;
+import org.mitallast.queue.ecdh.ECDHFlow;
+import org.mitallast.queue.ecdh.RequestStart;
+import org.mitallast.queue.ecdh.ResponseStart;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportServer;
@@ -17,13 +21,13 @@ public class NettyTransportServer extends NettyServer implements TransportServer
 
     @Inject
     public NettyTransportServer(
-        Config config,
-        NettyProvider provider,
-        TransportController transportController
+            Config config,
+            NettyProvider provider,
+            TransportController transportController
     ) {
         super(config, provider,
-            config.getString("transport.host"),
-            config.getInt("transport.port")
+                config.getString("transport.host"),
+                config.getInt("transport.port")
         );
         this.transportController = transportController;
         this.discoveryNode = new DiscoveryNode(host, port);
@@ -45,12 +49,15 @@ public class NettyTransportServer extends NettyServer implements TransportServer
             ChannelPipeline pipeline = ch.pipeline();
             pipeline.addLast(new CodecDecoder());
             pipeline.addLast(new CodecEncoder());
+            pipeline.addLast(new ECDHCodecEncoder());
+            pipeline.addLast(new ECDHCodecDecoder());
             pipeline.addLast(new TransportServerHandler());
         }
     }
 
     @ChannelHandler.Sharable
     private class TransportServerHandler extends SimpleChannelInboundHandler<Message> {
+        private final AttributeKey<ECDHFlow> ECDHKey = AttributeKey.valueOf("ECDH");
 
         public TransportServerHandler() {
             super(true);
@@ -62,8 +69,23 @@ public class NettyTransportServer extends NettyServer implements TransportServer
         }
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Message message) {
-            transportController.dispatch(message);
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            ECDHFlow ecdh = new ECDHFlow();
+            ctx.channel().attr(ECDHKey).set(ecdh);
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, Message message) throws Exception {
+            if (message instanceof RequestStart) {
+                logger.info("received ecdh request start");
+                ECDHFlow ecdh = ctx.channel().attr(ECDHKey).get();
+                RequestStart start = (RequestStart) message;
+                ecdh.keyAgreement(start.publicKey());
+                logger.info("send ecdh response start");
+                ctx.writeAndFlush(new ResponseStart(ecdh.publicKey()));
+            } else {
+                transportController.dispatch(message);
+            }
         }
 
         @Override

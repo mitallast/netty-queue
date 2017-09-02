@@ -18,7 +18,7 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Override
     protected int max() {
-        return 100000;
+        return 2000;
     }
 
     @Override

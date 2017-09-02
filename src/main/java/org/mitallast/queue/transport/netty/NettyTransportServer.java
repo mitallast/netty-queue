@@ -7,8 +7,9 @@ import io.netty.util.AttributeKey;
 import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.netty.NettyProvider;
 import org.mitallast.queue.common.netty.NettyServer;
-import org.mitallast.queue.ecdh.ECDHFlow;
-import org.mitallast.queue.ecdh.SecurityService;
+import org.mitallast.queue.security.ECDHFlow;
+import org.mitallast.queue.security.ECDHRequest;
+import org.mitallast.queue.security.SecurityService;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportController;
 import org.mitallast.queue.transport.TransportServer;
@@ -51,8 +52,8 @@ public class NettyTransportServer extends NettyServer implements TransportServer
             ChannelPipeline pipeline = ch.pipeline();
             pipeline.addLast(new CodecDecoder());
             pipeline.addLast(new CodecEncoder());
-//            pipeline.addLast(new ECDHCodecEncoder());
-//            pipeline.addLast(new ECDHCodecDecoder());
+            pipeline.addLast(new ECDHCodecEncoder());
+            pipeline.addLast(new ECDHCodecDecoder());
             pipeline.addLast(new TransportServerHandler());
         }
     }
@@ -70,23 +71,23 @@ public class NettyTransportServer extends NettyServer implements TransportServer
             return true;
         }
 
-//        @Override
-//        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-//            ctx.channel().attr(ECDHKey).set(securityService.ecdh());
-//        }
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            ctx.channel().attr(ECDHKey).set(securityService.ecdh());
+        }
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Message message) throws Exception {
-//            if (message instanceof RequestStart) {
-//                logger.info("received ecdh request start");
-//                ECDHFlow ecdh = ctx.channel().attr(ECDHKey).get();
-//                RequestStart start = (RequestStart) message;
-//                ecdh.keyAgreement(start);
-//                logger.info("send ecdh response start");
-//                ctx.writeAndFlush(ecdh.responseStart());
-//            } else {
-//            }
-            transportController.dispatch(message);
+            if (message instanceof ECDHRequest) {
+                logger.info("received ecdh request start");
+                ECDHFlow ecdh = ctx.channel().attr(ECDHKey).get();
+                ECDHRequest start = (ECDHRequest) message;
+                ecdh.keyAgreement(start);
+                logger.info("send ecdh response start");
+                ctx.writeAndFlush(ecdh.responseStart());
+            } else {
+                transportController.dispatch(message);
+            }
         }
 
         @Override

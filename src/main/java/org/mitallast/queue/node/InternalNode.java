@@ -17,6 +17,7 @@ import org.mitallast.queue.crdt.rest.RestCrdtModule;
 import org.mitallast.queue.raft.RaftModule;
 import org.mitallast.queue.raft.rest.RaftRestModule;
 import org.mitallast.queue.rest.RestModule;
+import org.mitallast.queue.security.SecurityModule;
 import org.mitallast.queue.transport.TransportModule;
 
 public class InternalNode extends AbstractLifecycleComponent implements Node {
@@ -34,6 +35,7 @@ public class InternalNode extends AbstractLifecycleComponent implements Node {
         modules.add(new FileModule());
         modules.add(new JsonModule());
         modules.add(new EventBusModule());
+        modules.add(new SecurityModule());
         modules.add(new TransportModule());
         if (config.getBoolean("rest.enabled")) {
             modules.add(new RestModule());

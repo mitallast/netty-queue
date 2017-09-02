@@ -40,9 +40,10 @@
             <version>${typesafe.config.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.58</version>
+            <groupId>org.conscrypt</groupId>
+            <artifactId>conscrypt-openjdk</artifactId>
+            <version>1.0.0.RC9</version>
+            <classifier>${os.detected.classifier}</classifier>
         </dependency>
 
         <!-- Logging -->
@@ -291,6 +292,13 @@
                 <version>3.0.4</version>
             </plugin>
         </plugins>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.4.1.Final</version>
+            </extension>
+        </extensions>
     </build>
 
     <reporting>

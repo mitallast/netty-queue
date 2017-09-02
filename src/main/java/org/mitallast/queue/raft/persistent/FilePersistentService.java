@@ -115,11 +115,11 @@ public class FilePersistentService implements PersistentService {
                 entries = entries.append(LogEntry.codec.read(input));
             }
             return new FileReplicatedLog(
-                segmentFile,
-                fileService.output(segmentFile, true),
-                entries,
-                initialCommittedIndex,
-                segment
+                    segmentFile,
+                    fileService.output(segmentFile, true),
+                    entries,
+                    initialCommittedIndex,
+                    segment
             );
         } catch (IOException e) {
             throw new IOError(e);
@@ -145,10 +145,10 @@ public class FilePersistentService implements PersistentService {
         private volatile long committedIndex;
 
         public FileReplicatedLog(
-            File segmentFile,
-            DataOutputStream segmentOutput,
-            Vector<LogEntry> entries,
-            long committedIndex, long start
+                File segmentFile,
+                DataOutputStream segmentOutput,
+                Vector<LogEntry> entries,
+                long committedIndex, long start
         ) {
             this.entries = entries;
             this.committedIndex = committedIndex;
@@ -200,9 +200,9 @@ public class FilePersistentService implements PersistentService {
 
         @Override
         public boolean containsMatchingEntry(long otherPrevTerm, long otherPrevIndex) {
-            return (otherPrevTerm == 0 && otherPrevIndex == 0) ||
-                (!isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) && termAt
-                    (otherPrevIndex) == otherPrevTerm);
+            return (otherPrevTerm == 0 && otherPrevIndex == 0 && isEmpty()) ||
+                    (!isEmpty() && otherPrevIndex >= committedIndex() && containsEntryAt(otherPrevIndex) &&
+                            termAt(otherPrevIndex) == otherPrevTerm);
         }
 
         @Override
@@ -228,9 +228,9 @@ public class FilePersistentService implements PersistentService {
         @Override
         public ReplicatedLog commit(long committedIndex) {
             Preconditions.checkArgument(this.committedIndex <= committedIndex, "commit index cannot be less than " +
-                "current commit");
+                    "current commit");
             Preconditions.checkArgument(lastIndex() >= committedIndex, "commit index cannot be greater than last " +
-                "index");
+                    "index");
             this.committedIndex = committedIndex;
             flush();
             return this;
@@ -270,9 +270,9 @@ public class FilePersistentService implements PersistentService {
          */
         private void truncate(long truncateIndex) {
             Preconditions.checkArgument(truncateIndex >= committedIndex,
-                "truncate index should be > committed index %d", committedIndex);
+                    "truncate index should be > committed index %d", committedIndex);
             Preconditions.checkArgument(truncateIndex < lastIndex(),
-                "truncate index should be < last index");
+                    "truncate index should be < last index");
 
             entries = entries.dropRightUntil(entry -> entry.index() <= truncateIndex);
 
@@ -435,11 +435,11 @@ public class FilePersistentService implements PersistentService {
         @Override
         public String toString() {
             return "ReplicatedLog{" +
-                "entries=" + entries +
-                ", committedIndex=" + committedIndex +
-                ", start=" + start +
-                ", file=" + segmentFile.toPath().getFileName() + " (" + segmentFile.length() + " bytes)" +
-                '}';
+                    "entries=" + entries +
+                    ", committedIndex=" + committedIndex +
+                    ", start=" + start +
+                    ", file=" + segmentFile.toPath().getFileName() + " (" + segmentFile.length() + " bytes)" +
+                    '}';
         }
     }
 }

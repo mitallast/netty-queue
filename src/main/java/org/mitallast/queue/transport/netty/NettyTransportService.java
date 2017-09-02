@@ -4,14 +4,14 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import io.netty.channel.*;
-import io.netty.util.AttributeKey;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.netty.NettyClientBootstrap;
 import org.mitallast.queue.common.netty.NettyProvider;
-import org.mitallast.queue.ecdh.ECDHFlow;
-import org.mitallast.queue.ecdh.SecurityService;
+import org.mitallast.queue.security.ECDHFlow;
+import org.mitallast.queue.security.ECDHResponse;
+import org.mitallast.queue.security.SecurityService;
 import org.mitallast.queue.transport.DiscoveryNode;
 import org.mitallast.queue.transport.TransportChannel;
 import org.mitallast.queue.transport.TransportController;
@@ -50,35 +50,34 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast(new CodecDecoder());
                 pipeline.addLast(new CodecEncoder());
-//                pipeline.addLast(new ECDHCodecEncoder());
-//                pipeline.addLast(new ECDHCodecDecoder());
+                pipeline.addLast(new ECDHCodecEncoder());
+                pipeline.addLast(new ECDHCodecDecoder());
                 pipeline.addLast(new SimpleChannelInboundHandler<Message>(false) {
-                    private final AttributeKey<ECDHFlow> ECDHKey = AttributeKey.valueOf("ECDH");
 
-//                    @Override
-//                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-//                        logger.info("start ecdh");
-//                        ctx.channel().attr(ECDHKey).set(securityService.ecdh());
-//                    }
+                    @Override
+                    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+                        logger.info("start ecdh");
+                        ctx.channel().attr(ECDHFlow.key).set(securityService.ecdh());
+                    }
 
-//                    @Override
-//                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-//                        logger.info("send ecdh request start");
-//                        ECDHFlow ecdh = ctx.channel().attr(ECDHKey).get();
-//                        ctx.writeAndFlush(ecdh.requestStart());
-//                        super.channelActive(ctx);
-//                    }
+                    @Override
+                    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                        logger.info("send ecdh request start");
+                        ECDHFlow ecdh = ctx.channel().attr(ECDHFlow.key).get();
+                        ctx.writeAndFlush(ecdh.requestStart());
+                        super.channelActive(ctx);
+                    }
 
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, Message message) throws Exception {
-//                        if (message instanceof ResponseStart) {
-//                            logger.info("received response ecdh start");
-//                            ResponseStart start = (ResponseStart) message;
-//                            ECDHFlow ecdh = ctx.channel().attr(ECDHKey).get();
-//                            ecdh.keyAgreement(start);
-//                        } else {
-//                        }
-                        transportController.dispatch(message);
+                        ECDHFlow ecdh = ctx.channel().attr(ECDHFlow.key).get();
+                        if (message instanceof ECDHResponse) {
+                            logger.info("received response ecdh start");
+                            ECDHResponse start = (ECDHResponse) message;
+                            ecdh.keyAgreement(start);
+                        } else {
+                            transportController.dispatch(message);
+                        }
                     }
 
                     @Override
@@ -211,7 +210,13 @@ public class NettyTransportService extends NettyClientBootstrap implements Trans
         @Override
         public void send(Message message) {
             Channel channel = channel();
-            channel.writeAndFlush(message, channel.voidPromise());
+            ECDHFlow ecdh = channel.attr(ECDHFlow.key).get();
+            if (ecdh.isAgreement()) {
+                channel.writeAndFlush(message, channel.voidPromise());
+            } else {
+                ecdh.agreementFuture().whenComplete((a, e) ->
+                        channel.writeAndFlush(message, channel.voidPromise()));
+            }
         }
 
         @Override

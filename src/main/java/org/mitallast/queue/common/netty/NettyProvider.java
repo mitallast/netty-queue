@@ -6,6 +6,10 @@ import io.netty.channel.epoll.Epoll;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
+import io.netty.channel.kqueue.KQueue;
+import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueServerSocketChannel;
+import io.netty.channel.kqueue.KQueueSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -37,6 +41,12 @@ public class NettyProvider extends AbstractLifecycleComponent {
             clientChannel = EpollSocketChannel.class;
             parent = new EpollEventLoopGroup(parentThreads, parentTF);
             child = new EpollEventLoopGroup(childThreads, childTF);
+        } else if (KQueue.isAvailable()) {
+            logger.info("use kqueue");
+            serverChannel = KQueueServerSocketChannel.class;
+            clientChannel = KQueueSocketChannel.class;
+            parent = new KQueueEventLoopGroup(parentThreads, parentTF);
+            child = new KQueueEventLoopGroup(childThreads, childTF);
         } else {
             logger.info("use nio");
             serverChannel = NioServerSocketChannel.class;

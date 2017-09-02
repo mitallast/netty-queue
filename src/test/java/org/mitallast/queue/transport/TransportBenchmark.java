@@ -18,15 +18,15 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Override
     protected int max() {
-        return 200000;
+        return 100000;
     }
 
     @Override
     protected Config config() throws Exception {
         Map<String, Object> config = HashMap.of(
-            "rest.enabled", false,
-            "raft.enabled", false,
-            "blob.enabled", false
+                "rest.enabled", false,
+                "raft.enabled", false,
+                "blob.enabled", false
         );
         return ConfigFactory.parseMap(config.toJavaMap()).withFallback(super.config());
     }
@@ -49,40 +49,32 @@ public class TransportBenchmark extends BaseQueueTest {
 
     @Test
     public void test() throws Exception {
-        warmUp();
-        countDownLatch = new CountDownLatch(total());
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < total(); i++) {
-            transportService.send(member, new TestStreamable(i));
+        for (int e = 0; e < 10; e++) {
+            System.gc();
+            countDownLatch = new CountDownLatch(total());
+            long start = System.currentTimeMillis();
+            for (int i = 0; i < total(); i++) {
+                transportService.send(member, new TestStreamable(i));
+            }
+            countDownLatch.await();
+            long end = System.currentTimeMillis();
+            printQps("send", total(), start, end);
         }
-        countDownLatch.await();
-        long end = System.currentTimeMillis();
-        printQps("send", total(), start, end);
     }
 
     @Test
     public void testConcurrent() throws Exception {
-        warmUp();
-        System.gc();
-        countDownLatch = new CountDownLatch(total());
-        long start = System.currentTimeMillis();
-        executeConcurrent((thread, concurrency) -> {
-            for (int i = thread; i < total(); i += concurrency) {
-                transportService.send(member, new TestStreamable(i));
-            }
-        });
-        countDownLatch.await();
-        long end = System.currentTimeMillis();
-        printQps("send", total(), start, end);
-    }
-
-    private void warmUp() throws Exception {
-        int warmUp = total();
-        countDownLatch = new CountDownLatch(warmUp);
-        for (int i = 0; i < warmUp; i++) {
-            transportService.send(member, new TestStreamable(i));
+        for (int e = 0; e < 10; e++) {
+            countDownLatch = new CountDownLatch(total());
+            long start = System.currentTimeMillis();
+            executeConcurrent((thread, concurrency) -> {
+                for (int i = thread; i < total(); i += concurrency) {
+                    transportService.send(member, new TestStreamable(i));
+                }
+            });
+            countDownLatch.await();
+            long end = System.currentTimeMillis();
+            printQps("send concurrent", total(), start, end);
         }
-        countDownLatch.await();
-        System.gc();
     }
 }

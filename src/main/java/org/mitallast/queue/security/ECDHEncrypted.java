@@ -4,14 +4,14 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class ECDHEncrypted implements Message {
-    public static final Codec<ECDHEncrypted> codec = Codec.of(
+    public static final Codec<ECDHEncrypted> codec = Codec.Companion.of(
             ECDHEncrypted::new,
             ECDHEncrypted::sign,
             ECDHEncrypted::iv,
             ECDHEncrypted::encrypted,
-            Codec.bytesCodec,
-            Codec.bytesCodec,
-            Codec.bytesCodec
+            Codec.Companion.bytesCodec(),
+            Codec.Companion.bytesCodec(),
+            Codec.Companion.bytesCodec()
     );
 
     private final byte[] sign;

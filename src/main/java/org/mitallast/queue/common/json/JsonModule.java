@@ -5,7 +5,7 @@ import org.mitallast.queue.common.codec.Codec;
 
 public class JsonModule extends AbstractModule {
     static {
-        Codec.register(6000, JsonMessage.class, JsonMessage.codec);
+        Codec.Companion.register(6000, JsonMessage.class, JsonMessage.codec);
     }
 
     @Override

@@ -6,12 +6,12 @@ import org.mitallast.queue.common.codec.Message;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
 
 public class ECDHResponse implements Message {
-    public static final Codec<ECDHResponse> codec = Codec.of(
+    public static final Codec<ECDHResponse> codec = Codec.Companion.of(
             ECDHResponse::new,
             ECDHResponse::sign,
             ECDHResponse::encodedKey,
-            Codec.bytesCodec,
-            Codec.bytesCodec
+            Codec.Companion.bytesCodec(),
+            Codec.Companion.bytesCodec()
     );
 
     private final byte[] sign;

@@ -7,10 +7,10 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 
 public class UpdateMembers implements Message {
-    public static final Codec<UpdateMembers> codec = Codec.of(
+    public static final Codec<UpdateMembers> codec = Codec.Companion.of(
         UpdateMembers::new,
         UpdateMembers::members,
-        Codec.setCodec(DiscoveryNode.codec)
+        Codec.Companion.setCodec(DiscoveryNode.codec)
     );
 
     private final Set<DiscoveryNode> members;

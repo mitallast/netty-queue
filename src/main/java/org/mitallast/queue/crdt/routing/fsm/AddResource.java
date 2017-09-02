@@ -5,12 +5,12 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.routing.ResourceType;
 
 public class AddResource implements Message {
-    public static final Codec<AddResource> codec = Codec.of(
+    public static final Codec<AddResource> codec = Codec.Companion.of(
         AddResource::new,
         AddResource::id,
         AddResource::type,
-        Codec.longCodec,
-        Codec.enumCodec(ResourceType.class)
+        Codec.Companion.longCodec(),
+        Codec.Companion.enumCodec(ResourceType.class)
     );
 
     private final long id;

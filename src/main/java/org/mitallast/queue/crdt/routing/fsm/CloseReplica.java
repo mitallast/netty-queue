@@ -4,12 +4,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class CloseReplica implements Message {
-    public static final Codec<CloseReplica> codec = Codec.of(
+    public static final Codec<CloseReplica> codec = Codec.Companion.of(
         CloseReplica::new,
         CloseReplica::bucket,
         CloseReplica::replica,
-        Codec.intCodec,
-        Codec.longCodec
+        Codec.Companion.intCodec(),
+        Codec.Companion.longCodec()
     );
 
     private final int bucket;

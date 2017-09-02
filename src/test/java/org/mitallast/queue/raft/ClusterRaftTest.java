@@ -30,14 +30,14 @@ import static org.mitallast.queue.raft.RaftState.Leader;
 public class ClusterRaftTest extends BaseClusterTest {
 
     static {
-        Codec.register(900000, RegisterSet.class, RegisterSet.codec);
-        Codec.register(900001, RegisterGet.class, RegisterGet.codec);
-        Codec.register(900002, RegisterValue.class, RegisterValue.codec);
+        Codec.Companion.register(900000, RegisterSet.class, RegisterSet.codec);
+        Codec.Companion.register(900001, RegisterGet.class, RegisterGet.codec);
+        Codec.Companion.register(900002, RegisterValue.class, RegisterValue.codec);
 
-        Codec.register(900100, RegisterByteSet.class, RegisterByteSet.codec);
-        Codec.register(900101, RegisterByteOK.class, RegisterByteOK.codec);
-        Codec.register(900102, RegisterByteGet.class, RegisterByteGet.codec);
-        Codec.register(900103, RegisterByteValue.class, RegisterByteValue.codec);
+        Codec.Companion.register(900100, RegisterByteSet.class, RegisterByteSet.codec);
+        Codec.Companion.register(900101, RegisterByteOK.class, RegisterByteOK.codec);
+        Codec.Companion.register(900102, RegisterByteGet.class, RegisterByteGet.codec);
+        Codec.Companion.register(900103, RegisterByteValue.class, RegisterByteValue.codec);
     }
 
     private Vector<Raft> raft;
@@ -244,10 +244,10 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterSet implements Message {
-        public static final Codec<RegisterSet> codec = Codec.of(
+        public static final Codec<RegisterSet> codec = Codec.Companion.of(
             RegisterSet::new,
             RegisterSet::value,
-            Codec.stringCodec
+            Codec.Companion.stringCodec()
         );
 
         private final String value;
@@ -269,17 +269,17 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterGet implements Message {
-        public static final Codec<RegisterGet> codec = Codec.of(new RegisterGet());
+        public static final Codec<RegisterGet> codec = Codec.Companion.of(new RegisterGet());
 
         public RegisterGet() {
         }
     }
 
     public static class RegisterValue implements Message {
-        public static final Codec<RegisterValue> codec = Codec.of(
+        public static final Codec<RegisterValue> codec = Codec.Companion.of(
             RegisterValue::new,
             RegisterValue::value,
-            Codec.stringCodec
+            Codec.Companion.stringCodec()
         );
 
         private final String value;
@@ -299,10 +299,10 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterByteSet implements Message {
-        public static final Codec<RegisterByteSet> codec = Codec.of(
+        public static final Codec<RegisterByteSet> codec = Codec.Companion.of(
             RegisterByteSet::new,
             RegisterByteSet::buf,
-            Codec.bufCodec
+            Codec.Companion.byteBufCodec()
         );
 
         private final ByteBuf buf;
@@ -317,24 +317,24 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterByteOK implements Message {
-        public static final Codec<RegisterByteOK> codec = Codec.of(new RegisterByteOK());
+        public static final Codec<RegisterByteOK> codec = Codec.Companion.of(new RegisterByteOK());
 
         public RegisterByteOK() {
         }
     }
 
     public static class RegisterByteGet implements Message {
-        public static final Codec<RegisterByteGet> codec = Codec.of(new RegisterByteGet());
+        public static final Codec<RegisterByteGet> codec = Codec.Companion.of(new RegisterByteGet());
 
         public RegisterByteGet() {
         }
     }
 
     public static class RegisterByteValue implements Message {
-        public static final Codec<RegisterByteValue> codec = Codec.of(
+        public static final Codec<RegisterByteValue> codec = Codec.Companion.of(
             RegisterByteValue::new,
             RegisterByteValue::buf,
-            Codec.bufCodec
+            Codec.Companion.byteBufCodec()
         );
 
         private final ByteBuf buf;

@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 public class BaseIntegrationTest extends BaseTest {
     static {
-        Codec.register(100, TestStreamable.class, TestStreamable.codec);
+        Codec.Companion.register(100, TestStreamable.class, TestStreamable.codec);
     }
 
     private final static AtomicInteger nodeCounter = new AtomicInteger(0);
@@ -68,10 +68,10 @@ public class BaseIntegrationTest extends BaseTest {
     }
 
     public static class TestStreamable implements Message {
-        public static final Codec<TestStreamable> codec = Codec.of(
+        public static final Codec<TestStreamable> codec = Codec.Companion.of(
             TestStreamable::new,
             TestStreamable::value,
-            Codec.longCodec
+            Codec.Companion.longCodec()
         );
 
         private final long value;

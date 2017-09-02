@@ -6,12 +6,12 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RemoveServerResponse implements Message {
-    public static final Codec<RemoveServerResponse> codec = Codec.of(
+    public static final Codec<RemoveServerResponse> codec = Codec.Companion.of(
         RemoveServerResponse::new,
         RemoveServerResponse::getStatus,
         RemoveServerResponse::getLeader,
-        Codec.enumCodec(Status.class),
-        DiscoveryNode.codec.opt()
+        Codec.Companion.enumCodec(Status.class),
+        Codec.Companion.optionCodec(DiscoveryNode.codec)
     );
 
     public enum Status {OK, TIMEOUT, NOT_LEADER}

@@ -5,14 +5,14 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class AppendRejected implements Message {
-    public static final Codec<AppendRejected> codec = Codec.of(
+    public static final Codec<AppendRejected> codec = Codec.Companion.of(
         AppendRejected::new,
         AppendRejected::getMember,
         AppendRejected::getTerm,
         AppendRejected::getLastIndex,
         DiscoveryNode.codec,
-        Codec.longCodec,
-        Codec.longCodec
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec()
     );
 
     private final DiscoveryNode member;

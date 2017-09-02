@@ -32,7 +32,7 @@ public class CodecDecoder extends ByteToMessageDecoder {
         int start = buffer.readerIndex();
         final Message message;
         DataInput stream = new ByteBufInputStream(buffer);
-        message = Codec.anyCodec().read(stream);
+        message = Codec.Companion.anyCodec().read(stream);
         int readSize = buffer.readerIndex() - start;
         if (readSize < size) {
             logger.warn("error reading message, expected {} read {}, skip bytes", size, readSize);

@@ -18,7 +18,7 @@ public class ECDHCodecDecoder extends MessageToMessageDecoder<Message> {
             ECDHFlow ecdhFlow = ctx.channel().attr(ECDHFlow.key).get();
             byte[] decrypted = ecdhFlow.decrypt((ECDHEncrypted) msg);
             ByteArrayDataInput input = ByteStreams.newDataInput(decrypted);
-            Message decoded = Codec.anyCodec().read(input);
+            Message decoded = Codec.Companion.anyCodec().read(input);
             out.add(decoded);
         } else {
             out.add(msg);

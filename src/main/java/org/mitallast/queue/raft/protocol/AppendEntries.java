@@ -6,7 +6,7 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class AppendEntries implements Message {
-    public static final Codec<AppendEntries> codec = Codec.of(
+    public static final Codec<AppendEntries> codec = Codec.Companion.of(
         AppendEntries::new,
         AppendEntries::getMember,
         AppendEntries::getTerm,
@@ -15,11 +15,11 @@ public class AppendEntries implements Message {
         AppendEntries::getLeaderCommit,
         AppendEntries::getEntries,
         DiscoveryNode.codec,
-        Codec.longCodec,
-        Codec.longCodec,
-        Codec.longCodec,
-        Codec.longCodec,
-        Codec.vectorCodec(LogEntry.codec)
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec(),
+        Codec.Companion.vectorCodec(LogEntry.codec)
     );
 
     private final DiscoveryNode member;

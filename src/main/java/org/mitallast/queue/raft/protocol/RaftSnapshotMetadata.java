@@ -5,13 +5,13 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 
 public class RaftSnapshotMetadata implements Message {
-    public static final Codec<RaftSnapshotMetadata> codec = Codec.of(
+    public static final Codec<RaftSnapshotMetadata> codec = Codec.Companion.of(
         RaftSnapshotMetadata::new,
         RaftSnapshotMetadata::getLastIncludedTerm,
         RaftSnapshotMetadata::getLastIncludedIndex,
         RaftSnapshotMetadata::getConfig,
-        Codec.longCodec,
-        Codec.longCodec,
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec(),
         ClusterConfiguration.codec
     );
 

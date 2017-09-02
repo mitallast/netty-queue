@@ -8,12 +8,12 @@ import org.mitallast.queue.crdt.replication.Replicator;
 public class LWWRegister implements CmRDT {
 
     public static class SourceAssign implements SourceUpdate {
-        public static final Codec<SourceAssign> codec = Codec.of(
+        public static final Codec<SourceAssign> codec = Codec.Companion.of(
             SourceAssign::new,
             SourceAssign::value,
             SourceAssign::timestamp,
-            Codec.anyCodec(),
-            Codec.longCodec
+            Codec.Companion.anyCodec(),
+            Codec.Companion.longCodec()
         );
 
         private final Message value;
@@ -34,12 +34,12 @@ public class LWWRegister implements CmRDT {
     }
 
     public static class DownstreamAssign implements DownstreamUpdate {
-        public static final Codec<DownstreamAssign> codec = Codec.of(
+        public static final Codec<DownstreamAssign> codec = Codec.Companion.of(
             DownstreamAssign::new,
             DownstreamAssign::value,
             DownstreamAssign::timestamp,
-            Codec.anyCodec(),
-            Codec.longCodec
+            Codec.Companion.anyCodec(),
+            Codec.Companion.longCodec()
         );
 
         private final Message value;

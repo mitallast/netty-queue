@@ -5,14 +5,14 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RoutingReplica implements Message {
-    public static final Codec<RoutingReplica> codec = Codec.of(
+    public static final Codec<RoutingReplica> codec = Codec.Companion.of(
         RoutingReplica::new,
         RoutingReplica::id,
         RoutingReplica::member,
         RoutingReplica::state,
-        Codec.longCodec,
+        Codec.Companion.longCodec(),
         DiscoveryNode.codec,
-        Codec.enumCodec(State.class)
+        Codec.Companion.enumCodec(State.class)
     );
 
     public enum State {

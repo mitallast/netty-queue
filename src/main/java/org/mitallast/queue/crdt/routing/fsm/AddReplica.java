@@ -5,11 +5,11 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class AddReplica implements Message {
-    public static final Codec<AddReplica> codec = Codec.of(
+    public static final Codec<AddReplica> codec = Codec.Companion.of(
         AddReplica::new,
         AddReplica::bucket,
         AddReplica::member,
-        Codec.intCodec,
+        Codec.Companion.intCodec(),
         DiscoveryNode.codec
     );
 

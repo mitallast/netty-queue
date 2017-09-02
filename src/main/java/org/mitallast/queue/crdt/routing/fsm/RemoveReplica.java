@@ -4,12 +4,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class RemoveReplica implements Message {
-    public static final Codec<RemoveReplica> codec = Codec.of(
+    public static final Codec<RemoveReplica> codec = Codec.Companion.of(
         RemoveReplica::new,
         RemoveReplica::bucket,
         RemoveReplica::replica,
-        Codec.intCodec,
-        Codec.longCodec
+        Codec.Companion.intCodec(),
+        Codec.Companion.longCodec()
     );
 
     private final int bucket;

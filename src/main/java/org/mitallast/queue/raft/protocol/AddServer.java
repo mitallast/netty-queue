@@ -5,7 +5,7 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class AddServer implements Message {
-    public static final Codec<AddServer> codec = Codec.of(
+    public static final Codec<AddServer> codec = Codec.Companion.of(
         AddServer::new,
         AddServer::getMember,
         DiscoveryNode.codec

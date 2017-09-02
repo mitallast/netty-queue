@@ -4,12 +4,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class ClientMessage implements Message {
-    public static final Codec<ClientMessage> codec = Codec.of(
+    public static final Codec<ClientMessage> codec = Codec.Companion.of(
         ClientMessage::new,
         ClientMessage::command,
         ClientMessage::session,
-        Codec.anyCodec(),
-        Codec.longCodec
+        Codec.Companion.anyCodec(),
+        Codec.Companion.longCodec()
     );
 
     private final Message command;

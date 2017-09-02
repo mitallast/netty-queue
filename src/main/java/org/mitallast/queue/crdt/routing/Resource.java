@@ -4,12 +4,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class Resource implements Message {
-    public static final Codec<Resource> codec = Codec.of(
+    public static final Codec<Resource> codec = Codec.Companion.of(
         Resource::new,
         Resource::id,
         Resource::type,
-        Codec.longCodec,
-        Codec.enumCodec(ResourceType.class)
+        Codec.Companion.longCodec(),
+        Codec.Companion.enumCodec(ResourceType.class)
     );
 
     private final long id;

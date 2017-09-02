@@ -17,7 +17,7 @@ import org.mitallast.queue.crdt.log.LogEntry;
 public class FileReplicatedLogTest extends BaseTest {
 
     static {
-        Codec.register(777777, TestLong.class, TestLong.codec);
+        Codec.Companion.register(777777, TestLong.class, TestLong.codec);
     }
 
     Config config;
@@ -79,10 +79,10 @@ public class FileReplicatedLogTest extends BaseTest {
     }
 
     public static class TestLong implements Message {
-        public static final Codec<TestLong> codec = Codec.of(
+        public static final Codec<TestLong> codec = Codec.Companion.of(
             TestLong::new,
             TestLong::value,
-            Codec.longCodec
+            Codec.Companion.longCodec()
         );
 
         private final long value;

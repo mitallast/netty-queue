@@ -25,7 +25,7 @@ public class ECDHCodecEncoder extends MessageToMessageEncoder<Message> {
         } else {
             ECDHFlow ecdhFlow = ctx.channel().attr(ECDHFlow.key).get();
             ByteArrayDataOutput output = ByteStreams.newDataOutput();
-            Codec.anyCodec().write(output, msg);
+            Codec.Companion.anyCodec().write(output, msg);
             byte[] data = output.toByteArray();
             ECDHEncrypted encrypted = ecdhFlow.encrypt(data);
             out.add(encrypted);

@@ -4,14 +4,14 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class AppendSuccessful implements Message {
-    public static final Codec<AppendSuccessful> codec = Codec.of(
+    public static final Codec<AppendSuccessful> codec = Codec.Companion.of(
         AppendSuccessful::new,
         AppendSuccessful::bucket,
         AppendSuccessful::replica,
         AppendSuccessful::index,
-        Codec.intCodec,
-        Codec.longCodec,
-        Codec.longCodec
+        Codec.Companion.intCodec(),
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec()
     );
 
     private final int bucket;

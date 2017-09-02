@@ -6,10 +6,10 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class StableClusterConfiguration implements ClusterConfiguration {
-    public static final Codec<StableClusterConfiguration> codec = Codec.of(
+    public static final Codec<StableClusterConfiguration> codec = Codec.Companion.of(
         StableClusterConfiguration::new,
         StableClusterConfiguration::members,
-        Codec.setCodec(DiscoveryNode.codec)
+        Codec.Companion.setCodec(DiscoveryNode.codec)
     );
 
     private final Set<DiscoveryNode> members;

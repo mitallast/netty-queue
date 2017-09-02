@@ -5,12 +5,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class DiscoveryNode implements Message {
-    public static final Codec<DiscoveryNode> codec = Codec.of(
+    public static final Codec<DiscoveryNode> codec = Codec.Companion.of(
         DiscoveryNode::new,
         DiscoveryNode::host,
         DiscoveryNode::port,
-        Codec.stringCodec,
-        Codec.intCodec
+        Codec.Companion.stringCodec(),
+        Codec.Companion.intCodec()
     );
 
     private final String host;

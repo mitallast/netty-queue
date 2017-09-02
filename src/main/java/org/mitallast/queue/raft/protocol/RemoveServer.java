@@ -5,7 +5,7 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RemoveServer implements Message {
-    public static final Codec<RemoveServer> codec = Codec.of(
+    public static final Codec<RemoveServer> codec = Codec.Companion.of(
         RemoveServer::new,
         RemoveServer::getMember,
         DiscoveryNode.codec

@@ -4,16 +4,16 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class LogEntry implements Message {
-    public static final Codec<LogEntry> codec = Codec.of(
+    public static final Codec<LogEntry> codec = Codec.Companion.of(
         LogEntry::new,
         LogEntry::term,
         LogEntry::index,
         LogEntry::session,
         LogEntry::command,
-        Codec.longCodec,
-        Codec.longCodec,
-        Codec.longCodec,
-        Codec.anyCodec()
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec(),
+        Codec.Companion.longCodec(),
+        Codec.Companion.anyCodec()
     );
 
     private final long term;

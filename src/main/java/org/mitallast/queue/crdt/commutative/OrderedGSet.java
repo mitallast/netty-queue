@@ -14,12 +14,12 @@ import org.mitallast.queue.crdt.replication.Replicator;
 public class OrderedGSet implements CmRDT {
 
     public static class SourceAdd implements SourceUpdate {
-        public static final Codec<SourceAdd> codec = Codec.of(
+        public static final Codec<SourceAdd> codec = Codec.Companion.of(
             SourceAdd::new,
             SourceAdd::value,
             SourceAdd::timestamp,
-            Codec.anyCodec(),
-            Codec.longCodec
+            Codec.Companion.anyCodec(),
+            Codec.Companion.longCodec()
         );
 
         private final Message value;
@@ -40,14 +40,14 @@ public class OrderedGSet implements CmRDT {
     }
 
     public static class DownstreamAdd implements DownstreamUpdate {
-        public static final Codec<DownstreamAdd> codec = Codec.of(
+        public static final Codec<DownstreamAdd> codec = Codec.Companion.of(
             DownstreamAdd::new,
             DownstreamAdd::value,
             DownstreamAdd::timestamp,
             DownstreamAdd::replica,
-            Codec.anyCodec(),
-            Codec.longCodec,
-            Codec.longCodec
+            Codec.Companion.anyCodec(),
+            Codec.Companion.longCodec(),
+            Codec.Companion.longCodec()
         );
 
         private final Message value;

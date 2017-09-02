@@ -5,12 +5,12 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.routing.ResourceType;
 
 public class RemoveResource implements Message {
-    public static final Codec<RemoveResource> codec = Codec.of(
+    public static final Codec<RemoveResource> codec = Codec.Companion.of(
         RemoveResource::new,
         RemoveResource::type,
         RemoveResource::id,
-        Codec.enumCodec(ResourceType.class),
-        Codec.longCodec
+        Codec.Companion.enumCodec(ResourceType.class),
+        Codec.Companion.longCodec()
     );
 
     private final ResourceType type;

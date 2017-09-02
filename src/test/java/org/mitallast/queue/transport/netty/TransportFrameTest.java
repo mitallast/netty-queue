@@ -13,7 +13,7 @@ import java.util.ArrayList;
 public class TransportFrameTest extends BaseTest {
 
     static {
-        Codec.register(123, TestStreamable.class, TestStreamable.codec);
+        Codec.Companion.register(123, TestStreamable.class, TestStreamable.codec);
     }
 
     @Test
@@ -73,10 +73,10 @@ public class TransportFrameTest extends BaseTest {
     }
 
     public static class TestStreamable implements Message {
-        public static final Codec<TestStreamable> codec = Codec.of(
+        public static final Codec<TestStreamable> codec = Codec.Companion.of(
             TestStreamable::new,
             TestStreamable::value,
-            Codec.longCodec
+            Codec.Companion.longCodec()
         );
 
         private final long value;

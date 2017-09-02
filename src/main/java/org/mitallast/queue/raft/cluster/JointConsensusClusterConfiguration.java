@@ -5,12 +5,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class JointConsensusClusterConfiguration implements ClusterConfiguration {
-    public static final Codec<JointConsensusClusterConfiguration> codec = Codec.of(
+    public static final Codec<JointConsensusClusterConfiguration> codec = Codec.Companion.of(
         JointConsensusClusterConfiguration::new,
         JointConsensusClusterConfiguration::getOldMembers,
         JointConsensusClusterConfiguration::getNewMembers,
-        Codec.setCodec(DiscoveryNode.codec),
-        Codec.setCodec(DiscoveryNode.codec)
+        Codec.Companion.setCodec(DiscoveryNode.codec),
+        Codec.Companion.setCodec(DiscoveryNode.codec)
     );
 
     private final Set<DiscoveryNode> oldMembers;

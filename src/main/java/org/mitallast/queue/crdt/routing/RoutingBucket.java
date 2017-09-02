@@ -10,14 +10,14 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class RoutingBucket implements Message {
-    public static final Codec<RoutingBucket> codec = Codec.of(
+    public static final Codec<RoutingBucket> codec = Codec.Companion.of(
         RoutingBucket::new,
         RoutingBucket::index,
         RoutingBucket::replicaSeq,
         RoutingBucket::resourceSeq,
-        Codec.intCodec,
-        Codec.seqCodec(RoutingReplica.codec),
-        Codec.seqCodec(Resource.codec)
+        Codec.Companion.intCodec(),
+        Codec.Companion.seqCodec(RoutingReplica.codec),
+        Codec.Companion.seqCodec(Resource.codec)
     );
 
     private final int index;

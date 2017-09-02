@@ -33,27 +33,27 @@ import org.mitallast.queue.crdt.routing.fsm.*;
 
 public class CrdtModule extends AbstractModule {
     static {
-        Codec.register(300, LWWRegister.SourceAssign.class, LWWRegister.SourceAssign.codec);
-        Codec.register(301, LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign.codec);
-        Codec.register(302, GCounter.SourceAssign.class, GCounter.SourceAssign.codec);
-        Codec.register(303, GCounter.DownstreamAssign.class, GCounter.DownstreamAssign.codec);
-        Codec.register(304, GSet.SourceAdd.class, GSet.SourceAdd.codec);
-        Codec.register(305, GSet.DownstreamAdd.class, GSet.DownstreamAdd.codec);
-        Codec.register(306, OrderedGSet.SourceAdd.class, OrderedGSet.SourceAdd.codec);
-        Codec.register(307, OrderedGSet.DownstreamAdd.class, OrderedGSet.DownstreamAdd.codec);
-        Codec.register(308, AppendEntries.class, AppendEntries.codec);
-        Codec.register(309, AppendSuccessful.class, AppendSuccessful.codec);
-        Codec.register(310, AppendRejected.class, AppendRejected.codec);
-        Codec.register(311, Resource.class, Resource.codec);
-        Codec.register(312, RoutingTable.class, RoutingTable.codec);
-        Codec.register(313, AddResource.class, AddResource.codec);
-        Codec.register(314, AddResourceResponse.class, AddResourceResponse.codec);
-        Codec.register(315, RemoveResource.class, RemoveResource.codec);
-        Codec.register(316, RemoveResourceResponse.class, RemoveResourceResponse.codec);
-        Codec.register(317, UpdateMembers.class, UpdateMembers.codec);
-        Codec.register(318, AddReplica.class, AddReplica.codec);
-        Codec.register(319, CloseReplica.class, CloseReplica.codec);
-        Codec.register(320, RemoveReplica.class, RemoveReplica.codec);
+        Codec.Companion.register(300, LWWRegister.SourceAssign.class, LWWRegister.SourceAssign.codec);
+        Codec.Companion.register(301, LWWRegister.DownstreamAssign.class, LWWRegister.DownstreamAssign.codec);
+        Codec.Companion.register(302, GCounter.SourceAssign.class, GCounter.SourceAssign.codec);
+        Codec.Companion.register(303, GCounter.DownstreamAssign.class, GCounter.DownstreamAssign.codec);
+        Codec.Companion.register(304, GSet.SourceAdd.class, GSet.SourceAdd.codec);
+        Codec.Companion.register(305, GSet.DownstreamAdd.class, GSet.DownstreamAdd.codec);
+        Codec.Companion.register(306, OrderedGSet.SourceAdd.class, OrderedGSet.SourceAdd.codec);
+        Codec.Companion.register(307, OrderedGSet.DownstreamAdd.class, OrderedGSet.DownstreamAdd.codec);
+        Codec.Companion.register(308, AppendEntries.class, AppendEntries.codec);
+        Codec.Companion.register(309, AppendSuccessful.class, AppendSuccessful.codec);
+        Codec.Companion.register(310, AppendRejected.class, AppendRejected.codec);
+        Codec.Companion.register(311, Resource.class, Resource.codec);
+        Codec.Companion.register(312, RoutingTable.class, RoutingTable.codec);
+        Codec.Companion.register(313, AddResource.class, AddResource.codec);
+        Codec.Companion.register(314, AddResourceResponse.class, AddResourceResponse.codec);
+        Codec.Companion.register(315, RemoveResource.class, RemoveResource.codec);
+        Codec.Companion.register(316, RemoveResourceResponse.class, RemoveResourceResponse.codec);
+        Codec.Companion.register(317, UpdateMembers.class, UpdateMembers.codec);
+        Codec.Companion.register(318, AddReplica.class, AddReplica.codec);
+        Codec.Companion.register(319, CloseReplica.class, CloseReplica.codec);
+        Codec.Companion.register(320, RemoveReplica.class, RemoveReplica.codec);
     }
 
     @Override

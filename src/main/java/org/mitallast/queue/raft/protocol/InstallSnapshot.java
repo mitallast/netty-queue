@@ -5,13 +5,13 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class InstallSnapshot implements Message {
-    public static final Codec<InstallSnapshot> codec = Codec.of(
+    public static final Codec<InstallSnapshot> codec = Codec.Companion.of(
         InstallSnapshot::new,
         InstallSnapshot::getLeader,
         InstallSnapshot::getTerm,
         InstallSnapshot::getSnapshot,
         DiscoveryNode.codec,
-        Codec.longCodec,
+        Codec.Companion.longCodec(),
         RaftSnapshot.codec
     );
 

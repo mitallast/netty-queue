@@ -5,12 +5,12 @@ import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 
 public class RaftSnapshot implements Message {
-    public static final Codec<RaftSnapshot> codec = Codec.of(
+    public static final Codec<RaftSnapshot> codec = Codec.Companion.of(
         RaftSnapshot::new,
         RaftSnapshot::getMeta,
         RaftSnapshot::getData,
         RaftSnapshotMetadata.codec,
-        Codec.vectorCodec(Codec.anyCodec())
+        Codec.Companion.vectorCodec(Codec.Companion.anyCodec())
     );
 
     private final RaftSnapshotMetadata meta;

@@ -15,10 +15,10 @@ import org.mitallast.queue.crdt.replication.Replicator;
 public class GCounter implements CmRDT {
 
     public static class SourceAssign implements SourceUpdate {
-        public static final Codec<SourceAssign> codec = Codec.of(
+        public static final Codec<SourceAssign> codec = Codec.Companion.of(
             SourceAssign::new,
             SourceAssign::value,
-            Codec.longCodec
+            Codec.Companion.longCodec()
         );
 
         private final long value;
@@ -33,12 +33,12 @@ public class GCounter implements CmRDT {
     }
 
     public static class DownstreamAssign implements DownstreamUpdate {
-        public static final Codec<DownstreamAssign> codec = Codec.of(
+        public static final Codec<DownstreamAssign> codec = Codec.Companion.of(
             DownstreamAssign::new,
             DownstreamAssign::replica,
             DownstreamAssign::value,
-            Codec.longCodec,
-            Codec.longCodec
+            Codec.Companion.longCodec(),
+            Codec.Companion.longCodec()
         );
 
         private final long replica;

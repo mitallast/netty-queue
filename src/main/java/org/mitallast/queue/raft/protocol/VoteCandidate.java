@@ -5,12 +5,12 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class VoteCandidate implements Message {
-    public static final Codec<VoteCandidate> codec = Codec.of(
+    public static final Codec<VoteCandidate> codec = Codec.Companion.of(
         VoteCandidate::new,
         VoteCandidate::getMember,
         VoteCandidate::getTerm,
         DiscoveryNode.codec,
-        Codec.longCodec
+        Codec.Companion.longCodec()
     );
 
     private final DiscoveryNode member;

@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 public class ReplicatedLogTest extends BaseTest {
     static {
-        Codec.register(8888888, AppendWord.class, AppendWord.codec);
+        Codec.Companion.register(8888888, AppendWord.class, AppendWord.codec);
     }
 
     private final long term = 1;
@@ -505,10 +505,10 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     public static class AppendWord implements Message {
-        public static final Codec<AppendWord> codec = Codec.of(
+        public static final Codec<AppendWord> codec = Codec.Companion.of(
             AppendWord::new,
             AppendWord::word,
-            Codec.stringCodec
+            Codec.Companion.stringCodec()
         );
 
         private final String word;

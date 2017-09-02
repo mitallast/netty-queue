@@ -14,7 +14,7 @@ public class CodecEncoder extends MessageToByteEncoder<Message> {
         int sizePos = out.writerIndex();
         out.writerIndex(out.writerIndex() + 4);
         ByteBufOutputStream stream = new ByteBufOutputStream(out);
-        Codec.anyCodec().write(stream, message);
+        Codec.Companion.anyCodec().write(stream, message);
         int size = out.writerIndex() - sizePos - 4;
         out.setInt(sizePos, size);
     }

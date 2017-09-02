@@ -48,7 +48,7 @@ import static org.mockito.Mockito.when;
 public class RaftTest extends BaseTest {
 
     static {
-        Codec.register(5555555, TestFSMMessage.class, TestFSMMessage.codec);
+        Codec.Companion.register(5555555, TestFSMMessage.class, TestFSMMessage.codec);
     }
 
     private Injector injector;
@@ -1173,7 +1173,7 @@ public class RaftTest extends BaseTest {
 
     private static class TestFSMMessage implements Message {
         public static final TestFSMMessage INSTANCE = new TestFSMMessage();
-        public static final Codec<TestFSMMessage> codec = Codec.of(INSTANCE);
+        public static final Codec<TestFSMMessage> codec = Codec.Companion.of(INSTANCE);
 
         private TestFSMMessage() {
         }

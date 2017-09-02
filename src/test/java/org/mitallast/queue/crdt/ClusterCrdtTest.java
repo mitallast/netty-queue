@@ -22,7 +22,7 @@ import java.io.IOException;
 
 public class ClusterCrdtTest extends BaseClusterTest {
     static {
-        Codec.register(99000000, TestLong.class, TestLong.codec);
+        Codec.Companion.register(99000000, TestLong.class, TestLong.codec);
     }
 
     private Vector<CrdtService> crdtServices;
@@ -221,10 +221,10 @@ public class ClusterCrdtTest extends BaseClusterTest {
     }
 
     public static class TestLong implements Message {
-        public static final Codec<TestLong> codec = Codec.of(
+        public static final Codec<TestLong> codec = Codec.Companion.of(
             TestLong::new,
             TestLong::value,
-            Codec.longCodec
+            Codec.Companion.longCodec()
         );
 
         private final long value;

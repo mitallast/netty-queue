@@ -246,6 +246,7 @@ public class HttpRequest implements RestRequest {
                     } catch (URISyntaxException e) {
                         throw new RuntimeException(e);
                     }
+                    break;
                 case "jar":
                     try {
                         String path = new URI(url.getPath()).getPath();

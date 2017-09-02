@@ -9,16 +9,16 @@ import org.mitallast.queue.transport.DiscoveryNode;
 
 
 public class RoutingTable implements Message {
-    public static final Codec<RoutingTable> codec = Codec.of(
+    public static final Codec<RoutingTable> codec = Codec.Companion.of(
         RoutingTable::new,
         RoutingTable::replicas,
         RoutingTable::members,
         RoutingTable::buckets,
         RoutingTable::nextReplica,
-        Codec.intCodec,
-        Codec.setCodec(DiscoveryNode.codec),
-        Codec.vectorCodec(RoutingBucket.codec),
-        Codec.longCodec
+        Codec.Companion.intCodec(),
+        Codec.Companion.setCodec(DiscoveryNode.codec),
+        Codec.Companion.vectorCodec(RoutingBucket.codec),
+        Codec.Companion.longCodec()
     );
 
     private final int replicas;

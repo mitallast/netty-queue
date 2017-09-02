@@ -5,14 +5,14 @@ import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.crdt.routing.ResourceType;
 
 public class RemoveResourceResponse implements Message {
-    public static final Codec<RemoveResourceResponse> codec = Codec.of(
+    public static final Codec<RemoveResourceResponse> codec = Codec.Companion.of(
         RemoveResourceResponse::new,
         RemoveResourceResponse::type,
         RemoveResourceResponse::id,
         RemoveResourceResponse::isRemoved,
-        Codec.enumCodec(ResourceType.class),
-        Codec.longCodec,
-        Codec.booleanCodec
+        Codec.Companion.enumCodec(ResourceType.class),
+        Codec.Companion.longCodec(),
+        Codec.Companion.booleanCodec()
     );
 
     private final ResourceType type;

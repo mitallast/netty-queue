@@ -44,8 +44,8 @@ public class FileReplicatedLogTest extends BaseTest {
         long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
             LogEntry append = log.append(i, new TestLong(i));
-            assert append.index() == i + 1;
-            assert append.id() == i;
+            assert append.getIndex() == i + 1;
+            assert append.getId() == i;
         }
         long end = System.currentTimeMillis();
         printQps("append single thread", total, start, end);
@@ -53,7 +53,7 @@ public class FileReplicatedLogTest extends BaseTest {
         assert logEntries.size() == total;
         long prev = 1;
         for (LogEntry logEntry : logEntries) {
-            Assert.assertEquals(prev, logEntry.index());
+            Assert.assertEquals(prev, logEntry.getIndex());
             prev++;
         }
     }
@@ -65,7 +65,7 @@ public class FileReplicatedLogTest extends BaseTest {
         executeConcurrent((thread, concurrency) -> {
             for (int i = thread; i < total; i += concurrency) {
                 LogEntry append = log.append(i, new TestLong(i));
-                assert append.id() == i;
+                assert append.getId() == i;
             }
         });
         long end = System.currentTimeMillis();
@@ -73,7 +73,7 @@ public class FileReplicatedLogTest extends BaseTest {
         assert log.entriesFrom(0).size() == total;
         long prev = 1;
         for (LogEntry logEntry : log.entriesFrom(0)) {
-            Assert.assertEquals(prev, logEntry.index());
+            Assert.assertEquals(prev, logEntry.getIndex());
             prev++;
         }
     }

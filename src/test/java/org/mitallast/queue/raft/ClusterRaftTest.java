@@ -214,27 +214,27 @@ public class ClusterRaftTest extends BaseClusterTest {
             registry.register(RegisterByteGet.class, this::handle);
         }
 
-        public Message handle(long index, RegisterSet registerSet) {
+        public Option<Message> handle(long index, RegisterSet registerSet) {
             logger.debug("prev value: {} new value: {}", value, registerSet.value);
             value = registerSet.value;
-            return new RegisterValue(value);
+            return Option.some(new RegisterValue(value));
         }
 
-        public Message handle(long index, RegisterGet message) {
-            return new RegisterValue(value);
+        public Option<Message> handle(long index, RegisterGet message) {
+            return Option.some(new RegisterValue(value));
         }
 
-        public Message handle(long index, RegisterByteSet set) {
+        public Option<Message> handle(long index, RegisterByteSet set) {
             logger.debug("prev value: {} new value: {}", value, set.buf);
             if (buff != null) {
                 buff.release();
             }
             buff = set.buf;
-            return new RegisterByteOK();
+            return Option.some(new RegisterByteOK());
         }
 
-        public Message handle(long index, RegisterByteGet message) {
-            return new RegisterByteValue(buff);
+        public Option<Message> handle(long index, RegisterByteGet message) {
+            return Option.some(new RegisterByteValue(buff));
         }
 
         @Override

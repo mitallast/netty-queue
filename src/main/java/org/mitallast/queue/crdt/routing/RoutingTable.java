@@ -16,7 +16,7 @@ public class RoutingTable implements Message {
         RoutingTable::buckets,
         RoutingTable::nextReplica,
         Codec.Companion.intCodec(),
-        Codec.Companion.setCodec(DiscoveryNode.codec),
+        Codec.Companion.setCodec(DiscoveryNode.Companion.getCodec()),
         Codec.Companion.vectorCodec(RoutingBucket.codec),
         Codec.Companion.longCodec()
     );

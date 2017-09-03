@@ -59,7 +59,7 @@ public abstract class NettyClientBootstrap extends AbstractLifecycleComponent {
     public final ChannelFuture connect(DiscoveryNode node) {
         checkIsStarted();
         Preconditions.checkNotNull(bootstrap);
-        return bootstrap.connect(node.host(), node.port());
+        return bootstrap.connect(node.getHost(), node.getPort());
     }
 
     public final ChannelFuture connect(String host, int port) {

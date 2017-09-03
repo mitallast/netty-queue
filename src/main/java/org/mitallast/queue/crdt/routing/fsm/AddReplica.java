@@ -10,7 +10,7 @@ public class AddReplica implements Message {
         AddReplica::bucket,
         AddReplica::member,
         Codec.Companion.intCodec(),
-        DiscoveryNode.codec
+        DiscoveryNode.Companion.getCodec()
     );
 
     private final int bucket;

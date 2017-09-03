@@ -10,7 +10,7 @@ public class UpdateMembers implements Message {
     public static final Codec<UpdateMembers> codec = Codec.Companion.of(
         UpdateMembers::new,
         UpdateMembers::members,
-        Codec.Companion.setCodec(DiscoveryNode.codec)
+        Codec.Companion.setCodec(DiscoveryNode.Companion.getCodec())
     );
 
     private final Set<DiscoveryNode> members;

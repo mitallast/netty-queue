@@ -11,7 +11,7 @@ public class RoutingReplica implements Message {
         RoutingReplica::member,
         RoutingReplica::state,
         Codec.Companion.longCodec(),
-        DiscoveryNode.codec,
+        DiscoveryNode.Companion.getCodec(),
         Codec.Companion.enumCodec(State.class)
     );
 

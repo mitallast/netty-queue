@@ -84,7 +84,7 @@ class Raft @Inject constructor(
 
     // fsm related
 
-    fun apply(event: Message) {
+    fun <T: Message> apply(event: T) {
         lock.lock()
         try {
             CloseableThreadContext.push(state.state().name).use {

@@ -202,11 +202,11 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
             return { request, response -> request.response().bytes(response) }
         }
 
-        fun <T> json(): (RestRequest, T) -> Unit {
+        fun <T: Any> json(): (RestRequest, T) -> Unit {
             return { request, t -> request.response().json(t) }
         }
 
-        fun <T> optionalJson(): (RestRequest, Option<T>) -> Unit {
+        fun <T: Any> optionalJson(): (RestRequest, Option<T>) -> Unit {
             return optional(json())
         }
 
@@ -237,7 +237,7 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
             }
         }
 
-        fun <T> futureJson(): (RestRequest, Future<T>) -> Unit {
+        fun <T: Any> futureJson(): (RestRequest, Future<T>) -> Unit {
             return future(json())
         }
 
@@ -267,7 +267,7 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
         }
 
         fun content(): (RestRequest) -> ByteBuf {
-            return { it.content() }
+            return { it.content }
         }
 
         fun method(): (RestRequest) -> HttpMethod {
@@ -299,11 +299,11 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
         }
 
         fun <T> json(type: Class<T>): (RestRequest) -> T {
-            return { request -> jsonService.deserialize<T>(request.content(), type) }
+            return { request -> jsonService.deserialize<T>(request.content, type) }
         }
 
         fun <T> json(type: TypeReference<T>): (RestRequest) -> T {
-            return { request -> jsonService.deserialize<T>(request.content(), type) }
+            return { request -> jsonService.deserialize<T>(request.content, type) }
         }
     }
 

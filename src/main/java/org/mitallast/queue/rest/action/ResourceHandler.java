@@ -15,18 +15,17 @@ import java.nio.file.Path;
 public class ResourceHandler {
 
     @Inject
-    public ResourceHandler(RestController controller) throws IOException {
+    public ResourceHandler(RestController c) throws IOException {
 
         ClassPath classPath = ClassPath.from(ResourceHandler.class.getClassLoader());
         ImmutableSet<ClassPath.ResourceInfo> resources = classPath.getResources();
 
-        resources.stream()
+        resources
+            .stream()
             .filter(resource -> resource.getResourceName().startsWith("META-INF/resources/webjars/"))
             .forEach(resource -> {
                 String resourcePath = resource.getResourceName().substring("META-INF".length());
-                controller.handle(this::webjars)
-                    .apply(controller.param().path())
-                    .apply(controller.response().url())
+                c.handle(this::webjars, c.param().path(), c.response().url())
                     .handle(HttpMethod.GET, resourcePath);
             });
 
@@ -37,18 +36,14 @@ public class ResourceHandler {
                 .filter(resource -> resource.getResourceName().startsWith("org/mitallast/queue/admin/"))
                 .forEach(resource -> {
                     String resourcePath = resource.getResourceName().substring("org/mitallast/queue/admin/".length());
-                    controller.handle(this::resourceStatic)
-                        .apply(controller.param().path())
-                        .apply(controller.response().url())
+                    c.handle(this::resourceStatic, c.param().path(), c.response().url())
                         .handle(HttpMethod.GET, resourcePath);
                 });
 
-            controller.handle(this::resourceFavicon)
-                .apply(controller.response().url())
+            c.handle(this::resourceFavicon, c.response().url())
                 .handle(HttpMethod.GET, "favicon.ico");
 
-            controller.handle(this::resourceIndex)
-                .apply(controller.response().url())
+            c.handle(this::resourceIndex, c.response().url())
                 .handle(HttpMethod.GET, "/");
         } else {
             Path root = new File("./src/main/resources/org/mitallast/queue/admin/").toPath();
@@ -63,18 +58,14 @@ public class ResourceHandler {
                         builder.append(part.getFileName());
                     }
                     String resourcePath = builder.toString();
-                    controller.handle(this::fileStatic)
-                        .apply(controller.param().path())
-                        .apply(controller.response().file())
+                    c.handle(this::fileStatic, c.param().path(), c.response().file())
                         .handle(HttpMethod.GET, resourcePath);
                 });
 
-            controller.handle(this::fileFavicon)
-                .apply(controller.response().file())
+            c.handle(this::fileFavicon, c.response().file())
                 .handle(HttpMethod.GET, "favicon.ico");
 
-            controller.handle(this::fileIndex)
-                .apply(controller.response().file())
+            c.handle(this::fileIndex, c.response().file())
                 .handle(HttpMethod.GET, "/");
         }
     }

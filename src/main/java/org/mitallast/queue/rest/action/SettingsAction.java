@@ -15,9 +15,10 @@ public class SettingsAction {
     public SettingsAction(Config config, RestController controller) {
         this.config = config;
 
-        controller.handle(this::settings)
-            .apply(controller.response().json())
-            .handle(HttpMethod.GET, "_settings");
+        controller.handle(
+            this::settings,
+            controller.response().json()
+        ).handle(HttpMethod.GET, "_settings");
     }
 
     public Map<String, Boolean> settings() {

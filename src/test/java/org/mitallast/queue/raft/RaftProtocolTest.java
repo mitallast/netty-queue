@@ -39,10 +39,10 @@ public class RaftProtocolTest extends BaseTest {
         AddServer expected = new AddServer(randomNode());
         // write
         output = new ByteBufOutputStream(buffer);
-        AddServer.codec.write(output, expected);
+        AddServer.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        AddServer actual = AddServer.codec.read(input);
+        AddServer actual = AddServer.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -54,10 +54,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        AddServerResponse.codec.write(output, expected);
+        AddServerResponse.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        AddServerResponse actual = AddServerResponse.codec.read(input);
+        AddServerResponse actual = AddServerResponse.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -76,10 +76,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        AppendEntries.codec.write(output, expected);
+        AppendEntries.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        AppendEntries actual = AppendEntries.codec.read(input);
+        AppendEntries actual = AppendEntries.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -92,10 +92,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        AppendRejected.codec.write(output, expected);
+        AppendRejected.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        AppendRejected actual = AppendRejected.codec.read(input);
+        AppendRejected actual = AppendRejected.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -108,25 +108,25 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        AppendSuccessful.codec.write(output, expected);
+        AppendSuccessful.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        AppendSuccessful actual = AppendSuccessful.codec.read(input);
+        AppendSuccessful actual = AppendSuccessful.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
     @Test
     public void testClientMessageCodec() throws Exception {
         ClientMessage expected = new ClientMessage(
-            Noop.INSTANCE,
+                Noop.Companion.getINSTANCE(),
             random.nextLong()
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        ClientMessage.codec.write(output, expected);
+        ClientMessage.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        ClientMessage actual = ClientMessage.codec.read(input);
+        ClientMessage actual = ClientMessage.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -138,10 +138,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        DeclineCandidate.codec.write(output, expected);
+        DeclineCandidate.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        DeclineCandidate actual = DeclineCandidate.codec.read(input);
+        DeclineCandidate actual = DeclineCandidate.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -156,15 +156,15 @@ public class RaftProtocolTest extends BaseTest {
                     random.nextLong(),
                     new StableClusterConfiguration(randomNode(), randomNode())
                 ),
-                Vector.of(Noop.INSTANCE)
+                Vector.of(Noop.Companion.getINSTANCE())
             )
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        InstallSnapshot.codec.write(output, expected);
+        InstallSnapshot.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        InstallSnapshot actual = InstallSnapshot.codec.read(input);
+        InstallSnapshot actual = InstallSnapshot.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -176,10 +176,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        InstallSnapshotRejected.codec.write(output, expected);
+        InstallSnapshotRejected.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        InstallSnapshotRejected actual = InstallSnapshotRejected.codec.read(input);
+        InstallSnapshotRejected actual = InstallSnapshotRejected.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -192,10 +192,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        InstallSnapshotSuccessful.codec.write(output, expected);
+        InstallSnapshotSuccessful.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        InstallSnapshotSuccessful actual = InstallSnapshotSuccessful.codec.read(input);
+        InstallSnapshotSuccessful actual = InstallSnapshotSuccessful.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -204,10 +204,10 @@ public class RaftProtocolTest extends BaseTest {
         LogEntry expected = randomLogEntry();
         // write
         output = new ByteBufOutputStream(buffer);
-        LogEntry.codec.write(output, expected);
+        LogEntry.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        LogEntry actual = LogEntry.codec.read(input);
+        LogEntry actual = LogEntry.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -215,11 +215,11 @@ public class RaftProtocolTest extends BaseTest {
     public void testNoopCodec() throws Exception {
         // write
         output = new ByteBufOutputStream(buffer);
-        Noop.codec.write(output, Noop.INSTANCE);
+        Noop.Companion.getCodec().write(output, Noop.Companion.getINSTANCE());
         // read
         input = new ByteBufInputStream(buffer);
-        Noop actual = Noop.codec.read(input);
-        assertEquals(Noop.INSTANCE, actual);
+        Noop actual = Noop.Companion.getCodec().read(input);
+        assertEquals(Noop.Companion.getINSTANCE(), actual);
     }
 
     @Test
@@ -230,14 +230,14 @@ public class RaftProtocolTest extends BaseTest {
                 random.nextLong(),
                 new StableClusterConfiguration(randomNode(), randomNode())
             ),
-            Vector.of(Noop.INSTANCE)
+            Vector.of(Noop.Companion.getINSTANCE())
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        RaftSnapshot.codec.write(output, expected);
+        RaftSnapshot.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        RaftSnapshot actual = RaftSnapshot.codec.read(input);
+        RaftSnapshot actual = RaftSnapshot.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -250,10 +250,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        RaftSnapshotMetadata.codec.write(output, expected);
+        RaftSnapshotMetadata.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        RaftSnapshotMetadata actual = RaftSnapshotMetadata.codec.read(input);
+        RaftSnapshotMetadata actual = RaftSnapshotMetadata.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -262,10 +262,10 @@ public class RaftProtocolTest extends BaseTest {
         RemoveServer expected = new RemoveServer(randomNode());
         // write
         output = new ByteBufOutputStream(buffer);
-        RemoveServer.codec.write(output, expected);
+        RemoveServer.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        RemoveServer actual = RemoveServer.codec.read(input);
+        RemoveServer actual = RemoveServer.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -277,10 +277,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        RemoveServerResponse.codec.write(output, expected);
+        RemoveServerResponse.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        RemoveServerResponse actual = RemoveServerResponse.codec.read(input);
+        RemoveServerResponse actual = RemoveServerResponse.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -294,10 +294,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        RequestVote.codec.write(output, expected);
+        RequestVote.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        RequestVote actual = RequestVote.codec.read(input);
+        RequestVote actual = RequestVote.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -309,10 +309,10 @@ public class RaftProtocolTest extends BaseTest {
         );
         // write
         output = new ByteBufOutputStream(buffer);
-        VoteCandidate.codec.write(output, expected);
+        VoteCandidate.Companion.getCodec().write(output, expected);
         // read
         input = new ByteBufInputStream(buffer);
-        VoteCandidate actual = VoteCandidate.codec.read(input);
+        VoteCandidate actual = VoteCandidate.Companion.getCodec().read(input);
         assertEquals(expected, actual);
     }
 
@@ -325,7 +325,7 @@ public class RaftProtocolTest extends BaseTest {
             random.nextLong(),
             random.nextLong(),
             random.nextLong(),
-            Noop.INSTANCE
+                Noop.Companion.getINSTANCE()
         );
     }
 }

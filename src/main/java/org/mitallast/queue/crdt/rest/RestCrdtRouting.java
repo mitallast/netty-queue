@@ -10,8 +10,9 @@ public class RestCrdtRouting {
 
     @Inject
     public RestCrdtRouting(RestController controller, CrdtService crdtService) {
-        controller.handle(crdtService::routingTable)
-            .apply(controller.response().json())
-            .handle(HttpMethod.GET, "_crdt/routing");
+        controller.handle(
+            crdtService::routingTable,
+            controller.response().json()
+        ).handle(HttpMethod.GET, "_crdt/routing");
     }
 }

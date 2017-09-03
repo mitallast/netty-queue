@@ -90,12 +90,12 @@ public abstract class BaseClusterTest extends BaseTest {
                 logger.warn("leader found");
                 if (raft.forAll(r -> !r.currentMeta().getConfig().isTransitioning())) {
                     logger.info("leader found");
-                    if (raft.forAll(r -> r.currentMeta().getConfig().members().size() == raft.size())) {
+                    if (raft.forAll(r -> r.currentMeta().getConfig().getMembers().size() == raft.size())) {
                         logger.info("cluster available");
                         return;
                     } else {
                         logger.warn("nodes {} not synced", raft.size());
-                        raft.map(r -> r.currentMeta().getConfig().members()).forEach(m -> logger.info("members: {}", m));
+                        raft.map(r -> r.currentMeta().getConfig().getMembers()).forEach(m -> logger.info("members: {}", m));
                     }
                 } else {
                     logger.warn("nodes in joint");

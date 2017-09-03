@@ -19,7 +19,7 @@ import org.mitallast.queue.crdt.routing.allocation.AllocationStrategy;
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged;
 import org.mitallast.queue.crdt.routing.fsm.*;
 import org.mitallast.queue.raft.Raft;
-import org.mitallast.queue.raft.discovery.ClusterDiscovery;
+import org.mitallast.queue.raft.cluster.ClusterDiscovery;
 import org.mitallast.queue.raft.event.MembersChanged;
 import org.mitallast.queue.raft.protocol.ClientMessage;
 import org.mitallast.queue.transport.TransportController;
@@ -183,7 +183,7 @@ public class DefaultCrdtService implements CrdtService {
     private void handle(MembersChanged event) {
         if (raft.currentState() == Leader) {
             logger.info("members changed");
-            raft.apply(new ClientMessage(new UpdateMembers(event.members()), 0));
+            raft.apply(new ClientMessage(new UpdateMembers(event.getMembers()), 0));
         }
     }
 
@@ -212,7 +212,7 @@ public class DefaultCrdtService implements CrdtService {
     private void processBuckets(RoutingTable routingTable) {
         for (RoutingBucket routingBucket : routingTable.buckets()) {
             Option<RoutingReplica> replicaOpt = routingBucket.replicas().values()
-                .find(r -> r.member().equals(discovery.self()));
+                .find(r -> r.member().equals(discovery.getSelf()));
             if (replicaOpt.isDefined()) {
                 processReplica(routingBucket, replicaOpt.get());
             } else {

@@ -20,35 +20,39 @@ public class RestGCounter {
     ) {
         this.crdtService = crdtService;
 
-        controller.handle(this::create)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().futureEither(
+        controller.handle(
+            this::create,
+            controller.param().toLong("id"),
+            controller.response().futureEither(
                 controller.response().created(),
                 controller.response().badRequest()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter");
 
-        controller.handle(this::value)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().optional(
+        controller.handle(
+            this::value,
+            controller.param().toLong("id"),
+            controller.response().optional(
                 controller.response().text()
-            ))
-            .handle(HttpMethod.GET, "_crdt/{id}/g-counter/value");
+            )
+        ).handle(HttpMethod.GET, "_crdt/{id}/g-counter/value");
 
-        controller.handle(this::increment)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().optional(
+        controller.handle(
+            this::increment,
+            controller.param().toLong("id"),
+            controller.response().optional(
                 controller.response().text()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter/increment");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter/increment");
 
-        controller.handle(this::add)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.param().toLong("value"))
-            .apply(controller.response().optional(
+        controller.handle(
+            this::add,
+            controller.param().toLong("id"),
+            controller.param().toLong("value"),
+            controller.response().optional(
                 controller.response().text()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter/add");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-counter/add");
     }
 
     public Future<Boolean> create(long id) {

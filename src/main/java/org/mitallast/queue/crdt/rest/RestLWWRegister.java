@@ -22,27 +22,30 @@ public class RestLWWRegister {
     ) {
         this.crdtService = crdtService;
 
-        controller.handle(this::create)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().futureEither(
+        controller.handle(
+            this::create,
+            controller.param().toLong("id"),
+            controller.response().futureEither(
                 controller.response().created(),
                 controller.response().badRequest()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register");
 
-        controller.handle(this::value)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().optionalJson())
-            .handle(HttpMethod.GET, "_crdt/{id}/lww-register/value");
+        controller.handle(
+            this::value,
+            controller.param().toLong("id"),
+            controller.response().optionalJson()
+        ).handle(HttpMethod.GET, "_crdt/{id}/lww-register/value");
 
-        controller.handle(this::assign)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.param().json(JsonMessage.class))
-            .apply(controller.response().either(
+        controller.handle(
+            this::assign,
+            controller.param().toLong("id"),
+            controller.param().json(JsonMessage.class),
+            controller.response().either(
                 controller.response().ok(),
                 controller.response().badRequest()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/value");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/lww-register/value");
     }
 
     public Future<Boolean> create(long id) {

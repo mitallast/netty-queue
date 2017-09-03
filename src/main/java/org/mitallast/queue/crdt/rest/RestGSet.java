@@ -23,27 +23,30 @@ public class RestGSet {
     ) {
         this.crdtService = crdtService;
 
-        controller.handle(this::create)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().futureEither(
+        controller.handle(
+            this::create,
+            controller.param().toLong("id"),
+            controller.response().futureEither(
                 controller.response().created(),
                 controller.response().badRequest()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-set");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-set");
 
-        controller.handle(this::values)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.response().optionalJson())
-            .handle(HttpMethod.GET, "_crdt/{id}/g-set/values");
+        controller.handle(
+            this::values,
+            controller.param().toLong("id"),
+            controller.response().optionalJson()
+        ).handle(HttpMethod.GET, "_crdt/{id}/g-set/values");
 
-        controller.handle(this::add)
-            .apply(controller.param().toLong("id"))
-            .apply(controller.param().json(JsonMessage.class))
-            .apply(controller.response().either(
+        controller.handle(
+            this::add,
+            controller.param().toLong("id"),
+            controller.param().json(JsonMessage.class),
+            controller.response().either(
                 controller.response().ok(),
                 controller.response().badRequest()
-            ))
-            .handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-set/add");
+            )
+        ).handle(HttpMethod.POST, HttpMethod.PUT, "_crdt/{id}/g-set/add");
     }
 
     public Future<Boolean> create(long id) {

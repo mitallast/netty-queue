@@ -40,7 +40,6 @@ public abstract class NettyServer extends AbstractLifecycleComponent {
             bootstrap = new ServerBootstrap();
             bootstrap.group(provider.parent(), provider.child())
                 .channel(provider.serverChannel())
-                .handler(channelInitializer())
                 .childHandler(channelInitializer())
                 .option(ChannelOption.SO_BACKLOG, backlog)
                 .option(ChannelOption.SO_REUSEADDR, reuseAddress)

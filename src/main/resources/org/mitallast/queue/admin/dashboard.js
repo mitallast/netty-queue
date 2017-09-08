@@ -37,10 +37,34 @@
                 templateUrl: '/crdt/value.html',
                 controller: 'CrdtValueCtrl'
             })
+            .when('/audio', {
+                templateUrl: '/audio.html',
+                controller: 'AudioCtrl'
+            })
             .otherwise({
                 redirectTo: '/'
             });
     }])
+    .factory('$audio', function($websocket){
+        var stream = $websocket('ws://localhost:8800/ws/', null, {
+            binaryType: 'arraybuffer'
+        });
+        console.log("stream", stream);
+        var consumers = [];
+        stream.onMessage(function(frame){
+            consumers.forEach(function(consumer){
+                consumer(frame);
+            });
+        });
+        return {
+            send: function(buffer){
+                stream.send(buffer);
+            },
+            subscribe: function(consumer){
+                consumers.push(consumer);
+            }
+        };
+    })
     .controller('SidebarCtrl', function($scope, $location){
         $scope.menus = [
             [
@@ -55,6 +79,9 @@
                 {href:'crdt/create', title:'Crdt Create'},
                 {href:'crdt/0/update', title:'Crdt 0 Update'},
                 {href:'crdt/0/value', title:'Crdt 0 Value'},
+            ],
+            [
+                {href:'audio', title:'Audio'},
             ],
         ];
         $scope.activeClass = function(page){
@@ -131,6 +158,140 @@
                 $scope.errors = response.data
             }
         );
+    })
+    .controller('AudioCtrl', function($scope, $http, $audio, $routeParams){
+        console.log("AudioCtrl")
+        var audioContext = new AudioContext();
+
+        var mixer = audioContext.createGain();
+
+        var audioInLevel = audioContext.createGain();
+        audioInLevel.gain.value = 100;
+        audioInLevel.connect(mixer);
+
+        // loop back
+        // mixer.connect(audioContext.destination);
+
+        var audioIn;
+
+        var onGotDevices = function(devInfos) {
+            var index = 0;
+            for (var i = 0; i < devInfos.length; i++) {
+                var info = devInfos[i];
+                if (info.kind !== 'audioinput') {
+                    continue;
+                }
+                var name = info.label || ("Audio in " + (++index));
+                console.log("use " + name, info);
+                onChangeAudioIn(info.deviceId)
+                break;
+            }
+        };
+
+        var onGotAudioIn = function(stream) {
+            if (audioIn != null) {
+              audioIn.disconnect();
+            }
+            audioIn = audioContext.createMediaStreamSource(stream);
+            audioIn.connect(audioInLevel);
+        };
+
+        var onChangeAudioIn = function(deviceId) {
+            var constraint;
+            if (navigator.webkitGetUserMedia !== undefined) {
+                constraint = {
+                    video: false,
+                    audio: {
+                        optional: [
+                            {sourceId:deviceId},
+                            {googAutoGainControl: false},
+                            {googAutoGainControl2: false},
+                            {echoCancellation: false},
+                            {googEchoCancellation: false},
+                            {googEchoCancellation2: false},
+                            {googDAEchoCancellation: false},
+                            {googNoiseSuppression: false},
+                            {googNoiseSuppression2: false},
+                            {googHighpassFilter: false},
+                            {googTypingNoiseDetection: false},
+                            {googAudioMirroring: false}
+                        ]
+                    }
+                }
+            }
+            else if (navigator.mozGetUserMedia !== undefined) {
+                constraint = {
+                    video: false,
+                    audio: {
+                        deviceId: deviceId ? { exact: deviceId } : void 0,
+                        echoCancellation: false,
+                        mozAutoGainControl: false
+                    }
+                }
+            }
+            else {
+                constraint = {
+                    video: false,
+                    audio: {
+                        deviceId: deviceId ? {exact: deviceId} : void 0,
+                        echoCancellation: false
+                    }
+                }
+            }
+            if ((navigator.mediaDevices != null) && (navigator.mediaDevices.getUserMedia != null)) {
+                navigator.mediaDevices.getUserMedia(constraint)
+                    .then(onGotAudioIn)["catch"](function(err) {
+                        console.log(err);
+                    });
+            } else {
+                navigator.getUserMedia(constraint, onGotAudioIn, function() {
+                    console.log(err);
+                });
+            }
+        };
+
+        if ((navigator.mediaDevices != null) && (navigator.mediaDevices.enumerateDevices != null)) {
+            navigator.mediaDevices.enumerateDevices().then(onGotDevices)["catch"](function(err) {
+              return console.log("Could not enumerate audio devices: " + err);
+            });
+        } else {
+            console.log("no enumerate devices")
+        }
+
+        console.log("mixer", mixer);
+
+        if(audioContext.createScriptProcessor==null){
+            audioContext.createScriptProcessor=audioContext.createJavaScriptNode;
+        }
+
+        var processor=audioContext.createScriptProcessor(undefined,1,1);
+        var input=audioContext.createGain();
+        mixer.connect(input);
+        input.connect(processor);
+
+        processor.connect(audioContext.destination);
+
+        processor.onaudioprocess=function(e){
+            var buffer = e.inputBuffer.getChannelData(0);
+            $audio.send(buffer)
+        };
+
+        var startTime = 0;
+        $audio.subscribe(function(frame){
+            // console.log("ws event", frame.data);
+            if(!window.lastFrame){
+                window.lastFrame = frame;
+            }
+            var floatBuffer = new Float32Array(frame.data);
+            var audioBuffer = audioContext.createBuffer(1, floatBuffer.length, 44100);
+            audioBuffer.getChannelData(0).set(floatBuffer);
+
+            var source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            source.start();
+            startTime += audioBuffer.duration;
+        })
     })
 
     function humanizeBytes(bytes) {

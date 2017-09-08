@@ -85,7 +85,7 @@ class JsonService {
     }
 
     companion object {
-        private val mapper: ObjectMapper
+        val mapper: ObjectMapper
 
         init {
             val module = SimpleModule()

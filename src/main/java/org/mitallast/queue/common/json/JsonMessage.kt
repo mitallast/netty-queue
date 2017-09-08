@@ -19,6 +19,7 @@ class JsonMessage : Message {
     }
 
     companion object {
+        private val mapper = JsonService.mapper
         val codec: Codec<JsonMessage> = object : Codec<JsonMessage> {
             override fun read(stream: DataInput): JsonMessage {
                 val parser = mapper.factory.createParser(stream)

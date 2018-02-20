@@ -31,7 +31,7 @@ public class RestClient extends NettyClient {
     public Future<FullHttpResponse> send(HttpRequest request) {
         Promise<FullHttpResponse> promise = Promise.make();
         queue.push(promise);
-        channel.writeAndFlush(request);
+        getChannel().writeAndFlush(request);
         return promise.future();
     }
 
@@ -43,7 +43,7 @@ public class RestClient extends NettyClient {
             protected void initChannel(SocketChannel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
                 pipeline.addLast("codec", new HttpClientCodec(4096, 8192, 8192, false, false));
-                pipeline.addLast("aggregator", new HttpObjectAggregator(maxContentLength));
+                pipeline.addLast("aggregator", new HttpObjectAggregator(getMaxContentLength()));
                 pipeline.addLast("handler", new SimpleChannelInboundHandler<FullHttpResponse>(false) {
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse response) throws Exception {
@@ -54,7 +54,7 @@ public class RestClient extends NettyClient {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                logger.error("unexpected error {}", ctx, cause);
+                getLogger().error("unexpected error {}", ctx, cause);
                 ctx.close();
             }
         };

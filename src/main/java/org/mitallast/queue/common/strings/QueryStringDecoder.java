@@ -23,7 +23,7 @@ public class QueryStringDecoder {
      * @throws IllegalArgumentException if the string contains a malformed
      *                                  escape sequence.
      */
-    public static String decodeComponent(final String s) {
+    public static String decodeComponent(final CharSequence s) {
         if (s == null) {
             return "";
         }
@@ -37,7 +37,7 @@ public class QueryStringDecoder {
             }
         }
         if (!modified) {
-            return s;
+            return s.toString();
         }
         final char[] buf = new char[size];
         int pos = 0;  // position in `buf'.

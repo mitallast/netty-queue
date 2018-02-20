@@ -59,11 +59,10 @@ class DefaultEventBus : EventBus {
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other == null || javaClass != other.javaClass) return false
-
-            val that = other as Listener<*>?
-
-            return consumer == that!!.consumer
+            if (javaClass != other?.javaClass) return false
+            other as Listener<*>
+            if (consumer != other.consumer) return false
+            return true
         }
 
         override fun hashCode(): Int {

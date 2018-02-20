@@ -13,6 +13,8 @@ import io.netty.handler.stream.ChunkedNioFile
 import io.netty.handler.stream.ChunkedStream
 import io.netty.util.AsciiString
 import io.netty.util.CharsetUtil
+import javaslang.collection.HashMap
+import javaslang.collection.Map
 import org.apache.logging.log4j.LogManager
 import org.joda.time.format.DateTimeFormat
 import org.mitallast.queue.common.json.JsonService
@@ -28,42 +30,17 @@ import javax.activation.MimetypesFileTypeMap
 
 class HttpRequest(private val ctx: ChannelHandlerContext,
                   private val httpRequest: FullHttpRequest,
-                  private val jsonService: JsonService) : RestRequest {
+                  private val jsonService: JsonService,
+                  override val paramMap: Map<String, String>,
+                  override val queryPath: String
+) : RestRequest {
 
     override val httpMethod: HttpMethod = httpRequest.method()
-
-    override val paramMap: Map<String, String>
-    override val queryPath: String
     override val uri: String = httpRequest.uri()
     override val content: ByteBuf = httpRequest.content()
 
-    init {
-        val uri = httpRequest.uri()
-
-        val pathEndPos = uri.indexOf('?')
-
-        if (pathEndPos < 0) {
-            paramMap = HashMap()
-            queryPath = uri
-        } else {
-            val decoder = QueryStringDecoder(uri)
-            queryPath = uri.substring(0, pathEndPos)
-            val parameters = decoder.parameters()
-            paramMap = if (parameters.isEmpty()) {
-                emptyMap()
-            } else {
-                val map = HashMap<String, String>(parameters.size)
-                parameters.entries.stream()
-                    .filter { entry -> entry.value != null && !entry.value.isEmpty() }
-                    .forEach { entry -> map.put(entry.key, entry.value[0]) }
-                map
-            }
-        }
-    }
-
     override fun param(param: String): String {
-        val `val` = paramMap[param]
-        return `val` ?: throw IllegalArgumentException("Param {$param} not found")
+        return paramMap[param].getOrElseThrow { IllegalArgumentException("Param {$param} not found") }
     }
 
     override fun hasParam(param: String): Boolean {
@@ -347,5 +324,26 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             .forPattern("EEE, dd MMM yyyy HH:mm:ss Z")
             .withLocale(Locale.US)
             .withZoneUTC()
+
+        fun decodeUri(uri: String): Pair<String, Map<String, String>> {
+            val pathEndPos = uri.indexOf('?')
+            return if (pathEndPos < 0) {
+                Pair(uri, HashMap.empty())
+            } else {
+                val decoder = QueryStringDecoder(uri)
+                val queryPath = uri.substring(0, pathEndPos)
+                val parameters = decoder.parameters()
+                val paramMap = if (parameters.isEmpty()) {
+                    HashMap.empty<String, String>()
+                } else {
+                    var map = HashMap.empty<String, String>()
+                    parameters.entries.stream()
+                        .filter { entry -> entry.value != null && !entry.value.isEmpty() }
+                        .forEach { entry -> map = map.put(entry.key, entry.value[0]) }
+                    map
+                }
+                Pair(queryPath, paramMap)
+            }
+        }
     }
 }

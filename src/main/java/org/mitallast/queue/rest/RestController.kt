@@ -11,34 +11,93 @@ import javaslang.concurrent.Future
 import javaslang.control.Option
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.json.JsonService
-import org.mitallast.queue.common.path.PathTrie
+import org.mitallast.queue.common.path.TrieNode
 import org.mitallast.queue.rest.netty.HttpRequest
 import java.io.File
 import java.net.URL
 
 class RestController @Inject constructor(private val jsonService: JsonService) {
     private val logger = LogManager.getLogger()
-    private val getHandlers = PathTrie<(RestRequest) -> Unit>()
-    private val postHandlers = PathTrie<(RestRequest) -> Unit>()
-    private val putHandlers = PathTrie<(RestRequest) -> Unit>()
-    private val deleteHandlers = PathTrie<(RestRequest) -> Unit>()
-    private val headHandlers = PathTrie<(RestRequest) -> Unit>()
-    private val optionsHandlers = PathTrie<(RestRequest) -> Unit>()
+    @Volatile
+    private var getHandlers = TrieNode.node<(RestRequest) -> Unit>()
+    @Volatile
+    private var postHandlers = TrieNode.node<(RestRequest) -> Unit>()
+    @Volatile
+    private var putHandlers = TrieNode.node<(RestRequest) -> Unit>()
+    @Volatile
+    private var deleteHandlers = TrieNode.node<(RestRequest) -> Unit>()
+    @Volatile
+    private var headHandlers = TrieNode.node<(RestRequest) -> Unit>()
+    @Volatile
+    private var optionsHandlers = TrieNode.node<(RestRequest) -> Unit>()
 
-    private val responseMappers: ResponseMappers
-    private val paramMappers: ParamMappers
-
-    init {
-
-        this.responseMappers = ResponseMappers()
-        this.paramMappers = ParamMappers()
-    }
+    private val responseMappers = ResponseMappers()
+    private val paramMappers = ParamMappers()
 
     fun dispatchRequest(ctx: ChannelHandlerContext, httpRequest: FullHttpRequest) {
-        val request = HttpRequest(ctx, httpRequest, jsonService)
+        logger.info("request ${httpRequest.method()} ${httpRequest.uri()}")
+        val (path, queryParams) = HttpRequest.decodeUri(httpRequest.uri())
         try {
-            executeHandler(request)
+            val method = httpRequest.method()
+            when(method) {
+                HttpMethod.GET -> {
+                    val (handler, pathParams) = getHandlers.retrieve(path)
+                    if (handler.isDefined) {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        return handler.get().invoke(request)
+                    }
+                }
+                HttpMethod.POST -> {
+                    val (handler, pathParams) = postHandlers.retrieve(path)
+                    if (handler.isDefined) {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        return handler.get().invoke(request)
+                    }
+                }
+                HttpMethod.PUT -> {
+                    val (handler, pathParams) = putHandlers.retrieve(path)
+                    if (handler.isDefined) {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        return handler.get().invoke(request)
+                    }
+                }
+                HttpMethod.DELETE -> {
+                    val (handler, pathParams) = deleteHandlers.retrieve(path)
+                    if (handler.isDefined) {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        return handler.get().invoke(request)
+                    }
+                }
+                HttpMethod.HEAD -> {
+                    val (handler, pathParams) = headHandlers.retrieve(path)
+                    if (handler.isDefined) {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        return handler.get().invoke(request)
+                    }
+                }
+                HttpMethod.OPTIONS -> {
+                    val (handler, pathParams) = optionsHandlers.retrieve(path)
+                    return if (handler.isDefined) {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        handler.get().invoke(request)
+                    } else {
+                        val request = HttpRequest(ctx, httpRequest, jsonService, pathParams.merge(queryParams), path)
+                        request.response()
+                            .status(HttpResponseStatus.OK)
+                            .empty()
+                    }
+                }
+            }
+
+            val request = HttpRequest(ctx, httpRequest, jsonService, queryParams, path)
+            logger.warn("handler not found for {} {}", request.httpMethod, request.uri)
+            return request.response()
+                .status(HttpResponseStatus.NOT_FOUND)
+                .text("No handler found for uri [" + request.uri + "] and method [" + request.httpMethod + "]")
+
+
         } catch (e: Throwable) {
+            val request = HttpRequest(ctx, httpRequest, jsonService, queryParams, path)
             logger.warn("error process request {} {}", request.httpMethod, request.uri)
             logger.warn("unexpected exception", e)
             try {
@@ -55,47 +114,22 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
         }
     }
 
-    private fun executeHandler(request: RestRequest) {
-        val handler = getHandler(request)
-        if (handler != null) {
-            handler.invoke(request)
-        } else {
-            logger.warn("handler not found for {} {}", request.httpMethod, request.uri)
-            if (request.httpMethod === HttpMethod.OPTIONS) {
-                request.response()
-                    .status(HttpResponseStatus.OK)
-                    .empty()
-            } else {
-                request.response()
-                    .status(HttpResponseStatus.BAD_REQUEST)
-                    .text("No handler found for uri [" + request.uri + "] and method [" + request.httpMethod + "]")
-            }
-        }
-    }
-
-    private fun getHandler(request: RestRequest): ((RestRequest) -> Unit)? {
-        val path = request.queryPath
-        val method = request.httpMethod
-        return when {
-            method === HttpMethod.GET -> getHandlers.retrieve(path, request.paramMap)
-            method === HttpMethod.POST -> postHandlers.retrieve(path, request.paramMap)
-            method === HttpMethod.PUT -> putHandlers.retrieve(path, request.paramMap)
-            method === HttpMethod.DELETE -> deleteHandlers.retrieve(path, request.paramMap)
-            method === HttpMethod.HEAD -> headHandlers.retrieve(path, request.paramMap)
-            method === HttpMethod.OPTIONS -> optionsHandlers.retrieve(path, request.paramMap)
-            else -> null
-        }
-    }
-
+    @Synchronized
     fun register(method: HttpMethod, path: String, handler: (RestRequest) -> Unit) {
         logger.info("register: {} {}", method, path)
-        when {
-            HttpMethod.GET === method -> getHandlers.insert(path, handler)
-            HttpMethod.DELETE === method -> deleteHandlers.insert(path, handler)
-            HttpMethod.POST === method -> postHandlers.insert(path, handler)
-            HttpMethod.PUT === method -> putHandlers.insert(path, handler)
-            HttpMethod.OPTIONS === method -> optionsHandlers.insert(path, handler)
-            HttpMethod.HEAD === method -> headHandlers.insert(path, handler)
+        when (method) {
+            HttpMethod.GET ->
+                getHandlers = getHandlers.insert(path, handler)
+            HttpMethod.DELETE ->
+                deleteHandlers = deleteHandlers.insert(path, handler)
+            HttpMethod.POST ->
+                postHandlers = postHandlers.insert(path, handler)
+            HttpMethod.PUT ->
+                putHandlers = putHandlers.insert(path, handler)
+            HttpMethod.OPTIONS ->
+                optionsHandlers = optionsHandlers.insert(path, handler)
+            HttpMethod.HEAD ->
+                headHandlers = headHandlers.insert(path, handler)
             else -> throw IllegalArgumentException("Can't handle [$method] for path [$path]")
         }
     }
@@ -202,11 +236,11 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
             return { request, response -> request.response().bytes(response) }
         }
 
-        fun <T: Any> json(): (RestRequest, T) -> Unit {
+        fun <T : Any> json(): (RestRequest, T) -> Unit {
             return { request, t -> request.response().json(t) }
         }
 
-        fun <T: Any> optionalJson(): (RestRequest, Option<T>) -> Unit {
+        fun <T : Any> optionalJson(): (RestRequest, Option<T>) -> Unit {
             return optional(json())
         }
 
@@ -237,7 +271,7 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
             }
         }
 
-        fun <T: Any> futureJson(): (RestRequest, Future<T>) -> Unit {
+        fun <T : Any> futureJson(): (RestRequest, Future<T>) -> Unit {
             return future(json())
         }
 

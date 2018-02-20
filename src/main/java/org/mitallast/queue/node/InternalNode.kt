@@ -11,6 +11,7 @@ import org.mitallast.queue.common.component.ModulesBuilder
 import org.mitallast.queue.common.events.EventBusModule
 import org.mitallast.queue.common.file.FileModule
 import org.mitallast.queue.common.json.JsonModule
+import org.mitallast.queue.common.netty.NettyModule
 import org.mitallast.queue.crdt.CrdtModule
 import org.mitallast.queue.crdt.rest.RestCrdtModule
 import org.mitallast.queue.raft.RaftModule
@@ -34,6 +35,7 @@ class InternalNode(conf: Config, vararg plugins: AbstractModule) : AbstractLifec
         modules.add(JsonModule())
         modules.add(EventBusModule())
         modules.add(SecurityModule())
+        modules.add(NettyModule())
         modules.add(TransportModule())
         if (config.getBoolean("rest.enabled")) {
             modules.add(RestModule())

@@ -29,7 +29,7 @@ class ResourceHandler @Inject constructor(c: RestController) {
             resources.stream()
                 .filter { resource -> resource.resourceName.startsWith("org/mitallast/queue/admin/") }
                 .forEach { resource ->
-                    val resourcePath = resource.resourceName.substring("org/mitallast/queue/admin/".length)
+                    val resourcePath = resource.resourceName.substring("org/mitallast/queue".length)
                     c.handle(this::resourceStatic, c.param().path(), c.response().url())
                         .handle(HttpMethod.GET, resourcePath)
                 }

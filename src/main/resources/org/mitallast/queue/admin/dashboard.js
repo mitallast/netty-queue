@@ -46,9 +46,12 @@
             });
     }])
     .factory('$audio', function($websocket){
-        var stream = $websocket('ws://localhost:8800/ws/', null, {
-            binaryType: 'arraybuffer'
-        });
+        var url =
+            (location.protocol === "https:" ? "wss://" : "ws://") +
+            location.hostname +
+            (location.port ? ':' + location.port : '') +
+            "/ws/";
+        var stream = $websocket(url, null, {binaryType: 'arraybuffer'});
         console.log("stream", stream);
         var consumers = [];
         stream.onMessage(function(frame){
@@ -166,7 +169,7 @@
         var mixer = audioContext.createGain();
 
         var audioInLevel = audioContext.createGain();
-        audioInLevel.gain.value = 100;
+        audioInLevel.gain.value = 1;
         audioInLevel.connect(mixer);
 
         // loop back
@@ -264,26 +267,33 @@
             audioContext.createScriptProcessor=audioContext.createJavaScriptNode;
         }
 
-        var processor=audioContext.createScriptProcessor(undefined,1,1);
+        var processor=audioContext.createScriptProcessor(16384, 1, 1);
         var input=audioContext.createGain();
         mixer.connect(input);
         input.connect(processor);
 
         processor.connect(audioContext.destination);
 
-        processor.onaudioprocess=function(e){
-            var buffer = e.inputBuffer.getChannelData(0);
-            $audio.send(buffer)
+        processor.onaudioprocess = function(e){
+            var samples = e.inputBuffer.length * 8820 / e.inputBuffer.sampleRate;
+            var offlineContext = new OfflineAudioContext(1, samples, 8820);
+            var bufferSource = offlineContext.createBufferSource();
+            bufferSource.buffer = e.inputBuffer;
+            bufferSource.connect(offlineContext.destination);
+            bufferSource.start(0);
+
+            offlineContext.startRendering().then(function(renderedBuffer){
+                $audio.send(renderedBuffer.getChannelData(0))
+            });
         };
 
         var startTime = 0;
         $audio.subscribe(function(frame){
-            // console.log("ws event", frame.data);
             if(!window.lastFrame){
                 window.lastFrame = frame;
             }
             var floatBuffer = new Float32Array(frame.data);
-            var audioBuffer = audioContext.createBuffer(1, floatBuffer.length, 44100);
+            var audioBuffer = audioContext.createBuffer(1, floatBuffer.length, 8820);
             audioBuffer.getChannelData(0).set(floatBuffer);
 
             var source = audioContext.createBufferSource();

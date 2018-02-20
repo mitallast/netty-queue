@@ -323,6 +323,7 @@
                         <argument>-d64</argument>
                         <argument>-Xms1g</argument>
                         <argument>-Xmx1g</argument>
+                        <argument>-Dfile.encoding=UTF-8</argument>
                         <argument>-Djava.net.preferIPv4Stack=true</argument>
                         <argument>-XX:+UseParNewGC</argument>
                         <argument>-XX:+UseConcMarkSweepGC</argument>

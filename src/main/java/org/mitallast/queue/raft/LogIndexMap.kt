@@ -3,7 +3,7 @@ package org.mitallast.queue.raft
 import gnu.trove.list.array.TLongArrayList
 import gnu.trove.map.TObjectLongMap
 import gnu.trove.map.hash.TObjectLongHashMap
-import javaslang.collection.Set
+import io.vavr.collection.Set
 import org.mitallast.queue.raft.cluster.ClusterConfiguration
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration
 import org.mitallast.queue.transport.DiscoveryNode

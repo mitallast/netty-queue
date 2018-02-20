@@ -1,8 +1,8 @@
 package org.mitallast.queue.crdt;
 
 import com.google.inject.AbstractModule;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

@@ -1,10 +1,10 @@
 package org.mitallast.queue.crdt.routing
 
-import javaslang.collection.HashMap
-import javaslang.collection.Map
-import javaslang.collection.Seq
-import javaslang.collection.Set
-import javaslang.control.Option
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
+import io.vavr.collection.Seq
+import io.vavr.collection.Set
+import io.vavr.control.Option
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.transport.DiscoveryNode

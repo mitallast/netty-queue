@@ -1,8 +1,8 @@
 package org.mitallast.queue.crdt.routing
 
-import javaslang.collection.HashSet
-import javaslang.collection.Set
-import javaslang.collection.Vector
+import io.vavr.collection.HashSet
+import io.vavr.collection.Set
+import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.transport.DiscoveryNode

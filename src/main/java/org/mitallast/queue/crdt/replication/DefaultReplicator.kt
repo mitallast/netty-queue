@@ -5,7 +5,7 @@ import com.google.inject.assistedinject.Assisted
 import com.typesafe.config.Config
 import gnu.trove.impl.sync.TSynchronizedLongLongMap
 import gnu.trove.map.hash.TLongLongHashMap
-import javaslang.collection.Vector
+import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.component.AbstractLifecycleComponent
 import org.mitallast.queue.common.events.EventBus

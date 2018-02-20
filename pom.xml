@@ -153,18 +153,18 @@
             <scope>compile</scope>
         </dependency>
 
-        <!-- javaslang -->
+        <!-- vavr -->
 
         <dependency>
-            <groupId>io.javaslang</groupId>
-            <artifactId>javaslang</artifactId>
-            <version>2.1.0-alpha</version>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr</artifactId>
+            <version>0.9.2</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>io.javaslang</groupId>
-            <artifactId>javaslang-jackson</artifactId>
-            <version>2.1.0-alpha</version>
+            <groupId>io.vavr</groupId>
+            <artifactId>vavr-jackson</artifactId>
+            <version>0.9.2</version>
             <scope>compile</scope>
         </dependency>
 

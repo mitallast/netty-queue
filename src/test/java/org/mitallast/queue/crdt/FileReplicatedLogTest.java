@@ -2,8 +2,8 @@ package org.mitallast.queue.crdt;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import javaslang.collection.HashMap;
-import javaslang.collection.Vector;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Vector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

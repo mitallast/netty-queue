@@ -2,7 +2,7 @@ package org.mitallast.queue.security;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import javaslang.collection.List;
+import io.vavr.collection.List;
 import org.conscrypt.OpenSSLProvider;
 import org.junit.Assert;
 import org.junit.Test;

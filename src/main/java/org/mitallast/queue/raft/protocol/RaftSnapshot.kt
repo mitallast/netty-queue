@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft.protocol
 
-import javaslang.collection.Vector
+import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 

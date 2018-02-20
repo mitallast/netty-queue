@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt.log
 
-import javaslang.collection.Vector
+import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Message
 
 import java.io.Closeable

@@ -1,7 +1,7 @@
 package org.mitallast.queue.raft
 
-import javaslang.collection.Set
-import javaslang.control.Option
+import io.vavr.collection.Set
+import io.vavr.control.Option
 import org.mitallast.queue.raft.cluster.ClusterConfiguration
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration
 import org.mitallast.queue.transport.DiscoveryNode

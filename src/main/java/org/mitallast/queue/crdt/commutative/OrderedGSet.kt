@@ -1,8 +1,8 @@
 package org.mitallast.queue.crdt.commutative
 
-import javaslang.collection.Set
-import javaslang.collection.TreeSet
-import javaslang.collection.Vector
+import io.vavr.collection.Set
+import io.vavr.collection.TreeSet
+import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.crdt.commutative.OrderedGSet.DownstreamAdd

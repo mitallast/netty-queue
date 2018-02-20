@@ -2,8 +2,8 @@ package org.mitallast.queue.raft.persistent
 
 import com.google.common.base.Preconditions
 import com.google.inject.Inject
-import javaslang.collection.Vector
-import javaslang.control.Option
+import io.vavr.collection.Vector
+import io.vavr.control.Option
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.file.FileService
 import org.mitallast.queue.raft.protocol.LogEntry

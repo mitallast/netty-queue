@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt.protocol
 
-import javaslang.collection.Vector
+import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.crdt.log.LogEntry

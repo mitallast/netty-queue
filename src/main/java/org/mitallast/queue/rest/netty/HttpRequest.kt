@@ -13,8 +13,8 @@ import io.netty.handler.stream.ChunkedNioFile
 import io.netty.handler.stream.ChunkedStream
 import io.netty.util.AsciiString
 import io.netty.util.CharsetUtil
-import javaslang.collection.HashMap
-import javaslang.collection.Map
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
 import org.apache.logging.log4j.LogManager
 import org.joda.time.format.DateTimeFormat
 import org.mitallast.queue.common.json.JsonService

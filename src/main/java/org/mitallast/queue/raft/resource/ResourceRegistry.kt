@@ -1,9 +1,9 @@
 package org.mitallast.queue.raft.resource
 
-import javaslang.collection.HashMap
-import javaslang.collection.Map
-import javaslang.collection.Vector
-import javaslang.control.Option
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
+import io.vavr.collection.Vector
+import io.vavr.control.Option
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.raft.protocol.RaftSnapshot
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata

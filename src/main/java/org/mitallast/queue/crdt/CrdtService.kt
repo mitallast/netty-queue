@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt
 
-import javaslang.concurrent.Future
+import io.vavr.concurrent.Future
 import org.mitallast.queue.crdt.bucket.Bucket
 import org.mitallast.queue.crdt.routing.ResourceType
 import org.mitallast.queue.crdt.routing.RoutingTable

@@ -2,7 +2,7 @@ package org.mitallast.queue.transport
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
-import javaslang.collection.HashMap
+import io.vavr.collection.HashMap
 import org.junit.Before
 import org.junit.Test
 import org.mitallast.queue.common.BaseIntegrationTest

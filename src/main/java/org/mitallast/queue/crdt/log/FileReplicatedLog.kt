@@ -3,7 +3,7 @@ package org.mitallast.queue.crdt.log
 import com.google.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import com.typesafe.config.Config
-import javaslang.collection.Vector
+import io.vavr.collection.Vector
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.file.FileService

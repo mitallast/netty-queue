@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt.registry
 
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.mitallast.queue.crdt.Crdt
 
 interface CrdtRegistry {

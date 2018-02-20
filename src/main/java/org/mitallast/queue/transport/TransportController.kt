@@ -1,7 +1,7 @@
 package org.mitallast.queue.transport
 
-import javaslang.collection.HashMap
-import javaslang.collection.Map
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Message
 

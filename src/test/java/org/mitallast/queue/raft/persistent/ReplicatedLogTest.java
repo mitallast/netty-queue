@@ -2,9 +2,9 @@ package org.mitallast.queue.raft.persistent;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import javaslang.collection.HashMap;
-import javaslang.collection.Vector;
-import javaslang.control.Option;
+import io.vavr.collection.HashMap;
+import io.vavr.collection.Vector;
+import io.vavr.control.Option;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;

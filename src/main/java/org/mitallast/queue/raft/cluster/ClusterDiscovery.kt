@@ -3,8 +3,8 @@ package org.mitallast.queue.raft.cluster
 import com.google.common.net.HostAndPort
 import com.google.inject.Inject
 import com.typesafe.config.Config
-import javaslang.collection.HashSet
-import javaslang.collection.Set
+import io.vavr.collection.HashSet
+import io.vavr.collection.Set
 import org.mitallast.queue.transport.DiscoveryNode
 import org.mitallast.queue.transport.TransportServer
 

@@ -1,8 +1,8 @@
 package org.mitallast.queue.common.path
 
-import javaslang.collection.HashMap
-import javaslang.collection.Map
-import javaslang.control.Option
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
+import io.vavr.control.Option
 import org.mitallast.queue.common.strings.QueryStringDecoder
 import org.mitallast.queue.common.strings.Strings
 import java.util.*

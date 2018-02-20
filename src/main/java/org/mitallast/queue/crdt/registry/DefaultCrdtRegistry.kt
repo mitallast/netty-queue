@@ -3,7 +3,7 @@ package org.mitallast.queue.crdt.registry
 import com.google.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import gnu.trove.map.hash.TLongObjectHashMap
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.mitallast.queue.crdt.Crdt
 import org.mitallast.queue.crdt.commutative.GCounter
 import org.mitallast.queue.crdt.commutative.GSet

@@ -6,11 +6,11 @@ import gnu.trove.map.hash.TObjectIntHashMap
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.buffer.Unpooled
-import javaslang.collection.HashSet
-import javaslang.collection.Seq
-import javaslang.collection.Set
-import javaslang.collection.Vector
-import javaslang.control.Option
+import io.vavr.collection.HashSet
+import io.vavr.collection.Seq
+import io.vavr.collection.Set
+import io.vavr.collection.Vector
+import io.vavr.control.Option
 import java.io.DataInput
 import java.io.DataOutput
 

@@ -1,7 +1,7 @@
 package org.mitallast.queue.raft.persistent
 
-import javaslang.collection.Vector
-import javaslang.control.Option
+import io.vavr.collection.Vector
+import io.vavr.control.Option
 import org.mitallast.queue.raft.protocol.LogEntry
 import org.mitallast.queue.raft.protocol.RaftSnapshot
 

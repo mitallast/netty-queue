@@ -1,7 +1,7 @@
 package org.mitallast.queue.common.events
 
-import javaslang.collection.HashMultimap
-import javaslang.collection.Multimap
+import io.vavr.collection.HashMultimap
+import io.vavr.collection.Multimap
 import java.util.concurrent.Executor
 import java.util.concurrent.locks.ReentrantLock
 

@@ -2,8 +2,8 @@ package org.mitallast.queue.raft.rest
 
 import com.google.inject.Inject
 import io.netty.handler.codec.http.HttpMethod
-import javaslang.collection.HashMap
-import javaslang.collection.Map
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
 import org.mitallast.queue.raft.Raft
 import org.mitallast.queue.raft.RaftMetadata
 import org.mitallast.queue.raft.cluster.JointConsensusClusterConfiguration

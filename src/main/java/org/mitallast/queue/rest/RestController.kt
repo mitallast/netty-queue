@@ -7,8 +7,8 @@ import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpRequest
 import io.netty.handler.codec.http.HttpMethod
 import io.netty.handler.codec.http.HttpResponseStatus
-import javaslang.concurrent.Future
-import javaslang.control.Option
+import io.vavr.concurrent.Future
+import io.vavr.control.Option
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.json.JsonService
 import org.mitallast.queue.common.path.TrieNode

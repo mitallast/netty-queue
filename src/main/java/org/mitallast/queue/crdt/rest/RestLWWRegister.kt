@@ -2,8 +2,8 @@ package org.mitallast.queue.crdt.rest
 
 import com.google.inject.Inject
 import io.netty.handler.codec.http.HttpMethod
-import javaslang.concurrent.Future
-import javaslang.control.Option
+import io.vavr.concurrent.Future
+import io.vavr.control.Option
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.json.JsonMessage
 import org.mitallast.queue.crdt.CrdtService

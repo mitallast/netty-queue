@@ -2,7 +2,7 @@ package org.mitallast.queue.crdt.routing.fsm
 
 import com.google.common.base.Preconditions
 import com.typesafe.config.Config
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.events.EventBus

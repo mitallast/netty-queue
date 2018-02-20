@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt.routing.fsm
 
-import javaslang.collection.Set
+import io.vavr.collection.Set
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.transport.DiscoveryNode

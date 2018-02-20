@@ -1,8 +1,8 @@
 package org.mitallast.queue.crdt
 
-import javaslang.collection.HashMap
-import javaslang.collection.Map
-import javaslang.concurrent.Future
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
+import io.vavr.concurrent.Future
 import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.events.EventBus
 import org.mitallast.queue.crdt.bucket.Bucket

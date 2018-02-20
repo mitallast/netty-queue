@@ -10,8 +10,8 @@ import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
-import javaslang.concurrent.Future;
-import javaslang.concurrent.Promise;
+import io.vavr.concurrent.Future;
+import io.vavr.concurrent.Promise;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.netty.NettyProvider;
 

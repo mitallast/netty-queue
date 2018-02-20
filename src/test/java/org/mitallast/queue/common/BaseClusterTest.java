@@ -2,9 +2,9 @@ package org.mitallast.queue.common;
 
 import com.google.inject.AbstractModule;
 import com.typesafe.config.Config;
-import javaslang.collection.HashSet;
-import javaslang.collection.Set;
-import javaslang.collection.Vector;
+import io.vavr.collection.HashSet;
+import io.vavr.collection.Set;
+import io.vavr.collection.Vector;
 import org.junit.After;
 import org.junit.Assert;
 import org.mitallast.queue.node.InternalNode;

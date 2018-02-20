@@ -4,8 +4,8 @@ import com.google.common.base.Preconditions
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import io.netty.channel.*
-import javaslang.collection.HashMap
-import javaslang.collection.Map
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.netty.NettyClientBootstrap
 import org.mitallast.queue.common.netty.NettyProvider

@@ -1,6 +1,6 @@
 package org.mitallast.queue.crdt.commutative
 
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.crdt.replication.Replicator

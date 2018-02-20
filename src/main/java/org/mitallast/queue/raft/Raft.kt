@@ -2,12 +2,12 @@ package org.mitallast.queue.raft
 
 import com.google.inject.Inject
 import com.typesafe.config.Config
-import javaslang.collection.HashMap
-import javaslang.collection.Map
-import javaslang.collection.Vector
-import javaslang.concurrent.Future
-import javaslang.concurrent.Promise
-import javaslang.control.Option
+import io.vavr.collection.HashMap
+import io.vavr.collection.Map
+import io.vavr.collection.Vector
+import io.vavr.concurrent.Future
+import io.vavr.concurrent.Promise
+import io.vavr.control.Option
 import org.apache.logging.log4j.CloseableThreadContext
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.component.AbstractLifecycleComponent

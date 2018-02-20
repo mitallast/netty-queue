@@ -1,7 +1,7 @@
 package org.mitallast.queue.raft.cluster
 
-import javaslang.collection.HashSet
-import javaslang.collection.Set
+import io.vavr.collection.HashSet
+import io.vavr.collection.Set
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.transport.DiscoveryNode

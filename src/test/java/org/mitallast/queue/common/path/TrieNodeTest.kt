@@ -1,6 +1,6 @@
 package org.mitallast.queue.common.path
 
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.junit.Assert
 import org.junit.Test
 

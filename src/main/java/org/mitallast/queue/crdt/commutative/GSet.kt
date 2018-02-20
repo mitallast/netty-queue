@@ -1,7 +1,7 @@
 package org.mitallast.queue.crdt.commutative
 
-import javaslang.collection.LinkedHashSet
-import javaslang.collection.Set
+import io.vavr.collection.LinkedHashSet
+import io.vavr.collection.Set
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.crdt.replication.Replicator

@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import javaslang.concurrent.Future;
+import io.vavr.concurrent.Future;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

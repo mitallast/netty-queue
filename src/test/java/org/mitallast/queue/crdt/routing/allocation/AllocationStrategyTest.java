@@ -1,7 +1,7 @@
 package org.mitallast.queue.crdt.routing.allocation;
 
-import javaslang.collection.HashSet;
-import javaslang.control.Option;
+import io.vavr.collection.HashSet;
+import io.vavr.control.Option;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;

@@ -1,6 +1,6 @@
 package org.mitallast.queue.raft.persistent
 
-import javaslang.control.Option
+import io.vavr.control.Option
 import org.mitallast.queue.transport.DiscoveryNode
 
 interface PersistentService {

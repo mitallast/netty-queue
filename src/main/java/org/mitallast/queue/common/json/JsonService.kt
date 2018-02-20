@@ -15,7 +15,7 @@ import com.typesafe.config.ConfigRenderOptions
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufInputStream
 import io.netty.buffer.ByteBufOutputStream
-import javaslang.jackson.datatype.JavaslangModule
+import io.vavr.jackson.datatype.VavrModule
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -97,7 +97,7 @@ class JsonService {
             mapper = ObjectMapper()
             mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
             mapper.registerModule(module)
-            mapper.registerModule(JavaslangModule())
+            mapper.registerModule(VavrModule())
             mapper.registerModule(JodaModule())
         }
     }

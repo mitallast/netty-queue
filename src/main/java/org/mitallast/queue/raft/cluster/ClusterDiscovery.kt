@@ -25,7 +25,7 @@ class ClusterDiscovery @Inject constructor(config: Config) {
                         .map { HostAndPort.fromString(it) }
                         .forEach {
                             nodes = nodes.add(DiscoveryNode(
-                                    it.hostText,
+                                    it.host,
                                     it.getPortOrDefault(TransportServer.DEFAULT_PORT)
                             ))
                         }

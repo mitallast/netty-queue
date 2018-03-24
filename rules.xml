@@ -49,5 +49,10 @@
                 <ignoreVersion type="regex">.*alpha.*</ignoreVersion>
             </ignoreVersions>
         </rule>
+        <rule groupId="org.javassist">
+            <ignoreVersions>
+                <ignoreVersion type="regex">.*CR.</ignoreVersion>
+            </ignoreVersions>
+        </rule>
     </rules>
 </ruleset>

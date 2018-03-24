@@ -116,7 +116,7 @@ class RestController @Inject constructor(private val jsonService: JsonService) {
 
     @Synchronized
     fun register(method: HttpMethod, path: String, handler: (RestRequest) -> Unit) {
-        logger.info("register: {} {}", method, path)
+        logger.debug("register: {} {}", method, path)
         when (method) {
             HttpMethod.GET ->
                 getHandlers = getHandlers.insert(path, handler)

@@ -27,7 +27,7 @@ Recommended server options
     net.inet.tcp.msl: 15000 -> 1000
     localhost$ ulimit -n
     2048
-    localhost$ ulimit -n 65536
+    localhost$ sudo ulimit -n 65536
     localhost$ ulimit -n
     65536
 

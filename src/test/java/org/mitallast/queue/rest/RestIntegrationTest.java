@@ -4,9 +4,7 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import io.vavr.concurrent.Future;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
 import org.mitallast.queue.common.netty.NettyProvider;
@@ -14,26 +12,15 @@ import org.mitallast.queue.rest.transport.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 public class RestIntegrationTest extends BaseQueueTest {
 
-    private List<RestClient> clients;
-    private int client;
-
-    @Before
-    public void setUpClient() throws Exception {
-        client = 0;
-        clients = new ArrayList<>();
-        for (int i = 0; i <= concurrency(); i++) {
-            RestClient restClient = new RestClient(
-                node().config(),
-                node().injector().getInstance(NettyProvider.class)
-            );
-            restClient.start();
-            clients.add(restClient);
-        }
-    }
+    private List<RestClient> clients = new ArrayList<>();
+    private ArrayBlockingQueue<RestClient> buffer = new ArrayBlockingQueue<>(64);
 
     @After
     public void tearDownClient() throws Exception {
@@ -43,8 +30,22 @@ public class RestIntegrationTest extends BaseQueueTest {
         }
     }
 
-    private synchronized RestClient restClient() {
-        return clients.get(client++);
+    private synchronized RestClient alloc() {
+        if (buffer.isEmpty()) {
+            RestClient client = new RestClient(
+                node().config(),
+                node().injector().getInstance(NettyProvider.class)
+            );
+            client.start();
+            clients.add(client);
+            return client;
+        } else {
+            return buffer.poll();
+        }
+    }
+
+    private synchronized void release(RestClient client) {
+        buffer.add(client);
     }
 
     @Test
@@ -59,39 +60,61 @@ public class RestIntegrationTest extends BaseQueueTest {
     @Test
     public void testConcurrent() throws Exception {
         warmUp();
-        long start = System.currentTimeMillis();
-        executeConcurrent(() -> send(max()));
-        long end = System.currentTimeMillis();
-        printQps("send", total(), start, end);
+        while (!Thread.interrupted()) {
+            logger.info("new epoch");
+            CountDownLatch latch = new CountDownLatch(concurrency());
+            long start = System.currentTimeMillis();
+            for(int i=0; i<concurrency(); i++) {
+                async(() -> send(max(), latch));
+            }
+            latch.await();
+            long end = System.currentTimeMillis();
+            printQps("send", total(), start, end);
+        }
     }
 
     private void warmUp() throws Exception {
-        send(1000);
+        CountDownLatch latch = new CountDownLatch(concurrency());
+        for(int i=0; i<concurrency(); i++) {
+            async(() -> send(10000, latch));
+        }
+        latch.await();
     }
 
     private void send(int max) throws Exception {
-        RestClient restClient = restClient();
-        logger.info("send");
-        List<Future<FullHttpResponse>> futures = new ArrayList<>(max);
-        Consumer<FullHttpResponse> consumer = response -> response.content().release();
+        send(max, new CountDownLatch(1));
+    }
 
+    private void send(int max, CountDownLatch latch) throws Exception {
+        RestClient restClient = alloc();
+        logger.trace("send");
+        List<DefaultFullHttpRequest> requests = new ArrayList<>(max);
         for (int i = 0; i < max; i++) {
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1,
                 HttpMethod.GET,
-                "/",
+                "/_index",
                 false
             );
-            Future<FullHttpResponse> future = restClient.send(request);
-            future.onSuccess(consumer);
-            futures.add(future);
+            requests.add(request);
         }
-        logger.info("await");
-        for (Future<FullHttpResponse> future : futures) {
-            FullHttpResponse response = future.get();
-            assert response.status().code() >= 200 : response.status();
-            assert response.status().code() < 300 : response.status();
+        AtomicLong counter = new AtomicLong();
+        CountDownLatch responses = new CountDownLatch(max);
+        Consumer<FullHttpResponse> consumer = response -> {
+            response.content().release();
+            long current = counter.incrementAndGet();
+            if(current % 10000 == 0L){
+                logger.info("responses: {}", current);
+            }
+            responses.countDown();
+        };
+        for (int i = 0; i < max; i++) {
+            restClient.send(requests.get(i)).thenAccept(consumer);
         }
-        logger.info("await done");
+        logger.trace("await");
+        responses.await();
+        logger.info("await done: {} of {}", counter.get(), max);
+        release(restClient);
+        latch.countDown();
     }
 }

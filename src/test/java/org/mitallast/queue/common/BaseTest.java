@@ -1,5 +1,6 @@
 package org.mitallast.queue.common;
 
+import io.netty.util.concurrent.DefaultThreadFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.After;
@@ -25,7 +26,7 @@ public class BaseTest {
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
 
-    private ExecutorService executorService = Executors.newCachedThreadPool();
+    private ExecutorService executorService = Executors.newFixedThreadPool(concurrency(), new DefaultThreadFactory("base-test"));
 
     @Before
     public void setUpModule() throws Exception {
@@ -41,11 +42,11 @@ public class BaseTest {
     }
 
     protected int concurrency() {
-        return availableProcessors;
+        return 8;
     }
 
     protected int max() {
-        return 20000;
+        return 200000;
     }
 
     protected final int total() {
@@ -100,6 +101,16 @@ public class BaseTest {
 
     protected Future<Void> submit(Runnable runnable) {
         return executorService.submit(runnable, null);
+    }
+
+    protected void async(Task task){
+        executorService.submit(() -> {
+            try {
+                task.execute();
+            } catch (Exception e) {
+                assert false : e;
+            }
+        });
     }
 
     protected void printQps(String metric, long total, long start, long end) {

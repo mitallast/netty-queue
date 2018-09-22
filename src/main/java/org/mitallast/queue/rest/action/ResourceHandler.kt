@@ -3,10 +3,12 @@ package org.mitallast.queue.rest.action
 import com.google.common.reflect.ClassPath
 import com.google.inject.Inject
 import io.netty.handler.codec.http.HttpMethod
+import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.rest.RestController
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicLong
 
 class ResourceHandler @Inject constructor(c: RestController) {
 
@@ -62,6 +64,15 @@ class ResourceHandler @Inject constructor(c: RestController) {
             c.handle(this::fileIndex, c.response().file())
                 .handle(HttpMethod.GET, "/")
         }
+        c.handle(this::index, c.response().text())
+            .handle(HttpMethod.GET, "/_index")
+    }
+
+    private val logger = LogManager.getLogger()
+    private val counter = AtomicLong(0)
+
+    private fun index(): String {
+        return "OK"
     }
 
     private fun webjars(path: String): URL {

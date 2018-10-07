@@ -39,14 +39,19 @@ class HttpServerHandler @Inject constructor(private val restController: RestCont
 
     override fun channelRead0(ctx: ChannelHandlerContext, httpRequest: FullHttpRequest) {
         if (!httpRequest.decoderResult().isSuccess) {
+            logger.warn("bad request, decoder failure", httpRequest.decoderResult().cause())
             sendError(ctx, BAD_REQUEST)
             return
         }
         restController.dispatchRequest(ctx, httpRequest)
     }
 
+    override fun channelReadComplete(ctx: ChannelHandlerContext) {
+        ctx.flush()
+    }
+
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
-        cause.printStackTrace()
+        logger.error("unexpected exception", cause)
         if (ctx.channel().isActive) {
             sendError(ctx, INTERNAL_SERVER_ERROR)
         }

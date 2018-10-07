@@ -1,24 +1,24 @@
 package org.mitallast.queue.rest.transport;
 
 import com.typesafe.config.Config;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
+import io.netty.util.internal.PlatformDependent;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.netty.NettyProvider;
 
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class RestClient extends NettyClient {
 
-    private final ConcurrentLinkedDeque<CompletableFuture<FullHttpResponse>> queue = new ConcurrentLinkedDeque<>();
+    private final Queue<CompletableFuture<FullHttpResponse>> queue = PlatformDependent.newMpscQueue();
+
 
     public RestClient(Config config, NettyProvider provider) {
         super(config, provider,
@@ -29,9 +29,18 @@ public class RestClient extends NettyClient {
 
     public CompletableFuture<FullHttpResponse> send(HttpRequest request) {
         CompletableFuture<FullHttpResponse> future = new CompletableFuture<>();
-        queue.push(future);
-        getChannel().writeAndFlush(request);
+        while (!queue.offer(future)) Thread.yield();
+        Channel channel = getChannel();
+        channel.write(request, channel.voidPromise());
         return future;
+    }
+
+    public void flush() {
+        getChannel().flush();
+    }
+
+    public ByteBufAllocator alloc() {
+        return getChannel().alloc();
     }
 
     @Override

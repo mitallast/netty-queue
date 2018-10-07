@@ -61,10 +61,12 @@ public class RestIntegrationTest extends BaseQueueTest {
     public void testConcurrent() throws Exception {
         warmUp();
         while (!Thread.interrupted()) {
+            System.gc();
+            Thread.sleep(100);
             logger.info("new epoch");
             CountDownLatch latch = new CountDownLatch(concurrency());
             long start = System.currentTimeMillis();
-            for(int i=0; i<concurrency(); i++) {
+            for (int i = 0; i < concurrency(); i++) {
                 async(() -> send(max(), latch));
             }
             latch.await();
@@ -75,7 +77,7 @@ public class RestIntegrationTest extends BaseQueueTest {
 
     private void warmUp() throws Exception {
         CountDownLatch latch = new CountDownLatch(concurrency());
-        for(int i=0; i<concurrency(); i++) {
+        for (int i = 0; i < concurrency(); i++) {
             async(() -> send(10000, latch));
         }
         latch.await();
@@ -88,29 +90,30 @@ public class RestIntegrationTest extends BaseQueueTest {
     private void send(int max, CountDownLatch latch) throws Exception {
         RestClient restClient = alloc();
         logger.trace("send");
-        List<DefaultFullHttpRequest> requests = new ArrayList<>(max);
-        for (int i = 0; i < max; i++) {
-            DefaultFullHttpRequest request = new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1,
-                HttpMethod.GET,
-                "/_index",
-                false
-            );
-            requests.add(request);
-        }
         AtomicLong counter = new AtomicLong();
         CountDownLatch responses = new CountDownLatch(max);
         Consumer<FullHttpResponse> consumer = response -> {
             response.content().release();
             long current = counter.incrementAndGet();
-            if(current % 10000 == 0L){
+            if (current % 10000 == 0L) {
                 logger.info("responses: {}", current);
             }
             responses.countDown();
         };
         for (int i = 0; i < max; i++) {
-            restClient.send(requests.get(i)).thenAccept(consumer);
+            DefaultFullHttpRequest request = new DefaultFullHttpRequest(
+                HttpVersion.HTTP_1_1,
+                HttpMethod.GET,
+                "/_index",
+                restClient.alloc().buffer()
+            );
+            restClient.send(request).thenAccept(consumer);
+            if (i % 1000 == 0L) {
+                restClient.flush();
+            }
         }
+
+        restClient.flush();
         logger.trace("await");
         responses.await();
         logger.info("await done: {} of {}", counter.get(), max);

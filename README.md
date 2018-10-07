@@ -35,22 +35,35 @@ Recommended java options
 ------------------------
 
     -server
-    -d64
     -Xms4g
     -Xmx4g
-    -Djava.net.preferIPv4Stack=true
-    -XX:MaxDirectMemorySize=1g
-    -XX:+UseParNewGC
-    -XX:+UseConcMarkSweepGC
-    -XX:CMSInitiatingOccupancyFraction=75
-    -XX:+UseCMSInitiatingOccupancyOnly
-    -XX:MaxGCPauseMillis=150
-    -XX:InitiatingHeapOccupancyPercent=70
-    -XX:NewRatio=2
-    -XX:SurvivorRatio=8
-    -XX:MaxTenuringThreshold=15
-    -XX:+UseCompressedOops
+    -Xss6m
     -XX:+AggressiveOpts
-    -XX:+UseFastAccessorMethods
+    -XX:+UseCompressedOops
     -XX:-MaxFDLimit
+    -XX:+AlwaysPreTouch
+    -XX:+DisableExplicitGC
+    -XX:+TieredCompilation
+    -XX:+UnlockDiagnosticVMOptions
+    -XX:+UnlockExperimentalVMOptions
+    -XX:InitialRAMFraction=1
+    -XX:MaxRAMFraction=1
+    -XX:MinRAMFraction=1
+    -XX:+UseAES
+    -XX:+UseAESIntrinsics
+    -XX:+UseG1GC
+    -XX:+UseStringDeduplication
+    -XX:-UseBiasedLocking
+    -XX:ConcGCThreads=5
+    -XX:G1HeapRegionSize=16m
+    -XX:G1MaxNewSizePercent=80
+    -XX:G1MixedGCLiveThresholdPercent=50
+    -XX:G1NewSizePercent=50
+    -XX:InitiatingHeapOccupancyPercent=10
+    -XX:MaxGCPauseMillis=100
+    -XX:NewSize=512m
+    -XX:ParallelGCThreads=20
+    -XX:ReservedCodeCacheSize=256m
+    -XX:TargetSurvivorRatio=90
     -Dio.netty.leakDetectionLevel=disabled
+    -Djava.net.preferIPv4Stack=true

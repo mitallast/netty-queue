@@ -139,9 +139,10 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             if (HttpUtil.isKeepAlive(httpRequest)) {
                 HttpUtil.setKeepAlive(response, true)
             }
-            val writeFuture = ctx.writeAndFlush(response)
             if (!HttpUtil.isKeepAlive(httpRequest)) {
-                writeFuture.addListener(ChannelFutureListener.CLOSE)
+                ctx.write(response).addListener(ChannelFutureListener.CLOSE)
+            }else {
+                ctx.write(response, ctx.voidPromise())
             }
         }
 
@@ -211,10 +212,10 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             if (HttpUtil.isKeepAlive(httpRequest)) {
                 HttpUtil.setKeepAlive(response, true)
             }
-            ctx.write(response)
-            val write = ctx.writeAndFlush(HttpChunkedInput(ChunkedStream(stream, 8192)))
             if (!HttpUtil.isKeepAlive(httpRequest)) {
-                write.addListener(ChannelFutureListener.CLOSE)
+                ctx.write(HttpChunkedInput(ChunkedStream(stream, 8192))).addListener(ChannelFutureListener.CLOSE)
+            }else{
+                ctx.write(HttpChunkedInput(ChunkedStream(stream, 8192)), ctx.voidPromise())
             }
         }
 
@@ -234,9 +235,10 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
                 ctx.write(response)
 
                 try {
-                    val write = ctx.writeAndFlush(HttpChunkedInput(ChunkedNioFile(file)))
                     if (!HttpUtil.isKeepAlive(httpRequest)) {
-                        write.addListener(ChannelFutureListener.CLOSE)
+                        ctx.write(HttpChunkedInput(ChunkedNioFile(file))).addListener(ChannelFutureListener.CLOSE)
+                    }else{
+                        ctx.write(HttpChunkedInput(ChunkedNioFile(file)), ctx.voidPromise())
                     }
                 } catch (e: IOException) {
                     throw RuntimeException(e)
@@ -269,9 +271,10 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             if (HttpUtil.isKeepAlive(httpRequest)) {
                 HttpUtil.setKeepAlive(response, true)
             }
-            val write = ctx.writeAndFlush(response)
             if (!HttpUtil.isKeepAlive(httpRequest)) {
-                write.addListener(ChannelFutureListener.CLOSE)
+                ctx.write(response).addListener(ChannelFutureListener.CLOSE)
+            }else {
+                ctx.write(response, ctx.voidPromise())
             }
         }
 
@@ -305,9 +308,10 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             if (HttpUtil.isKeepAlive(httpRequest)) {
                 HttpUtil.setKeepAlive(response, true)
             }
-            val write = ctx.writeAndFlush(response)
             if (!HttpUtil.isKeepAlive(httpRequest)) {
-                write.addListener(ChannelFutureListener.CLOSE)
+                ctx.write(response).addListener(ChannelFutureListener.CLOSE)
+            }else {
+                ctx.write(response, ctx.voidPromise())
             }
         }
     }

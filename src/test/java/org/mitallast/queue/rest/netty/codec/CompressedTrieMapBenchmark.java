@@ -10,7 +10,9 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @BenchmarkMode(Mode.All)
 @Warmup(iterations = 5)
@@ -21,7 +23,11 @@ import java.util.ArrayList;
 public class CompressedTrieMapBenchmark {
 
     private final ArrayList<AsciiString> headers;
-    private final CompressedTrieMap<AsciiString> map;
+    private final CompressedTrieMap<AsciiString> trieMap;
+    private final HashMap<String, AsciiString> hashMap;
+    private final StringBuilder stringBuilder = new StringBuilder();
+
+    private int i = 0;
 
     public CompressedTrieMapBenchmark() {
         headers = new ArrayList<>();
@@ -105,16 +111,31 @@ public class CompressedTrieMapBenchmark {
         headers.add(HttpHeaderNames.WWW_AUTHENTICATE);
         headers.add(HttpHeaderNames.X_FRAME_OPTIONS);
 
+        hashMap = new HashMap<>();
         CompressedTrieMap.Builder<AsciiString> builder = CompressedTrieMap.builder();
         for (AsciiString header : headers) {
             builder.add(header.toString(), header);
+            hashMap.put(header.toString(), header);
         }
-        map = builder.build();
-        map.print();
+        trieMap = builder.build();
+        trieMap.print();
     }
 
     @Benchmark
-    public void find(Blackhole blackhole) {
-        blackhole.consume(map.find(headers.get(0).toString()));
+    public void trieMap(Blackhole blackhole) {
+        i = (i + 1) % headers.size();
+        stringBuilder.setLength(0);
+        stringBuilder.append(headers.get(i).toString());
+        String key = stringBuilder.toString();
+        blackhole.consume(key);
+    }
+
+    @Benchmark
+    public void hashMap(Blackhole blackhole) {
+        i = (i + 1) % headers.size();
+        stringBuilder.setLength(0);
+        stringBuilder.append(headers.get(i).toString());
+        String key = stringBuilder.toString();
+        blackhole.consume(hashMap.get(key));
     }
 }

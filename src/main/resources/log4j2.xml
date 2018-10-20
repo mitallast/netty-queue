@@ -8,7 +8,8 @@
     <Loggers>
         <Logger name="org.mitallast.queue.raft.Raft" level="WARN"/>
         <Logger name="org.mitallast.queue.rest.RestController" level="WARN"/>
-        <Root level="info">
+        <Logger name="io.netty" level="WARN"/>
+        <Root level="debug">
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>

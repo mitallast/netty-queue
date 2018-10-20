@@ -26,7 +26,7 @@ import java.net.URISyntaxException
 import java.net.URL
 import java.util.*
 import java.util.zip.ZipFile
-import javax.activation.MimetypesFileTypeMap
+//import javax.activation.MimetypesFileTypeMap
 
 class HttpRequest(private val ctx: ChannelHandlerContext,
                   private val httpRequest: FullHttpRequest,
@@ -255,7 +255,7 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             } else if (path.endsWith(".html")) {
                 header(HttpHeaderNames.CONTENT_TYPE, TEXT_HTML)
             } else {
-                header(HttpHeaderNames.CONTENT_TYPE, mimeTypesMap.getContentType(path))
+//                header(HttpHeaderNames.CONTENT_TYPE, mimeTypesMap.getContentType(path))
             }
         }
 
@@ -318,7 +318,7 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
 
     companion object {
         private val logger = LogManager.getLogger()
-        private val mimeTypesMap = MimetypesFileTypeMap()
+//        private val mimeTypesMap = MimetypesFileTypeMap()
 
         private val APPLICATION_JAVASCRIPT = AsciiString("application/javascript")
         private val TEXT_CSS = AsciiString("text/css")

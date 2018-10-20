@@ -17,6 +17,7 @@ import org.mitallast.queue.crdt.rest.RestCrdtModule
 import org.mitallast.queue.raft.RaftModule
 import org.mitallast.queue.raft.rest.RaftRestModule
 import org.mitallast.queue.rest.RestModule
+import org.mitallast.queue.rest.netty.codec.server.RestCustomModule
 import org.mitallast.queue.security.SecurityModule
 import org.mitallast.queue.transport.TransportModule
 
@@ -39,6 +40,9 @@ class InternalNode(conf: Config, vararg plugins: AbstractModule) : AbstractLifec
         modules.add(TransportModule())
         if (config.getBoolean("rest.enabled")) {
             modules.add(RestModule())
+        }
+        if (config.getBoolean("rest.custom.enabled")) {
+            modules.add(RestCustomModule())
         }
         if (config.getBoolean("raft.enabled")) {
             modules.add(RaftModule())

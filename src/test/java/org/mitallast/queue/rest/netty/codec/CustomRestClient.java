@@ -1,34 +1,32 @@
-package org.mitallast.queue.rest.transport;
+package org.mitallast.queue.rest.netty.codec;
 
 import com.typesafe.config.Config;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.PlatformDependent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.netty.NettyProvider;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 
-public class RestClient extends NettyClient {
+public class CustomRestClient extends NettyClient {
+    private final Logger logger = LogManager.getLogger();
+    private final Queue<CompletableFuture<HttpResponse>> queue = PlatformDependent.newMpscQueue();
 
-    private final Queue<CompletableFuture<FullHttpResponse>> queue = PlatformDependent.newMpscQueue();
 
-
-    public RestClient(Config config, NettyProvider provider) {
+    public CustomRestClient(Config config, NettyProvider provider) {
         super(config, provider,
             config.getString("rest.custom.host"),
             config.getInt("rest.custom.port")
         );
     }
 
-    public CompletableFuture<FullHttpResponse> send(HttpRequest request) {
-        CompletableFuture<FullHttpResponse> future = new CompletableFuture<>();
+    public CompletableFuture<HttpResponse> send(HttpRequest request) {
+        CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         while (!queue.offer(future)) Thread.yield();
         Channel channel = getChannel();
         channel.write(request, channel.voidPromise());
@@ -50,11 +48,12 @@ public class RestClient extends NettyClient {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast("codec", new HttpClientCodec(4096, 8192, 8192, false, false));
-                pipeline.addLast("aggregator", new HttpObjectAggregator(getMaxContentLength()));
-                pipeline.addLast("handler", new SimpleChannelInboundHandler<FullHttpResponse>(false) {
+                pipeline.addLast("codec", new HttpRequestEncoder());
+                pipeline.addLast("aggregator", new HttpResponseDecoder());
+                pipeline.addLast("handler", new SimpleChannelInboundHandler<HttpResponse>(false) {
                     @Override
-                    protected void channelRead0(ChannelHandlerContext ctx, FullHttpResponse response) throws Exception {
+                    protected void channelRead0(ChannelHandlerContext ctx, HttpResponse response) throws Exception {
+//                        logger.info("incoming response");
                         queue.poll().complete(response);
                     }
                 });

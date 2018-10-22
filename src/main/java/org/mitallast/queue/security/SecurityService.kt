@@ -2,11 +2,11 @@ package org.mitallast.queue.security
 
 import com.google.inject.Inject
 import com.typesafe.config.Config
+import org.mitallast.queue.common.Hex.parseHexBinary
 import java.security.*
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
-import javax.xml.bind.DatatypeConverter.parseHexBinary
 
 class SecurityService @Inject constructor(config: Config) {
 

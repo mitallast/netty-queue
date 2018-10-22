@@ -14,8 +14,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
 import java.security.spec.ECGenParameterSpec;
-
-import static javax.xml.bind.DatatypeConverter.printHexBinary;
+import static org.mitallast.queue.common.Hex.printHexBinary;
 
 public class NativeCryptoTest extends BaseTest {
     static {

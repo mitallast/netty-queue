@@ -36,6 +36,7 @@ public abstract class BaseClusterTest extends BaseTest {
         return new ConfigBuilder()
             .with("node.path", path)
             .with("rest.enabled", false)
+            .with("rest.custom.enabled", false)
             .with("raft.discovery.host", "127.0.0.1")
             .with("transport.host", "127.0.0.1");
     }

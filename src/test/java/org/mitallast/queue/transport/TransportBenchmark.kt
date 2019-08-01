@@ -16,7 +16,7 @@ class TransportBenchmark : BaseQueueTest() {
     private var countDownLatch: CountDownLatch? = null
 
     override fun max(): Int {
-        return 2000
+        return 20000
     }
 
     @Throws(Exception::class)

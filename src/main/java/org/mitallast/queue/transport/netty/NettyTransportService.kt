@@ -124,7 +124,6 @@ class NettyTransportService @Inject constructor(
         } catch (e: Exception) {
             logger.error("error send message", e)
         }
-
     }
 
     private inner class NodeChannel constructor(private val node: DiscoveryNode) : TransportChannel, Closeable {

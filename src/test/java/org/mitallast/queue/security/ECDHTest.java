@@ -65,7 +65,7 @@ public class ECDHTest extends BaseTest {
 
         byte[] source = randomBytes(256);
         ECDHEncrypted encrypted = bob.encrypt(source);
-        int total = 10000;
+        int total = 100000;
         long start = System.currentTimeMillis();
         for (int i = 0; i < total; i++) {
             encrypted = bob.encrypt(source);
@@ -108,7 +108,7 @@ public class ECDHTest extends BaseTest {
     }
 
     @Test
-    public void benchmarkSignECDSA() throws Exception {
+    public void benchmarkSignHMac() throws Exception {
         Config config = ConfigFactory.defaultReference();
         SecurityService securityService = new SecurityService(config);
         ECDHFlow alice = securityService.ecdh();
@@ -117,24 +117,25 @@ public class ECDHTest extends BaseTest {
         bob.keyAgreement(alice.requestStart());
         alice.keyAgreement(bob.responseStart());
 
+        byte[] iv = randomBytes(256);
         byte[] data = randomBytes(256);
         byte[] sign = randomBytes(1);
 
         for (int k = 0; k < 3; k++) {
-            int total = 20000;
+            int total = 1000000;
             long start = System.currentTimeMillis();
             for (int i = 0; i < total; i++) {
-                sign = alice.sign(data);
+                sign = alice.sign(iv, data);
             }
             long end = System.currentTimeMillis();
             printQps("sign", total, start, end);
         }
 
         for (int k = 0; k < 3; k++) {
-            int total = 10000;
+            int total = 1000000;
             long start = System.currentTimeMillis();
             for (int i = 0; i < total; i++) {
-                assert bob.verify(data, sign);
+                assert bob.verify(iv, data, sign);
             }
             long end = System.currentTimeMillis();
             printQps("verify", total, start, end);

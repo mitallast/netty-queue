@@ -54,5 +54,10 @@
                 <ignoreVersion type="regex">.*CR.</ignoreVersion>
             </ignoreVersions>
         </rule>
+        <rule groupId="io.vavr">
+            <ignoreVersions>
+                <ignoreVersion type="regex">.*alpha..</ignoreVersion>
+            </ignoreVersions>
+        </rule>
     </rules>
 </ruleset>

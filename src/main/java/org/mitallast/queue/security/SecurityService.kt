@@ -6,7 +6,7 @@ import java.security.*
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.Cipher
-import javax.xml.bind.DatatypeConverter.parseHexBinary
+import org.mitallast.queue.common.Hex.parseHexBinary
 
 class SecurityService @Inject constructor(config: Config) {
 

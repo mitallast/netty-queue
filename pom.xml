@@ -56,6 +56,11 @@
             <version>1.0.1</version>
             <classifier>${os.detected.classifier}</classifier>
         </dependency>
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>javax.activation</artifactId>
+            <version>1.2.0</version>
+        </dependency>
 
         <!-- Logging -->
 
@@ -297,8 +302,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>11</source>
+                    <target>11</target>
                     <showDeprecation>true</showDeprecation>
                     <compilerArgument>-Xlint:unchecked,deprecation,fallthrough,finally</compilerArgument>
                 </configuration>

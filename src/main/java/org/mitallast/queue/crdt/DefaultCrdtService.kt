@@ -3,8 +3,8 @@ package org.mitallast.queue.crdt
 import io.vavr.collection.HashMap
 import io.vavr.collection.Map
 import io.vavr.concurrent.Future
-import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.events.EventBus
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.crdt.bucket.Bucket
 import org.mitallast.queue.crdt.bucket.BucketFactory
 import org.mitallast.queue.crdt.event.ClosedLogSynced
@@ -30,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock
 import javax.inject.Inject
 
 class DefaultCrdtService @Inject constructor(
+    logging: LoggingService,
     private val raft: Raft,
     private val routingTableFSM: RoutingTableFSM,
     private val allocationStrategy: AllocationStrategy,
@@ -39,7 +40,7 @@ class DefaultCrdtService @Inject constructor(
     transportController: TransportController,
     eventBus: EventBus
 ) : CrdtService {
-    private val logger = LogManager.getLogger()
+    private val logger = logging.logger()
 
     private val lock = ReentrantLock()
     @Volatile private var lastApplied: Long = 0

@@ -3,14 +3,17 @@ package org.mitallast.queue.rest.action
 import com.google.common.reflect.ClassPath
 import com.google.inject.Inject
 import io.netty.handler.codec.http.HttpMethod
-import org.apache.logging.log4j.LogManager
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.rest.RestController
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicLong
 
-class ResourceHandler @Inject constructor(c: RestController) {
+class ResourceHandler @Inject constructor(
+    logging: LoggingService,
+    c: RestController
+) {
 
     init {
         val classPath = ClassPath.from(ResourceHandler::class.java.classLoader)
@@ -68,7 +71,7 @@ class ResourceHandler @Inject constructor(c: RestController) {
             .handle(HttpMethod.GET, "/_index")
     }
 
-    private val logger = LogManager.getLogger()
+    private val logger = logging.logger()
     private val counter = AtomicLong(0)
 
     private fun index(): String {

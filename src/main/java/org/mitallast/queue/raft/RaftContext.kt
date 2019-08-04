@@ -3,6 +3,7 @@ package org.mitallast.queue.raft
 import com.google.inject.Inject
 import io.netty.util.concurrent.DefaultThreadFactory
 import org.mitallast.queue.common.component.AbstractLifecycleComponent
+import org.mitallast.queue.common.logging.LoggingService
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -22,10 +23,12 @@ interface RaftContext {
     }
 }
 
-class DefaultRaftContext @Inject constructor() : AbstractLifecycleComponent(), RaftContext {
+class DefaultRaftContext @Inject constructor(
+    logging: LoggingService
+) : AbstractLifecycleComponent(logging), RaftContext {
 
     private val timers = ConcurrentHashMap<String, ScheduledFuture<*>>()
-    private val scheduler= Executors.newScheduledThreadPool(1, DefaultThreadFactory("raft"))
+    private val scheduler = Executors.newScheduledThreadPool(1, DefaultThreadFactory("raft"))
 
     override fun doStart() {}
 

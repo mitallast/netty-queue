@@ -15,9 +15,9 @@ import io.netty.util.AsciiString
 import io.netty.util.CharsetUtil
 import io.vavr.collection.HashMap
 import io.vavr.collection.Map
-import org.apache.logging.log4j.LogManager
 import org.joda.time.format.DateTimeFormat
 import org.mitallast.queue.common.json.JsonService
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.rest.ResponseBuilder
 import org.mitallast.queue.rest.RestRequest
 import java.io.*
@@ -28,12 +28,15 @@ import java.util.*
 import java.util.zip.ZipFile
 import javax.activation.MimetypesFileTypeMap
 
-class HttpRequest(private val ctx: ChannelHandlerContext,
-                  private val httpRequest: FullHttpRequest,
-                  private val jsonService: JsonService,
-                  override val paramMap: Map<String, String>,
-                  override val queryPath: String
+class HttpRequest(
+    logging: LoggingService,
+    private val ctx: ChannelHandlerContext,
+    private val httpRequest: FullHttpRequest,
+    private val jsonService: JsonService,
+    override val paramMap: Map<String, String>,
+    override val queryPath: String
 ) : RestRequest {
+    private val logger = logging.logger()
 
     override val httpMethod: HttpMethod = httpRequest.method()
     override val uri: String = httpRequest.uri()
@@ -141,7 +144,7 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             }
             if (!HttpUtil.isKeepAlive(httpRequest)) {
                 ctx.write(response).addListener(ChannelFutureListener.CLOSE)
-            }else {
+            } else {
                 ctx.write(response, ctx.voidPromise())
             }
         }
@@ -214,7 +217,7 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             }
             if (!HttpUtil.isKeepAlive(httpRequest)) {
                 ctx.write(HttpChunkedInput(ChunkedStream(stream, 8192))).addListener(ChannelFutureListener.CLOSE)
-            }else{
+            } else {
                 ctx.write(HttpChunkedInput(ChunkedStream(stream, 8192)), ctx.voidPromise())
             }
         }
@@ -237,7 +240,7 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
                 try {
                     if (!HttpUtil.isKeepAlive(httpRequest)) {
                         ctx.write(HttpChunkedInput(ChunkedNioFile(file))).addListener(ChannelFutureListener.CLOSE)
-                    }else{
+                    } else {
                         ctx.write(HttpChunkedInput(ChunkedNioFile(file)), ctx.voidPromise())
                     }
                 } catch (e: IOException) {
@@ -273,7 +276,7 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             }
             if (!HttpUtil.isKeepAlive(httpRequest)) {
                 ctx.write(response).addListener(ChannelFutureListener.CLOSE)
-            }else {
+            } else {
                 ctx.write(response, ctx.voidPromise())
             }
         }
@@ -310,14 +313,13 @@ class HttpRequest(private val ctx: ChannelHandlerContext,
             }
             if (!HttpUtil.isKeepAlive(httpRequest)) {
                 ctx.write(response).addListener(ChannelFutureListener.CLOSE)
-            }else {
+            } else {
                 ctx.write(response, ctx.voidPromise())
             }
         }
     }
 
     companion object {
-        private val logger = LogManager.getLogger()
         private val mimeTypesMap = MimetypesFileTypeMap()
 
         private val APPLICATION_JAVASCRIPT = AsciiString("application/javascript")

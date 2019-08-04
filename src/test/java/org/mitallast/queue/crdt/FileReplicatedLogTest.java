@@ -11,6 +11,7 @@ import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
 import org.mitallast.queue.common.file.FileService;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.crdt.log.FileReplicatedLog;
 import org.mitallast.queue.crdt.log.LogEntry;
 
@@ -21,6 +22,7 @@ public class FileReplicatedLogTest extends BaseTest {
     }
 
     Config config;
+    LoggingService logging;
     FileReplicatedLog log;
 
     @Before
@@ -28,10 +30,9 @@ public class FileReplicatedLogTest extends BaseTest {
         config = ConfigFactory.parseMap(HashMap.of("node.path", testFolder.newFolder().getAbsolutePath()).toJavaMap())
             .withFallback(ConfigFactory.defaultReference());
         log = new FileReplicatedLog(
+            logging,
             config,
-            new FileService(
-                config
-            ),
+            new FileService(config),
             logEntry -> false,
             0,
             0

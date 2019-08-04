@@ -7,11 +7,11 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
 import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import io.vavr.collection.HashMap
 import io.vavr.collection.Map
-import org.apache.logging.log4j.LogManager
+import org.mitallast.queue.common.logging.LoggingService
 
 @ChannelHandler.Sharable
-class WebSocketFrameHandler : SimpleChannelInboundHandler<WebSocketFrame>() {
-    private val logger = LogManager.getLogger()
+class WebSocketFrameHandler(logging: LoggingService) : SimpleChannelInboundHandler<WebSocketFrame>() {
+    private val logger = logging.logger()
 
     @Volatile
     private var channels : Map<ChannelId, Channel> = HashMap.empty()

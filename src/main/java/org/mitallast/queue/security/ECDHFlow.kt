@@ -25,7 +25,7 @@ class ECDHFlow constructor(private val securityService: SecurityService) {
     }
 
     private val keyPair: KeyPair
-    private var state: State? = null
+    private var state: State = State.START
     private var otherPublicKey: PublicKey? = null
     private var secretKey: SecretKey? = null
     private val encryptCipher: Cipher
@@ -45,8 +45,6 @@ class ECDHFlow constructor(private val securityService: SecurityService) {
         val spec = ECGenParameterSpec(ECC_CURVE)
         generator.initialize(spec)
         keyPair = generator.genKeyPair()
-
-        state = State.START
     }
 
     fun requestStart(): ECDHRequest {

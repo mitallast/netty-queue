@@ -8,8 +8,7 @@ import java.io.*
 import java.nio.file.*
 import java.util.stream.Stream
 
-class FileService @Inject
-constructor(config: Config) {
+class FileService @Inject constructor(config: Config) {
     private val root: File
 
     init {

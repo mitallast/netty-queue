@@ -9,6 +9,7 @@ import io.vavr.collection.Vector
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.component.AbstractLifecycleComponent
 import org.mitallast.queue.common.events.EventBus
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.crdt.bucket.Bucket
 import org.mitallast.queue.crdt.event.ClosedLogSynced
 import org.mitallast.queue.crdt.protocol.AppendEntries
@@ -23,11 +24,12 @@ import java.util.concurrent.locks.ReentrantLock
 
 class DefaultReplicator @Inject constructor(
     config: Config,
+    logging: LoggingService,
     private val fsm: RoutingTableFSM,
     private val eventBus: EventBus,
     private val transportService: TransportService,
     @param:Assisted private val bucket: Bucket
-) : AbstractLifecycleComponent(), Replicator {
+) : AbstractLifecycleComponent(logging), Replicator {
 
     private val lock = ReentrantLock()
     private val scheduler = Executors.newSingleThreadScheduledExecutor()

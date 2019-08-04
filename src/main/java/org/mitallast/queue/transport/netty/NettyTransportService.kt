@@ -7,6 +7,7 @@ import io.netty.channel.*
 import io.vavr.collection.HashMap
 import io.vavr.collection.Map
 import org.mitallast.queue.common.codec.Message
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.common.netty.NettyClientBootstrap
 import org.mitallast.queue.common.netty.NettyProvider
 import org.mitallast.queue.security.ECDHFlow
@@ -16,7 +17,6 @@ import org.mitallast.queue.transport.DiscoveryNode
 import org.mitallast.queue.transport.TransportChannel
 import org.mitallast.queue.transport.TransportController
 import org.mitallast.queue.transport.TransportService
-
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -25,19 +25,21 @@ import java.util.concurrent.locks.ReentrantLock
 @Suppress("OverridingDeprecatedMember")
 class NettyTransportService @Inject constructor(
     config: Config,
+    private val logging: LoggingService,
     provider: NettyProvider,
     private val transportController: TransportController,
     private val securityService: SecurityService
-) : NettyClientBootstrap(config, provider), TransportService {
+) : NettyClientBootstrap(config, logging, provider), TransportService {
     private val connectionLock = ReentrantLock()
     private val maxConnections = config.getInt("transport.max_connections")
-    @Volatile private var connectedNodes: Map<DiscoveryNode, NodeChannel> = HashMap.empty()
+    @Volatile
+    private var connectedNodes: Map<DiscoveryNode, NodeChannel> = HashMap.empty()
 
     override fun channelInitializer(): ChannelInitializer<Channel> {
         return object : ChannelInitializer<Channel>() {
             override fun initChannel(ch: Channel) {
                 val pipeline = ch.pipeline()
-                pipeline.addLast(CodecDecoder())
+                pipeline.addLast(CodecDecoder(logging))
                 pipeline.addLast(CodecEncoder())
                 pipeline.addLast(ECDHCodecEncoder())
                 pipeline.addLast(ECDHCodecDecoder())
@@ -128,56 +130,70 @@ class NettyTransportService @Inject constructor(
 
     private inner class NodeChannel constructor(private val node: DiscoveryNode) : TransportChannel, Closeable {
         private val channelCounter = AtomicLong()
-        private val reconnectScheduled = AtomicBoolean()
+        private val channelFutures: Array<ChannelFuture?> = arrayOfNulls(maxConnections)
+        private val lock = Object()
         private val closed = AtomicBoolean(false)
-        private val channels: Array<Channel?> = arrayOfNulls(maxConnections)
 
-        @Synchronized
         fun open() {
             logger.info("connect to {}", node)
-            val channelFutures: Array<ChannelFuture?> = arrayOfNulls(maxConnections)
             for (i in 0 until maxConnections) {
-                channelFutures[i] = connect(node)
-            }
-            logger.debug("await channel open {}", node)
-            for (i in 0 until maxConnections) {
-                try {
-                    val channel = channelFutures[i]
-                        ?.awaitUninterruptibly()
-                        ?.channel()
-                    channels[i] = channel
-                } catch (e: Throwable) {
-                    logger.error("error connect to {}", node, e)
-                    if (reconnectScheduled.compareAndSet(false, true)) {
-                        provider.child().execute { this.reconnect() }
-                    }
-                }
-
+                connect(i)
             }
         }
 
-        @Synchronized private fun reconnect() {
-            if (closed.get()) {
-                return
-            }
-            logger.warn("reconnect to {}", node)
-            channels.indices
-                .filter { channels[it] == null || !channels[it]!!.isOpen }
-                .forEach {
-                    try {
-                        val channel = connect(node)
-                            .awaitUninterruptibly()
-                            .channel()
-                        channels[it] = channel
-                    } catch (e: Throwable) {
-                        logger.error("error reconnect to {}", node, e)
+        private fun connect(index: Int) {
+            synchronized(lock) {
+                val future: ChannelFuture = connect(node)
+                future.addListener { result ->
+                    synchronized(lock) {
+                        if (result.isSuccess) {
+                            val channel = future.channel()
+                            channel.closeFuture().addListener {
+                                if (!closed.get()) {
+                                    connect(index)
+                                }
+                            }
+                        } else {
+                            connect(index)
+                        }
                     }
                 }
-            reconnectScheduled.set(false)
+                channelFutures[index] = future
+            }
         }
 
         override fun send(message: Message) {
-            val channel = channel()
+            if (closed.get()) return
+            var index = channelCounter.get().toInt() % maxConnections
+            channelCounter.set((index + 1).toLong())
+            var loopIndex = index
+            do {
+                val future = channelFutures[index]
+                if (future != null && future.isSuccess) {
+                    send(future.channel(), message)
+                    return
+                }
+                index = (index + 1) % maxConnections
+            } while (index != loopIndex)
+            loopIndex = index
+            do {
+                val future = channelFutures[index]
+                if (future != null && !future.isCancelled) {
+                    future.addListener {
+                        if (it.isSuccess) {
+                            send(future.channel(), message)
+                        } else {
+                            send(message)
+                        }
+                    }
+                    return
+                }
+                index = (index + 1) % maxConnections
+            } while (index != loopIndex)
+            logger.warn("error send message to {}", node)
+        }
+
+        private fun send(channel: Channel, message: Message) {
             val ecdh = channel.attr(ECDHFlow.key).get()
             if (ecdh.isAgreement) {
                 channel.writeAndFlush(message, channel.voidPromise())
@@ -186,26 +202,13 @@ class NettyTransportService @Inject constructor(
             }
         }
 
-        @Synchronized override fun close() {
-            closed.set(true)
-            for (channel in channels) {
-                channel?.close()
-            }
-        }
-
-        private fun channel(): Channel {
-            var index = channelCounter.get().toInt() % channels.size
-            channelCounter.set((index + 1).toLong())
-            val loopIndex = index
-            do {
-                if (channels[index] != null && channels[index]!!.isOpen) {
-                    return channels[index]!!
-                } else if (reconnectScheduled.compareAndSet(false, true)) {
-                    provider.child().execute { this.reconnect() }
+        override fun close() {
+            synchronized(lock) {
+                closed.set(true)
+                channelFutures.forEach { future ->
+                    future?.addListener { future.channel().close() }
                 }
-                index = (index + 1) % channels.size
-            } while (index != loopIndex)
-            throw RuntimeException("error connect to " + node)
+            }
         }
     }
 }

@@ -7,7 +7,6 @@ import io.netty.buffer.Unpooled;
 import io.vavr.collection.Vector;
 import io.vavr.concurrent.Future;
 import io.vavr.control.Option;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
@@ -16,6 +15,7 @@ import org.mitallast.queue.common.BaseClusterTest;
 import org.mitallast.queue.common.ConfigBuilder;
 import org.mitallast.queue.common.codec.Codec;
 import org.mitallast.queue.common.codec.Message;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.raft.protocol.RaftSnapshotMetadata;
 import org.mitallast.queue.raft.resource.ResourceFSM;
 import org.mitallast.queue.raft.resource.ResourceRegistry;
@@ -201,12 +201,15 @@ public class ClusterRaftTest extends BaseClusterTest {
     }
 
     public static class RegisterResourceFSM implements ResourceFSM {
-        private final Logger logger = LogManager.getLogger();
+        private final Logger logger;
         private volatile String value = "";
         private volatile ByteBuf buff = Unpooled.EMPTY_BUFFER;
 
         @Inject
-        public RegisterResourceFSM(ResourceRegistry registry) {
+        public RegisterResourceFSM(
+            LoggingService logging,
+            ResourceRegistry registry) {
+            logger = logging.logger();
             registry.register(this);
             registry.register(RegisterSet.class, this::handle);
             registry.register(RegisterGet.class, this::handle);

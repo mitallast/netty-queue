@@ -1,9 +1,10 @@
 package org.mitallast.queue.common.component
 
-import org.apache.logging.log4j.LogManager
+import org.mitallast.queue.common.logging.LoggingService
 
-abstract class AbstractLifecycleComponent : LifecycleComponent {
-    protected val logger = LogManager.getLogger(javaClass)
+abstract class AbstractLifecycleComponent(logging: LoggingService) : LifecycleComponent {
+    protected val logger = logging.logger(javaClass)
+
     private val lifecycle = Lifecycle()
 
     override fun lifecycle(): Lifecycle {

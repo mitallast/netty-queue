@@ -4,8 +4,8 @@ import com.google.common.base.Preconditions
 import com.google.inject.Inject
 import io.vavr.collection.Vector
 import io.vavr.control.Option
-import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.file.FileService
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.raft.protocol.LogEntry
 import org.mitallast.queue.raft.protocol.RaftSnapshot
 import org.mitallast.queue.transport.DiscoveryNode
@@ -14,7 +14,11 @@ import java.io.File
 import java.io.IOError
 import java.io.IOException
 
-class FilePersistentService @Inject constructor(private val fileService: FileService) : PersistentService {
+class FilePersistentService @Inject constructor(
+    logging: LoggingService,
+    private val fileService: FileService
+) : PersistentService {
+    private val logger = logging.logger()
     private val stateFile: File = fileService.resource("raft", "state.bin")
 
     private var segment: Long = 0
@@ -395,8 +399,6 @@ class FilePersistentService @Inject constructor(private val fileService: FileSer
     }
 
     companion object {
-        private val logger = LogManager.getLogger()
-
         private val initialIndex: Long = 1
         private val initialCommittedIndex: Long = 0
     }

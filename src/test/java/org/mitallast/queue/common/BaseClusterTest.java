@@ -48,7 +48,7 @@ public abstract class BaseClusterTest extends BaseTest {
             .with("raft.bootstrap", true)
             .with("transport.port", leaderPort)
             .build();
-        InternalNode node = new InternalNode(config, testModules());
+        InternalNode node = InternalNode.Companion.build(config, testModules());
         node.start();
         nodes = nodes.append(node);
     }
@@ -62,7 +62,7 @@ public abstract class BaseClusterTest extends BaseTest {
             .with("raft.bootstrap", false)
             .with("transport.port", port)
             .build();
-        InternalNode node = new InternalNode(config, testModules());
+        InternalNode node = InternalNode.Companion.build(config, testModules());
         node.start();
         nodes = nodes.append(node);
     }

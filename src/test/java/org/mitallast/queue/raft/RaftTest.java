@@ -10,6 +10,7 @@ import io.vavr.collection.HashMap;
 import io.vavr.collection.HashSet;
 import io.vavr.collection.Vector;
 import io.vavr.control.Option;
+import org.apache.logging.log4j.MarkerManager;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -21,6 +22,7 @@ import org.mitallast.queue.common.component.ComponentModule;
 import org.mitallast.queue.common.component.LifecycleService;
 import org.mitallast.queue.common.events.EventBus;
 import org.mitallast.queue.common.file.FileModule;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.raft.cluster.ClusterConfiguration;
 import org.mitallast.queue.raft.cluster.ClusterDiscovery;
 import org.mitallast.queue.raft.cluster.StableClusterConfiguration;
@@ -69,6 +71,8 @@ public class RaftTest extends BaseTest {
 
     private Config config;
 
+    private LoggingService logging;
+
     private Raft raft;
 
     private PersistentService persistentService;
@@ -97,8 +101,9 @@ public class RaftTest extends BaseTest {
         override("raft.enabled", "true");
         override("raft.bootstrap", "true");
         override("raft.snapshot-interval", "100");
+        logging = new LoggingService(MarkerManager.getMarker("raft"));
         injector = Guice.createInjector(
-            new ComponentModule(config),
+            new ComponentModule(config, logging),
             new FileModule(),
             new TestRaftModule()
         );
@@ -130,6 +135,7 @@ public class RaftTest extends BaseTest {
         log = null;
         raft = new Raft(
             config,
+            logging,
             injector.getInstance(TransportService.class),
             injector.getInstance(TransportController.class),
             injector.getInstance(ClusterDiscovery.class),

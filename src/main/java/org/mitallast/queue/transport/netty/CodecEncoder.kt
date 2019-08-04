@@ -10,7 +10,7 @@ import org.mitallast.queue.common.codec.Message
 class CodecEncoder : MessageToByteEncoder<Message>() {
 
     @Throws(Exception::class)
-    public override fun encode(ctx: ChannelHandlerContext, message: Message, out: ByteBuf) {
+    public override fun encode(ctx: ChannelHandlerContext?, message: Message, out: ByteBuf) {
         val sizePos = out.writerIndex()
         out.writerIndex(out.writerIndex() + 4)
         val stream = ByteBufOutputStream(out)

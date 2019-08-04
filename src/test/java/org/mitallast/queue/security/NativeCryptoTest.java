@@ -15,7 +15,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
 import java.security.spec.ECGenParameterSpec;
 
-import static javax.xml.bind.DatatypeConverter.printHexBinary;
+//import static javax.xml.bind.DatatypeConverter.printHexBinary;
 
 public class NativeCryptoTest extends BaseTest {
     static {
@@ -30,11 +30,11 @@ public class NativeCryptoTest extends BaseTest {
 
         System.out.println("private");
         System.out.println(keyPair.getPrivate().getFormat());
-        System.out.println(printHexBinary(keyPair.getPrivate().getEncoded()));
+//        System.out.println(printHexBinary(keyPair.getPrivate().getEncoded()));
 
         System.out.println("public");
         System.out.println(keyPair.getPublic().getFormat());
-        System.out.println(printHexBinary(keyPair.getPublic().getEncoded()));
+//        System.out.println(printHexBinary(keyPair.getPublic().getEncoded()));
     }
 
     @Test

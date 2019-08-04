@@ -19,7 +19,7 @@ public class TransportFrameTest extends BaseTest {
     @Test
     public void testMessage() throws Exception {
         CodecEncoder encoder = new CodecEncoder();
-        CodecDecoder decoder = new CodecDecoder();
+        CodecDecoder decoder = new CodecDecoder(logging);
 
         ByteBuf buffer = Unpooled.buffer();
         encoder.encode(null, new TestStreamable(123123), buffer);
@@ -54,7 +54,7 @@ public class TransportFrameTest extends BaseTest {
     @Test
     public void testMessageDecodeBenchmark() throws Exception {
         CodecEncoder encoder = new CodecEncoder();
-        CodecDecoder decoder = new CodecDecoder();
+        CodecDecoder decoder = new CodecDecoder(logging);
 
         ByteBuf buffer = Unpooled.directBuffer(1024);
         encoder.encode(null, new TestStreamable(123123), buffer);

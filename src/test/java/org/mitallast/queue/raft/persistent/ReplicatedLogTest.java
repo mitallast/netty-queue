@@ -59,7 +59,7 @@ public class ReplicatedLogTest extends BaseTest {
     }
 
     private ReplicatedLog log() throws Exception {
-        return new FilePersistentService(fileService()).openLog();
+        return new FilePersistentService(logging, fileService()).openLog();
     }
 
     @Test

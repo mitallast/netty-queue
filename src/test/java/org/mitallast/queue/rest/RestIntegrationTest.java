@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.junit.After;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseQueueTest;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.common.netty.NettyProvider;
 import org.mitallast.queue.rest.transport.RestClient;
 
@@ -34,6 +35,7 @@ public class RestIntegrationTest extends BaseQueueTest {
         if (buffer.isEmpty()) {
             RestClient client = new RestClient(
                 node().config(),
+                node().injector().getInstance(LoggingService.class),
                 node().injector().getInstance(NettyProvider.class)
             );
             client.start();

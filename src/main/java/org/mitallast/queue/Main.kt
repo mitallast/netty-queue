@@ -8,7 +8,7 @@ object Main {
     @JvmStatic
     fun main(args: Array<String>) {
         val config = ConfigFactory.load()
-        val node = InternalNode(config)
+        val node = InternalNode.build(config)
         node.start()
 
         val countDownLatch = CountDownLatch(1)

@@ -4,15 +4,15 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufInputStream
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.ByteToMessageDecoder
-import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
+import org.mitallast.queue.common.logging.LoggingService
 
-class CodecDecoder : ByteToMessageDecoder() {
-    private val logger = LogManager.getLogger()
+class CodecDecoder(logging: LoggingService) : ByteToMessageDecoder() {
+    private val logger = logging.logger()
 
     @Throws(Exception::class)
-    public override fun decode(ctx: ChannelHandlerContext, buffer: ByteBuf, out: MutableList<Any>) {
+    public override fun decode(ctx: ChannelHandlerContext?, buffer: ByteBuf, out: MutableList<Any>) {
         if (buffer.readableBytes() < Integer.BYTES) {
             return
         }

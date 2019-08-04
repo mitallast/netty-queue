@@ -31,7 +31,7 @@ public class BaseIntegrationTest extends BaseTest {
     }
 
     protected InternalNode createNode(Config config) throws Exception {
-        InternalNode node = new InternalNode(config);
+        InternalNode node = InternalNode.Companion.build(config);
         node.start();
         nodes.add(node);
         return node;
@@ -59,7 +59,7 @@ public class BaseIntegrationTest extends BaseTest {
         int nodeId = nodeCounter.incrementAndGet();
         return ConfigFactory.parseMap(HashMap.ofEntries(
             Map.entry("nodes.name", "nodes" + nodeId),
-            Map.entry("work_dir", testFolder.newFolder().getAbsolutePath()),
+            Map.entry("node.path", testFolder.newFolder().getAbsolutePath()),
             Map.entry("rest.transport.host", "127.0.0.1"),
             Map.entry("rest.transport.port", 18000 + random.nextInt(500)),
             Map.entry("transport.host", "127.0.0.1"),

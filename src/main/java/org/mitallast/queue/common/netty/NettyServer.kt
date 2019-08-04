@@ -6,8 +6,15 @@ import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.*
 import org.mitallast.queue.common.component.AbstractLifecycleComponent
+import org.mitallast.queue.common.logging.LoggingService
 
-abstract class NettyServer protected constructor(config: Config, protected val provider: NettyProvider, protected val host: String, protected val port: Int) : AbstractLifecycleComponent() {
+abstract class NettyServer protected constructor(
+    config: Config,
+    logging: LoggingService,
+    protected val provider: NettyProvider,
+    protected val host: String,
+    protected val port: Int
+) : AbstractLifecycleComponent(logging) {
     private val backlog: Int = config.getInt("netty.backlog")
     private val keepAlive: Boolean = config.getBoolean("netty.keep_alive")
     private val reuseAddress: Boolean = config.getBoolean("netty.reuse_address")

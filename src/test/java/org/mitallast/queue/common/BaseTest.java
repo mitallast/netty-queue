@@ -1,12 +1,13 @@
 package org.mitallast.queue.common;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
-import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.MarkerManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.crdt.CrdtModule;
 import org.mitallast.queue.raft.RaftModule;
 
@@ -16,12 +17,10 @@ import java.util.Random;
 import java.util.concurrent.*;
 
 public class BaseTest {
-
-    protected final Logger logger = LogManager.getLogger();
+    protected final LoggingService logging = new LoggingService(MarkerManager.getMarker("test"));
+    protected final Logger logger = logging.logger();
 
     protected final Random random = new Random();
-
-    private final static int availableProcessors = Runtime.getRuntime().availableProcessors();
 
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
@@ -103,7 +102,7 @@ public class BaseTest {
         return executorService.submit(runnable, null);
     }
 
-    protected void async(Task task){
+    protected void async(Task task) {
         executorService.submit(() -> {
             try {
                 task.execute();

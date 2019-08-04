@@ -17,11 +17,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.util.concurrent.DefaultThreadFactory
 import org.mitallast.queue.common.component.AbstractLifecycleComponent
+import org.mitallast.queue.common.logging.LoggingService
 import java.util.concurrent.ThreadFactory
 import javax.inject.Inject
 
-class NettyProvider @Inject
-constructor(config: Config) : AbstractLifecycleComponent() {
+class NettyProvider @Inject constructor(
+    config: Config,
+    logging: LoggingService
+) : AbstractLifecycleComponent(logging) {
     private val serverChannel: Class<out ServerSocketChannel>
     private val clientChannel: Class<out SocketChannel>
     private val parent: EventLoopGroup

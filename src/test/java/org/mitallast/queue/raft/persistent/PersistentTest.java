@@ -4,16 +4,19 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.vavr.collection.HashMap;
 import io.vavr.control.Option;
+import org.apache.logging.log4j.MarkerManager;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mitallast.queue.common.BaseTest;
 import org.mitallast.queue.common.file.FileService;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.transport.DiscoveryNode;
 
 public class PersistentTest extends BaseTest {
 
     private final long term1 = 1;
     private final DiscoveryNode node = new DiscoveryNode("127.0.0.1", 8900);
+    private final LoggingService logging = new LoggingService(MarkerManager.getMarker("test"));
 
     private Config config() {
         return ConfigFactory.parseMap(HashMap.of(
@@ -28,7 +31,7 @@ public class PersistentTest extends BaseTest {
     }
 
     private PersistentService persistent() throws Exception {
-        return new FilePersistentService(fileService());
+        return new FilePersistentService(logging, fileService());
     }
 
     @Test

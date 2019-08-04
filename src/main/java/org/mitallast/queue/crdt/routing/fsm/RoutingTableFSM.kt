@@ -3,10 +3,10 @@ package org.mitallast.queue.crdt.routing.fsm
 import com.google.common.base.Preconditions
 import com.typesafe.config.Config
 import io.vavr.control.Option
-import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.events.EventBus
 import org.mitallast.queue.common.file.FileService
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.crdt.routing.Resource
 import org.mitallast.queue.crdt.routing.RoutingTable
 import org.mitallast.queue.crdt.routing.event.RoutingTableChanged
@@ -20,11 +20,12 @@ import javax.inject.Inject
 
 class RoutingTableFSM @Inject constructor(
     config: Config,
+    logging: LoggingService,
     registry: ResourceRegistry,
     private val eventBus: EventBus,
     private val fileService: FileService
 ) : ResourceFSM {
-    private val logger = LogManager.getLogger()
+    private val logger = logging.logger()
     private val file: File = fileService.resource("crdt", "routing.bin")
 
     @Volatile private var lastApplied: Long = 0

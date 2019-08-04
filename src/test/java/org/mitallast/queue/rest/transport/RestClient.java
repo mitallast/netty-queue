@@ -9,6 +9,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.internal.PlatformDependent;
+import org.mitallast.queue.common.logging.LoggingService;
 import org.mitallast.queue.common.netty.NettyClient;
 import org.mitallast.queue.common.netty.NettyProvider;
 
@@ -20,8 +21,8 @@ public class RestClient extends NettyClient {
     private final Queue<CompletableFuture<FullHttpResponse>> queue = PlatformDependent.newMpscQueue();
 
 
-    public RestClient(Config config, NettyProvider provider) {
-        super(config, provider,
+    public RestClient(Config config, LoggingService logging, NettyProvider provider) {
+        super(config, logging, provider,
             config.getString("rest.host"),
             config.getInt("rest.port")
         );

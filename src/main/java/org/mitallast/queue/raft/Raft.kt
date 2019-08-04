@@ -12,6 +12,7 @@ import org.apache.logging.log4j.CloseableThreadContext
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.component.AbstractLifecycleComponent
 import org.mitallast.queue.common.events.EventBus
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.raft.RaftState.*
 import org.mitallast.queue.raft.cluster.ClusterConfiguration
 import org.mitallast.queue.raft.cluster.ClusterDiscovery
@@ -39,15 +40,16 @@ enum class RaftState {
 }
 
 class Raft @Inject constructor(
-        config: Config,
-        private val transportService: TransportService,
-        private val transportController: TransportController,
-        private val clusterDiscovery: ClusterDiscovery,
-        private val persistentService: PersistentService,
-        private val registry: ResourceRegistry,
-        private val context: RaftContext,
-        private val eventBus: EventBus
-) : AbstractLifecycleComponent() {
+    config: Config,
+    logging: LoggingService,
+    private val transportService: TransportService,
+    private val transportController: TransportController,
+    private val clusterDiscovery: ClusterDiscovery,
+    private val persistentService: PersistentService,
+    private val registry: ResourceRegistry,
+    private val context: RaftContext,
+    private val eventBus: EventBus
+) : AbstractLifecycleComponent(logging) {
     private val replicatedLog = persistentService.openLog()
 
     private val bootstrap = config.getBoolean("raft.bootstrap")
@@ -60,17 +62,22 @@ class Raft @Inject constructor(
     private val sessionCommands = ConcurrentHashMap<Long, Promise<Message>>()
     private val lock: ReentrantLock = ReentrantLock()
 
-    @Volatile private var recentlyContactedByLeader: Option<DiscoveryNode> = Option.none()
-    @Volatile private var replicationIndex: Map<DiscoveryNode, Long> = HashMap.empty()
-    @Volatile private var nextIndex = LogIndexMap(0)
-    @Volatile private var matchIndex = LogIndexMap(0)
-    @Volatile private var state: State = VoidState()
+    @Volatile
+    private var recentlyContactedByLeader: Option<DiscoveryNode> = Option.none()
+    @Volatile
+    private var replicationIndex: Map<DiscoveryNode, Long> = HashMap.empty()
+    @Volatile
+    private var nextIndex = LogIndexMap(0)
+    @Volatile
+    private var matchIndex = LogIndexMap(0)
+    @Volatile
+    private var state: State = VoidState()
 
     override fun doStart() {
         val meta = RaftMetadata(
-                persistentService.currentTerm(),
-                StableClusterConfiguration(),
-                persistentService.votedFor()
+            persistentService.currentTerm(),
+            StableClusterConfiguration(),
+            persistentService.votedFor()
         )
         state = FollowerState(meta).initialize()
     }
@@ -84,11 +91,11 @@ class Raft @Inject constructor(
 
     // fsm related
 
-    fun <T: Message> apply(event: T) {
+    fun <T : Message> apply(event: T) {
         lock.lock()
         try {
             CloseableThreadContext.push(state.state().name).use {
-                state = when(event) {
+                state = when (event) {
                     is AppendEntries -> state.handle(event)
                     is AppendRejected -> state.handle(event)
                     is AppendSuccessful -> state.handle(event)
@@ -123,8 +130,8 @@ class Raft @Inject constructor(
             logger.info("client command with session {}", session)
         }
         val clientMessage = ClientMessage(
-                cmd,
-                session
+            cmd,
+            session
         )
         apply(clientMessage)
         return promise.future()
@@ -213,21 +220,22 @@ class Raft @Inject constructor(
         fun createSnapshot(): State {
             val committedIndex = replicatedLog.committedIndex()
             val snapshotMeta = RaftSnapshotMetadata(replicatedLog.termAt(committedIndex),
-                    committedIndex, meta().config)
+                committedIndex, meta().config)
             if (logger.isInfoEnabled) {
                 logger.info("init snapshot up to: {}:{}", snapshotMeta.lastIncludedIndex,
-                        snapshotMeta.lastIncludedTerm)
+                    snapshotMeta.lastIncludedTerm)
             }
 
             val snapshot = registry.prepareSnapshot(snapshotMeta)
             if (logger.isInfoEnabled) {
                 logger.info("successfully prepared snapshot for {}:{}, compacting log now",
-                        snapshotMeta.lastIncludedIndex, snapshotMeta.lastIncludedTerm)
+                    snapshotMeta.lastIncludedIndex, snapshotMeta.lastIncludedTerm)
             }
             replicatedLog.compactWith(snapshot)
 
             return this
         }
+
         open fun handle(message: InstallSnapshot): State = stay(meta())
         open fun handle(message: InstallSnapshotSuccessful): State = stay(meta())
         open fun handle(message: InstallSnapshotRejected): State = stay(meta())
@@ -313,11 +321,11 @@ class Raft @Inject constructor(
                 }
             } else {
                 val config = replicatedLog.entries()
-                        .map<Message> { it.command }
-                        .filter { cmd -> cmd is ClusterConfiguration }
-                        .map { cmd -> cmd as ClusterConfiguration }
-                        .reduceOption { _, b -> b }
-                        .getOrElse(meta().config)
+                    .map<Message> { it.command }
+                    .filter { cmd -> cmd is ClusterConfiguration }
+                    .map { cmd -> cmd as ClusterConfiguration }
+                    .reduceOption { _, b -> b }
+                    .getOrElse(meta().config)
 
                 val meta = meta().withConfig(config).withTerm(replicatedLog.lastTerm())
                 return stay(meta)
@@ -346,19 +354,19 @@ class Raft @Inject constructor(
                     resetElectionDeadline()
                     if (replicatedLog.lastTerm().exists { term -> message.lastLogTerm < term }) {
                         logger.warn("rejecting vote for {} at term {}, candidate's lastLogTerm: {} < ours: {}",
-                                message.candidate,
-                                message.term,
-                                message.lastLogTerm,
-                                replicatedLog.lastTerm())
+                            message.candidate,
+                            message.term,
+                            message.lastLogTerm,
+                            replicatedLog.lastTerm())
                         send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta.currentTerm))
                         return stay(meta)
                     }
                     if (replicatedLog.lastTerm().exists { term -> term == message.lastLogTerm } && message.lastLogIndex < replicatedLog.lastIndex()) {
                         logger.warn("rejecting vote for {} at term {}, candidate's lastLogIndex: {} < ours: {}",
-                                message.candidate,
-                                message.term,
-                                message.lastLogIndex,
-                                replicatedLog.lastIndex())
+                            message.candidate,
+                            message.term,
+                            message.lastLogIndex,
+                            replicatedLog.lastIndex())
                         send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta.currentTerm))
                         return stay(meta)
                     }
@@ -371,17 +379,17 @@ class Raft @Inject constructor(
                 }
                 meta.votedFor.isDefined -> {
                     logger.warn("rejecting vote for {}, and {}, currentTerm: {}, already voted for: {}",
-                            message.candidate,
-                            message.term,
-                            meta.currentTerm,
-                            meta.votedFor)
+                        message.candidate,
+                        message.term,
+                        meta.currentTerm,
+                        meta.votedFor)
                     send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta.currentTerm))
                     return stay(meta)
                 }
                 else -> {
                     logger.warn("rejecting vote for {}, and {}, currentTerm: {}, received stale term number {}",
-                            message.candidate, message.term,
-                            meta.currentTerm, message.term)
+                        message.candidate, message.term,
+                        meta.currentTerm, message.term)
                     send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta.currentTerm))
                     return stay(meta)
                 }
@@ -400,7 +408,7 @@ class Raft @Inject constructor(
             if (message.term < meta.currentTerm) {
                 logger.warn("rejecting write (old term): {} < {} ", message.term, meta.currentTerm)
                 send(message.member, AppendRejected(clusterDiscovery.self, meta.currentTerm,
-                        replicatedLog.lastIndex()))
+                    replicatedLog.lastIndex()))
                 return stay(meta)
             }
 
@@ -408,10 +416,10 @@ class Raft @Inject constructor(
                 // 2) Reply false if log doesn’t contain an entry at prevLogIndex whose term matches prevLogTerm (5.3)
                 return if (!replicatedLog.containsMatchingEntry(message.prevLogTerm, message.prevLogIndex)) {
                     logger.warn("rejecting write (inconsistent log): {}:{} {} ",
-                            message.prevLogTerm, message.prevLogIndex,
-                            replicatedLog)
+                        message.prevLogTerm, message.prevLogIndex,
+                        replicatedLog)
                     send(message.member, AppendRejected(clusterDiscovery.self, meta.currentTerm,
-                            replicatedLog.lastIndex()))
+                        replicatedLog.lastIndex()))
                     stay(meta)
                 } else {
                     appendEntries(message, meta)
@@ -476,11 +484,11 @@ class Raft @Inject constructor(
             }
 
             val config = msg.entries
-                    .map<Message> { it.command }
-                    .filter { cmd -> cmd is ClusterConfiguration }
-                    .map { cmd -> cmd as ClusterConfiguration }
-                    .reduceOption { _, b -> b }
-                    .getOrElse(meta.config)
+                .map<Message> { it.command }
+                .filter { cmd -> cmd is ClusterConfiguration }
+                .map { cmd -> cmd as ClusterConfiguration }
+                .reduceOption { _, b -> b }
+                .getOrElse(meta.config)
 
             val newState = stay(meta.withTerm(replicatedLog.lastTerm()).withConfig(config))
             newState.unstash()
@@ -498,8 +506,8 @@ class Raft @Inject constructor(
                     logger.info("no members found, joint timeout")
                 }
                 clusterDiscovery.discoveryNodes
-                        .filter { it != clusterDiscovery.self }
-                        .forEach { send(it, AddServer(clusterDiscovery.self)) }
+                    .filter { it != clusterDiscovery.self }
+                    .forEach { send(it, AddServer(clusterDiscovery.self)) }
                 this
             } else {
                 gotoCandidate()
@@ -510,14 +518,14 @@ class Raft @Inject constructor(
 
         override fun handle(request: AddServer): State {
             if (bootstrap && meta().config.members.isEmpty &&
-                    request.member == clusterDiscovery.self &&
-                    replicatedLog.isEmpty) {
+                request.member == clusterDiscovery.self &&
+                replicatedLog.isEmpty) {
                 context.cancelTimer(RaftContext.ELECTION_TIMEOUT)
                 return LeaderState(this.meta()).selfJoin()
             }
             send(request.member, AddServerResponse(
-                    AddServerResponse.Status.NOT_LEADER,
-                    recentlyContactedByLeader
+                AddServerResponse.Status.NOT_LEADER,
+                recentlyContactedByLeader
             ))
             return this
         }
@@ -538,8 +546,8 @@ class Raft @Inject constructor(
 
         override fun handle(request: RemoveServer): State {
             send(request.member, RemoveServerResponse(
-                    RemoveServerResponse.Status.NOT_LEADER,
-                    recentlyContactedByLeader
+                RemoveServerResponse.Status.NOT_LEADER,
+                recentlyContactedByLeader
             ))
             return this
         }
@@ -583,10 +591,10 @@ class Raft @Inject constructor(
 
                 if (logger.isInfoEnabled) {
                     logger.info("response snapshot installed in {} last index {}", meta.currentTerm,
-                            replicatedLog.lastIndex())
+                        replicatedLog.lastIndex())
                 }
                 send(message.leader, InstallSnapshotSuccessful(clusterDiscovery.self,
-                        meta.currentTerm, replicatedLog.lastIndex()))
+                    meta.currentTerm, replicatedLog.lastIndex()))
 
                 return stay(meta)
             }
@@ -631,16 +639,16 @@ class Raft @Inject constructor(
 
         override fun handle(request: AddServer): State {
             send(request.member, AddServerResponse(
-                    AddServerResponse.Status.NOT_LEADER,
-                    Option.none()
+                AddServerResponse.Status.NOT_LEADER,
+                Option.none()
             ))
             return this
         }
 
         override fun handle(request: RemoveServer): State {
             send(request.member, RemoveServerResponse(
-                    RemoveServerResponse.Status.NOT_LEADER,
-                    Option.none()
+                RemoveServerResponse.Status.NOT_LEADER,
+                Option.none()
             ))
             return this
         }
@@ -673,7 +681,7 @@ class Raft @Inject constructor(
                 logger.info("initializing election (among {} nodes) for {}", meta.config.members.size(), meta.currentTerm)
             }
             val request = RequestVote(meta.currentTerm, clusterDiscovery.self,
-                    replicatedLog.lastTerm().getOrElse(0L), replicatedLog.lastIndex())
+                replicatedLog.lastTerm().getOrElse(0L), replicatedLog.lastIndex())
             for (member in meta.membersWithout(clusterDiscovery.self)) {
                 if (logger.isInfoEnabled) {
                     logger.info("send request vote to {}", member)
@@ -684,7 +692,7 @@ class Raft @Inject constructor(
             return if (meta.hasMajority()) {
                 if (logger.isInfoEnabled) {
                     logger.info("received vote by {}, won election with {} of {} votes", clusterDiscovery.self,
-                            meta.votesReceived, meta.config.members.size())
+                        meta.votesReceived, meta.config.members.size())
                 }
                 stay(meta).gotoLeader()
             } else {
@@ -696,7 +704,7 @@ class Raft @Inject constructor(
             if (message.term < meta().currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("rejecting request vote msg by {} in {}, received stale {}.", message.candidate,
-                            meta().currentTerm, message.term)
+                        meta().currentTerm, message.term)
                 }
                 send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta().currentTerm))
                 return this
@@ -704,13 +712,13 @@ class Raft @Inject constructor(
             if (message.term > meta().currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("received newer {}, current term is {}, revert to follower state.", message.term,
-                            meta().currentTerm)
+                        meta().currentTerm)
                 }
                 return stay(meta().withTerm(message.term)).gotoFollower().handle(message)
             }
             if (logger.isInfoEnabled) {
                 logger.info("rejecting requestVote msg by {} in {}, already voted for {}", message.candidate,
-                        meta().currentTerm, meta().votedFor)
+                    meta().currentTerm, meta().votedFor)
             }
             send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta().currentTerm))
             return this
@@ -721,14 +729,14 @@ class Raft @Inject constructor(
             if (message.term < meta.currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("ignore vote candidate msg by {} in {}, received stale {}.", message.member,
-                            meta.currentTerm, message.term)
+                        meta.currentTerm, message.term)
                 }
                 return this
             }
             if (message.term > meta.currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("received newer {}, current term is {}, revert to follower state.", message.term,
-                            meta.currentTerm)
+                        meta.currentTerm)
                 }
                 return stay(meta.withTerm(message.term)).gotoFollower()
             }
@@ -737,13 +745,13 @@ class Raft @Inject constructor(
             return if (meta.hasMajority()) {
                 if (logger.isInfoEnabled) {
                     logger.info("received vote by {}, won election with {} of {} votes", message.member,
-                            meta.votesReceived, meta.config.members.size())
+                        meta.votesReceived, meta.config.members.size())
                 }
                 stay(meta).gotoLeader()
             } else {
                 if (logger.isInfoEnabled) {
                     logger.info("received vote by {}, have {} of {} votes", message.member, meta.votesReceived,
-                            meta.config.members.size())
+                        meta.config.members.size())
                 }
                 stay(meta)
             }
@@ -753,7 +761,7 @@ class Raft @Inject constructor(
             return if (message.term > meta().currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("received newer {}, current term is {}, revert to follower state.", message.term,
-                            meta().currentTerm)
+                        meta().currentTerm)
                 }
                 stay(meta().withTerm(message.term)).gotoFollower()
             } else {
@@ -769,7 +777,7 @@ class Raft @Inject constructor(
             return if (leaderIsAhead) {
                 if (logger.isInfoEnabled) {
                     logger.info("reverting to follower, because got append entries from leader in {}, but am in {}",
-                            message.term, meta().currentTerm)
+                        message.term, meta().currentTerm)
                 }
                 stay(meta().withTerm(message.term)).gotoFollower().handle(message)
             } else {
@@ -782,7 +790,7 @@ class Raft @Inject constructor(
             return if (leaderIsAhead) {
                 if (logger.isInfoEnabled) {
                     logger.info("reverting to follower, because got install snapshot from leader in {}, but am in {}",
-                            message.term, meta().currentTerm)
+                        message.term, meta().currentTerm)
                 }
                 stay(meta().withTerm(message.term)).gotoFollower().handle(message)
             } else {
@@ -820,8 +828,8 @@ class Raft @Inject constructor(
                 logger.info("bootstrap cluster with {}", clusterDiscovery.self)
             }
             val meta = meta()
-                    .withTerm(meta().currentTerm + 1)
-                    .withConfig(StableClusterConfiguration(clusterDiscovery.self))
+                .withTerm(meta().currentTerm + 1)
+                .withConfig(StableClusterConfiguration(clusterDiscovery.self))
 
             nextIndex = LogIndexMap(replicatedLog.lastIndex() + 1)
             matchIndex = LogIndexMap(0)
@@ -888,7 +896,7 @@ class Raft @Inject constructor(
                     logger.debug("appending command: [{}] to replicated log", clientMessage.command)
                 }
                 val logEntry = LogEntry(meta().currentTerm, replicatedLog.nextIndex(),
-                        clientMessage.session, clientMessage.command)
+                    clientMessage.session, clientMessage.command)
                 replicatedLog.append(logEntry)
                 matchIndex.put(clusterDiscovery.self, entry.index)
             }
@@ -915,7 +923,7 @@ class Raft @Inject constructor(
                 gotoFollower().handle(message)
             } else {
                 logger.warn("leader ({}) got append entries from rogue leader ({} @ {}), it's not fresher than self, " + "will send entries, to force it to step down.", meta().currentTerm, message.member,
-                        message.term)
+                    message.term)
                 sendEntries(message.member)
                 this
             }
@@ -933,7 +941,7 @@ class Raft @Inject constructor(
                     nextIndex.decrementFor(message.member)
                 }
                 logger.warn("follower {} rejected write, term {}, decrement index to {}", message.member,
-                        message.term, nextIndex.indexFor(message.member))
+                    message.term, nextIndex.indexFor(message.member))
                 sendEntries(message.member)
                 this
             } else {
@@ -968,16 +976,16 @@ class Raft @Inject constructor(
             if (message.term > meta().currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("leader ({}) got install snapshot from fresher leader ({}), " + "will step down and the leader will keep being: {}",
-                            meta().currentTerm, message.term, message.leader)
+                        meta().currentTerm, message.term, message.leader)
                 }
                 return stay(meta().withTerm(message.term)).gotoFollower().handle(message)
             } else {
                 if (logger.isInfoEnabled) {
                     logger.info("rejecting install snapshot {}, current term is {}",
-                            message.term, meta().currentTerm)
+                        message.term, meta().currentTerm)
                 }
                 logger.warn("leader ({}) got install snapshot from rogue leader ({} @ {}), " + "it's not fresher than self, will send entries, to force it to step down.",
-                        meta().currentTerm, message.leader, message.term)
+                    meta().currentTerm, message.leader, message.term)
                 sendEntries(message.leader)
                 return this
             }
@@ -990,7 +998,7 @@ class Raft @Inject constructor(
             return if (message.term == meta().currentTerm) {
                 if (logger.isInfoEnabled) {
                     logger.info("received install snapshot successful[{}], last index[{}]", message.lastIndex,
-                            replicatedLog.lastIndex())
+                        replicatedLog.lastIndex())
                 }
                 assert(message.lastIndex <= replicatedLog.lastIndex())
                 if (message.lastIndex > 0) {
@@ -1011,7 +1019,7 @@ class Raft @Inject constructor(
                 message.term == meta().currentTerm -> {
                     if (logger.isInfoEnabled) {
                         logger.info("follower {} rejected write: {}, back out the first index in this term and retry",
-                                message.member, message.term)
+                            message.member, message.term)
                     }
                     if (nextIndex.indexFor(message.member) > 1) {
                         nextIndex.decrementFor(message.member)
@@ -1031,15 +1039,15 @@ class Raft @Inject constructor(
             if (meta.config.isTransitioning) {
                 logger.warn("try add server {} in transitioning state", request.member)
                 send(request.member, AddServerResponse(
-                        AddServerResponse.Status.TIMEOUT,
-                        Option.some(clusterDiscovery.self)
+                    AddServerResponse.Status.TIMEOUT,
+                    Option.some(clusterDiscovery.self)
                 ))
                 return stay(meta)
             } else {
                 if (meta.members().contains(request.member)) {
                     send(request.member, AddServerResponse(
-                            AddServerResponse.Status.OK,
-                            Option.some(clusterDiscovery.self)
+                        AddServerResponse.Status.OK,
+                        Option.some(clusterDiscovery.self)
                     ))
                     return stay(meta)
                 }
@@ -1054,12 +1062,12 @@ class Raft @Inject constructor(
             if (meta.config.isTransitioning) {
                 logger.warn("try remove server {} in transitioning state", request.member)
                 send(request.member, RemoveServerResponse(
-                        RemoveServerResponse.Status.TIMEOUT,
-                        Option.some(clusterDiscovery.self)
+                    RemoveServerResponse.Status.TIMEOUT,
+                    Option.some(clusterDiscovery.self)
                 ))
             } else {
                 val config = StableClusterConfiguration(
-                        meta.membersWithout(request.member)
+                    meta.membersWithout(request.member)
                 )
                 meta.config.transitionTo(config)
                 meta = meta.withConfig(meta.config.transitionTo(config))
@@ -1076,8 +1084,8 @@ class Raft @Inject constructor(
                 stay(meta().withTerm(message.term)).gotoFollower().handle(message)
             } else {
                 logger.warn("rejecting vote for {}, and {}, currentTerm: {}, received stale term number {}",
-                        message.candidate, message.term,
-                        meta().currentTerm, message.term)
+                    message.candidate, message.term,
+                    meta().currentTerm, message.term)
                 send(message.candidate, DeclineCandidate(clusterDiscovery.self, meta().currentTerm))
                 this
             }
@@ -1109,11 +1117,11 @@ class Raft @Inject constructor(
             }
             val timeout = System.currentTimeMillis() - heartbeat
             meta().membersWithout(clusterDiscovery.self)
-                    .filter {
-                        // check heartbeat response timeout for prevent re-send heartbeat
-                        replicationIndex.getOrElse(it, 0L) < timeout
-                    }
-                    .forEach { sendEntries(it) }
+                .filter {
+                    // check heartbeat response timeout for prevent re-send heartbeat
+                    replicationIndex.getOrElse(it, 0L) < timeout
+                }
+                .forEach { sendEntries(it) }
             return this
         }
 
@@ -1153,14 +1161,14 @@ class Raft @Inject constructor(
                 val prevTerm = replicatedLog.termAt(prevIndex)
                 if (logger.isInfoEnabled) {
                     logger.info("send to {} append entries {} prev {}:{} in {} from index:{}", follower, entries.size(),
-                            prevTerm, prevIndex, meta.currentTerm, lastIndex)
+                        prevTerm, prevIndex, meta.currentTerm, lastIndex)
                 }
                 val append = AppendEntries(
-                        clusterDiscovery.self,
-                        meta.currentTerm,
-                        prevTerm, prevIndex,
-                        replicatedLog.committedIndex(),
-                        entries
+                    clusterDiscovery.self,
+                    meta.currentTerm,
+                    prevTerm, prevIndex,
+                    replicatedLog.committedIndex(),
+                    entries
                 )
                 send(follower, append)
             }
@@ -1216,7 +1224,7 @@ class Raft @Inject constructor(
                             }
                         }
                     }
-                }else{
+                } else {
                     break
                 }
             }

@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.typesafe.config.Config
 import io.netty.channel.*
 import org.mitallast.queue.common.codec.Message
+import org.mitallast.queue.common.logging.LoggingService
 import org.mitallast.queue.common.netty.NettyProvider
 import org.mitallast.queue.common.netty.NettyServer
 import org.mitallast.queue.security.ECDHFlow
@@ -16,10 +17,17 @@ import org.mitallast.queue.transport.TransportServer
 @Suppress("OverridingDeprecatedMember")
 class NettyTransportServer @Inject constructor(
     config: Config,
+    private val logging: LoggingService,
     provider: NettyProvider,
     private val transportController: TransportController,
     private val securityService: SecurityService
-) : NettyServer(config, provider, config.getString("transport.host"), config.getInt("transport.port")), TransportServer {
+) : NettyServer(
+    config,
+    logging,
+    provider,
+    config.getString("transport.host"),
+    config.getInt("transport.port")
+), TransportServer {
 
     private val discoveryNode: DiscoveryNode = DiscoveryNode(host, port)
 
@@ -34,7 +42,7 @@ class NettyTransportServer @Inject constructor(
     private inner class TransportServerInitializer : ChannelInitializer<Channel>() {
         override fun initChannel(ch: Channel) {
             val pipeline = ch.pipeline()
-            pipeline.addLast(CodecDecoder())
+            pipeline.addLast(CodecDecoder(logging))
             pipeline.addLast(CodecEncoder())
             pipeline.addLast(ECDHCodecEncoder())
             pipeline.addLast(ECDHCodecDecoder())

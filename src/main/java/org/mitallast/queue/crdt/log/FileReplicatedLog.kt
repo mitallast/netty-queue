@@ -4,10 +4,10 @@ import com.google.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import com.typesafe.config.Config
 import io.vavr.collection.Vector
-import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.common.file.FileService
-import java.util.ArrayList
+import org.mitallast.queue.common.logging.LoggingService
+import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -15,13 +15,14 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.function.Predicate
 
 class FileReplicatedLog @Inject constructor(
+    logging: LoggingService,
     config: Config,
     private val fileService: FileService,
     @param:Assisted private val compactionFilter: Predicate<LogEntry>,
     @Assisted index: Int,
     @Assisted replica: Long
 ) : ReplicatedLog {
-    private val logger = LogManager.getLogger()
+    private val logger = logging.logger()
     private val segmentSize = config.getInt("crdt.segment.size")
     private val serviceName = String.format("crdt/%d/log/%d", index, replica)
 

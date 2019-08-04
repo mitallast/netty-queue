@@ -1,14 +1,16 @@
 package org.mitallast.queue.transport
 
+import com.google.inject.Inject
 import io.vavr.collection.HashMap
 import io.vavr.collection.Map
-import org.apache.logging.log4j.LogManager
 import org.mitallast.queue.common.codec.Message
+import org.mitallast.queue.common.logging.LoggingService
 
 @Suppress("UNCHECKED_CAST")
-class TransportController {
-
-    @Volatile private var handlerMap: Map<Class<*>, (Message) -> Unit> = HashMap.empty()
+class TransportController @Inject constructor(logging: LoggingService) {
+    private val logger = logging.logger()
+    @Volatile
+    private var handlerMap: Map<Class<*>, (Message) -> Unit> = HashMap.empty()
 
     @Synchronized
     fun <T : Message> registerMessageHandler(
@@ -33,9 +35,5 @@ class TransportController {
         } else {
             logger.error("handler not found for {}", message.javaClass)
         }
-    }
-
-    companion object {
-        private val logger = LogManager.getLogger()
     }
 }

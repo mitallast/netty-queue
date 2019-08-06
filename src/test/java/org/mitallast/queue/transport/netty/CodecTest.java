@@ -10,7 +10,7 @@ import org.mitallast.queue.common.codec.Message;
 
 import java.util.ArrayList;
 
-public class TransportFrameTest extends BaseTest {
+public class CodecTest extends BaseTest {
 
     static {
         Codec.Companion.register(123, TestStreamable.class, TestStreamable.codec);

@@ -1,7 +1,6 @@
 package org.mitallast.queue.security
 
 import io.netty.util.AttributeKey
-import net.jpountz.lz4.LZ4Factory
 import org.conscrypt.OpenSSLProvider
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -13,9 +12,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement
-import javax.crypto.Mac
 import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 class ECDHFlow constructor(private val securityService: SecurityService) {
@@ -28,19 +25,9 @@ class ECDHFlow constructor(private val securityService: SecurityService) {
     private var state: State = State.START
     private var otherPublicKey: PublicKey? = null
     private var secretKey: SecretKey? = null
-    private val encryptCipher: Cipher
-    private val decryptCipher: Cipher
-    private val hmac: Mac
-    private val agreementFuture: CompletableFuture<Void>
-
-    private val lz4: LZ4Factory = LZ4Factory.fastestInstance()
+    private val agreementFuture = CompletableFuture<Void>()
 
     init {
-        this.encryptCipher = Cipher.getInstance(AES256)
-        this.decryptCipher = Cipher.getInstance(AES256)
-        this.hmac = Mac.getInstance(HmacSHA256)
-        this.agreementFuture = CompletableFuture()
-
         val generator = KeyPairGenerator.getInstance(ECC_KEY_TYPE, PROVIDER)
         val spec = ECGenParameterSpec(ECC_CURVE)
         generator.initialize(spec)
@@ -111,57 +98,11 @@ class ECDHFlow constructor(private val securityService: SecurityService) {
         agreementFuture.complete(null)
     }
 
-    fun sign(iv: ByteArray, encrypted: ByteArray): ByteArray {
-        hmac.init(secretKey)
-        hmac.update(iv)
-        hmac.update(encrypted)
-        return hmac.doFinal()
-    }
-
-    fun verify(iv: ByteArray, encrypted: ByteArray, sign: ByteArray): Boolean {
-        hmac.init(secretKey)
-        hmac.update(iv)
-        hmac.update(encrypted)
-        val ref = hmac.doFinal()
-        return MessageDigest.isEqual(ref, sign)
-    }
-
-    fun encrypt(data: ByteArray): ECDHEncrypted {
+    fun secretKey(): SecretKey {
         if (state != State.AGREEMENT) {
             throw IllegalStateException("no shared key")
         }
-
-        // compress
-        val comp = lz4.fastCompressor()
-        val maxCL = comp.maxCompressedLength(data.size)
-        val compressed = ByteArray(maxCL)
-        val compressedLength = comp.compress(data, compressed)
-
-        // encrypt
-        encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey)
-        val params = encryptCipher.parameters
-        val iv = params.getParameterSpec(IvParameterSpec::class.java).iv
-        val encrypted = encryptCipher.doFinal(compressed, 0, compressedLength)
-        val sign = sign(iv, encrypted)
-        return ECDHEncrypted(sign, iv, data.size, encrypted)
-    }
-
-    fun decrypt(encrypted: ECDHEncrypted): ByteArray {
-        if (state != State.AGREEMENT) {
-            throw IllegalStateException("no shared key")
-        }
-
-        if (!verify(encrypted.iv, encrypted.encrypted, encrypted.sign)) {
-            throw IllegalArgumentException("not verified")
-        }
-
-        // decrypt
-        decryptCipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(encrypted.iv))
-        val decrypted = decryptCipher.doFinal(encrypted.encrypted)
-
-        // decompress
-        val decompressor = lz4.fastDecompressor()
-        return decompressor.decompress(decrypted, encrypted.len)
+        return secretKey!!
     }
 
     val isAgreement: Boolean
@@ -213,13 +154,13 @@ class ECDHFlow constructor(private val securityService: SecurityService) {
                 throw RuntimeException("Failed manually overriding key-length permissions.") // hack failed
         }
 
-        private const val PROVIDER = "GC"
-        private const val ECC_KEY_TYPE = "EC"
-        private const val ECC_CURVE = "secp224r1"
-        private const val ECDH_AGREEMENT = "ECDH"
-        private const val AES256 = "AES/CBC/PKCS5Padding"
-        private const val DIGEST = "SHA-256"
-        private const val HmacSHA256 = "HmacSHA256"
+        const val PROVIDER = "GC"
+        const val ECC_KEY_TYPE = "EC"
+        const val ECC_CURVE = "secp224r1"
+        const val ECDH_AGREEMENT = "ECDH"
+        const val AES256 = "AES/CBC/PKCS5Padding"
+        const val DIGEST = "SHA-256"
+        const val HmacSHA256 = "HmacSHA256"
 
         init {
             Security.addProvider(OpenSSLProvider(PROVIDER))

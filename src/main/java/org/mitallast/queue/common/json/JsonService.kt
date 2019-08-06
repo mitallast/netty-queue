@@ -16,6 +16,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufInputStream
 import io.netty.buffer.ByteBufOutputStream
 import io.vavr.jackson.datatype.VavrModule
+import org.mitallast.queue.common.codec.UnsafeByteBufInputStream
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -38,7 +39,7 @@ class JsonService {
     }
 
     fun <T> deserialize(buf: ByteBuf, type: Class<T>): T {
-        ByteBufInputStream(buf).use { return deserialize(it, type) }
+        UnsafeByteBufInputStream(buf).use { return deserialize(it, type) }
     }
 
     fun <T> deserialize(input: InputStream, type: Class<T>): T {
@@ -50,7 +51,7 @@ class JsonService {
     }
 
     fun <T> deserialize(buf: ByteBuf, type: TypeReference<T>): T {
-        ByteBufInputStream(buf).use { return deserialize(it, type) }
+        UnsafeByteBufInputStream(buf).use { return deserialize(it, type) }
     }
 
     fun <T> deserialize(input: InputStream, type: TypeReference<T>): T {

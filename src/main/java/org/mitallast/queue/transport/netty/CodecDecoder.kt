@@ -1,11 +1,11 @@
 package org.mitallast.queue.transport.netty
 
 import io.netty.buffer.ByteBuf
-import io.netty.buffer.ByteBufInputStream
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.ByteToMessageDecoder
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
+import org.mitallast.queue.common.codec.UnsafeByteBufInputStream
 import org.mitallast.queue.common.logging.LoggingService
 
 class CodecDecoder(logging: LoggingService) : ByteToMessageDecoder() {
@@ -27,7 +27,7 @@ class CodecDecoder(logging: LoggingService) : ByteToMessageDecoder() {
         buffer.skipBytes(Integer.BYTES)
         val start = buffer.readerIndex()
         val message: Message
-        val stream = ByteBufInputStream(buffer)
+        val stream = UnsafeByteBufInputStream(buffer)
         message = Codec.anyCodec<Message>().read(stream)
         val readSize = buffer.readerIndex() - start
         if (readSize < size) {

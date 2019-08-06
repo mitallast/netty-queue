@@ -47,7 +47,7 @@ class TransportBenchmark : BaseQueueTest() {
     @Test
     @Throws(Exception::class)
     fun test() {
-        for (e in 0..9) {
+        for (e in 0..100) {
             System.gc()
             countDownLatch = CountDownLatch(total())
             val start = System.currentTimeMillis()

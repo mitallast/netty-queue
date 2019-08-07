@@ -4,6 +4,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.Vector;
+import org.apache.logging.log4j.MarkerManager;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,6 +30,7 @@ public class FileReplicatedLogTest extends BaseTest {
     public void setUp() throws Exception {
         config = ConfigFactory.parseMap(HashMap.of("node.path", testFolder.newFolder().getAbsolutePath()).toJavaMap())
             .withFallback(ConfigFactory.defaultReference());
+        logging = new LoggingService(MarkerManager.getMarker("test"));
         log = new FileReplicatedLog(
             logging,
             config,

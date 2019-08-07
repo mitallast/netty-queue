@@ -44,7 +44,7 @@ class NettyTransportServer @Inject constructor(
             val pipeline = ch.pipeline()
             pipeline.addLast(CodecDecoder(logging))
             pipeline.addLast(CodecEncoder())
-            pipeline.addLast(ECDHCodecEncoder())
+            pipeline.addLast(ECDHNewEncoder())
             pipeline.addLast(ECDHCodecDecoder())
             pipeline.addLast(TransportServerHandler())
         }

@@ -126,7 +126,7 @@ public class ClusterRaftTest extends BaseClusterTest {
             Assert.assertEquals("hello world " + i, value);
         }
 
-        for (int t = 0; t < 3; t++) {
+        for (int t = 0; t < 300; t++) {
             final int total = 200000;
             final ArrayList<Future<String>> futures = new ArrayList<>(total);
             final long start = System.currentTimeMillis();

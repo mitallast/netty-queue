@@ -5,7 +5,6 @@ import com.typesafe.config.ConfigFactory
 import io.vavr.collection.HashMap
 import org.junit.Before
 import org.junit.Test
-import org.mitallast.queue.common.BaseIntegrationTest
 import org.mitallast.queue.common.BaseQueueTest
 import java.util.concurrent.CountDownLatch
 
@@ -16,7 +15,7 @@ class TransportBenchmark : BaseQueueTest() {
     private var countDownLatch: CountDownLatch? = null
 
     override fun max(): Int {
-        return 20000
+        return 500000
     }
 
     @Throws(Exception::class)
@@ -36,7 +35,7 @@ class TransportBenchmark : BaseQueueTest() {
         val transportServer = node().injector().getInstance(TransportServer::class.java)
 
         val transportController = node().injector().getInstance(TransportController::class.java)
-        transportController.registerMessageHandler(BaseIntegrationTest.TestStreamable::class.java) { _ ->
+        transportController.registerMessageHandler(TestStreamable::class.java) {
             countDownLatch!!.countDown()
         }
 
@@ -47,12 +46,12 @@ class TransportBenchmark : BaseQueueTest() {
     @Test
     @Throws(Exception::class)
     fun test() {
-        for (e in 0..100) {
+        for (e in 0..10) {
             System.gc()
             countDownLatch = CountDownLatch(total())
             val start = System.currentTimeMillis()
             for (i in 0 until total()) {
-                transportService!!.send(member, BaseIntegrationTest.TestStreamable(i.toLong()))
+                transportService!!.send(member, TestStreamable(i.toLong()))
             }
             countDownLatch!!.await()
             val end = System.currentTimeMillis()
@@ -63,13 +62,13 @@ class TransportBenchmark : BaseQueueTest() {
     @Test
     @Throws(Exception::class)
     fun testConcurrent() {
-        for (e in 0..9) {
+        for (e in 0..100) {
             countDownLatch = CountDownLatch(total())
             val start = System.currentTimeMillis()
             executeConcurrent { thread, concurrency ->
                 var i = thread
                 while (i < total()) {
-                    transportService!!.send(member, BaseIntegrationTest.TestStreamable(i.toLong()))
+                    transportService!!.send(member, TestStreamable(i.toLong()))
                     i += concurrency
                 }
             }

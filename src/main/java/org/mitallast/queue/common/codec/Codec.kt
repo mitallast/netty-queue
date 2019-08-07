@@ -21,6 +21,8 @@ interface Codec<T> {
 
     fun write(stream: DataOutput, value: T)
 
+    fun size(value: T): Int
+
 //    fun opt(): Codec<Option<T>> = Codec.optionCodec(this)
 //    fun vector(): Codec<Vector<T>> = Codec.vectorCodec(this)
 //    fun set(): Codec<Set<T>> = Codec.setCodec(this)
@@ -140,6 +142,10 @@ internal object BooleanCodec : Codec<Boolean> {
     override fun write(stream: DataOutput, value: Boolean) {
         stream.writeBoolean(value)
     }
+
+    override fun size(value: Boolean): Int {
+        return 1
+    }
 }
 
 internal object IntCodec : Codec<Int> {
@@ -149,6 +155,10 @@ internal object IntCodec : Codec<Int> {
 
     override fun write(stream: DataOutput, value: Int) {
         stream.writeInt(value)
+    }
+
+    override fun size(value: Int): Int {
+        return 4
     }
 }
 
@@ -160,6 +170,10 @@ internal object LongCodec : Codec<Long> {
     override fun write(stream: DataOutput, value: Long) {
         stream.writeLong(value)
     }
+
+    override fun size(value: Long): Int {
+        return 4
+    }
 }
 
 internal object StringCodec : Codec<String> {
@@ -169,6 +183,21 @@ internal object StringCodec : Codec<String> {
 
     override fun write(stream: DataOutput, value: String) {
         stream.writeUTF(value)
+    }
+
+    override fun size(value: String): Int {
+        var utflen = 0
+        val strlen = value.length
+        var c: Int
+        for (i in 0 until strlen) {
+            c = value.get(i).toInt()
+            when {
+                c in 0x0001..0x007F -> utflen++
+                c > 0x07FF -> utflen += 3
+                else -> utflen += 2
+            }
+        }
+        return strlen + 2
     }
 }
 
@@ -191,6 +220,10 @@ internal object ByteArrayCodec : Codec<ByteArray> {
         if (value.isNotEmpty()) {
             stream.write(value)
         }
+    }
+
+    override fun size(value: ByteArray): Int {
+        return 4 + value.size
     }
 }
 
@@ -236,6 +269,10 @@ internal object ByteBufCodec : Codec<ByteBuf> {
             }
         }
     }
+
+    override fun size(value: ByteBuf): Int {
+        return 4 + value.readableBytes()
+    }
 }
 
 internal class EnumCodec<T : Enum<T>>(private val enumClass: Class<T>) : Codec<T> {
@@ -247,6 +284,10 @@ internal class EnumCodec<T : Enum<T>>(private val enumClass: Class<T>) : Codec<T
 
     override fun write(stream: DataOutput, value: T) {
         stream.writeShort(value.ordinal)
+    }
+
+    override fun size(value: T): Int {
+        return 2
     }
 }
 
@@ -264,10 +305,17 @@ internal class OptionCodec<T>(private val codec: Codec<T>) : Codec<Option<T>> {
         stream.writeBoolean(value.isDefined)
         value.forEach { i -> codec.write(stream, i) }
     }
+
+    override fun size(value: Option<T>): Int {
+        if (value.isDefined) {
+            return 1
+        } else {
+            return 1 + codec.size(value.get())
+        }
+    }
 }
 
 internal class VectorCodec<T>(private val codec: Codec<T>) : Codec<Vector<T>> {
-
     override fun read(stream: DataInput): Vector<T> {
         val size = stream.readInt()
         return Vector.fill(size) { codec.read(stream) }
@@ -276,6 +324,10 @@ internal class VectorCodec<T>(private val codec: Codec<T>) : Codec<Vector<T>> {
     override fun write(stream: DataOutput, value: Vector<T>) {
         stream.writeInt(value.size())
         value.forEach { i -> codec.write(stream, i) }
+    }
+
+    override fun size(value: Vector<T>): Int {
+        return value.foldLeft(4, { s, v -> s + codec.size(v) })
     }
 }
 
@@ -290,6 +342,10 @@ internal class SetCodec<Type>(private val codec: Codec<Type>) : Codec<Set<Type>>
         stream.writeInt(value.size())
         value.forEach { i -> codec.write(stream, i) }
     }
+
+    override fun size(value: Set<Type>): Int {
+        return value.foldLeft(4, { s, v -> s + codec.size(v) })
+    }
 }
 
 internal class SeqCodec<Type>(private val codec: Codec<Type>) : Codec<Seq<Type>> {
@@ -302,6 +358,10 @@ internal class SeqCodec<Type>(private val codec: Codec<Type>) : Codec<Seq<Type>>
     override fun write(stream: DataOutput, value: Seq<Type>) {
         stream.writeInt(value.size())
         value.forEach { i -> codec.write(stream, i) }
+    }
+
+    override fun size(value: Seq<Type>): Int {
+        return value.foldLeft(4, { s, v -> s + codec.size(v) })
     }
 }
 
@@ -318,6 +378,10 @@ internal class Codec1<Type, Param1>(
 
     override fun write(stream: DataOutput, value: Type) {
         codec1.write(stream, lens1.invoke(value))
+    }
+
+    override fun size(value: Type): Int {
+        return codec1.size(lens1.invoke(value))
     }
 }
 
@@ -338,6 +402,11 @@ internal class Codec2<Type, Param1, Param2>(
     override fun write(stream: DataOutput, value: Type) {
         codec1.write(stream, lens1.invoke(value))
         codec2.write(stream, lens2.invoke(value))
+    }
+
+    override fun size(value: Type): Int {
+        return codec1.size(lens1.invoke(value)) +
+            codec2.size(lens2.invoke(value))
     }
 }
 
@@ -362,6 +431,12 @@ internal class Codec3<Type, Param1, Param2, Param3>(
         codec1.write(stream, lens1.invoke(value))
         codec2.write(stream, lens2.invoke(value))
         codec3.write(stream, lens3.invoke(value))
+    }
+
+    override fun size(value: Type): Int {
+        return codec1.size(lens1.invoke(value)) +
+            codec2.size(lens2.invoke(value)) +
+            codec3.size(lens3.invoke(value))
     }
 }
 
@@ -390,6 +465,13 @@ internal class Codec4<Type, Param1, Param2, Param3, Param4>(
         codec2.write(stream, lens2.invoke(value))
         codec3.write(stream, lens3.invoke(value))
         codec4.write(stream, lens4.invoke(value))
+    }
+
+    override fun size(value: Type): Int {
+        return codec1.size(lens1.invoke(value)) +
+            codec2.size(lens2.invoke(value)) +
+            codec3.size(lens3.invoke(value)) +
+            codec4.size(lens4.invoke(value))
     }
 }
 
@@ -422,6 +504,14 @@ internal class Codec5<Type, Param1, Param2, Param3, Param4, Param5>(
         codec3.write(stream, lens3.invoke(value))
         codec4.write(stream, lens4.invoke(value))
         codec5.write(stream, lens5.invoke(value))
+    }
+
+    override fun size(value: Type): Int {
+        return codec1.size(lens1.invoke(value)) +
+            codec2.size(lens2.invoke(value)) +
+            codec3.size(lens3.invoke(value)) +
+            codec4.size(lens4.invoke(value)) +
+            codec5.size(lens5.invoke(value))
     }
 }
 
@@ -459,6 +549,15 @@ internal class Codec6<Type, Param1, Param2, Param3, Param4, Param5, Param6>(
         codec5.write(stream, lens5.invoke(value))
         codec6.write(stream, lens6.invoke(value))
     }
+
+    override fun size(value: Type): Int {
+        return codec1.size(lens1.invoke(value)) +
+            codec2.size(lens2.invoke(value)) +
+            codec3.size(lens3.invoke(value)) +
+            codec4.size(lens4.invoke(value)) +
+            codec5.size(lens5.invoke(value)) +
+            codec6.size(lens6.invoke(value))
+    }
 }
 
 internal class StaticCodec<T>(private val value: T) : Codec<T> {
@@ -468,17 +567,20 @@ internal class StaticCodec<T>(private val value: T) : Codec<T> {
     }
 
     override fun write(stream: DataOutput, value: T) {}
+
+    override fun size(value: T): Int {
+        return 0
+    }
 }
 
 @Suppress("UNCHECKED_CAST")
 internal class AnyCodec<T : Message> : Codec<T> {
-
     override fun read(stream: DataInput): T {
         val id = stream.readInt()
         Preconditions.checkArgument(id >= 0)
-        val codec = idToCodecMap.get(id) as Codec<T>
-        Preconditions.checkNotNull(codec)
-        return codec.read(stream)
+        val codec = idToCodecMap.get(id) as Codec<T>?
+        Preconditions.checkNotNull(codec, "codec not registered %s", id)
+        return codec!!.read(stream)
     }
 
     override fun write(stream: DataOutput, value: T) {
@@ -489,6 +591,13 @@ internal class AnyCodec<T : Message> : Codec<T> {
         codec.write(stream, value)
     }
 
+    override fun size(value: T): Int {
+        val id = classToIdMap.get(value.javaClass)
+        Preconditions.checkArgument(id >= 0, "class not registered %s", value.javaClass)
+        val codec = idToCodecMap.get(id) as Codec<T>
+        return 4 + codec.size(value)
+    }
+
     companion object {
         private val idToCodecMap = TIntObjectHashMap<Codec<*>>(100, 0.5f, -1)
         private val classToIdMap = TObjectIntHashMap<Class<*>>(100, 0.5f, -1)
@@ -496,9 +605,9 @@ internal class AnyCodec<T : Message> : Codec<T> {
         @Synchronized
         fun <T : Message> register(code: Int, type: Class<T>, codec: Codec<T>) {
             val c = idToCodecMap.putIfAbsent(code, codec)
-            Preconditions.checkArgument(c == null, "code already registered: " + code)
+            Preconditions.checkArgument(c == null, "code already registered: %s", code)
             val i = classToIdMap.putIfAbsent(type, code)
-            Preconditions.checkArgument(i < 0, "class already registered: " + type)
+            Preconditions.checkArgument(i < 0, "class already registered: %s", type)
         }
     }
 }

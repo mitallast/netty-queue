@@ -45,11 +45,19 @@ internal object ClusterConfigurationCodec : Codec<ClusterConfiguration> {
             StableClusterConfiguration.codec.write(stream, value as StableClusterConfiguration)
         }
     }
+
+    override fun size(value: ClusterConfiguration): Int {
+        return if (value.isTransitioning) {
+            JointConsensusClusterConfiguration.codec.size(value as JointConsensusClusterConfiguration)
+        } else {
+            StableClusterConfiguration.codec.size(value as StableClusterConfiguration)
+        }
+    }
 }
 
 data class JointConsensusClusterConfiguration(
-        val oldMembers: Set<DiscoveryNode>,
-        val newMembers: Set<DiscoveryNode>
+    val oldMembers: Set<DiscoveryNode>,
+    val newMembers: Set<DiscoveryNode>
 ) : ClusterConfiguration {
     override val members: Set<DiscoveryNode> = oldMembers.addAll(newMembers)
     override val isTransitioning = true
@@ -66,11 +74,11 @@ data class JointConsensusClusterConfiguration(
 
     companion object {
         val codec = Codec.of(
-                ::JointConsensusClusterConfiguration,
-                JointConsensusClusterConfiguration::oldMembers,
-                JointConsensusClusterConfiguration::newMembers,
-                Codec.setCodec(DiscoveryNode.codec),
-                Codec.setCodec(DiscoveryNode.codec)
+            ::JointConsensusClusterConfiguration,
+            JointConsensusClusterConfiguration::oldMembers,
+            JointConsensusClusterConfiguration::newMembers,
+            Codec.setCodec(DiscoveryNode.codec),
+            Codec.setCodec(DiscoveryNode.codec)
         )
     }
 }
@@ -91,9 +99,9 @@ data class StableClusterConfiguration(override val members: Set<DiscoveryNode>) 
 
     companion object {
         val codec = Codec.of(
-                ::StableClusterConfiguration,
-                StableClusterConfiguration::members,
-                Codec.setCodec(DiscoveryNode.codec)
+            ::StableClusterConfiguration,
+            StableClusterConfiguration::members,
+            Codec.setCodec(DiscoveryNode.codec)
         )
     }
 }

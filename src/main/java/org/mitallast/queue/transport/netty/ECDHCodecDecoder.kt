@@ -3,6 +3,7 @@ package org.mitallast.queue.transport.netty
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToMessageDecoder
 import net.jpountz.lz4.LZ4Factory
+import org.mitallast.queue.common.Hex
 import org.mitallast.queue.common.codec.Codec
 import org.mitallast.queue.common.codec.Message
 import org.mitallast.queue.security.ECDHEncrypted
@@ -29,42 +30,50 @@ class ECDHCodecDecoder : MessageToMessageDecoder<Message>() {
 
     override fun decode(ctx: ChannelHandlerContext, msg: Message, out: MutableList<Any>) {
         if (msg is ECDHEncrypted) {
-            val ecdhFlow = ctx.channel().attr(ECDHFlow.key).get()
-            val secretKey = ecdhFlow.secretKey()
-            val buffer = msg.encrypted.nioBuffer()
-            buffer.mark()
+            try {
+                val ecdhFlow = ctx.channel().attr(ECDHFlow.key).get()
+                val secretKey = ecdhFlow.secretKey()
+                val buffer = msg.encrypted.nioBuffer()
+                buffer.mark()
 
-            // verify
-            hmac.init(secretKey)
-            hmac.update(msg.iv)
-            hmac.update(buffer)
-            hmac.doFinal(sign, 0)
-            if (!MessageDigest.isEqual(msg.sign, sign)) {
-                throw IllegalArgumentException("not verified")
-            }
+                // verify
+                hmac.init(secretKey)
+                hmac.update(msg.iv)
+                hmac.update(buffer)
+                hmac.doFinal(sign, 0)
+                if (!MessageDigest.isEqual(msg.sign, sign)) {
+                    throw IllegalArgumentException("not verified")
+                }
 
-            // decrypt
-            buffer.reset()
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(msg.iv))
-            val maxDecryptedLen = cipher.getOutputSize(msg.encrypted.readableBytes())
-            if (decrypted.size < maxDecryptedLen) {
-                decrypted = ByteArray(maxDecryptedLen + 4096)
-                decryptedBuffer = ByteBuffer.wrap(decrypted)
-            } else {
-                decryptedBuffer.clear()
-            }
-            cipher.doFinal(buffer, decryptedBuffer)
+                // decrypt
+                buffer.reset()
+                cipher.init(Cipher.DECRYPT_MODE, secretKey, IvParameterSpec(msg.iv))
+                val maxDecryptedLen = cipher.getOutputSize(msg.encrypted.readableBytes())
+                if (decrypted.size < maxDecryptedLen) {
+                    decrypted = ByteArray(maxDecryptedLen + 4096)
+                    decryptedBuffer = ByteBuffer.wrap(decrypted)
+                } else {
+                    decryptedBuffer.clear()
+                }
+                cipher.doFinal(buffer, decryptedBuffer)
 
-            // decompress
-            if (decompressed.size < msg.len) {
-                decompressed = ByteArray(msg.len + 4096)
-                input = ByteArrayInputStream(decompressed)
-                stream = DataInputStream(input)
+                // decompress
+                if (decompressed.size < msg.len) {
+                    decompressed = ByteArray(msg.len + 4096)
+                    input = ByteArrayInputStream(decompressed)
+                    stream = DataInputStream(input)
+                }
+                input.reset()
+                decompressor.decompress(decrypted, decompressed, msg.len)
+
+                // decode list
+                val count = stream.readInt()
+                for (i in 0 until count) {
+                    out.add(Codec.anyCodec<Message>().read(stream))
+                }
+            } finally {
+                msg.encrypted.release()
             }
-            input.reset()
-            decompressor.decompress(decrypted, decompressed, msg.len)
-            val decoded = Codec.anyCodec<Message>().read(stream)
-            out.add(decoded)
         } else {
             out.add(msg)
         }

@@ -26,7 +26,7 @@ public class ECDHCodecTest extends BaseTest {
         var channel = new EmbeddedChannel(
             new CodecEncoder(),
             new CodecDecoder(logging),
-            new ECDHCodecEncoder(),
+            new ECDHNewEncoder(),
             new ECDHCodecDecoder()
         );
         var ecdh1 = securityService.ecdh();
@@ -41,14 +41,28 @@ public class ECDHCodecTest extends BaseTest {
         assert ecdh1.isAgreement();
 
         var msg = new TestStreamable(123123);
-        channel.writeOutbound(msg);
+        channel.writeOneOutbound(msg);
+        channel.writeOneOutbound(msg);
+        channel.writeOneOutbound(msg);
+        channel.writeOneOutbound(msg);
+        channel.flushOutbound();
         ByteBuf outbound = channel.readOutbound();
+        logger.info("outbound: {}", outbound);
 
         channel.writeInbound(outbound);
-        var inbound = channel.readInbound();
-        logger.info("inbound: {}", inbound);
+        var inbound1 = channel.readInbound();
+        var inbound2 = channel.readInbound();
+        var inbound3 = channel.readInbound();
+        var inbound4 = channel.readInbound();
+        logger.info("inbound: {}", inbound1);
+        logger.info("inbound: {}", inbound2);
+        logger.info("inbound: {}", inbound3);
+        logger.info("inbound: {}", inbound4);
 
-        Assert.assertEquals(msg, inbound);
+        Assert.assertEquals(msg, inbound1);
+        Assert.assertEquals(msg, inbound2);
+        Assert.assertEquals(msg, inbound3);
+        Assert.assertEquals(msg, inbound4);
     }
 
 //    @Test

@@ -4,6 +4,9 @@ import com.google.common.base.Preconditions
 import com.google.inject.Inject
 import com.typesafe.config.Config
 import io.netty.channel.*
+import io.netty.util.AttributeKey
+import io.netty.util.concurrent.Future
+import io.netty.util.concurrent.GenericFutureListener
 import io.vavr.collection.HashMap
 import io.vavr.collection.Map
 import org.mitallast.queue.common.codec.Message
@@ -19,6 +22,7 @@ import org.mitallast.queue.transport.TransportController
 import org.mitallast.queue.transport.TransportService
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 
@@ -38,10 +42,11 @@ class NettyTransportService @Inject constructor(
     override fun channelInitializer(): ChannelInitializer<Channel> {
         return object : ChannelInitializer<Channel>() {
             override fun initChannel(ch: Channel) {
+                ch.attr(flushKey).set(FlushListener(ch))
                 val pipeline = ch.pipeline()
-                pipeline.addLast(CodecDecoder(logging))
                 pipeline.addLast(CodecEncoder())
-                pipeline.addLast(ECDHCodecEncoder())
+                pipeline.addLast(CodecDecoder(logging))
+                pipeline.addLast(ECDHNewEncoder())
                 pipeline.addLast(ECDHCodecDecoder())
                 pipeline.addLast(object : SimpleChannelInboundHandler<Message>(false) {
 
@@ -116,7 +121,7 @@ class NettyTransportService @Inject constructor(
 
     private fun channel(node: DiscoveryNode): TransportChannel {
         Preconditions.checkNotNull(node)
-        return connectedNodes.getOrElse(node, null) ?: throw IllegalArgumentException("Not connected to node: " + node)
+        return connectedNodes.getOrElse(node, null) ?: throw IllegalArgumentException("Not connected to node: $node")
     }
 
     override fun send(node: DiscoveryNode, message: Message) {
@@ -195,10 +200,19 @@ class NettyTransportService @Inject constructor(
 
         private fun send(channel: Channel, message: Message) {
             val ecdh = channel.attr(ECDHFlow.key).get()
+            val flush = channel.attr(flushKey).get()
             if (ecdh.isAgreement) {
-                channel.writeAndFlush(message, channel.voidPromise())
+                flush.increment()
+                channel.write(message, channel.voidPromise())
+                channel.eventLoop().execute(flush)
             } else {
-                ecdh.agreementFuture().whenComplete { _, _ -> channel.writeAndFlush(message, channel.voidPromise()) }
+                ecdh.agreementFuture().whenComplete { _, t ->
+                    if (t == null) {
+                        flush.increment()
+                        channel.write(message, channel.voidPromise())
+                        channel.eventLoop().execute(flush)
+                    }
+                }
             }
         }
 
@@ -210,5 +224,24 @@ class NettyTransportService @Inject constructor(
                 }
             }
         }
+    }
+
+    private inner class FlushListener(val channel: Channel) : Runnable {
+        override fun run() {
+            val c = counter.decrementAndGet()
+            if (c == 0) {
+                channel.flush()
+            }
+        }
+
+        private val counter = AtomicInteger()
+
+        fun increment() {
+            counter.incrementAndGet()
+        }
+    }
+
+    companion object {
+        private val flushKey: AttributeKey<FlushListener> = AttributeKey.valueOf("flush")
     }
 }

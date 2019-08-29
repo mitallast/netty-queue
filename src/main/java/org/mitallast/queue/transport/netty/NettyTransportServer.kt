@@ -62,10 +62,10 @@ class NettyTransportServer @Inject constructor(
 
         override fun channelRead0(ctx: ChannelHandlerContext, message: Message) {
             if (message is ECDHRequest) {
-                logger.info("received ecdh request start")
+                logger.trace("received ecdh request start")
                 val ecdh = ctx.channel().attr(ECDHFlow.key).get()
                 ecdh.keyAgreement(message)
-                logger.info("send ecdh response start")
+                logger.trace("send ecdh response start")
                 ctx.writeAndFlush(ecdh.responseStart())
             } else {
                 transportController.dispatch(message)

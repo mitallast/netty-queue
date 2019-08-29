@@ -1053,6 +1053,8 @@ class Raft @Inject constructor(
                 }
                 val config = StableClusterConfiguration(meta.members().add(request.member))
                 meta = meta.withConfig(meta.config.transitionTo(config))
+                // initialize new node as without replication log
+                nextIndex.put(request.member, 0)
                 return stay(meta).handle(ClientMessage(config, 0))
             }
         }

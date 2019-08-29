@@ -1197,6 +1197,7 @@ public class RaftTest extends BaseTest {
             bind(RaftContext.class).toInstance(context);
             bind(FilePersistentService.class).asEagerSingleton();
             bind(PersistentService.class).to(FilePersistentService.class);
+            bind(LoggingService.class).toInstance(new LoggingService(MarkerManager.getMarker("test")));
         }
     }
 }

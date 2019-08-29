@@ -51,12 +51,12 @@ class NettyTransportService @Inject constructor(
                 pipeline.addLast(object : SimpleChannelInboundHandler<Message>(false) {
 
                     override fun channelRegistered(ctx: ChannelHandlerContext) {
-                        logger.info("start ecdh")
+                        logger.trace("start ecdh")
                         ctx.channel().attr(ECDHFlow.key).set(securityService.ecdh())
                     }
 
                     override fun channelActive(ctx: ChannelHandlerContext) {
-                        logger.info("send ecdh request start")
+                        logger.trace("send ecdh request start")
                         val ecdh = ctx.channel().attr(ECDHFlow.key).get()
                         ctx.writeAndFlush(ecdh.requestStart())
                         super.channelActive(ctx)
@@ -65,7 +65,7 @@ class NettyTransportService @Inject constructor(
                     override fun channelRead0(ctx: ChannelHandlerContext, message: Message) {
                         val ecdh = ctx.channel().attr(ECDHFlow.key).get()
                         if (message is ECDHResponse) {
-                            logger.info("received response ecdh start")
+                            logger.trace("received response ecdh start")
                             ecdh.keyAgreement(message)
                         } else {
                             transportController.dispatch(message)

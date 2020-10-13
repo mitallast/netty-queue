@@ -22,7 +22,7 @@
         <joda.version>2.10.3</joda.version>
         <javassist.version>3.25.0-GA</javassist.version>
         <google.guice.version>4.2.2</google.guice.version>
-        <junit.version>4.12</junit.version>
+        <junit.version>4.13.1</junit.version>
         <unitils.version>3.4.6</unitils.version>
         <mockito.version>3.0.0</mockito.version>
         <uuid.version>3.4</uuid.version>

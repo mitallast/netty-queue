@@ -239,7 +239,7 @@
     <repositories>
         <repository>
             <id>eaio.com</id>
-            <url>http://eaio.com/maven2</url>
+            <url>https://eaio.com/maven2</url>
         </repository>
     </repositories>
 
